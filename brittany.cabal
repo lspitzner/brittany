@@ -1,0 +1,232 @@
+name:                brittany
+version:             0.1.0.0
+-- synopsis:            
+-- description:         
+license:             AllRightsReserved
+-- license-file:        LICENSE
+author:              Lennart Spitzner
+maintainer:          lsp@informatik.uni-kiel.de
+-- copyright:           
+category:            Language
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+flag brittany-dev
+  description: dev options
+  default: False
+
+flag brittany-dev-lib
+  description: set buildable false for anything but lib
+  default: False
+
+library {
+  default-language:
+    Haskell2010
+  hs-source-dirs:
+    src
+  exposed-modules: {
+    Language.Haskell.Brittany.Prelude
+    Language.Haskell.Brittany
+    Language.Haskell.Brittany.Types
+    Language.Haskell.Brittany.Utils
+    Language.Haskell.Brittany.Config
+    Language.Haskell.Brittany.Config.Types
+    Language.Haskell.Brittany.LayoutBasics
+    Language.Haskell.Brittany.BriLayouter
+    Language.Haskell.Brittany.Layouters.Type
+    Language.Haskell.Brittany.Layouters.Decl
+    Language.Haskell.Brittany.Layouters.Expr
+    Language.Haskell.Brittany.Layouters.Stmt
+    Language.Haskell.Brittany.Layouters.Pattern
+  }
+  ghc-options: {
+    -Wall
+    -fprof-auto -fprof-cafs -fno-spec-constr
+    -j
+    -fno-warn-unused-imports
+    -fno-warn-orphans
+  }
+  if flag(brittany-dev) {
+    ghc-options: -O0 -Werror -fobject-code
+  }
+  build-depends:
+    { base >=4.9 && <4.10
+    -- , ghc-parser >=0.1 && <0.2
+    , ghc
+    , ghc-paths
+    , ghc-exactprint
+    , stable-memo
+    , transformers
+    , containers
+    , qualified-prelude
+    , mtl
+    , text
+    , multistate
+    , syb
+    , neat-interpolation
+    , hspec
+    , data-tree-print
+    , pretty
+    , bytestring
+    , directory
+    , lens
+    , butcher
+    , yaml
+    , extra
+    , uniplate
+    , strict
+    , unsafe
+    }
+  default-extensions: {
+    CPP
+
+    NoImplicitPrelude
+
+    GADTs
+
+    FlexibleContexts
+    FlexibleInstances
+    ScopedTypeVariables
+    MonadComprehensions
+    LambdaCase
+    MultiWayIf
+    KindSignatures
+  }
+  include-dirs:
+    srcinc
+}
+
+executable brittany
+  if flag(brittany-dev-lib) {
+    buildable: False
+  } else {
+    buildable: True
+  }
+  main-is:             Main.hs
+  -- other-modules:       
+  -- other-extensions:    
+  build-depends:
+    { brittany
+    , base >=4.9 && <4.10
+    -- , ghc-parser >=0.1 && <0.2
+    , ghc
+    , ghc-paths
+    , ghc-exactprint
+    , stable-memo
+    , transformers
+    , containers
+    , qualified-prelude
+    , mtl
+    , text
+    , multistate
+    , syb
+    , neat-interpolation
+    , hspec
+    , data-tree-print
+    , pretty
+    , bytestring
+    , directory
+    , lens
+    , butcher
+    , yaml
+    , extra
+    , uniplate
+    , strict
+    }
+  hs-source-dirs:      src-brittany
+  default-language:    Haskell2010
+  default-extensions: {
+    CPP
+
+    NoImplicitPrelude
+
+    GADTs
+
+    FlexibleContexts
+    FlexibleInstances
+    ScopedTypeVariables
+    MonadComprehensions
+    LambdaCase
+    MultiWayIf
+    KindSignatures
+  }
+  ghc-options: {
+    -Wall
+    -fprof-auto -fprof-cafs -fno-spec-constr
+    -j
+    -fno-warn-unused-imports
+    -fno-warn-orphans
+    -rtsopts
+  }
+  if flag(brittany-dev) {
+    ghc-options: -O0 -Werror -fobject-code
+  }
+
+test-suite unittests
+  if flag(brittany-dev-lib) {
+    buildable: False
+  } else {
+    buildable: True
+  }
+  type:             exitcode-stdio-1.0
+  default-language: Haskell2010
+  build-depends:
+    { brittany
+    , base >=4.9 && <4.10
+    -- , ghc-parser >=0.1 && <0.2
+    , ghc
+    , ghc-paths
+    , ghc-exactprint
+    , stable-memo
+    , transformers
+    , containers
+    , qualified-prelude
+    , mtl
+    , text
+    , multistate
+    , syb
+    , neat-interpolation
+    , hspec
+    , data-tree-print
+    , pretty
+    , bytestring
+    , directory
+    , lens
+    , butcher
+    , yaml
+    , extra
+    , uniplate
+    , strict
+    }
+  ghc-options:      -Wall
+  main-is:          TestMain.hs
+  other-modules:    IdentityTests
+                    TestUtils
+                    AsymptoticPerfTests
+  hs-source-dirs:   src-unittests
+  default-extensions: {
+    CPP
+
+    NoImplicitPrelude
+
+    GADTs
+
+    FlexibleContexts
+    FlexibleInstances
+    ScopedTypeVariables
+    MonadComprehensions
+    LambdaCase
+    MultiWayIf
+    KindSignatures
+  }
+  ghc-options: {
+    -Wall
+    -fprof-auto -fprof-cafs -fno-spec-constr
+    -j
+    -fno-warn-unused-imports
+    -fno-warn-orphans
+  }
+  if flag(brittany-dev) {
+    ghc-options: -O0 -Werror -fobject-code
+  }

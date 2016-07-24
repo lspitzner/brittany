@@ -1,0 +1,17 @@
+idempotency testing on real-life examples, i.e. checks that brittany(x) is
+equal to brittany(brittany(x)) for some x's. The idea is that these testcases
+are not yet transformed, i.e. that x is not brittany(x). This can capture
+certain bugs that are not detected by checking that brittany behaves as
+identity on "well-formed" input.
+
+to run:
+
+- put a "brittany" executable into this directory.
+- cd into this directory.
+- ./run.sh
+
+report.txt will contain the results.
+
+note that only the configuration in brittany.yaml is tested, which contains
+the default settings. ideally this would be managed in some other, more
+transparent fashion.
