@@ -1,0 +1,25 @@
+_conf_errorHandling:
+  _econf_Werror: false
+  _econf_produceOutputOnErrors: false
+_conf_layout:
+  _lconfig_indentPolicy: IndentPolicyFree
+  _lconfig_cols: 80
+  _lconfig_indentAmount: 2
+  _lconfig_importColumn: 60
+  _lconfig_altChooser:
+    tag: AltChooserBoundedSearch
+    contents: 3
+  _lconfig_indentWhereSpecial: true
+  _lconfig_indentListSpecial: true
+_conf_debug:
+  _dconf_dump_annotations: false
+  _dconf_dump_bridoc_simpl_par: false
+  _dconf_dump_bridoc_simpl_indent: false
+  _dconf_dump_bridoc_simpl_floating: false
+  _dconf_dump_ast_full: false
+  _dconf_dump_bridoc_simpl_columns: false
+  _dconf_dump_ast_unknown: false
+  _dconf_dump_bridoc_simpl_alt: false
+  _dconf_dump_bridoc_final: false
+  _dconf_dump_bridoc_raw: false
+  _dconf_dump_config: false
