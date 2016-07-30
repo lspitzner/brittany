@@ -53,12 +53,19 @@ mainCmdParser = do
   addCmdSynopsis "haskell source pretty printer"
   addCmdHelp $ PP.vcat $ List.intersperse (PP.text "")
     [ parDoc $ "Transforms one haskell module by reformatting"
-            ++ " (parts of) the source code, while preserving the"
-            ++ " parts not transformed."
-            ++ " Especially, comments are preserved completely"
-            ++ " and newlines are in many cases."
-    , parDoc $ "Based on ghc-exactprint, thus supporting all that"
-            ++ " ghc does."
+            ++ " (parts of) the source code (while preserving the"
+            ++ " parts not transformed)."
+    , parDoc $ "Based on ghc-exactprint, thus (theoretically) supporting all"
+            ++ " that ghc does."
+    , parDoc $ "This is an early, experimental release. Some flags currently"
+            ++ " won't be parsed correctly or will have no effect."
+            ++ " Only type-signatures and function-bindings are transformed."
+            ++ " The output may"
+            ++ " not be valid haskell if you run into some unfixed bug."
+            ++ " (And yes, i should include automatic checking for that..)"
+    , parDoc $ "See https://github.com/lspitzner/brittany"
+    , parDoc $ "Please report bugs at"
+            ++ " https://github.com/lspitzner/brittany/issues"
     ]
   -- addCmd "debugArgs" $ do
   addHelpCommand
@@ -76,7 +83,10 @@ mainCmdParser = do
   desc <- peekCmdDesc
   addCmdImpl $ void $ do
     when printVersion $ do
-      liftIO $ putStrLn $ "brittany version " ++ showVersion version
+      liftIO $ do
+        putStrLn $ "brittany version " ++ showVersion version
+        putStrLn $ "Copyright (C) 2016 Lennart Spitzner"
+        putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
