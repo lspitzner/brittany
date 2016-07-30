@@ -71,50 +71,6 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
 layoutBind :: ToBriDocC (HsBindLR RdrName RdrName) (Either [BriDocNumbered] BriDocNumbered)
 layoutBind lbind@(L _ bind) = case bind of
   FunBind fId (MG lmatches@(L _ matches) _ _ _) _ _ [] -> do
-    -- funcPatDocs :: [BriDocNumbered] <- matches `forM` \(L _ match@(Match _
-    --                                           pats
-    --                                           _mType -- not an actual type sig
-    --                                           (GRHSs grhss whereBinds))) -> do
-    --   let isInfix = isInfixMatch match
-    --   let mId     = fId
-    --   idStr <- lrdrNameToTextAnn mId
-    --   patDocs <- docSharedWrapper layoutPat `mapM` pats
-    --   let funcPatternPartLine = case patDocs of
-    --         (p1:pr) | isInfix -> docCols ColFuncPatternsInfix
-    --           ( [ appSep $ docForceSingleline p1
-    --             , appSep $ docLit idStr
-    --             ]
-    --           ++ (pr <&> (\p -> appSep $ docForceSingleline p))
-    --           )
-    --         ps -> docCols ColFuncPatternsPrefix
-    --           $ appSep (docLit $ idStr)
-    --           : (ps <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
-    --   grhssDocsNoInd :: ToBriDocM BriDocNumbered <- do
-    --     case grhss of
-    --       [grhs1] -> _ grhs1
-    --       (grhs1:grhsr) -> do
-    --         grhsDoc1 <- _ grhs1
-    --         grhsDocr <- _ grhsr
-    --         return $ docLines $ grhsDoc1 : grhsDocr
-    --       [] -> error "layoutBind grhssDocsNoInd"
-    --   let grhssDocs = docAlt [grhssDocsNoInd {-, grhssDocsInd TODO-}]
-    --   layoutLocalBinds whereBinds >>= \case
-    --     Nothing -> grhssDocs
-    --     Just whereDocs -> do
-    --       let defaultWhereDocs = docPar grhssDocs 
-    --                            $ docEnsureIndent BrIndentRegular
-    --                            $ docAddBaseY BrIndentRegular
-    --                            $ docPar (docLit $ Text.pack "where")
-    --                            $ docSetIndentLevel $ docLines $ return <$> whereDocs
-    --       case whereDocs of
-    --         [wd] -> docAlt
-    --           [ docSeq [ appSep $ docForceSingleline grhssDocs
-    --                    , appSep $ docLit $ Text.pack "where"
-    --                    , docForceSingleline $ return wd
-    --                    ]
-    --           , defaultWhereDocs
-    --           ]
-    --         _ -> defaultWhereDocs
     idStr <- lrdrNameToTextAnn fId
     binderDoc <- docLit $ Text.pack "="
     funcPatDocs <- docWrapNode lbind $ docWrapNode lmatches $ layoutPatternBind (Just idStr) binderDoc `mapM` matches
@@ -125,33 +81,6 @@ layoutBind lbind@(L _ bind) = case bind of
     mWhereDocs <- layoutLocalBinds whereBinds
     binderDoc <- docLit $ Text.pack "="
     fmap Right $ docWrapNode lbind $ layoutPatternBindFinal binderDoc (Just patDoc) clauseDocs mWhereDocs
-    -- grhssDocsNoInd <- do
-    --   case grhss of
-    --     [grhs1] -> docSharedWrapper (layoutGrhs (Just $ appSep patDoc)) grhs1
-    --     (grhs1:grhsr) -> do
-    --       grhsDoc1 <- docSharedWrapper (layoutGrhs (Just $ appSep patDoc)) grhs1
-    --       grhsDocr <- docSharedWrapper (layoutGrhs Nothing) `mapM` grhsr
-    --       return $ docLines $ grhsDoc1 : grhsDocr
-    --     [] -> error "layoutBind grhssDocsNoInd"
-    -- let grhssDocs = docAlt [grhssDocsNoInd {-, grhssDocsInd TODO-}]
-    -- case mWhereDocs of
-    --   Nothing ->
-    --     Right <$> grhssDocs
-    --   Just whereDocs -> do
-    --     let defaultWhereDocs = docAddBaseY BrIndentRegular
-    --                          $ docPar grhssDocs 
-    --                          $ docAddBaseY BrIndentRegular
-    --                          $ docPar (docLit $ Text.pack "where")
-    --                          $ docSetIndentLevel $ docLines $ return <$> whereDocs
-    --     Right <$> case whereDocs of
-    --       [wd] -> docAlt
-    --         [ docSeq [ appSep $ docForceSingleline grhssDocs
-    --                  , appSep $ docLit $ Text.pack "where"
-    --                  , docForceSingleline $ return wd
-    --                  ]
-    --         , defaultWhereDocs
-    --         ]
-    --       _ -> defaultWhereDocs
   _ -> Right <$> briDocByExact lbind
 
 data BagBindOrSig = BagBind (LHsBindLR RdrName RdrName)
@@ -326,72 +255,3 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
             ]
         )
     ]
-
--- layoutBind :: LayouterFType' (HsBindLR RdrName RdrName)
--- layoutBind lbind@(L _ bind) = case bind of
--- #if MIN_VERSION_ghc(8,0,0)
---   FunBind fId (MG (L _ matches) _ _ _) _ _ [] -> do
--- #else
---   FunBind fId fInfix (MG matches _ _ _) _ _ [] -> do
--- #endif
---     return $ Layouter
---       { _layouter_desc = LayoutDesc
---         { _ldesc_line  = Nothing -- no parent
---         , _ldesc_block = Nothing -- no parent
---         }
---       , _layouter_func = \_params -> do
---           layoutWritePriorCommentsRestore lbind
---           moveToExactAnn lbind
---           -- remaining <- getCurRemaining
--- #if MIN_VERSION_ghc(8,0,0)
---           matches `forM_` \(L _ match@(Match _
---                                              pats
---                                              mType
---                                              (GRHSs grhss (L _ whereBinds)))) -> do
---             let isInfix = isInfixMatch match
---             let mId     = fId
--- #else
---           matches `forM_` \(L _ (Match mIdInfix
---                                        pats
---                                        mType
---                                        (GRHSs grhss whereBinds))) -> do
---             let isInfix = maybe fInfix snd mIdInfix
---             let mId     = maybe fId fst mIdInfix
--- #endif
---             idStr <- lrdrNameToTextAnn mId
---             patLays <- pats `forM` \p -> layouterFToLayouterM $ layoutPat p
---             case patLays of
---               (p1:pr) | isInfix -> do
---                 applyLayouter p1 defaultParams
---                 layoutWriteAppend $ (Text.pack " ") <> idStr
---                 pr `forM_` \p -> do
---                   layoutWriteAppend $ Text.pack " "
---                   applyLayouter p defaultParams
---               ps                -> do
---                 layoutWriteAppend $ idStr
---                 ps `forM_` \p -> do
---                   layoutWriteAppend $ Text.pack " "
---                   applyLayouter p defaultParams
---             case mType of
---               Nothing -> return ()
---               Just t  -> do
---                 tLay <- layouterFToLayouterM $ layoutType t
---                 layoutWriteAppend $ Text.pack " :: "
---                 applyLayouter tLay defaultParams
---             grhss `forM_` \case
---               L _ (GRHS [] body) -> do
---                 layoutWriteAppend $ Text.pack " = "
---                 l <- layouterFToLayouterM $ layoutExpr body
---                 layoutWithAddIndent $ do
---                   applyLayouter l defaultParams
---               grhs -> do
---                 l <- layoutByExact grhs
---                 applyLayouter l defaultParams
---             case whereBinds of
---               HsValBinds valBinds -> undefined valBinds -- TODO
---               HsIPBinds ipBinds   -> undefined ipBinds -- TODO
---               EmptyLocalBinds     -> return ()
---           layoutWritePostCommentsRestore lbind
---       , _layouter_ast = lbind
---       }
---   _ -> layoutByExact lbind

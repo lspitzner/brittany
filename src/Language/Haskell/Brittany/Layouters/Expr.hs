@@ -67,30 +67,6 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   HsLam{} ->
     unknownNodeError "HsLam too complex" lexpr
   HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
-    -- funcPatDocs <- matches `forM` \(L _ (Match _
-    --                                     pats
-    --                                     _mType -- not an actual type sig
-    --                                     (GRHSs grhss whereBinds))) -> do
-    --   patDocs <- pats `forM` docSharedWrapper layoutPat
-    --   let funcPatternPartLine = case patDocs of
-    --         ps -> docCols ColFuncPatternsPrefix
-    --           $ (ps <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
-    --   grhssDocsNoInd :: ToBriDocM BriDocNumbered <- do
-    --     case grhss of
-    --       [grhs1] -> docSharedWrapper (layoutGrhsLCase (Just funcPatternPartLine)) grhs1
-    --       (grhs1:grhsr) -> do
-    --         grhsDoc1 <- docSharedWrapper (layoutGrhsLCase (Just funcPatternPartLine)) grhs1
-    --         grhsDocr <- docSharedWrapper (layoutGrhsLCase Nothing) `mapM` grhsr
-    --         return $ docLines $ grhsDoc1 : grhsDocr
-    --       [] -> error "layoutBind grhssDocsNoInd"
-    --   let grhssDocs = docAlt [grhssDocsNoInd {-, grhssDocsInd TODO-}]
-    --   layoutLocalBinds whereBinds >>= \case
-    --     Nothing -> grhssDocs
-    --     Just whereDocs -> docAddBaseY BrIndentRegular
-    --                     $ docPar grhssDocs 
-    --                     $ docAddBaseY BrIndentRegular
-    --                     $ docPar (docLit $ Text.pack "where")
-    --                     $ docSetIndentLevel $ docLines $ return <$> whereDocs
     binderDoc <- docLit $ Text.pack "->"
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
     docAddBaseY BrIndentRegular $ docPar
@@ -246,30 +222,6 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     unknownNodeError "ExplicitTuple|.." lexpr 
   HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
     cExpDoc <- docSharedWrapper layoutExpr cExp
-    -- funcPatDocs <- matches `forM` \(L _ (Match _
-    --                                     pats
-    --                                     _mType -- not an actual type sig
-    --                                     (GRHSs grhss whereBinds))) -> do
-    --   patDocs <- pats `forM` docSharedWrapper layoutPat
-    --   let funcPatternPartLine =
-    --         docCols ColCasePattern
-    --           $ (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
-    --   grhssDocsNoInd <- do
-    --     case grhss of
-    --       [grhs1] -> docSharedWrapper (layoutGrhsCase (Just funcPatternPartLine)) grhs1
-    --       (grhs1:grhsr) -> do
-    --         grhsDoc1 <- docSharedWrapper (layoutGrhsCase (Just funcPatternPartLine)) grhs1
-    --         grhsDocr <- docSharedWrapper (layoutGrhsCase Nothing) `mapM` grhsr
-    --         return $ docLines $ grhsDoc1 : grhsDocr
-    --       [] -> error "layoutBind grhssDocsNoInd"
-    --   let grhssDocs = docAlt [grhssDocsNoInd {-, grhssDocsInd TODO-}]
-    --   layoutLocalBinds whereBinds >>= \case
-    --     Nothing -> grhssDocs
-    --     Just lhsBindsLRDoc -> docAddBaseY BrIndentRegular
-    --              $ docPar grhssDocs 
-    --              $ docAddBaseY BrIndentRegular
-    --              $ docPar (docLit $ Text.pack "where")
-    --              $ docSetIndentLevel $ docLines $ return <$> lhsBindsLRDoc
     binderDoc <- docLit $ Text.pack "->"
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
     docAlt
