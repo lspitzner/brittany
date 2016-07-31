@@ -5,6 +5,7 @@ module Language.Haskell.Brittany.Layouters.Expr
   , litBriDoc
   , isExpressionTypeHeadPar
   , isExpressionTypeHeadPar'
+  , overLitValBriDoc
   )
 where
 
@@ -26,6 +27,7 @@ import           BasicTypes
 import           Language.Haskell.Brittany.Layouters.Pattern
 import           Language.Haskell.Brittany.Layouters.Decl
 import           Language.Haskell.Brittany.Layouters.Stmt
+import           Language.Haskell.Brittany.Layouters.Type
 
 
 
@@ -294,9 +296,62 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     docAddBaseY BrIndentRegular $ docPar
       (docLit $ Text.pack "if")
       (layoutPatternBindFinal binderDoc Nothing clauseDocs Nothing)
-  HsLet{} -> do
-    -- TODO
-    briDocByExact lexpr
+  HsLet binds exp1 -> do
+    expDoc1 <- docSharedWrapper layoutExpr exp1
+    mBindDocs <- layoutLocalBinds binds
+    case mBindDocs of
+      Just [bindDoc] -> docAlt
+        [ docSeq
+          [ appSep $ docLit $ Text.pack "let"
+          , appSep $ docForceSingleline $ return bindDoc
+          , appSep $ docLit $ Text.pack "in"
+          , docForceSingleline $ expDoc1
+          ]
+        , docLines
+          [ docSeq
+            [ appSep $ docLit $ Text.pack "let"
+            , docSetBaseY $ docSetIndentLevel $ return bindDoc
+            ]
+          , docSeq
+            [ appSep $ docLit $ Text.pack "in "
+            , docSetBaseY $ docSetIndentLevel $ expDoc1
+            ]
+          ]
+        , docLines
+          [ docAddBaseY BrIndentRegular
+          $ docPar
+            (appSep $ docLit $ Text.pack "let")
+            (docSetIndentLevel $ return bindDoc)
+          , docAddBaseY BrIndentRegular
+          $ docPar
+            (appSep $ docLit $ Text.pack "in")
+            (docSetIndentLevel $ expDoc1)
+          ]
+        ]
+      Just bindDocs@(_:_) -> docAlt
+        [ docLines
+          [ docSeq
+            [ appSep $ docLit $ Text.pack "let"
+            , docSetBaseY $ docSetIndentLevel $ docLines $ return <$> bindDocs
+            ]
+          , docSeq
+            [ appSep $ docLit $ Text.pack "in "
+            , docSetBaseY $ docSetIndentLevel $ expDoc1
+            ]
+          ]
+        , docLines
+          [ docAddBaseY BrIndentRegular
+          $ docPar
+            (appSep $ docLit $ Text.pack "let")
+            (docSetIndentLevel $ docLines $ return <$> bindDocs)
+          , docAddBaseY BrIndentRegular
+          $ docPar
+            (appSep $ docLit $ Text.pack "in")
+            (docSetIndentLevel $ expDoc1)
+          ]
+        ]
+      _ -> docSeq [appSep $ docLit $ Text.pack "let in", expDoc1]
+    -- docSeq [appSep $ docLit "let in", expDoc1]
   HsDo DoExpr (L _ stmts) _ -> do
     stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
     docAddBaseY BrIndentRegular
@@ -449,9 +504,14 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             lineN = docLit $ Text.pack "}"
             in [line1] ++ lineR ++ [lineN])
       ]
-  ExprWithTySig{} -> do
-    -- TODO
-    briDocByExact lexpr
+  ExprWithTySig exp1 (HsIB _ (HsWC _ _ typ1)) -> do
+    expDoc <- docSharedWrapper layoutExpr exp1
+    typDoc <- docSharedWrapper layoutType typ1
+    docSeq
+      [ appSep expDoc
+      , appSep $ docLit $ Text.pack "::"
+      , typDoc
+      ]
   ExprWithTySigOut{} -> do
     -- TODO
     briDocByExact lexpr

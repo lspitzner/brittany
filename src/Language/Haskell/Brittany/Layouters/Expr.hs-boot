@@ -5,6 +5,7 @@ module Language.Haskell.Brittany.Layouters.Expr
   , litBriDoc
   , isExpressionTypeHeadPar
   , isExpressionTypeHeadPar'
+  , overLitValBriDoc
   )
 where
 
@@ -31,3 +32,5 @@ litBriDoc :: HsLit -> BriDocFInt
 
 isExpressionTypeHeadPar :: LHsExpr RdrName -> Bool
 isExpressionTypeHeadPar' :: LHsExpr RdrName -> Bool
+
+overLitValBriDoc :: OverLitVal -> BriDocFInt

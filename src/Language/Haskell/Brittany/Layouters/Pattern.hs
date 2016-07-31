@@ -107,6 +107,8 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   BangPat pat1 -> do
     patDoc <- docSharedWrapper layoutPat pat1
     docSeq [docLit $ Text.pack "!", patDoc]
+  NPat llit@(L _ (OverLit olit _ _ _)) _ _ _ -> do
+    docWrapNode llit $ allocateNode $ overLitValBriDoc olit
 
 -- #if MIN_VERSION_ghc(8,0,0)
 --   VarPat n -> return $ stringLayouter lpat $ lrdrNameToText n
