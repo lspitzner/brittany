@@ -221,6 +221,7 @@ test-suite unittests
     -j
     -fno-warn-unused-imports
     -fno-warn-orphans
+    -rtsopts
     -with-rtsopts "-M2G"
   }
   if flag(brittany-dev) {
