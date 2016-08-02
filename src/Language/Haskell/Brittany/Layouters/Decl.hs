@@ -43,8 +43,8 @@ layoutSig lsig@(L _loc sig) = docWrapNode lsig $ case sig of
     typeDoc <- docSharedWrapper layoutType typ
     docAlt
       [ docSeq
-        [ docPostComment lsig $ docLit nameStr
-        , docLit $ Text.pack " :: "
+        [ appSep $ docPostComment lsig $ docLit nameStr
+        , appSep $ docLit $ Text.pack "::"
         , docForceSingleline typeDoc
         ]
       , docAddBaseY BrIndentRegular
@@ -65,7 +65,7 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
     patDoc <- docSharedWrapper layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
     docCols ColBindStmt
-      [patDoc, docSeq [docLit $ Text.pack " <- ", expDoc]]
+      [appSep patDoc, docSeq [appSep $ docLit $ Text.pack "<-", expDoc]]
   _ -> briDocByExact lgstmt -- TODO
 
 layoutBind :: ToBriDocC (HsBindLR RdrName RdrName) (Either [BriDocNumbered] BriDocNumbered)

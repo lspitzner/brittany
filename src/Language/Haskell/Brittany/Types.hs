@@ -37,7 +37,11 @@ type PostMap  = Map AnnKey [(Comment, DeltaPos)]
 data LayoutState = LayoutState
   { _lstate_baseY         :: Int -- ^ number of current indentation columns
                                  -- (not number of indentations).
-  , _lstate_curY          :: Int -- ^ number of chars in the current line.
+  , _lstate_curYOrAddNewline :: Either Int Int
+             -- ^ Either:
+             -- 1) number of chars in the current line.
+             -- 2) number of newlines to be inserted before inserting any
+             --    non-space elements.
   , _lstate_indLevel      :: Int -- ^ current indentation level. set for
                                  -- any layout-affected elements such as
                                  -- let/do/case/where elements.
@@ -54,7 +58,12 @@ data LayoutState = LayoutState
                                       -- really _should_ be included in the
                                       -- output.
   , _lstate_commentsPost  :: PostMap  -- similarly, for post-node comments.
-  , _lstate_commentCol    :: Maybe Int
+  , _lstate_commentCol    :: Maybe Int -- this communicates two things:
+                                       -- firstly, that cursor is currently
+                                       -- at the end of a comment (so needs
+                                       -- newline before any actual content).
+                                       -- secondly, the column at which
+                                       -- insertion of comments started.
   , _lstate_addSepSpace   :: Maybe Int -- number of spaces to insert if anyone
                                        -- writes (any non-spaces) in the
                                        -- current line.
@@ -66,18 +75,31 @@ data LayoutState = LayoutState
       -- While this flag is on, this behaviour will be disabled.
       -- The flag is automatically turned off when inserting any kind of
       -- newline.
-  , _lstate_isNewline     :: NewLineState
-      -- captures if the layouter currently is in a new line, i.e. if the
-      -- current line only contains (indentation) spaces.
+  -- , _lstate_isNewline     :: NewLineState
+  --     -- captures if the layouter currently is in a new line, i.e. if the
+  --     -- current line only contains (indentation) spaces.
   }
 
-data NewLineState = NewLineStateInit -- initial state. we do not know if in a
-                                     -- newline, really. by special-casing
-                                     -- this we can appropriately handle it
-                                     -- differently at use-site.
-                  | NewLineStateYes
-                  | NewLineStateNo
-  deriving Eq
+-- evil, incomplete Show instance; only for debugging.
+instance Show LayoutState where
+  show state =
+    "LayoutState"
+    ++ "{baseY=" ++ show (_lstate_baseY state)
+    ++ ",curYOrAddNewline=" ++ show (_lstate_curYOrAddNewline state)
+    ++ ",indLevel=" ++ show (_lstate_indLevel state)
+    ++ ",indLevelLinger=" ++ show (_lstate_indLevelLinger state)
+    ++ ",commentCol=" ++ show (_lstate_commentCol state)
+    ++ ",addSepSpace=" ++ show (_lstate_addSepSpace state)
+    ++ ",inhibitMTEL=" ++ show (_lstate_inhibitMTEL state)
+    ++ "}"
+
+-- data NewLineState = NewLineStateInit -- initial state. we do not know if in a
+--                                      -- newline, really. by special-casing
+--                                      -- this we can appropriately handle it
+--                                      -- differently at use-site.
+--                   | NewLineStateYes
+--                   | NewLineStateNo
+--   deriving Eq
 
 -- data LayoutSettings = LayoutSettings
 --   { _lsettings_cols :: Int -- the thing that has default 80.

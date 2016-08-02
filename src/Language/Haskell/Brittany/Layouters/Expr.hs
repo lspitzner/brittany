@@ -73,7 +73,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
     docAddBaseY BrIndentRegular $ docPar
       (docLit $ Text.pack "\\case")
-      (docLines $ return <$> funcPatDocs)
+      (docSetIndentLevel $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
   HsApp exp1@(L _ HsApp{}) exp2 -> do
     let gather :: [LHsExpr RdrName] -> LHsExpr RdrName -> (LHsExpr RdrName, [LHsExpr RdrName])
         gather list = \case

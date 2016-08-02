@@ -207,7 +207,7 @@ tellDebugMess :: MonadMultiWriter
   (Seq String) m => String -> m ()
 tellDebugMess s = mTell $ Seq.singleton s
 
-tellDebugMessShow :: (MonadMultiWriter
+tellDebugMessShow :: forall a m . (MonadMultiWriter
   (Seq String) m, Show a) => a -> m () 
 tellDebugMessShow = tellDebugMess . show
 

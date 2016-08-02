@@ -102,7 +102,7 @@ layoutBriDoc ast briDoc = do
   
   let state = LayoutState
         { _lstate_baseY          = 0
-        , _lstate_curY           = 0
+        , _lstate_curYOrAddNewline = Right 0
         , _lstate_indLevel       = 0
         , _lstate_indLevelLinger = 0
         , _lstate_commentsPrior = extractCommentsPrior filteredAnns
@@ -110,7 +110,6 @@ layoutBriDoc ast briDoc = do
         , _lstate_commentCol  = Nothing
         , _lstate_addSepSpace = Nothing
         , _lstate_inhibitMTEL = False
-        , _lstate_isNewline   = NewLineStateInit
         }
 
   state' <- MultiRWSS.withMultiStateS state
@@ -1073,6 +1072,7 @@ layoutBriDocM = \case
   BDEmpty -> do
     return () -- can it be that simple
   BDLit t -> do
+    layoutIndentRestorePostComment
     layoutRemoveIndentLevelLinger
     layoutWriteAppend t
   BDSeq list -> do
@@ -1142,7 +1142,7 @@ layoutBriDocM = \case
       state <- mGet
       let m   = _lstate_commentsPrior state
       let allowMTEL = not (_lstate_inhibitMTEL state)
-                   && _lstate_isNewline state /= NewLineStateNo
+                   && Data.Either.isRight (_lstate_curYOrAddNewline state)
       mAnn <- do
         let mAnn = Map.lookup annKey m
         mSet $ state { _lstate_commentsPrior = Map.delete annKey m }
@@ -1152,17 +1152,16 @@ layoutBriDocM = \case
         Just [] -> when allowMTEL $ moveToExactAnn annKey
         Just priors -> do
           -- layoutResetSepSpace
-          layoutSetCommentCol
           priors `forM_` \( ExactPrint.Types.Comment comment _ _
-                          , ExactPrint.Types.DP (x, y)
+                          , ExactPrint.Types.DP (y, x)
                           ) -> do
-            fixedX <- fixMoveToLineByIsNewline x
-            replicateM_ fixedX layoutWriteNewline
-            layoutMoveToIndentCol y
-            -- layoutWriteAppend $ Text.pack $ replicate y ' '
+            layoutMoveToCommentPos y x
+            -- fixedX <- fixMoveToLineByIsNewline x
+            -- replicateM_ fixedX layoutWriteNewline
+            -- layoutMoveToIndentCol y
             layoutWriteAppendMultiline $ Text.pack $ comment
+            -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
           when allowMTEL $ moveToExactAnn annKey
-          layoutIndentRestorePostComment
     layoutBriDocM bd
   BDAnnotationPost annKey bd -> do
     layoutBriDocM bd
@@ -1176,16 +1175,15 @@ layoutBriDocM = \case
       case mAnn of
         Nothing -> return ()
         Just posts -> do
-          when (not $ null posts) $ layoutSetCommentCol
           posts `forM_` \( ExactPrint.Types.Comment comment _ _
                           , ExactPrint.Types.DP (x, y)
                           ) -> do
-            fixedX <- fixMoveToLineByIsNewline x
-            replicateM_ fixedX layoutWriteNewline
-            -- layoutWriteAppend $ Text.pack $ replicate y ' '
-            layoutMoveToIndentCol y
+            layoutMoveToCommentPos x y
+            -- fixedX <- fixMoveToLineByIsNewline x
+            -- replicateM_ fixedX layoutWriteNewline
+            -- layoutMoveToIndentCol y
             layoutWriteAppendMultiline $ Text.pack $ comment
-    layoutIndentRestorePostComment
+            -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDNonBottomSpacing bd -> layoutBriDocM bd
   BDProhibitMTEL bd -> do
     -- set flag to True for this child, but disable afterwards.
@@ -1279,7 +1277,8 @@ layoutBriDocM = \case
       ColInfo ind _ list -> do
         curX <- do
           state <- mGet
-          return $ _lstate_curY state + fromMaybe 0 (_lstate_addSepSpace state)
+          return $ either id (const 0) (_lstate_curYOrAddNewline state)
+                 + fromMaybe 0 (_lstate_addSepSpace state)
         -- tellDebugMess $ show curX
         let Just cols = IntMapS.lookup ind m
         let (maxX, posXs) = (mapAccumL (\acc x -> (acc+x,acc)) curX cols)
