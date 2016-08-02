@@ -634,7 +634,9 @@ getSpacings limit bridoc = rec bridoc
         BDFPar{} -> error "BDPar with indent in getSpacing"
         BDFAlt [] -> error "empty BDAlt"
         -- BDAlt (alt:_) -> rec alt
-        BDFAlt alts -> filterAndLimit . join . transpose <$> rec `mapM` alts
+        BDFAlt alts -> do
+          r <- filterAndLimit . join . Control.Lens.transposeOf traverse <$> (rec `mapM` alts)
+          return r
         BDFForceMultiline  bd -> rec bd
         BDFForceSingleline bd -> do
           mVs <- rec bd
@@ -654,10 +656,10 @@ getSpacings limit bridoc = rec bridoc
           -- counterexample would be anything like Seq[Lit "foo", Lines].
           lSpss <- rec `mapM` ls
           return $ filterAndLimit
-                 $ transpose lSpss <&> \lSps ->
+                 $ Control.Lens.transposeOf traverse lSpss <&> \lSps ->
                      VerticalSpacing 0 (spMakePar $ maxVs lSps)
           -- lSpss@(mVs:_) <- rec `mapM` ls
-          -- return $ case transpose lSpss of -- TODO: we currently only
+          -- return $ case Control.Lens.transposeOf traverse lSpss of -- TODO: we currently only
           --                      -- consider the first alternative for the
           --                      -- line's spacings.
           --                      -- also i am not sure if always including
@@ -685,7 +687,10 @@ getSpacings limit bridoc = rec bridoc
             else mVs <&> \vs -> vs { _vs_paragraph = VerticalSpacingParNonBottom}
         BDFProhibitMTEL bd -> rec bd
 #if INSERTTRACESGETSPACING
-      mTell $ Seq.fromList ["getSpacing: visiting: "
+      case brdc of
+        BDFAnnotationPrior{} -> return ()
+        BDFAnnotationPost{} -> return ()
+        _ -> mTell $ Seq.fromList ["getSpacing: visiting: "
                             ++ show {-(toConstr $ brdc)-} (briDocToDoc $ unwrapBriDocNumbered (0, brdc))
                            , " -> "
                             ++ show result
@@ -796,6 +801,8 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDSeq $ List.init list ++ [BDAddBaseY ind (List.last list)]
       BDAddBaseY _ lit@BDLit{} ->
         Just $ lit
+      BDAddBaseY ind (BDSetBaseY x) ->
+        Just $ BDSetBaseY (BDAddBaseY ind x)
       _ -> Nothing
     stepBO :: BriDoc -> BriDoc
     stepBO = -- traceFunctionWith "stepBO" (show . briDocToDocWithAnns) (show . briDocToDocWithAnns) $
@@ -823,6 +830,8 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDPar (mergeIndents ind1 ind2) line indented
       BDAddBaseY _ lit@BDLit{} ->
         Just $ lit
+      BDAddBaseY ind (BDSetBaseY x) ->
+        Just $ BDSetBaseY (BDAddBaseY ind x)
       -- prior floating in
       BDAnnotationPrior annKey1 (BDPar ind line indented) ->
         Just $ BDPar ind (BDAnnotationPrior annKey1 line) indented
