@@ -510,10 +510,12 @@ layoutSetBaseColCur m = do
   tellDebugMessShow ("layoutSetBaseColCur")
 #endif
   state <- mGet
-  case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
-    (Left i, Just j) -> layoutSetBaseColInternal (i+j)
-    (Left i, Nothing) -> layoutSetBaseColInternal i
-    (Right{}, _) -> return ()
+  case _lstate_commentCol state of
+    Nothing -> case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
+      (Left i, Just j) -> layoutSetBaseColInternal (i+j)
+      (Left i, Nothing) -> layoutSetBaseColInternal i
+      (Right{}, _) -> return ()
+    Just cCol -> layoutSetBaseColInternal cCol
   m
   layoutSetBaseColInternal $ _lstate_baseY state
 

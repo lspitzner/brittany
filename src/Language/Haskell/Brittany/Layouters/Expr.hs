@@ -60,11 +60,18 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     docAlt
       [ docSeq
         [ docLit $ Text.pack "\\"
-        , docWrapNode lmatch $ funcPatternPartLine
+        , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
         , appSep $ docLit $ Text.pack "->"
-        , docWrapNode lgrhs $ bodyDoc
+        , docWrapNode lgrhs $ docForceSingleline bodyDoc
         ]
-      -- TODO
+      , docAddBaseY BrIndentRegular
+      $ docPar
+        (docSeq
+          [ docLit $ Text.pack "\\"
+          , docWrapNode lmatch $ appSep $ docForceSingleline funcPatternPartLine
+          , docLit $ Text.pack "->"
+          ])
+        (docWrapNode lgrhs $ docNonBottomSpacing bodyDoc)
       ]
   HsLam{} ->
     unknownNodeError "HsLam too complex" lexpr
@@ -142,15 +149,19 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , appSep $ docForceSingleline opLastDoc
         , docForceSingleline expLastDoc
         ]
-      , docAddBaseY BrIndentRegular
+      , docSetBaseY
       $ docPar
-          (docSetBaseY leftOperandDoc)
+          leftOperandDoc
           ( docLines
           $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
             ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
           )
-      -- TODO: singleline
-      -- TODO: wrapping on spine nodes
+      , docPar
+          leftOperandDoc
+          ( docLines
+          $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
+            ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
+          )
       ]
   OpApp expLeft expOp _ expRight -> do
     expDocLeft  <- docSharedWrapper layoutExpr expLeft
@@ -179,7 +190,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           $ docPar
               expDocLeft
               -- TODO: turn this into docCols?
-              (docCols ColOpPrefix [appSep $ expDocOp, expDocRight])
+              (docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight])
           ]
   NegApp{} -> do
     -- TODO
@@ -192,7 +203,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docForceSingleline innerExpDoc
         , docLit $ Text.pack ")"
         ]
-      -- TODO
+      , docSetBaseY $ docLines
+        [ docCols ColOpPrefix
+          [ docParenLSep
+          , docAddBaseY (BrIndentSpecial 2) innerExpDoc
+          ]
+        , docLit $ Text.pack ")"
+        ]
       ]
   SectionL left op -> do -- TODO: add to testsuite
     leftDoc <- docSharedWrapper layoutExpr left
@@ -241,7 +258,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           )
           ( docAddBaseY BrIndentRegular
           $ docPar (docLit $ Text.pack "of")
-            (docSetIndentLevel $ docLines $ return <$> funcPatDocs)
+            (docSetIndentLevel $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
           )
       ]
   HsIf _ ifExpr thenExpr elseExpr -> do
@@ -379,7 +396,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
                     [appSep $ docLit $ Text.pack "|", s1]
           lineM = sM <&> \d ->
                   docCols ColListComp [docCommaSep, d]
-          end   = docLit $ Text.pack "]"
+          end   = docLit $ Text.pack " ]"
         in docSetBaseY $ docLines $ [start, line1] ++ lineM ++ [end]
       ]
   HsDo{} -> do
@@ -443,19 +460,20 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     docSeq [rExprDoc, docLit $ Text.pack "{}"]
   RecordUpd rExpr fields@(_:_) _ _ _ _ -> do
     rExprDoc <- docSharedWrapper layoutExpr rExpr
-    rFs@(rF1:rFr) <- fields `forM` \(L _ (HsRecField (L _ ambName) rFExpr _)) -> do
-      rFExpDoc <- docSharedWrapper layoutExpr rFExpr
-      return $ case ambName of
-        Unambiguous n _ -> (lrdrNameToText n, rFExpDoc)
-        Ambiguous   n _ -> (lrdrNameToText n, rFExpDoc)
+    rFs@((rF1f, rF1n, rF1e):rFr) <- fields
+      `forM` \lfield@(L _ (HsRecField (L _ ambName) rFExpr _)) -> do
+        rFExpDoc <- docSharedWrapper layoutExpr rFExpr
+        return $ case ambName of
+          Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
+          Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
     docAlt
       -- singleline
       [ docSeq
         [ appSep rExprDoc
         , appSep $ docLit $ Text.pack "{"
         , appSep $ docSeq $ List.intersperse docCommaSep
-                $ rFs <&> \(fieldStr, fieldDoc) ->
-                    docSeq [ appSep $ docLit fieldStr
+                $ rFs <&> \(lfield, fieldStr, fieldDoc) ->
+                    docSeq [ appSep $ docWrapNode lfield $ docLit fieldStr
                           , appSep $ docLit $ Text.pack "="
                           , docForceSingleline fieldDoc
                           ]
@@ -467,14 +485,14 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docSetBaseY $ docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docLit $ fst rF1
+              , appSep $ docLit $ rF1n
               , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docForceSingleline $ snd rF1
+                      , docForceSingleline $ rF1e
                       ]
               ]
-            lineR = rFr <&> \(fText, fDoc) -> docCols ColRecUpdate
+            lineR = rFr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
-              , appSep $ docLit $ fText
+              , appSep $ docWrapNode lfield $ docLit $ fText
               , docSeq [ appSep $ docLit $ Text.pack "="
                       , docForceSingleline fDoc
                       ]
@@ -486,17 +504,17 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       , docAddBaseY BrIndentRegular
       $ docPar
           rExprDoc
-          (docLines $ let
+          (docNonBottomSpacing $ docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docLit $ fst rF1
+              , appSep $ docWrapNode rF1f $ docLit $ rF1n
               , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docAddBaseY BrIndentRegular $ snd rF1
+                      , docAddBaseY BrIndentRegular $ rF1e
                       ]
               ]
-            lineR = rFr <&> \(fText, fDoc) -> docCols ColRecUpdate
+            lineR = rFr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
-              , appSep $ docLit $ fText
+              , appSep $ docWrapNode lfield $ docLit $ fText
               , docSeq [ appSep $ docLit $ Text.pack "="
                       , docAddBaseY BrIndentRegular fDoc
                       ]
@@ -623,12 +641,18 @@ isExpressionTypeHeadPar (L _ expr) = case expr of
   RecordUpd{} -> True
   HsDo{} -> True
   HsIf{} -> True
-  HsCase{} -> True
   HsLamCase{} -> True
   -- TODO: these cases might have unfortunate layouts, if for some reason
   -- the first operand is multiline.
   OpApp _ _ _ (L _ HsDo{}) -> True
   OpApp _ _ _ (L _ HsLamCase{}) -> True
+  OpApp _ _ _ (L _ HsLam{}) -> True
+  OpApp (L _ (OpApp left _ _ _)) _ _ _ | leftVar left -> True
+    where
+      -- leftVar (L _ x) | traceShow (Data.Data.toConstr x) False = error "foo"
+      leftVar (L _ HsVar{}) = True
+      leftVar (L _ (OpApp x _ _ _)) = leftVar x
+      leftVar _ = False
   _ -> False
 
 isExpressionTypeHeadPar' :: LHsExpr RdrName -> Bool
@@ -637,7 +661,6 @@ isExpressionTypeHeadPar' (L _ expr) = case expr of
   RecordUpd{} -> True
   HsDo{} -> True
   HsIf{} -> True
-  HsCase{} -> True
   HsLamCase{} -> True
   -- TODO: these cases might have unfortunate layouts, if for some reason
   -- the first operand is multiline.

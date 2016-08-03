@@ -102,7 +102,10 @@ layoutBriDoc ast briDoc = do
   
   let state = LayoutState
         { _lstate_baseY          = 0
-        , _lstate_curYOrAddNewline = Right 0
+        , _lstate_curYOrAddNewline = Right 0 -- important that we use left here
+                                             -- because moveToAnn stuff of the
+                                             -- first node needs to do its
+                                             -- thing properly.
         , _lstate_indLevel       = 0
         , _lstate_indLevelLinger = 0
         , _lstate_commentsPrior = extractCommentsPrior filteredAnns
@@ -213,7 +216,10 @@ transformAlts briDoc
 #if INSERTTRACESALT
       do
         acp :: AltCurPos <- mGet
-        tellDebugMess $ "transformAlts: visiting: " ++ show (toConstr brDc, acp)
+        tellDebugMess $ "transformAlts: visiting: " ++ case brDc of
+          BDFAnnotationPrior annKey _ -> show (toConstr brDc, annKey, acp)
+          BDFAnnotationPost annKey _ -> show (toConstr brDc, annKey, acp)
+          _ -> show (toConstr brDc, acp)
 #endif
       let reWrap = (,) brDcId
       -- debugAcp :: AltCurPos <- mGet
@@ -335,23 +341,21 @@ transformAlts briDoc
                              <&> \(vs, bd) -> -- trace ("spacing=" ++ show vs ++ ",hasSpace=" ++ show (hasSpace lconf acp vs) ++ ",lineCheck=" ++ show (lineCheck vs))
                                (  any (hasSpace2 lconf acp) vs
                                && any lineCheck vs, bd))
+              let checkedOptions :: [Maybe (Int, BriDocNumbered)] =
+                    zip [1..] options <&> (\(i, (b,x)) -> [ (i, x) | b ])
 #if INSERTTRACESALT
               zip spacings options `forM_` \(vs, (_, bd)) ->
                 tellDebugMess $ "  " ++ "spacing=" ++ show vs
                              ++ ",hasSpace=" ++ show (hasSpace2 lconf acp <$> vs)
                              ++ ",lineCheck=" ++ show (lineCheck <$> vs)
                              ++ " " ++ show (toConstr bd)
+              tellDebugMess $ "  " ++ show (Data.Maybe.mapMaybe (fmap fst) checkedOptions)
 #endif
               id -- $ (fmap $ \x -> traceShow (briDocToDoc x) x)
                  $ rec
                  $ fromMaybe (-- trace ("choosing last") $
                               List.last alts)
-                 $ Data.List.Extra.firstJust (\(_i::Int, (b,x)) ->
-                     [ -- traceShow ("choosing option " ++ show i) $
-                       x
-                     | b
-                     ])
-                 $ zip [1..] options
+                 $ Data.List.Extra.firstJust (fmap snd) checkedOptions
         BDFForceMultiline bd -> do
           acp <- mGet
           x <- do
@@ -635,7 +639,7 @@ getSpacings limit bridoc = rec bridoc
         BDFAlt [] -> error "empty BDAlt"
         -- BDAlt (alt:_) -> rec alt
         BDFAlt alts -> do
-          r <- filterAndLimit . join . Control.Lens.transposeOf traverse <$> (rec `mapM` alts)
+          r <- filterAndLimit . join . transpose <$> (rec `mapM` alts)
           return r
         BDFForceMultiline  bd -> rec bd
         BDFForceSingleline bd -> do
