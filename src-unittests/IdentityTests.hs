@@ -370,11 +370,11 @@ patternTests = do
          b
       = x
     |]
-  before_ pending $ it "simple constructor" $ roundTripEqual $
+  it "simple constructor" $ roundTripEqual $
     [text|
     func (A a) = a
     |]
-  before_ pending $ it "list constructor" $ roundTripEqual $
+  it "list constructor" $ roundTripEqual $
     [text|
     func (x:xr) = x
     |]
@@ -433,6 +433,57 @@ basicExpressionTests = do
       FooBar -> x
       Baz    -> y
     |]
+  it "lambda" $ roundTripEqual $
+    [text|
+    func = \x -> abc
+    |]
+  describe "app" $ do
+    it "1" $ roundTripEqual $
+      [text|
+      func = klajsdas klajsdas klajsdas
+      |]
+    it "2" $ roundTripEqual $
+      [text|
+      func =
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+          lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+          lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+      |]
+    it "3" $ roundTripEqual $
+      [text|
+      func =
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd lakjsdlajsdljas
+                                                      lakjsdlajsdljas
+                                                      lakjsdlajsdljas
+      |]
+  describe "sections" $ do
+    it "left" $ roundTripEqual $
+      [text|
+      func = (1+)
+      |]
+    it "right" $ roundTripEqual $
+      [text|
+      func = (+1)
+      |]
+    it "left inf" $ roundTripEqual $
+      -- TODO: this could be improved..
+      [text|
+      func = (1`abc`)
+      |]
+    it "right inf" $ roundTripEqual $
+      [text|
+      func = (`abc`1)
+      |]
+  describe "tuples" $ do
+    it "1" $ roundTripEqual $
+      [text|
+      func = (abc, def)
+      |]
+    before_ pending $ it "2" $ roundTripEqual $
+      [text|
+      func = (lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        , lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd)
+      |]
 
 
 doStatementTests :: Spec
