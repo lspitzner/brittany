@@ -639,7 +639,7 @@ getSpacings limit bridoc = rec bridoc
         BDFAlt [] -> error "empty BDAlt"
         -- BDAlt (alt:_) -> rec alt
         BDFAlt alts -> do
-          r <- filterAndLimit . join . transpose <$> (rec `mapM` alts)
+          r <- filterAndLimit . join <$> (rec `mapM` alts)
           return r
         BDFForceMultiline  bd -> rec bd
         BDFForceSingleline bd -> do
