@@ -12,6 +12,7 @@ module Language.Haskell.Brittany.LayoutBasics
   , rdrNameToText
   , lrdrNameToText
   , lrdrNameToTextAnn
+  , lrdrNameToTextAnnTypeEqualityIsSpecial
   , askIndent
   , layoutWriteAppend
   , layoutWriteAppendMultiline
@@ -192,6 +193,15 @@ lrdrNameToTextAnn ast@(L _ n) = do
       _ | any (hasUni AnnOpenP)     aks -> Text.pack "(" <> t <> Text.pack ")"
       _ | otherwise -> t
 
+lrdrNameToTextAnnTypeEqualityIsSpecial
+  :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
+  => GenLocated SrcSpan RdrName
+  -> m Text
+lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
+  x <- lrdrNameToTextAnn ast
+  return $ if x == Text.pack "Data.Type.Equality~"
+      then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
+      else x
 
 askIndent :: (MonadMultiReader Config m) => m Int
 askIndent = runIdentity . _lconfig_indentAmount . _conf_layout <$> mAsk
@@ -369,6 +379,7 @@ layoutWriteEnsureNewlineBlock = do
         Right i -> Right $ max 1 i
     , _lstate_addSepSpace = Just $ _lstate_baseY state
     , _lstate_inhibitMTEL = False
+    , _lstate_commentCol = Nothing
     }
 
 layoutWriteEnsureBlock :: (MonadMultiWriter

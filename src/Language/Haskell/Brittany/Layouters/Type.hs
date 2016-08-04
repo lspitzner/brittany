@@ -29,7 +29,7 @@ layoutType :: ToBriDoc HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
   HsTyVar name -> do
-    let t = lrdrNameToText name
+    t <- lrdrNameToTextAnn name
     docLit t
   HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts@(_:_)) typ2)) -> do
     typeDoc <- docSharedWrapper layoutType typ2
@@ -284,7 +284,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsAppsTy [L _ (HsAppPrefix typ1)] -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     typeDoc1
-  HsAppsTy [L l (HsAppInfix name)] -> do
+  HsAppsTy [_lname@(L _ (HsAppInfix name))] -> do
     -- this redirection is somewhat hacky, but whatever.
     -- TODO: a general problem when doing deep inspections on
     --       the type (and this is not the only instance)
@@ -292,8 +292,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     --       the middle constructors. i have no idea under which
     --       circumstances exactly important annotations (comments)
     --       would be assigned to such constructors.
-    typeDoc1 <- docSharedWrapper layoutType $ (L l $ HsTyVar name)
-    typeDoc1
+    typeDoc1 <- -- docSharedWrapper layoutType $ (L l $ HsTyVar name)
+      lrdrNameToTextAnnTypeEqualityIsSpecial name
+    docLit typeDoc1
   HsAppsTy (L _ (HsAppPrefix typHead):typRestA)
     | Just typRest <- mapM (\case L _ (HsAppPrefix t) -> Just t
                                   _ -> Nothing) typRestA -> do
@@ -316,7 +317,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
     where
       layoutAppType (L _ (HsAppPrefix t)) = layoutType t
-      layoutAppType (L _ (HsAppInfix t))  = docLit =<< lrdrNameToTextAnn t
+      layoutAppType (L _ (HsAppInfix t))  = docLit =<< lrdrNameToTextAnnTypeEqualityIsSpecial t
   HsListTy typ1 -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
