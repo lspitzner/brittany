@@ -35,20 +35,22 @@ type PriorMap = Map AnnKey [(Comment, DeltaPos)]
 type PostMap  = Map AnnKey [(Comment, DeltaPos)]
 
 data LayoutState = LayoutState
-  { _lstate_baseY         :: Int -- ^ number of current indentation columns
-                                 -- (not number of indentations).
+  { _lstate_baseYs         :: [Int]
+     -- ^ stack of number of current indentation columns
+     -- (not number of indentations).
   , _lstate_curYOrAddNewline :: Either Int Int
              -- ^ Either:
              -- 1) number of chars in the current line.
              -- 2) number of newlines to be inserted before inserting any
              --    non-space elements.
-  , _lstate_indLevel      :: Int -- ^ current indentation level. set for
-                                 -- any layout-affected elements such as
-                                 -- let/do/case/where elements.
-                                 -- The main purpose of this member is to
-                                 -- properly align comments, as their
-                                 -- annotation positions are relative to the
-                                 -- current layout indentation level.
+  , _lstate_indLevels      :: [Int]
+    -- ^ stack of current indentation levels. set for
+    -- any layout-affected elements such as
+    -- let/do/case/where elements.
+    -- The main purpose of this member is to
+    -- properly align comments, as their
+    -- annotation positions are relative to the
+    -- current layout indentation level.
   , _lstate_indLevelLinger :: Int -- like a "last" of indLevel. Used for
                                   -- properly treating cases where comments
                                   -- on the first indented element have an
@@ -80,13 +82,19 @@ data LayoutState = LayoutState
   --     -- current line only contains (indentation) spaces.
   }
 
+lstate_baseY :: LayoutState -> Int
+lstate_baseY = head . _lstate_baseYs
+
+lstate_indLevel :: LayoutState -> Int
+lstate_indLevel = head . _lstate_indLevels
+
 -- evil, incomplete Show instance; only for debugging.
 instance Show LayoutState where
   show state =
     "LayoutState"
-    ++ "{baseY=" ++ show (_lstate_baseY state)
+    ++ "{baseYs=" ++ show (_lstate_baseYs state)
     ++ ",curYOrAddNewline=" ++ show (_lstate_curYOrAddNewline state)
-    ++ ",indLevel=" ++ show (_lstate_indLevel state)
+    ++ ",indLevels=" ++ show (_lstate_indLevels state)
     ++ ",indLevelLinger=" ++ show (_lstate_indLevelLinger state)
     ++ ",commentCol=" ++ show (_lstate_commentCol state)
     ++ ",addSepSpace=" ++ show (_lstate_addSepSpace state)
@@ -194,8 +202,10 @@ data BriDoc
                          -- should not contains BDPars
   | BDSeparator -- semantically, space-unless-at-end-of-line.
   | BDAddBaseY BrIndent BriDoc
-  | BDSetBaseY BriDoc
-  | BDSetIndentLevel BriDoc
+  | BDBaseYPushCur BriDoc
+  | BDBaseYPop BriDoc
+  | BDIndentLevelPushCur BriDoc
+  | BDIndentLevelPop BriDoc
   | BDPar
     { _bdpar_indent :: BrIndent
     , _bdpar_restOfLine :: BriDoc -- should not contain other BDPars
@@ -234,8 +244,10 @@ data BriDocF f
                          -- should not contains BDPars
   | BDFSeparator -- semantically, space-unless-at-end-of-line.
   | BDFAddBaseY BrIndent (f (BriDocF f))
-  | BDFSetBaseY (f (BriDocF f))
-  | BDFSetIndentLevel (f (BriDocF f))
+  | BDFBaseYPushCur (f (BriDocF f))
+  | BDFBaseYPop (f (BriDocF f))
+  | BDFIndentLevelPushCur (f (BriDocF f))
+  | BDFIndentLevelPop (f (BriDocF f))
   | BDFPar
     { _bdfpar_indent :: BrIndent
     , _bdfpar_restOfLine :: f (BriDocF f) -- should not contain other BDPars
@@ -276,8 +288,10 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDCols sig list)             = plate BDCols |- sig ||* list
   uniplate x@BDSeparator                 = plate x
   uniplate (BDAddBaseY ind bd)           = plate BDAddBaseY |- ind |* bd
-  uniplate (BDSetBaseY bd)               = plate BDSetBaseY |* bd
-  uniplate (BDSetIndentLevel bd)         = plate BDSetIndentLevel |* bd
+  uniplate (BDBaseYPushCur bd)           = plate BDBaseYPushCur |* bd
+  uniplate (BDBaseYPop bd)               = plate BDBaseYPop |* bd
+  uniplate (BDIndentLevelPushCur bd)     = plate BDIndentLevelPushCur |* bd
+  uniplate (BDIndentLevelPop bd)         = plate BDIndentLevelPop |* bd
   uniplate (BDPar ind line indented)     = plate BDPar |- ind |* line |* indented
   uniplate (BDAlt alts)                  = plate BDAlt ||* alts
   uniplate (BDForceMultiline  bd)        = plate BDForceMultiline |* bd
@@ -301,8 +315,10 @@ unwrapBriDocNumbered = snd .> \case
   BDFCols sig list -> BDCols sig $ rec <$> list
   BDFSeparator -> BDSeparator
   BDFAddBaseY ind bd -> BDAddBaseY ind $ rec bd
-  BDFSetBaseY bd -> BDSetBaseY $ rec bd
-  BDFSetIndentLevel bd -> BDSetIndentLevel $ rec bd
+  BDFBaseYPushCur bd -> BDBaseYPushCur $ rec bd
+  BDFBaseYPop bd -> BDBaseYPop $ rec bd
+  BDFIndentLevelPushCur bd -> BDIndentLevelPushCur $ rec bd
+  BDFIndentLevelPop bd -> BDIndentLevelPop $ rec bd
   BDFPar ind line indented -> BDPar ind (rec line) (rec indented)
   BDFAlt alts -> BDAlt $ rec <$> alts -- not that this will happen
   BDFForceMultiline  bd -> BDForceMultiline $ rec bd
@@ -326,8 +342,10 @@ briDocSeqSpine = \case
   BDCols _sig list -> foldl' ((briDocSeqSpine .) . seq) () list
   BDSeparator -> ()
   BDAddBaseY _ind bd -> briDocSeqSpine bd
-  BDSetBaseY bd     -> briDocSeqSpine bd
-  BDSetIndentLevel bd -> briDocSeqSpine bd
+  BDBaseYPushCur bd     -> briDocSeqSpine bd
+  BDBaseYPop bd     -> briDocSeqSpine bd
+  BDIndentLevelPushCur bd -> briDocSeqSpine bd
+  BDIndentLevelPop bd -> briDocSeqSpine bd
   BDPar _ind line indented -> briDocSeqSpine line `seq` briDocSeqSpine indented
   BDAlt alts -> foldl' (\(!()) -> briDocSeqSpine) () alts
   BDForceMultiline  bd -> briDocSeqSpine bd

@@ -24,8 +24,10 @@ module Language.Haskell.Brittany.LayoutBasics
   , layoutWithAddBaseColBlock
   , layoutWithAddBaseColN
   , layoutWithAddBaseColNBlock
-  , layoutSetBaseColCur
-  , layoutSetIndentLevel
+  , layoutBaseYPushCur
+  , layoutBaseYPop
+  , layoutIndentLevelPushCur
+  , layoutIndentLevelPop
   , layoutWriteEnsureAbsoluteN
   , layoutAddSepSpace
   , layoutSetCommentCol
@@ -283,7 +285,7 @@ layoutWriteNewlineBlock = do
   traceLocal ("layoutWriteNewlineBlock")
   state <- mGet
   mSet $ state { _lstate_curYOrAddNewline = Right 1
-               , _lstate_addSepSpace = Just $ _lstate_baseY state
+               , _lstate_addSepSpace = Just $ lstate_baseY state
                , _lstate_inhibitMTEL = False
                }
 
@@ -308,7 +310,7 @@ layoutSetCommentCol = do
   state <- mGet
   let col = case _lstate_curYOrAddNewline state of
         Left i -> i + fromMaybe 0 (_lstate_addSepSpace state)
-        Right{} -> _lstate_baseY state
+        Right{} -> lstate_baseY state
   traceLocal ("layoutSetCommentCol", col)
   unless (Data.Maybe.isJust $ _lstate_commentCol state)
     $ mSet state { _lstate_commentCol = Just col }
@@ -346,7 +348,7 @@ layoutMoveToCommentPos y x = do
               else _lstate_indLevelLinger state + x
         , _lstate_commentCol = Just $ case _lstate_curYOrAddNewline state of
             Left i -> i + fromMaybe 0 (_lstate_addSepSpace state)
-            Right{} -> _lstate_baseY state
+            Right{} -> lstate_baseY state
         }
 
 -- | does _not_ add spaces to again reach the current base column.
@@ -377,7 +379,7 @@ layoutWriteEnsureNewlineBlock = do
     { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
         Left{} -> Right 1
         Right i -> Right $ max 1 i
-    , _lstate_addSepSpace = Just $ _lstate_baseY state
+    , _lstate_addSepSpace = Just $ lstate_baseY state
     , _lstate_inhibitMTEL = False
     , _lstate_commentCol = Nothing
     }
@@ -392,10 +394,10 @@ layoutWriteEnsureBlock = do
   state <- mGet
   let
     diff = case (_lstate_addSepSpace state, _lstate_curYOrAddNewline state) of
-      (Nothing, Left i) -> _lstate_baseY state - i
-      (Nothing, Right{}) -> _lstate_baseY state
-      (Just sp, Left i) -> max sp (_lstate_baseY state - i)
-      (Just sp, Right{}) -> max sp (_lstate_baseY state)
+      (Nothing, Left i) -> lstate_baseY state - i
+      (Nothing, Right{}) -> lstate_baseY state
+      (Just sp, Left i) -> max sp (lstate_baseY state - i)
+      (Just sp, Right{}) -> max sp (lstate_baseY state)
   -- when (diff>0) $ layoutWriteNewlineBlock
   when (diff > 0) $ do
     mSet $ state { _lstate_addSepSpace = Just $ diff }
@@ -418,22 +420,36 @@ layoutWriteEnsureAbsoluteN n = do
                                             -- bad way.
                  }
 
-layoutSetBaseColInternal :: ( MonadMultiState LayoutState m
-             , MonadMultiWriter (Seq String) m
-             ) => Int -> m ()
-layoutSetBaseColInternal i = do
-  traceLocal ("layoutSetBaseColInternal", i)
-  mModify $ \s -> s { _lstate_baseY = i }
+layoutBaseYPushInternal
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m)
+  => Int
+  -> m ()
+layoutBaseYPushInternal i = do
+  traceLocal ("layoutBaseYPushInternal", i)
+  mModify $ \s -> s { _lstate_baseYs = i : _lstate_baseYs s }
 
-layoutSetIndentLevelInternal :: ( MonadMultiState LayoutState m
-             , MonadMultiWriter (Seq String) m
-             ) => Int -> m ()
-layoutSetIndentLevelInternal i = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutSetIndentLevelInternal", i)
-#endif
-  mModify $ \s -> s { _lstate_indLevelLinger = _lstate_indLevel s
-                    , _lstate_indLevel = i
+layoutBaseYPopInternal
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+layoutBaseYPopInternal = do
+  traceLocal ("layoutBaseYPopInternal")
+  mModify $ \s -> s { _lstate_baseYs = List.tail $ _lstate_baseYs s }
+
+layoutIndentLevelPushInternal
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m)
+  => Int
+  -> m ()
+layoutIndentLevelPushInternal i = do
+  traceLocal ("layoutIndentLevelPushInternal", i)
+  mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
+                    , _lstate_indLevels = i : _lstate_indLevels s
+                    }
+
+layoutIndentLevelPopInternal
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+layoutIndentLevelPopInternal = do
+  traceLocal ("layoutIndentLevelPopInternal")
+  mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
+                    , _lstate_indLevels = List.tail $ _lstate_indLevels s
                     }
 
 layoutRemoveIndentLevelLinger :: ( MonadMultiState LayoutState m
@@ -443,7 +459,7 @@ layoutRemoveIndentLevelLinger = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutRemoveIndentLevelLinger")
 #endif
-  mModify $ \s -> s { _lstate_indLevelLinger = _lstate_indLevel s
+  mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
                     }
 
 layoutWithAddBaseCol :: (MonadMultiWriter
@@ -459,42 +475,44 @@ layoutWithAddBaseCol m = do
 #endif
   amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
   state <- mGet
-  layoutSetBaseColInternal $ _lstate_baseY state + amount
+  layoutBaseYPushInternal $ lstate_baseY state + amount
   m
-  layoutSetBaseColInternal $ _lstate_baseY state
+  layoutBaseYPopInternal
 
-layoutWithAddBaseColBlock :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               ,MonadMultiReader Config m
-                                               , MonadMultiWriter (Seq String) m)
-                  => m ()
-                  -> m ()
+layoutWithAddBaseColBlock
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiReader Config m
+     , MonadMultiWriter (Seq String) m
+     )
+  => m ()
+  -> m ()
 layoutWithAddBaseColBlock m = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutWithAddBaseColBlock")
 #endif
   amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
   state <- mGet
-  layoutSetBaseColInternal $ _lstate_baseY state + amount
+  layoutBaseYPushInternal $ lstate_baseY state + amount
   layoutWriteEnsureBlock
   m
-  layoutSetBaseColInternal $ _lstate_baseY state
+  layoutBaseYPopInternal
 
-layoutWithAddBaseColNBlock :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => Int
-                  -> m ()
-                  -> m ()
+layoutWithAddBaseColNBlock
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Int
+  -> m ()
+  -> m ()
 layoutWithAddBaseColNBlock amount m = do
   traceLocal ("layoutWithAddBaseColNBlock", amount)
   state <- mGet
-  layoutSetBaseColInternal $ _lstate_baseY state + amount
+  layoutBaseYPushInternal $ lstate_baseY state + amount
   layoutWriteEnsureBlock
   m
-  layoutSetBaseColInternal $ _lstate_baseY state
+  layoutBaseYPopInternal
 
 layoutWithAddBaseColN :: (MonadMultiWriter
                                                  Text.Builder.Builder m,
@@ -508,44 +526,47 @@ layoutWithAddBaseColN amount m = do
   tellDebugMessShow ("layoutWithAddBaseColN", amount)
 #endif
   state <- mGet
-  layoutSetBaseColInternal $ _lstate_baseY state + amount
+  layoutBaseYPushInternal $ lstate_baseY state + amount
   m
-  layoutSetBaseColInternal $ _lstate_baseY state
+  layoutBaseYPopInternal
 
-layoutSetBaseColCur :: (MonadMultiState
-                                                   LayoutState m,
-                                                 MonadMultiWriter (Seq String) m)
-                    => m () -> m ()
-layoutSetBaseColCur m = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutSetBaseColCur")
-#endif
+layoutBaseYPushCur
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+layoutBaseYPushCur = do
+  traceLocal ("layoutBaseYPushCur")
   state <- mGet
   case _lstate_commentCol state of
     Nothing -> case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
-      (Left i, Just j) -> layoutSetBaseColInternal (i+j)
-      (Left i, Nothing) -> layoutSetBaseColInternal i
+      (Left i, Just j) -> layoutBaseYPushInternal (i+j)
+      (Left i, Nothing) -> layoutBaseYPushInternal i
       (Right{}, _) -> return ()
-    Just cCol -> layoutSetBaseColInternal cCol
-  m
-  layoutSetBaseColInternal $ _lstate_baseY state
+    Just cCol -> layoutBaseYPushInternal cCol
 
-layoutSetIndentLevel :: (MonadMultiState
-                                                   LayoutState m,
-                                                 MonadMultiWriter (Seq String) m)
-                    => m () -> m ()
-layoutSetIndentLevel m = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutSetIndentLevel")
-#endif
+layoutBaseYPop
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+layoutBaseYPop = do
+  traceLocal ("layoutBaseYPop")
+  layoutBaseYPopInternal
+
+layoutIndentLevelPushCur
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+layoutIndentLevelPushCur = do
+  traceLocal ("layoutIndentLevelPushCur")
   state <- mGet
-  layoutSetIndentLevelInternal $ case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
-    (Left i, Just j) -> i + j
-    (Left i, Nothing) -> i
-    (Right{}, Just j) -> j
-    (Right{}, Nothing) -> 0
-  m
-  layoutSetIndentLevelInternal $ _lstate_indLevel state
+  let y = case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
+        (Left i, Just j)   -> i + j
+        (Left i, Nothing)  -> i
+        (Right{}, Just j)  -> j
+        (Right{}, Nothing) -> 0
+  layoutIndentLevelPushInternal y
+  layoutBaseYPushInternal y
+
+layoutIndentLevelPop
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+layoutIndentLevelPop = do
+  traceLocal ("layoutIndentLevelPop")
+  layoutBaseYPop
+  layoutIndentLevelPopInternal
   -- why are comment indentations relative to the previous indentation on
   -- the first node of an additional indentation, and relative to the outer
   -- indentation after the last node of some indented stuff? sure does not
@@ -588,7 +609,7 @@ moveToExactAnn annKey = do
         in state
           { _lstate_curYOrAddNewline = upd
           , _lstate_addSepSpace = if Data.Either.isRight upd
-              then _lstate_commentCol state <|> _lstate_addSepSpace state <|> Just (_lstate_baseY state)
+              then _lstate_commentCol state <|> _lstate_addSepSpace state <|> Just (lstate_baseY state)
               else Nothing
           , _lstate_commentCol = Nothing
           }
@@ -884,10 +905,20 @@ docAddBaseY :: BrIndent -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docAddBaseY ind bdm = allocateNode . BDFAddBaseY ind =<< bdm
 
 docSetBaseY :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
-docSetBaseY bdm = allocateNode . BDFSetBaseY =<< bdm
+docSetBaseY bdm = do
+  bd <- bdm
+  -- the order here is important so that these two nodes can be treated
+  -- properly over at `transformAlts`.
+  n1 <- allocateNode $ BDFBaseYPushCur bd
+  n2 <- allocateNode $ BDFBaseYPop n1
+  return n2
 
 docSetIndentLevel :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
-docSetIndentLevel bdm = allocateNode . BDFSetIndentLevel =<< bdm
+docSetIndentLevel bdm = do
+  bd <- bdm
+  n1 <- allocateNode $ BDFIndentLevelPushCur bd
+  n2 <- allocateNode $ BDFIndentLevelPop n1
+  return n2
 
 docSeparator :: ToBriDocM BriDocNumbered
 docSeparator = allocateNode BDFSeparator

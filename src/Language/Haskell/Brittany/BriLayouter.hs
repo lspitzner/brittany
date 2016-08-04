@@ -101,12 +101,12 @@ layoutBriDoc ast briDoc = do
   let filteredAnns = filterAnns ast anns
   
   let state = LayoutState
-        { _lstate_baseY          = 0
+        { _lstate_baseYs         = [0]
         , _lstate_curYOrAddNewline = Right 0 -- important that we use left here
                                              -- because moveToAnn stuff of the
                                              -- first node needs to do its
                                              -- thing properly.
-        , _lstate_indLevel       = 0
+        , _lstate_indLevels      = [0]
         , _lstate_indLevelLinger = 0
         , _lstate_commentsPrior = extractCommentsPrior filteredAnns
         , _lstate_commentsPost  = extractCommentsPost  filteredAnns
@@ -250,15 +250,21 @@ transformAlts briDoc
             BrIndentNone -> r
             BrIndentRegular ->   reWrap $ BDFAddBaseY (BrIndentSpecial indAdd) r
             BrIndentSpecial i -> reWrap $ BDFAddBaseY (BrIndentSpecial i) r
-        BDFSetBaseY bd -> do
+        BDFBaseYPushCur bd -> do
           acp <- mGet
           mSet $ acp { _acp_indent = _acp_line acp }
           r <- rec bd
+          return $ reWrap $ BDFBaseYPushCur r
+        BDFBaseYPop bd -> do
+          acp <- mGet
+          r <- rec bd
           acp' <- mGet
-          mSet $ acp' { _acp_indent = _acp_indent acp }
-          return $ reWrap $ BDFSetBaseY r
-        BDFSetIndentLevel bd -> do
-          reWrap . BDFSetIndentLevel <$> rec bd
+          mSet $ acp' { _acp_indent = _acp_indentPrep acp }
+          return $ reWrap $ BDFBaseYPop r
+        BDFIndentLevelPushCur bd -> do
+          reWrap . BDFIndentLevelPushCur <$> rec bd
+        BDFIndentLevelPop bd -> do
+          reWrap . BDFIndentLevelPop <$> rec bd
         BDFPar indent sameLine indented -> do
           indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
           let indAdd = case indent of
@@ -459,7 +465,7 @@ getSpacing !bridoc = rec bridoc
                                          )
                 BrIndentSpecial j -> i + j
           }
-      BDFSetBaseY bd -> do
+      BDFBaseYPushCur bd -> do
         mVs <- rec bd
         return $ mVs <&> \vs -> vs
           -- We leave par as-is, even though it technically is not
@@ -474,7 +480,9 @@ getSpacing !bridoc = rec bridoc
                                   VerticalSpacingParNonBottom -> 999)
           , _vs_paragraph = VerticalSpacingParNonBottom
           }
-      BDFSetIndentLevel bd -> rec bd
+      BDFBaseYPop bd -> rec bd
+      BDFIndentLevelPushCur bd -> rec bd
+      BDFIndentLevelPop bd -> rec bd
       BDFPar BrIndentNone sameLine indented -> do
         mVs <- rec sameLine
         indSp <- rec indented
@@ -600,7 +608,7 @@ getSpacings limit bridoc = rec bridoc
                                            )
                   BrIndentSpecial j -> i + j
             }
-        BDFSetBaseY bd -> do
+        BDFBaseYPushCur bd -> do
           mVs <- rec bd
           return $ mVs <&> \vs -> vs
             -- We leave par as-is, even though it technically is not
@@ -617,7 +625,9 @@ getSpacings limit bridoc = rec bridoc
                 VerticalSpacingParNone -> VerticalSpacingParNone
                 _ -> VerticalSpacingParNonBottom
             }
-        BDFSetIndentLevel bd -> rec bd
+        BDFBaseYPop bd -> rec bd
+        BDFIndentLevelPushCur bd -> rec bd
+        BDFIndentLevelPop bd -> rec bd
         BDFPar BrIndentNone sameLine indented -> do
           mVss <- rec sameLine
           indSps <- rec indented
@@ -785,6 +795,22 @@ transformSimplifyFloating = stepBO .> stepFull
       BDAnnotationPrior annKey1 (BDAddBaseY indent x) ->
          Just $ BDAddBaseY indent $ BDAnnotationPrior annKey1 x
       _ -> Nothing
+    descendBYPush = transformDownMay $ \case
+      BDBaseYPushCur (BDCols sig cols) ->
+        Just $ BDCols sig (BDBaseYPushCur (List.head cols) : List.tail cols)
+      _ -> Nothing
+    descendBYPop = transformDownMay $ \case
+      BDBaseYPop (BDCols sig cols) ->
+        Just $ BDCols sig (List.init cols ++ [BDBaseYPop (List.last cols)])
+      _ -> Nothing
+    descendILPush = transformDownMay $ \case
+      BDIndentLevelPushCur (BDCols sig cols) ->
+        Just $ BDCols sig (BDIndentLevelPushCur (List.head cols) : List.tail cols)
+      _ -> Nothing
+    descendILPop = transformDownMay $ \case
+      BDIndentLevelPop (BDCols sig cols) ->
+        Just $ BDCols sig (List.init cols ++ [BDIndentLevelPop (List.last cols)])
+      _ -> Nothing
     descendAddB = transformDownMay $ \case
       -- AddIndent floats into Lines.
       BDAddBaseY BrIndentNone x ->
@@ -805,17 +831,23 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDSeq $ List.init list ++ [BDAddBaseY ind (List.last list)]
       BDAddBaseY _ lit@BDLit{} ->
         Just $ lit
-      BDAddBaseY ind (BDSetBaseY x) ->
-        Just $ BDSetBaseY (BDAddBaseY ind x)
+      BDAddBaseY ind (BDBaseYPushCur x) ->
+        Just $ BDBaseYPushCur (BDAddBaseY ind x)
+      BDAddBaseY ind (BDBaseYPop x) ->
+        Just $ BDBaseYPop (BDAddBaseY ind x)
       _ -> Nothing
     stepBO :: BriDoc -> BriDoc
     stepBO = -- traceFunctionWith "stepBO" (show . briDocToDocWithAnns) (show . briDocToDocWithAnns) $
              transformUp f
       where
         f = \case
-          x@BDAnnotationPrior{} -> descendPrior x
-          x@BDAnnotationPost{}  -> descendPost  x
-          x@BDAddBaseY{}        -> descendAddB  x
+          x@BDAnnotationPrior{}    -> descendPrior x
+          x@BDAnnotationPost{}     -> descendPost  x
+          x@BDAddBaseY{}           -> descendAddB  x
+          x@BDBaseYPushCur{}       -> descendBYPush x
+          x@BDBaseYPop{}           -> descendBYPop x
+          x@BDIndentLevelPushCur{} -> descendILPush x
+          x@BDIndentLevelPop{}     -> descendILPop x
           x -> x
     stepFull = -- traceFunctionWith "stepFull" (show . briDocToDocWithAnns) (show . briDocToDocWithAnns) $
                Uniplate.rewrite $ \case
@@ -834,8 +866,10 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDPar (mergeIndents ind1 ind2) line indented
       BDAddBaseY _ lit@BDLit{} ->
         Just $ lit
-      BDAddBaseY ind (BDSetBaseY x) ->
-        Just $ BDSetBaseY (BDAddBaseY ind x)
+      BDAddBaseY ind (BDBaseYPushCur x) ->
+        Just $ BDBaseYPushCur (BDAddBaseY ind x)
+      BDAddBaseY ind (BDBaseYPop x) ->
+        Just $ BDBaseYPop (BDAddBaseY ind x)
       -- prior floating in
       BDAnnotationPrior annKey1 (BDPar ind line indented) ->
         Just $ BDPar ind (BDAnnotationPrior annKey1 line) indented
@@ -991,8 +1025,10 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDCols{}            -> Nothing
   BDSeparator         -> Nothing
   BDAddBaseY{}        -> Nothing
-  BDSetBaseY{}        -> Nothing
-  BDSetIndentLevel{}  -> Nothing
+  BDBaseYPushCur{}    -> Nothing
+  BDBaseYPop{}        -> Nothing
+  BDIndentLevelPushCur{} -> Nothing
+  BDIndentLevelPop{}  -> Nothing
   BDPar{}             -> Nothing
   BDAlt{}             -> Nothing
   BDForceMultiline{}  -> Nothing
@@ -1052,8 +1088,10 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDCols _ bds -> sum <$> rec `mapM` bds
     BDSeparator -> StateS.get >>= \b -> StateS.put True $> if b then 0 else 1
     BDAddBaseY _ bd -> rec bd
-    BDSetBaseY bd -> rec bd
-    BDSetIndentLevel bd -> rec bd
+    BDBaseYPushCur bd -> rec bd
+    BDBaseYPop bd -> rec bd
+    BDIndentLevelPushCur bd -> rec bd
+    BDIndentLevelPop bd -> rec bd
     BDPar _ line _ -> rec line
     BDAlt{} -> error "briDocLineLength BDAlt"
     BDForceMultiline  bd -> rec bd
@@ -1104,10 +1142,18 @@ layoutBriDocM = \case
           BrIndentRegular   -> layoutWithAddBaseCol
           BrIndentSpecial i -> layoutWithAddBaseColN i
     indentF $ layoutBriDocM bd
-  BDSetBaseY bd -> do
-    layoutSetBaseColCur $ layoutBriDocM bd
-  BDSetIndentLevel bd -> do
-    layoutSetIndentLevel $ layoutBriDocM bd
+  BDBaseYPushCur bd -> do
+    layoutBaseYPushCur
+    layoutBriDocM bd
+  BDBaseYPop bd -> do
+    layoutBriDocM bd
+    layoutBaseYPop
+  BDIndentLevelPushCur bd -> do
+    layoutIndentLevelPushCur
+    layoutBriDocM bd
+  BDIndentLevelPop bd -> do
+    layoutBriDocM bd
+    layoutIndentLevelPop
   BDEnsureIndent indent bd -> do
     let indentF = case indent of
           BrIndentNone      -> id
