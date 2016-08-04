@@ -18,6 +18,7 @@ where
 
 import           Language.Haskell.Brittany.Types
 import           Language.Haskell.Brittany.LayoutBasics
+import           Language.Haskell.Brittany.Config.Types
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
@@ -148,6 +149,11 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
       patPartParWrap = case mPatDoc of
         Nothing -> id
         Just patDoc -> docPar (return patDoc)
+  _whereIndent <- mAsk
+                 <&> _conf_layout
+                 .>  _lconfig_indentWhereSpecial
+                 .>  runIdentity
+                 .>  Bool.bool BrIndentRegular (BrIndentSpecial 1)
   docAlt $
     -- one-line solution
     [ docCols ColBindingLine
@@ -171,14 +177,29 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
               $ [appSep $ docLit $ Text.pack "|"]
               ++ List.intersperse docCommaSep (return <$> gs)
               ++ [docSeparator]
-    , wherePart <- case mWhereDocs of
-        Nothing -> pure docEmpty
-        Just [w] -> pure $ docSeq
-          [ docSeparator
-          , appSep $ docLit $ Text.pack "where"
-          , docSetBaseY $ docSetIndentLevel $ return w
-          ]
-        _ -> []
+    , let
+        wherePart = case mWhereDocs of
+          Nothing -> docEmpty
+          Just [w] -> docAlt
+            [ docSeq
+              [ docSeparator
+              , appSep $ docLit $ Text.pack "where"
+              , docSetIndentLevel $ docForceSingleline $ return w
+              ]
+            , docAddBaseY BrIndentRegular
+            $ docPar docEmpty
+            $ docAddBaseY BrIndentRegular
+            $ docPar
+              (docLit $ Text.pack "where")
+              (docSetIndentLevel $ return w)
+            ]
+          Just ws ->
+            docAddBaseY BrIndentRegular
+            $ docPar docEmpty
+            $ docAddBaseY BrIndentRegular
+            $ docPar
+              (docLit $ Text.pack "where")
+              (docSetIndentLevel $ docLines $ return <$> ws)
     ] ++
     -- two-line solution
     [ docLines
@@ -238,7 +259,10 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
     [ docAddBaseY BrIndentRegular
     $ docPar
       (docSeq (patPartInline ++ [appSep $ guardPart, return binderDoc]))
-      (docLines $ [ return body ] ++ wherePart)
+      ( docNonBottomSpacing
+      $ docLines
+      $ [ docAddBaseY BrIndentRegular $ return body ] ++ wherePart
+      )
     | [(guards, body, _)] <- [clauseDocs]
     , let guardPart = case guards of
             [] -> docEmpty

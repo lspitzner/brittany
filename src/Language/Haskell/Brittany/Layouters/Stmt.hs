@@ -46,28 +46,30 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
     Just [bindDoc] -> docAlt
       [ docCols ColDoLet
         [ appSep $ docLit $ Text.pack "let"
-        , docSetBaseY $ docAddBaseY BrIndentRegular (return bindDoc)
+        , docSetIndentLevel $ docAddBaseY BrIndentRegular (return bindDoc)
         ]
       , docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "let")
-        (return bindDoc)
+        (docSetIndentLevel $ return bindDoc)
       ]
     Just bindDocs@(bindDoc1:bindDocr) -> do
+      -- TODO: the indentation here is screwed up. needs docSetIndentLevel and
+      -- SetBaseY based layouting, not cols.
       docAlt
         [ docLines
         $ (docCols ColDoLet
             [ appSep $ docLit $ Text.pack "let"
-            , docAddBaseY (BrIndentSpecial 6) (return bindDoc1)
+            , docSetIndentLevel $ docAddBaseY BrIndentRegular (return bindDoc1)
             ])
         : (bindDocr <&> \bindDoc ->
            docCols ColDoLet
-            [ appSep $ docEmpty
-            , docAddBaseY (BrIndentSpecial 6) (return bindDoc)
+            [ docEnsureIndent (BrIndentSpecial 4) docEmpty
+            , docSetIndentLevel $ docAddBaseY BrIndentRegular (return bindDoc)
             ])
         , docAddBaseY BrIndentRegular
         $ docPar
           (docLit $ Text.pack "let")
-          (docLines $ return <$> bindDocs)
+          (docSetIndentLevel $ docAddBaseY BrIndentRegular $ docLines $ return <$> bindDocs)
         ]
   BodyStmt expr _ _ _ -> do
     expDoc <- docSharedWrapper layoutExpr expr

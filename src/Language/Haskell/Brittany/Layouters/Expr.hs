@@ -57,12 +57,15 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     let funcPatternPartLine =
           docCols ColCasePattern
             $ (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
+    let lineMod = if isExpressionTypeHeadPar body
+          then id
+          else docForceSingleline
     docAlt
       [ docSeq
         [ docLit $ Text.pack "\\"
         , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
         , appSep $ docLit $ Text.pack "->"
-        , docWrapNode lgrhs $ docForceSingleline bodyDoc
+        , docWrapNode lgrhs $ lineMod bodyDoc
         ]
       , docAddBaseY BrIndentRegular
       $ docPar
@@ -327,11 +330,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docLines
           [ docSeq
             [ appSep $ docLit $ Text.pack "let"
-            , docSetBaseY $ docSetIndentLevel $ return bindDoc
+            , docSetIndentLevel $ return bindDoc
             ]
           , docSeq
             [ appSep $ docLit $ Text.pack "in "
-            , docSetBaseY $ docSetIndentLevel $ expDoc1
+            , docSetIndentLevel $ expDoc1
             ]
           ]
         , docLines
@@ -349,11 +352,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         [ docLines
           [ docSeq
             [ appSep $ docLit $ Text.pack "let"
-            , docSetBaseY $ docSetIndentLevel $ docLines $ return <$> bindDocs
+            , docSetIndentLevel $ docLines $ return <$> bindDocs
             ]
           , docSeq
             [ appSep $ docLit $ Text.pack "in "
-            , docSetBaseY $ docSetIndentLevel $ expDoc1
+            , docSetIndentLevel $ expDoc1
             ]
           ]
         , docLines
@@ -386,7 +389,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , appSep $ docLit $ Text.pack "|"
         , docSeq $ List.intersperse docCommaSep
                 $ fmap docForceSingleline $ List.init stmtDocs
-        , docLit $ Text.pack "]"
+        , docLit $ Text.pack " ]"
         ]
       , let
           start = docCols ColListComp
@@ -396,7 +399,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
                     [appSep $ docLit $ Text.pack "|", s1]
           lineM = sM <&> \d ->
                   docCols ColListComp [docCommaSep, d]
-          end   = docLit $ Text.pack " ]"
+          end   = docLit $ Text.pack "]"
         in docSetBaseY $ docLines $ [start, line1] ++ lineM ++ [end]
       ]
   HsDo{} -> do
@@ -427,9 +430,9 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     docLit $ t <> Text.pack "{}"
   RecordCon lname _ _ (HsRecFields fs@(_:_) Nothing) -> do
     let t = lrdrNameToText lname
-    (fd1:fdr) <- fs `forM` \(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr _)) -> do
+    ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr _)) -> do
       fExpDoc <- docSharedWrapper layoutExpr fExpr
-      return $ (lrdrNameToText lnameF, fExpDoc)
+      return $ (fieldl, lrdrNameToText lnameF, fExpDoc)
     docAlt
       [ docAddBaseY BrIndentRegular
       $ docPar
@@ -437,16 +440,16 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           (docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docLit $ fst fd1
+              , appSep $ docLit $ fd1n
               , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docAddBaseY BrIndentRegular $ snd fd1
+                      , docWrapNode fd1l $ docAddBaseY BrIndentRegular $ fd1e
                       ]
               ]
-            lineR = fdr <&> \(fText, fDoc) -> docCols ColRecUpdate
+            lineR = fdr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
               , appSep $ docLit $ fText
               , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docAddBaseY BrIndentRegular fDoc
+                      , docWrapNode lfield $ docAddBaseY BrIndentRegular fDoc
                       ]
               ]
             lineN = docLit $ Text.pack "}"

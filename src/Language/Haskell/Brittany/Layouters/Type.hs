@@ -217,7 +217,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       [ docSeq
         [ docForceSingleline contextDoc
         , docLit $ Text.pack " => "
-        , typeDoc
+        , docForceSingleline typeDoc
         ]
       --    (Foo a b c)
       -- => a b
