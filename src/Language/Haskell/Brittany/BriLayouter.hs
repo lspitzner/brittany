@@ -768,6 +768,8 @@ transformSimplifyFloating = stepBO .> stepFull
   -- note that semantically, stepFull is completely sufficient.
   -- but the bottom-up switch-to-top-down-on-match transformation has much
   -- better complexity.
+  -- UPDATE: by now, stepBO does more than stepFull; for semantic equivalence
+  --         the push/pop cases would need to be copied over
   where
     descendPost = transformDownMay $ \case
       -- post floating in
@@ -796,19 +798,19 @@ transformSimplifyFloating = stepBO .> stepFull
          Just $ BDAddBaseY indent $ BDAnnotationPrior annKey1 x
       _ -> Nothing
     descendBYPush = transformDownMay $ \case
-      BDBaseYPushCur (BDCols sig cols) ->
+      BDBaseYPushCur (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (BDBaseYPushCur (List.head cols) : List.tail cols)
       _ -> Nothing
     descendBYPop = transformDownMay $ \case
-      BDBaseYPop (BDCols sig cols) ->
+      BDBaseYPop (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (List.init cols ++ [BDBaseYPop (List.last cols)])
       _ -> Nothing
     descendILPush = transformDownMay $ \case
-      BDIndentLevelPushCur (BDCols sig cols) ->
+      BDIndentLevelPushCur (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (BDIndentLevelPushCur (List.head cols) : List.tail cols)
       _ -> Nothing
     descendILPop = transformDownMay $ \case
-      BDIndentLevelPop (BDCols sig cols) ->
+      BDIndentLevelPop (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (List.init cols ++ [BDIndentLevelPop (List.last cols)])
       _ -> Nothing
     descendAddB = transformDownMay $ \case

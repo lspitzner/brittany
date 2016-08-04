@@ -149,11 +149,25 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
       patPartParWrap = case mPatDoc of
         Nothing -> id
         Just patDoc -> docPar (return patDoc)
-  _whereIndent <- mAsk
+  whereIndent <- mAsk
                  <&> _conf_layout
                  .>  _lconfig_indentWhereSpecial
                  .>  runIdentity
                  .>  Bool.bool BrIndentRegular (BrIndentSpecial 1)
+  -- TODO: apart from this, there probably are more nodes below which could
+  --       be shared between alternatives.
+  wherePartMultiLine :: [ToBriDocM BriDocNumbered] <- case mWhereDocs of
+        Nothing -> return $ []
+        Just ws -> fmap (fmap return) $ sequence $ return @[]
+          $ docEnsureIndent whereIndent
+          $ docLines
+            [ docLit $ Text.pack "where"
+            , docEnsureIndent whereIndent
+            $ docSetIndentLevel
+            $ docNonBottomSpacing
+            $ docLines
+            $ return <$> ws
+            ]
   docAlt $
     -- one-line solution
     [ docCols ColBindingLine
@@ -177,38 +191,48 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
               $ [appSep $ docLit $ Text.pack "|"]
               ++ List.intersperse docCommaSep (return <$> gs)
               ++ [docSeparator]
-    , let
-        wherePart = case mWhereDocs of
-          Nothing -> docEmpty
-          Just [w] -> docAlt
-            [ docSeq
-              [ docSeparator
-              , appSep $ docLit $ Text.pack "where"
-              , docSetIndentLevel $ docForceSingleline $ return w
-              ]
-            , docAddBaseY BrIndentRegular
-            $ docPar docEmpty
-            $ docAddBaseY BrIndentRegular
-            $ docPar
-              (docLit $ Text.pack "where")
-              (docSetIndentLevel $ return w)
+    , wherePart <- case mWhereDocs of
+          Nothing -> return @[] $ docEmpty
+          Just [w] -> return @[] $ docSeq
+            [ docSeparator
+            , appSep $ docLit $ Text.pack "where"
+            , docSetIndentLevel $ docForceSingleline $ return w
             ]
-          Just ws ->
-            docAddBaseY BrIndentRegular
-            $ docPar docEmpty
-            $ docAddBaseY BrIndentRegular
-            $ docPar
-              (docLit $ Text.pack "where")
-              (docSetIndentLevel $ docLines $ return <$> ws)
+          _ -> []
     ] ++
-    -- two-line solution
+    -- one-line solution + where in next line(s)
+    [ docLines
+    $ [ docCols ColBindingLine
+        [ docSeq
+          (patPartInline ++ [guardPart])
+        , docSeq
+          [ appSep $ return binderDoc
+          , lineMod $ return body
+          ]
+        ]
+      ] ++ wherePartMultiLine
+    | [(guards, body, bodyRaw)] <- [clauseDocs]
+    , let lineMod = case mWhereDocs of
+            Nothing | isExpressionTypeHeadPar bodyRaw ->
+              docAddBaseY BrIndentRegular
+            _ -> docForceSingleline
+    , let guardPart = case guards of
+            [] -> docEmpty
+            [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g, docSeparator]
+            gs -> docSeq
+              $ [appSep $ docLit $ Text.pack "|"]
+              ++ List.intersperse docCommaSep (return <$> gs)
+              ++ [docSeparator]
+    , Data.Maybe.isJust mWhereDocs
+    ] ++
+    -- two-line solution + where in next line(s)
     [ docLines
     $ [ docForceSingleline
       $ docSeq (patPartInline ++ [guardPart, return binderDoc])
       , docEnsureIndent BrIndentRegular
       $ docForceSingleline
       $ return body
-      ] ++ wherePart
+      ] ++ wherePartMultiLine
     | [(guards, body, _bodyRaw)] <- [clauseDocs]
     , let guardPart = case guards of
             [] -> docEmpty
@@ -217,14 +241,9 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
               $ [appSep $ docLit $ Text.pack "|"]
               ++ List.intersperse docCommaSep (return <$> gs)
               ++ [docSeparator]
-    , let wherePart = case mWhereDocs of
-            Nothing -> []
-            Just ws -> pure $ docEnsureIndent BrIndentRegular $ docPar
-              (docLit $ Text.pack "where")
-              (docSetIndentLevel $ docLines $ return <$> ws)
     ] ++
-    -- pattern and exactly one clause in single line, body and where
-    -- indented if necessary.
+    -- pattern and exactly one clause in single line, body as par;
+    -- where in following lines
     [ docLines
     $ [ docCols ColBindingLine
         [ docSeq
@@ -238,7 +257,7 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
           --   ]
           ]
         ]
-      ] ++ wherePart
+      ] ++ wherePartMultiLine
     | [(guards, body, bodyRaw)] <- [clauseDocs]
     , let lineMod = case () of
             _ | isExpressionTypeHeadPar bodyRaw -> id
@@ -249,20 +268,15 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
             gs -> docSeq
               $ [appSep $ docLit $ Text.pack "|"]
               ++ List.intersperse docCommaSep (return <$> gs)
-    , let wherePart = case mWhereDocs of
-            Nothing -> []
-            Just ws -> pure $ docEnsureIndent BrIndentRegular $ docPar
-              (docLit $ Text.pack "where")
-              (docSetIndentLevel $ docLines $ return <$> ws)
     ] ++
     -- pattern and exactly one clause in single line, body in new line.
-    [ docAddBaseY BrIndentRegular
-    $ docPar
-      (docSeq (patPartInline ++ [appSep $ guardPart, return binderDoc]))
-      ( docNonBottomSpacing
+    [ docLines
+    $ [ docSeq (patPartInline ++ [appSep $ guardPart, return binderDoc])
+      , docEnsureIndent BrIndentRegular
+      $ docNonBottomSpacing
       $ docLines
-      $ [ docAddBaseY BrIndentRegular $ return body ] ++ wherePart
-      )
+      $ [ docAddBaseY BrIndentRegular $ return body ]
+      ] ++ wherePartMultiLine
     | [(guards, body, _)] <- [clauseDocs]
     , let guardPart = case guards of
             [] -> docEmpty
@@ -270,17 +284,13 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
             gs -> docSeq
               $ [appSep $ docLit $ Text.pack "|"]
               ++ List.intersperse docCommaSep (return <$> gs)
-    , let wherePart = case mWhereDocs of
-            Nothing -> []
-            Just ws -> pure $ docAddBaseY BrIndentRegular $ docPar
-              (docLit $ Text.pack "where")
-              (docSetIndentLevel $ docLines $ return <$> ws)
     ] ++
     -- conservative approach: everything starts on the left.
-    [ docAddBaseY BrIndentRegular
-    $ patPartParWrap
-    $ docLines $
-        (clauseDocs >>= \(guardDocs, bodyDoc, _) ->
+    [ docLines $
+        [ patPartParWrap
+        $ docLines
+        $ fmap (docEnsureIndent BrIndentRegular)
+        $ clauseDocs >>= \(guardDocs, bodyDoc, _) ->
           (case guardDocs of
             [] -> []
             [g] -> [docSeq [appSep $ docLit $ Text.pack "|", return g]]
@@ -295,13 +305,5 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
             [ appSep $ return binderDoc
             , docAddBaseY BrIndentRegular $ return bodyDoc]
             ]
-        ) ++
-        (case mWhereDocs of
-          Nothing -> []
-          Just whereDocs ->
-            [ docAddBaseY BrIndentRegular
-            $ docPar (docLit $ Text.pack "where")
-            $ docSetIndentLevel $ docLines (return <$> whereDocs)
-            ]
-        )
+        ] ++ wherePartMultiLine
     ]

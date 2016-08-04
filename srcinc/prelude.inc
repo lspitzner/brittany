@@ -428,6 +428,8 @@ import qualified Control.Monad.Trans.State.Strict as StateS
 
 import qualified Data.Strict.Maybe as Strict
 
+import qualified Safe as Safe
+
 import Data.Functor.Identity ( Identity(..) )
 import Control.Concurrent.Chan ( Chan )
 import Control.Concurrent.MVar ( MVar )

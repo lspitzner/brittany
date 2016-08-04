@@ -83,10 +83,10 @@ data LayoutState = LayoutState
   }
 
 lstate_baseY :: LayoutState -> Int
-lstate_baseY = head . _lstate_baseYs
+lstate_baseY = Safe.headNote "lstate_baseY" . _lstate_baseYs
 
 lstate_indLevel :: LayoutState -> Int
-lstate_indLevel = head . _lstate_indLevels
+lstate_indLevel = Safe.headNote "lstate_baseY" . _lstate_indLevels
 
 -- evil, incomplete Show instance; only for debugging.
 instance Show LayoutState where
