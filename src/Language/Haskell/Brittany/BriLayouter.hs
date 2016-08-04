@@ -1307,10 +1307,13 @@ layoutBriDocM = \case
         -- in each column. but in that line, in the last column, we will be
         -- forced to occupy the full vertical space, not reduced by any factor.
         let fixedPosXs = if maxX>colMax
-              then let factor :: Float = fromIntegral (colMax - curX)
-                                       / fromIntegral (maxX - curX)
-                       offsets = (subtract curX) <$> posXs
-                       fixed = offsets <&> fromIntegral .> (*factor) .> truncate
+              then let
+                     factor :: Float =
+                       max 1.0 ( fromIntegral (10 + colMax - curX) -- TODO: remove arbitrary 10..
+                               / fromIntegral (maxX - curX)
+                               )
+                     offsets = (subtract curX) <$> posXs
+                     fixed = offsets <&> fromIntegral .> (*factor) .> truncate
                    in  fixed <&> (+curX)
               else posXs
         -- fixing overflows, act II.
