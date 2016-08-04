@@ -539,7 +539,7 @@ layoutBaseYPushCur = do
     Nothing -> case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
       (Left i, Just j) -> layoutBaseYPushInternal (i+j)
       (Left i, Nothing) -> layoutBaseYPushInternal i
-      (Right{}, _) -> return ()
+      (Right{}, _) -> layoutBaseYPushInternal $ lstate_baseY state
     Just cCol -> layoutBaseYPushInternal cCol
 
 layoutBaseYPop
@@ -565,7 +565,7 @@ layoutIndentLevelPop
   :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
 layoutIndentLevelPop = do
   traceLocal ("layoutIndentLevelPop")
-  layoutBaseYPop
+  layoutBaseYPopInternal
   layoutIndentLevelPopInternal
   -- why are comment indentations relative to the previous indentation on
   -- the first node of an additional indentation, and relative to the outer
