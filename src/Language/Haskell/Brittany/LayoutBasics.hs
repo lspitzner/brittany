@@ -728,10 +728,12 @@ extractCommentsPrior anns = flip Map.mapMaybe anns $ \ann ->
   [r | let r = ExactPrint.Types.annPriorComments ann, not (null r)]
 extractCommentsPost  :: ExactPrint.Types.Anns -> PostMap
 extractCommentsPost  anns = flip Map.mapMaybe anns $ \ann ->
-  [r
-  | let r = ExactPrint.Types.annsDP ann >>= \case
+  [ r
+  | let annDPs = ExactPrint.Types.annsDP ann >>= \case
                  (ExactPrint.Types.AnnComment comment, dp) -> [(comment, dp)]
                  _ -> []
+  , let following = ExactPrint.Types.annFollowingComments ann
+  , let r = following ++ annDPs
   , not (null r)
   ]
 

@@ -38,6 +38,9 @@ import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint.Preprocess
+
+import qualified Data.Generics as SYB
+
 import qualified Data.Map as Map
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
@@ -52,6 +55,14 @@ import           Language.Haskell.Brittany.Layouters.Decl
 import           Language.Haskell.Brittany.Utils
 import           Language.Haskell.Brittany.BriLayouter
 
+import           RdrName ( RdrName(..) )
+import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import           SrcLoc ( SrcSpan )
+import           HsSyn
+import           Name
+import qualified FastString
+import           BasicTypes
+
 
 
 -- LayoutErrors can be non-fatal warnings, thus both are returned instead
@@ -64,16 +75,18 @@ pPrintModule
   -> GHC.ParsedSource
   -> ([LayoutError], TextL.Text)
 pPrintModule conf anns parsedModule =
-  let ((out, errs), debugStrings)
+  let ((), (annsBalanced, _), _) =
+        ExactPrint.runTransform anns (commentAnnFixTransform parsedModule)
+      ((out, errs), debugStrings)
         = runIdentity
         $ MultiRWSS.runMultiRWSTNil
         $ MultiRWSS.withMultiWriterAW
         $ MultiRWSS.withMultiWriterAW
         $ MultiRWSS.withMultiWriterW
-        $ MultiRWSS.withMultiReader anns
+        $ MultiRWSS.withMultiReader annsBalanced
         $ MultiRWSS.withMultiReader conf
         $ do
-            traceIfDumpConf "bridoc annotations" _dconf_dump_annotations $ annsDoc anns
+            traceIfDumpConf "bridoc annotations" _dconf_dump_annotations $ annsDoc annsBalanced
             ppModule parsedModule
       tracer = if Seq.null debugStrings
         then id
@@ -106,6 +119,55 @@ parsePrintModule conf filename input = do
                 LayoutWarning str -> str
                 LayoutErrorUnknownNode str _ -> str
           in Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
+
+-- TODO: move to separate module
+commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
+commentAnnFixTransform modul = SYB.everything (>>) genF modul
+ where
+  genF :: Data.Data.Data a => a -> ExactPrint.Transform ()
+  genF = (\_ -> return ()) `SYB.extQ` exprF
+  exprF :: Located (HsExpr RdrName) -> ExactPrint.Transform ()
+  exprF lexpr@(L _ expr) = case expr of
+    RecordCon _lname _ _ (HsRecFields fs@(_:_) Nothing) ->
+      moveTrailingComments lexpr (List.last fs)
+    RecordUpd _lname fs@(_:_) _ _ _ _ ->
+      moveTrailingComments lexpr (List.last fs)
+    _ -> return ()
+
+moveTrailingComments :: (Data.Data.Data a,Data.Data.Data b)
+                     => GHC.Located a -> GHC.Located b -> ExactPrint.Transform ()
+moveTrailingComments astFrom astTo = do
+  let
+    breakHet :: (a -> Either b c) -> [a] -> ([b],[c])
+    breakHet _ [] = ([],[])
+    breakHet fn (a1:aR) = case fn a1 of
+      Left  b -> (b:bs,cs)
+      Right c -> (bs,c:cs)
+     where
+      (bs,cs) = breakHet fn aR
+          
+    k1 = ExactPrint.Types.mkAnnKey astFrom
+    k2 = ExactPrint.Types.mkAnnKey astTo
+    moveComments ans = ans'
+      where
+        an1 = Data.Maybe.fromJust $ Map.lookup k1 ans
+        an2 = Data.Maybe.fromJust $ Map.lookup k2 ans
+        cs1f = ExactPrint.Types.annFollowingComments an1
+        cs2f = ExactPrint.Types.annFollowingComments an2
+        (comments, nonComments) = flip breakHet (ExactPrint.Types.annsDP an1)
+             $ \case
+               (ExactPrint.Types.AnnComment com, dp) -> Left (com, dp)
+               x -> Right x
+        an1' = an1
+          { ExactPrint.annsDP               = nonComments
+          , ExactPrint.annFollowingComments = []
+          }
+        an2' = an2
+          { ExactPrint.annFollowingComments = cs1f ++ cs2f ++ comments
+          }
+        ans' = Map.insert k1 an1' $ Map.insert k2 an2' ans
+
+  ExactPrint.modifyAnnsT moveComments
 
 -- this approach would for with there was a pure GHC.parseDynamicFilePragma.
 -- Unfortunately that does not exist yet, so we cannot provide a nominally
