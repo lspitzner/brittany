@@ -214,8 +214,6 @@ data BriDoc
   -- | BDAddIndent BrIndent (BriDocF f)
   -- | BDNewline
   | BDAlt [BriDoc]
-  | BDForceMultiline BriDoc
-  | BDForceSingleline BriDoc
   | BDForwardLineMode BriDoc
   | BDExternal AnnKey
                (Set AnnKey) -- set of annkeys contained within the node
@@ -226,7 +224,15 @@ data BriDoc
   | BDAnnotationPost  AnnKey BriDoc
   | BDLines [BriDoc]
   | BDEnsureIndent BrIndent BriDoc
+  -- the following constructors are only relevant for the alt transformation
+  -- and are removed afterwards. They should never occur in any BriDoc
+  -- after the alt transformation.
+  | BDForceMultiline BriDoc
+  | BDForceSingleline BriDoc
   | BDNonBottomSpacing BriDoc
+  | BDSetParSpacing BriDoc
+  | BDForceParSpacing BriDoc
+  -- pseudo-deprecated
   | BDProhibitMTEL BriDoc -- move to exact location
                           -- TODO: this constructor is deprecated. should
                           --       still work, but i should probably completely
@@ -256,8 +262,6 @@ data BriDocF f
   -- | BDAddIndent BrIndent (BriDocF f)
   -- | BDNewline
   | BDFAlt [f (BriDocF f)]
-  | BDFForceMultiline (f (BriDocF f))
-  | BDFForceSingleline (f (BriDocF f))
   | BDFForwardLineMode (f (BriDocF f))
   | BDFExternal AnnKey
                (Set AnnKey) -- set of annkeys contained within the node
@@ -268,7 +272,11 @@ data BriDocF f
   | BDFAnnotationPost  AnnKey (f (BriDocF f))
   | BDFLines [(f (BriDocF f))]
   | BDFEnsureIndent BrIndent (f (BriDocF f))
+  | BDFForceMultiline (f (BriDocF f))
+  | BDFForceSingleline (f (BriDocF f))
   | BDFNonBottomSpacing (f (BriDocF f))
+  | BDFSetParSpacing (f (BriDocF f))
+  | BDFForceParSpacing (f (BriDocF f))
   | BDFProhibitMTEL (f (BriDocF f)) -- move to exact location
                           -- TODO: this constructor is deprecated. should
                           --       still work, but i should probably completely
@@ -294,15 +302,17 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDIndentLevelPop bd)         = plate BDIndentLevelPop |* bd
   uniplate (BDPar ind line indented)     = plate BDPar |- ind |* line |* indented
   uniplate (BDAlt alts)                  = plate BDAlt ||* alts
-  uniplate (BDForceMultiline  bd)        = plate BDForceMultiline |* bd
-  uniplate (BDForceSingleline bd)        = plate BDForceSingleline |* bd
   uniplate (BDForwardLineMode bd)        = plate BDForwardLineMode |* bd
   uniplate x@BDExternal{}                = plate x
   uniplate (BDAnnotationPrior annKey bd) = plate BDAnnotationPrior |- annKey |* bd
   uniplate (BDAnnotationPost  annKey bd) = plate BDAnnotationPost  |- annKey |* bd
   uniplate (BDLines lines)               = plate BDLines ||* lines
   uniplate (BDEnsureIndent ind bd)       = plate BDEnsureIndent |- ind |* bd
+  uniplate (BDForceMultiline  bd)        = plate BDForceMultiline |* bd
+  uniplate (BDForceSingleline bd)        = plate BDForceSingleline |* bd
   uniplate (BDNonBottomSpacing bd)       = plate BDNonBottomSpacing |* bd
+  uniplate (BDSetParSpacing bd)          = plate BDSetParSpacing |* bd
+  uniplate (BDForceParSpacing bd)        = plate BDForceParSpacing |* bd
   uniplate (BDProhibitMTEL bd)           = plate BDProhibitMTEL |* bd
 
 newtype NodeAllocIndex = NodeAllocIndex Int
@@ -321,15 +331,17 @@ unwrapBriDocNumbered = snd .> \case
   BDFIndentLevelPop bd -> BDIndentLevelPop $ rec bd
   BDFPar ind line indented -> BDPar ind (rec line) (rec indented)
   BDFAlt alts -> BDAlt $ rec <$> alts -- not that this will happen
-  BDFForceMultiline  bd -> BDForceMultiline $ rec bd
-  BDFForceSingleline bd -> BDForceSingleline $ rec bd
   BDFForwardLineMode bd -> BDForwardLineMode $ rec bd
   BDFExternal k ks c t -> BDExternal k ks c t
   BDFAnnotationPrior annKey bd -> BDAnnotationPrior annKey $ rec bd
   BDFAnnotationPost  annKey bd -> BDAnnotationPost  annKey $ rec bd
   BDFLines lines -> BDLines $ rec <$> lines
   BDFEnsureIndent ind bd -> BDEnsureIndent ind $ rec bd
+  BDFForceMultiline  bd -> BDForceMultiline $ rec bd
+  BDFForceSingleline bd -> BDForceSingleline $ rec bd
   BDFNonBottomSpacing bd -> BDNonBottomSpacing $ rec bd
+  BDFSetParSpacing bd -> BDSetParSpacing $ rec bd
+  BDFForceParSpacing bd -> BDForceParSpacing $ rec bd
   BDFProhibitMTEL bd -> BDProhibitMTEL $ rec bd
  where
   rec = unwrapBriDocNumbered
@@ -348,15 +360,17 @@ briDocSeqSpine = \case
   BDIndentLevelPop bd -> briDocSeqSpine bd
   BDPar _ind line indented -> briDocSeqSpine line `seq` briDocSeqSpine indented
   BDAlt alts -> foldl' (\(!()) -> briDocSeqSpine) () alts
-  BDForceMultiline  bd -> briDocSeqSpine bd
-  BDForceSingleline bd -> briDocSeqSpine bd
   BDForwardLineMode bd -> briDocSeqSpine bd
   BDExternal{} -> ()
   BDAnnotationPrior _annKey bd -> briDocSeqSpine bd
   BDAnnotationPost  _annKey bd -> briDocSeqSpine bd
   BDLines lines -> foldl' (\(!()) -> briDocSeqSpine) () lines
   BDEnsureIndent _ind bd -> briDocSeqSpine bd
+  BDForceMultiline  bd -> briDocSeqSpine bd
+  BDForceSingleline bd -> briDocSeqSpine bd
   BDNonBottomSpacing bd -> briDocSeqSpine bd
+  BDSetParSpacing bd -> briDocSeqSpine bd
+  BDForceParSpacing bd -> briDocSeqSpine bd
   BDProhibitMTEL bd -> briDocSeqSpine bd
 
 briDocForceSpine :: BriDoc -> BriDoc
@@ -377,6 +391,7 @@ data VerticalSpacing
   = VerticalSpacing
     { _vs_sameLine  :: !Int
     , _vs_paragraph :: !VerticalSpacingPar
+    , _vs_parFlag   :: !Bool
     }
   deriving Show
 

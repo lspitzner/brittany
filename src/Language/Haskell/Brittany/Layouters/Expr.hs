@@ -3,8 +3,6 @@
 module Language.Haskell.Brittany.Layouters.Expr
   ( layoutExpr
   , litBriDoc
-  , isExpressionTypeHeadPar
-  , isExpressionTypeHeadPar'
   , overLitValBriDoc
   )
 where
@@ -57,15 +55,12 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     let funcPatternPartLine =
           docCols ColCasePattern
             $ (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
-    let lineMod = if isExpressionTypeHeadPar body
-          then id
-          else docForceSingleline
     docAlt
       [ docSeq
         [ docLit $ Text.pack "\\"
         , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
         , appSep $ docLit $ Text.pack "->"
-        , docWrapNode lgrhs $ lineMod bodyDoc
+        , docWrapNode lgrhs $ docForceParSpacing bodyDoc
         ]
       , docAddBaseY BrIndentRegular
       $ docPar
@@ -81,7 +76,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
     binderDoc <- docLit $ Text.pack "->"
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
-    docAddBaseY BrIndentRegular $ docPar
+    docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
       (docLit $ Text.pack "\\case")
       (docSetIndentLevel $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
   HsApp exp1@(L _ HsApp{}) exp2 -> do
@@ -103,6 +98,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         $ docLines
         $ paramDocs
         ]
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+        (docForceSingleline headDoc)
+        ( docNonBottomSpacing
+        $ docLines paramDocs
+        )
       , docAddBaseY BrIndentRegular
       $ docPar
         headDoc
@@ -116,6 +118,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     expDoc2 <- docSharedWrapper layoutExpr exp2
     docAlt
       [ docSeq [appSep $ docForceSingleline expDoc1, docForceSingleline expDoc2]
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+        (docForceSingleline expDoc1)
+        expDoc2
       , docAddBaseY BrIndentRegular
       $ docPar
         expDoc1
@@ -150,16 +157,19 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             ]
           )
         , appSep $ docForceSingleline opLastDoc
-        , docForceSingleline expLastDoc
+        , docForceParSpacing expLastDoc
         ]
-      , docSetBaseY
+      -- this case rather leads to some unfortunate layouting than to anything
+      -- useful; disabling for now. (it interfers with cols stuff.)
+      -- , docSetBaseY
+      -- $ docPar
+      --     leftOperandDoc
+      --     ( docLines
+      --     $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
+      --       ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
+      --     )
+      , docAddBaseY BrIndentRegular
       $ docPar
-          leftOperandDoc
-          ( docLines
-          $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
-            ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
-          )
-      , docPar
           leftOperandDoc
           ( docLines
           $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
@@ -171,28 +181,35 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     expDocOp    <- docSharedWrapper layoutExpr expOp
     expDocRight <- docSharedWrapper layoutExpr expRight
     docAlt
-      $   [ docSeq
+      $   [ -- one-line
+            docSeq
             [ appSep $ docForceSingleline expDocLeft
             , appSep $ docForceSingleline expDocOp
             , docForceSingleline expDocRight
             ]
-          ]
-      ++  [ docSeq
-            [ appSep $ docForceSingleline expDocLeft
-            , appSep $ docForceSingleline expDocOp
-            , docForceMultiline expDocRight
-            ]
-          | isExpressionTypeHeadPar expRight
-          ]
-      ++  [ docSeq
+          , -- line + freely indented block for right expression
+            docSeq
             [ appSep $ docForceSingleline expDocLeft
             , appSep $ docForceSingleline expDocOp
             , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
             ]
-          , docAddBaseY BrIndentRegular
+          , -- two-line
+            docAddBaseY BrIndentRegular
           $ docPar
               expDocLeft
-              -- TODO: turn this into docCols?
+              ( docForceSingleline
+              $ docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight]
+              )
+          , -- one-line + par
+            docSeq
+            [ appSep $ docForceSingleline expDocLeft
+            , appSep $ docForceSingleline expDocOp
+            , docForceParSpacing expDocRight
+            ]
+          , -- more lines
+            docAddBaseY BrIndentRegular
+          $ docPar
+              expDocLeft
               (docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight])
           ]
   NegApp{} -> do
@@ -247,7 +264,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     binderDoc <- docLit $ Text.pack "->"
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
     docAlt
-      [ docAddBaseY BrIndentRegular
+      [ docSetParSpacing
+      $ docAddBaseY BrIndentRegular
       $ docPar
         ( docSeq
           [ appSep $ docLit $ Text.pack "case"
@@ -268,12 +286,6 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     ifExprDoc   <- docSharedWrapper layoutExpr ifExpr
     thenExprDoc <- docSharedWrapper layoutExpr thenExpr
     elseExprDoc <- docSharedWrapper layoutExpr elseExpr
-    let thenMod = if isExpressionTypeHeadPar thenExpr
-          then id
-          else docForceSingleline
-        elseMod = if isExpressionTypeHeadPar elseExpr
-          then id
-          else docForceSingleline
     docAlt
       [ docSeq
         [ appSep $ docLit $ Text.pack "if"
@@ -283,6 +295,25 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , appSep $ docLit $ Text.pack "else"
         , docForceSingleline elseExprDoc
         ]
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+          ( docAddBaseY (BrIndentSpecial 3)
+          $ docSeq [appSep $ docLit $ Text.pack "if", docForceSingleline ifExprDoc])
+          (docLines
+            [ docAddBaseY BrIndentRegular
+            $ docAlt
+              [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
+              , docAddBaseY BrIndentRegular
+              $ docPar (docLit $ Text.pack "then") thenExprDoc
+              ]
+            , docAddBaseY BrIndentRegular
+            $ docAlt
+              [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
+              , docAddBaseY BrIndentRegular
+              $ docPar (docLit $ Text.pack "else") elseExprDoc
+              ]
+            ])
       , docAddBaseY BrIndentRegular
       $ docPar
           ( docAddBaseY (BrIndentSpecial 3)
@@ -290,13 +321,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           (docLines
             [ docAddBaseY BrIndentRegular
             $ docAlt
-              [ docSeq [appSep $ docLit $ Text.pack "then", thenMod thenExprDoc]
+              [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
               , docAddBaseY BrIndentRegular
               $ docPar (docLit $ Text.pack "then") thenExprDoc
               ]
             , docAddBaseY BrIndentRegular
             $ docAlt
-              [ docSeq [appSep $ docLit $ Text.pack "else", elseMod elseExprDoc]
+              [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
               , docAddBaseY BrIndentRegular
               $ docPar (docLit $ Text.pack "else") elseExprDoc
               ]
@@ -374,10 +405,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     -- docSeq [appSep $ docLit "let in", expDoc1]
   HsDo DoExpr (L _ stmts) _ -> do
     stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
-    docAddBaseY BrIndentRegular
-           $ docPar
-               (docLit $ Text.pack "do")
-               (docSetIndentLevel $ docNonBottomSpacing $ docLines stmtDocs)
+    docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+          (docLit $ Text.pack "do")
+          (docSetIndentLevel $ docNonBottomSpacing $ docLines stmtDocs)
   HsDo x  (L _ stmts) _ | case x of { ListComp -> True
                                     ; MonadComp -> True
                                     ; _ -> False } -> do
@@ -434,7 +466,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       fExpDoc <- docSharedWrapper layoutExpr fExpr
       return $ (fieldl, lrdrNameToText lnameF, fExpDoc)
     docAlt
-      [ docAddBaseY BrIndentRegular
+      [ docSetParSpacing
+      $ docAddBaseY BrIndentRegular
       $ docPar
           (docLit t)
           (docLines $ let
@@ -471,7 +504,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
     docAlt
       -- singleline
-      [ docSeq
+      [ docSetParSpacing
+      $ docSeq
         [ appSep rExprDoc
         , appSep $ docLit $ Text.pack "{"
         , appSep $ docSeq $ List.intersperse docCommaSep
@@ -504,7 +538,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             in [line1] ++ lineR ++ [lineN]
         ]
       -- strict indentation block
-      , docAddBaseY BrIndentRegular
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
       $ docPar
           rExprDoc
           (docNonBottomSpacing $ docLines $ let
@@ -637,42 +672,6 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   HsWrap{} -> do
     -- TODO
     briDocByExact lexpr
-
-isExpressionTypeHeadPar :: LHsExpr RdrName -> Bool
-isExpressionTypeHeadPar (L _ expr) = case expr of
-  RecordCon{} -> True
-  RecordUpd{} -> True
-  HsDo{} -> True
-  HsIf{} -> True
-  HsLamCase{} -> True
-  -- TODO: these cases might have unfortunate layouts, if for some reason
-  -- the first operand is multiline.
-  OpApp _ _ _ (L _ HsDo{}) -> True
-  OpApp _ _ _ (L _ HsLamCase{}) -> True
-  OpApp _ _ _ (L _ HsLam{}) -> True
-  OpApp (L _ (OpApp left _ _ _)) _ _ _ | leftVar left -> True
-    where
-      -- leftVar (L _ x) | traceShow (Data.Data.toConstr x) False = error "foo"
-      leftVar (L _ HsVar{}) = True
-      leftVar (L _ (OpApp x _ _ _)) = leftVar x
-      leftVar _ = False
-  _ -> False
-
-isExpressionTypeHeadPar' :: LHsExpr RdrName -> Bool
-isExpressionTypeHeadPar' (L _ expr) = case expr of
-  RecordCon{} -> True
-  RecordUpd{} -> True
-  HsDo{} -> True
-  HsIf{} -> True
-  HsLamCase{} -> True
-  -- TODO: these cases might have unfortunate layouts, if for some reason
-  -- the first operand is multiline.
-  OpApp _ _ _ (L _ HsDo{}) -> True
-  OpApp _ _ _ (L _ HsLamCase{}) -> True
-  HsApp (L _ HsVar{}) _ -> True
-  HsApp (L _ (HsApp (L _ HsVar{}) _)) _ -> True
-  HsApp (L _ (HsApp (L _ (HsApp (L _ HsVar{}) _)) _)) _ -> True -- TODO: the obvious
-  _ -> False
 
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case

@@ -3,8 +3,6 @@
 module Language.Haskell.Brittany.Layouters.Expr
   ( layoutExpr
   , litBriDoc
-  , isExpressionTypeHeadPar
-  , isExpressionTypeHeadPar'
   , overLitValBriDoc
   )
 where
@@ -29,8 +27,5 @@ layoutExpr :: ToBriDoc HsExpr
 -- layoutStmt :: ToBriDoc' (StmtLR RdrName RdrName (LHsExpr RdrName))
 
 litBriDoc :: HsLit -> BriDocFInt
-
-isExpressionTypeHeadPar :: LHsExpr RdrName -> Bool
-isExpressionTypeHeadPar' :: LHsExpr RdrName -> Bool
 
 overLitValBriDoc :: OverLitVal -> BriDocFInt

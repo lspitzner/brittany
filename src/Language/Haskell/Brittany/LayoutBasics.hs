@@ -62,6 +62,8 @@ module Language.Haskell.Brittany.LayoutBasics
   , docAnnotationPrior
   , docAnnotationPost
   , docNonBottomSpacing
+  , docSetParSpacing
+  , docForceParSpacing
   , briDocByExact
   , briDocByExactNoComment
   , fromMaybeIdentity
@@ -933,6 +935,12 @@ docAnnotationPost  annKey bdm = allocateNode . BDFAnnotationPost annKey =<< bdm
 
 docNonBottomSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing =<< bdm
+
+docSetParSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docSetParSpacing bdm = allocateNode . BDFSetParSpacing =<< bdm
+
+docForceParSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docForceParSpacing bdm = allocateNode . BDFForceParSpacing =<< bdm
 
 appSep :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 appSep x = docSeq [x, docSeparator]

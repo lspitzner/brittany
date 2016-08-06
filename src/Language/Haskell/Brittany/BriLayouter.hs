@@ -297,7 +297,7 @@ transformAlts briDoc
               spacings <- alts `forM` getSpacing
               acp <- mGet
               let lineCheck LineModeInvalid = False
-                  lineCheck (LineModeValid (VerticalSpacing _ p)) =
+                  lineCheck (LineModeValid (VerticalSpacing _ p _)) =
                     case _acp_forceMLFlag acp of
                       AltLineModeStateNone      -> True
                       AltLineModeStateForceSL{} -> p == VerticalSpacingParNone
@@ -332,7 +332,7 @@ transformAlts briDoc
             AltChooserBoundedSearch limit -> do
               spacings <- alts `forM` getSpacings limit
               acp <- mGet
-              let lineCheck (VerticalSpacing _ p) =
+              let lineCheck (VerticalSpacing _ p _) =
                     case _acp_forceMLFlag acp of
                       AltLineModeStateNone      -> True
                       AltLineModeStateForceSL{} -> p == VerticalSpacingParNone
@@ -408,6 +408,8 @@ transformAlts briDoc
         BDFEnsureIndent indent bd ->
           reWrap . BDFEnsureIndent indent <$> rec bd
         BDFNonBottomSpacing bd -> rec bd
+        BDFSetParSpacing bd -> rec bd
+        BDFForceParSpacing bd -> rec bd
         BDFProhibitMTEL bd ->
           reWrap . BDFProhibitMTEL <$> rec bd
     processSpacingSimple :: (MonadMultiReader
@@ -415,22 +417,22 @@ transformAlts briDoc
                                                    MonadMultiState AltCurPos m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m ()
     processSpacingSimple bd = getSpacing bd >>= \case
       LineModeInvalid                           -> error "processSpacingSimple inv"
-      LineModeValid (VerticalSpacing i VerticalSpacingParNone) -> do
+      LineModeValid (VerticalSpacing i VerticalSpacingParNone _) -> do
         acp <- mGet
         mSet $ acp { _acp_line = _acp_line acp + i }
-      LineModeValid (VerticalSpacing _ _)  -> error "processSpacingSimple par"
+      LineModeValid (VerticalSpacing _ _ _)  -> error "processSpacingSimple par"
       _ -> error "ghc exhaustive check is insufficient"
     hasSpace1 :: LayoutConfig -> AltCurPos -> LineModeValidity VerticalSpacing -> Bool
     hasSpace1 _ _ LineModeInvalid = False
     hasSpace1 lconf acp (LineModeValid vs) = hasSpace2 lconf acp vs
     hasSpace1 _ _ _ = error "ghc exhaustive check is insufficient"
     hasSpace2 :: LayoutConfig -> AltCurPos -> VerticalSpacing -> Bool
-    hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNone)
+    hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNone _)
       = line + sameLine <= runIdentity (_lconfig_cols lconf)
-    hasSpace2 lconf (AltCurPos line indent indentPrep _) (VerticalSpacing sameLine (VerticalSpacingParSome par))
+    hasSpace2 lconf (AltCurPos line indent indentPrep _) (VerticalSpacing sameLine (VerticalSpacingParSome par) _)
       = line + sameLine <= runIdentity (_lconfig_cols lconf)
         && indent + indentPrep + par <= runIdentity (_lconfig_cols lconf)
-    hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNonBottom)
+    hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNonBottom _)
       = line + sameLine <= runIdentity (_lconfig_cols lconf)
 
 getSpacing :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m (LineModeValidity VerticalSpacing)
@@ -442,14 +444,14 @@ getSpacing !bridoc = rec bridoc
     result <- case brDc of
       -- BDWrapAnnKey _annKey bd -> rec bd
       BDFEmpty ->
-        return $ LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone
+        return $ LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone False
       BDFLit t ->
-        return $ LineModeValid $ VerticalSpacing (Text.length t) VerticalSpacingParNone
+        return $ LineModeValid $ VerticalSpacing (Text.length t) VerticalSpacingParNone False
       BDFSeq list ->
         sumVs <$> rec `mapM` list
       BDFCols _sig list -> sumVs <$> rec `mapM` list
       BDFSeparator ->
-        return $ LineModeValid $ VerticalSpacing 1 VerticalSpacingParNone
+        return $ LineModeValid $ VerticalSpacing 1 VerticalSpacingParNone False
       BDFAddBaseY indent bd -> do
         mVs <- rec bd
         return $ mVs <&> \vs -> vs
@@ -485,34 +487,42 @@ getSpacing !bridoc = rec bridoc
       BDFIndentLevelPop bd -> rec bd
       BDFPar BrIndentNone sameLine indented -> do
         mVs <- rec sameLine
-        indSp <- rec indented
-        return $ [ VerticalSpacing lsp $ case mPsp of
-                    VerticalSpacingParSome psp -> VerticalSpacingParSome $ max psp lineMax
-                    VerticalSpacingParNone  -> VerticalSpacingParSome $ lineMax
+        mIndSp <- rec indented
+        return
+          $ [ VerticalSpacing lsp pspResult parFlagResult
+            | VerticalSpacing lsp mPsp _ <- mVs
+            , indSp <- mIndSp
+            , lineMax <- getMaxVS $ mIndSp
+            , let pspResult = case mPsp of
+                    VerticalSpacingParSome psp  -> VerticalSpacingParSome $ max psp lineMax
+                    VerticalSpacingParNone      -> VerticalSpacingParSome $ lineMax
                     VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
-                 | VerticalSpacing lsp mPsp <- mVs
-                 , lineMax <- getMaxVS $ indSp
-                 ]
+            , let parFlagResult =  mPsp == VerticalSpacingParNone
+                                && _vs_paragraph indSp ==  VerticalSpacingParNone
+                                && _vs_parFlag indSp
+            ]
       BDFPar{} -> error "BDPar with indent in getSpacing"
       BDFAlt [] -> error "empty BDAlt"
       BDFAlt (alt:_) -> rec alt
       BDFForceMultiline  bd -> rec bd
       BDFForceSingleline bd -> do
         mVs <- rec bd
-        return $ mVs >>= \(VerticalSpacing _ psp) ->
-          case psp of
-            VerticalSpacingParNone -> mVs
-            _  -> LineModeInvalid
+        return $ mVs >>= _vs_paragraph .> \case
+          VerticalSpacingParNone -> mVs
+          _  -> LineModeInvalid
       BDFForwardLineMode bd -> rec bd
-      BDFExternal{} ->
-        return $ LineModeValid $ VerticalSpacing 999 VerticalSpacingParNone
+      BDFExternal{} -> return
+        $ LineModeValid
+        $ VerticalSpacing 999 VerticalSpacingParNone False
       BDFAnnotationPrior _annKey bd -> rec bd
       BDFAnnotationPost  _annKey bd -> rec bd
-      BDFLines [] -> return $ LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone
+      BDFLines [] -> return
+        $ LineModeValid
+        $ VerticalSpacing 0 VerticalSpacingParNone False
       BDFLines ls@(_:_) -> do
         lSps@(mVs:_) <- rec `mapM` ls
-        return $ [ VerticalSpacing lsp $ VerticalSpacingParSome $ lineMax
-                 | VerticalSpacing lsp _ <- mVs
+        return $ [ VerticalSpacing lsp (VerticalSpacingParSome $ lineMax) False
+                 | VerticalSpacing lsp _ _ <- mVs
                  , lineMax <- getMaxVS $ maxVs $ lSps
                  ]
       BDFEnsureIndent indent bd -> do
@@ -524,11 +534,21 @@ getSpacing !bridoc = rec bridoc
                                  $ _conf_layout
                                  $ config
               BrIndentSpecial i -> i
-        return $ mVs <&> \(VerticalSpacing lsp psp) ->
-          VerticalSpacing (lsp + addInd) psp
+        return $ mVs <&> \(VerticalSpacing lsp psp pf) ->
+          VerticalSpacing (lsp + addInd) psp pf
       BDFNonBottomSpacing bd -> do
         mVs <- rec bd
-        return $ mVs <|> LineModeValid (VerticalSpacing 0 VerticalSpacingParNonBottom)
+        return
+          $   mVs
+          <|> LineModeValid (VerticalSpacing 0
+                                             VerticalSpacingParNonBottom
+                                             False)
+      BDFSetParSpacing bd -> do
+        mVs <- rec bd
+        return $ mVs <&> \vs -> vs { _vs_parFlag = True }
+      BDFForceParSpacing bd -> do
+        mVs <- rec bd
+        return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
       BDFProhibitMTEL bd -> rec bd
 #if INSERTTRACESGETSPACING
     mTell $ Seq.singleton ("getSpacing: visiting: "
@@ -539,26 +559,36 @@ getSpacing !bridoc = rec bridoc
     return result
   maxVs :: [LineModeValidity VerticalSpacing] -> LineModeValidity VerticalSpacing
   maxVs = foldl'
-    (liftM2 (\(VerticalSpacing x1 x2) (VerticalSpacing y1 y2) ->
+    (liftM2 (\(VerticalSpacing x1 x2 _) (VerticalSpacing y1 y2 _) ->
         VerticalSpacing (max x1 y1) (case (x2, y2) of
           (x, VerticalSpacingParNone) -> x
           (VerticalSpacingParNone, x) -> x
           (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
           (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-          (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ max x y)))
-    (LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone)
+          (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ max x y) False))
+    (LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone False)
   sumVs :: [LineModeValidity VerticalSpacing] -> LineModeValidity VerticalSpacing
-  sumVs = foldl'
-    (liftM2 (\(VerticalSpacing x1 x2) (VerticalSpacing y1 y2) ->
-        VerticalSpacing (x1 + y1) (case (x2, y2) of
-          (x, VerticalSpacingParNone) -> x
-          (VerticalSpacingParNone, x) -> x
-          (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-          (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-          (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ x + y)))
-    (LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone)
+  sumVs sps = foldl' (liftM2 go) initial sps
+   where
+    go (VerticalSpacing x1 x2 x3) (VerticalSpacing y1 y2 _) = VerticalSpacing
+      (x1 + y1)
+      (case (x2, y2) of
+        (x, VerticalSpacingParNone) -> x
+        (VerticalSpacingParNone, x) -> x
+        (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
+        (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
+        (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ x + y)
+      x3
+    singleline (LineModeValid x) = _vs_paragraph x == VerticalSpacingParNone
+    singleline _                 = False
+    isPar (LineModeValid x) = _vs_parFlag x
+    isPar _                 = False
+    parFlag = case sps of
+      [] -> True
+      _ -> all singleline (List.init sps) && isPar (List.last sps)
+    initial = LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone parFlag
   getMaxVS :: LineModeValidity VerticalSpacing -> LineModeValidity Int
-  getMaxVS = fmap $ \(VerticalSpacing x1 x2) -> x1 `max` case x2 of
+  getMaxVS = fmap $ \(VerticalSpacing x1 x2 _) -> x1 `max` case x2 of
     VerticalSpacingParSome i -> i
     VerticalSpacingParNone -> 0
     VerticalSpacingParNonBottom -> 999
@@ -570,10 +600,10 @@ getSpacings limit bridoc = rec bridoc
     memoWithKey :: Memo.MonadMemo k v m1 => k -> m1 v -> m1 v
     memoWithKey k v = Memo.memo (const v) k
     rec :: BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
-    rec (bdKey, brdc) = memoWithKey bdKey $ do
+    rec (brDcId, brdc) = memoWithKey brDcId $ do
       config <- mAsk
       let colMax = config & _conf_layout & _lconfig_cols & runIdentity
-      let hasOkColCount (VerticalSpacing lsp psp) =
+      let hasOkColCount (VerticalSpacing lsp psp _) =
             lsp <= colMax && case psp of
               VerticalSpacingParNone -> True
               VerticalSpacingParSome i -> i <= colMax
@@ -584,15 +614,15 @@ getSpacings limit bridoc = rec bridoc
       result <- case brdc of
         -- BDWrapAnnKey _annKey bd -> rec bd
         BDFEmpty ->
-          return $ [VerticalSpacing 0 VerticalSpacingParNone]
+          return $ [VerticalSpacing 0 VerticalSpacingParNone False]
         BDFLit t ->
-          return $ [VerticalSpacing (Text.length t) VerticalSpacingParNone]
+          return $ [VerticalSpacing (Text.length t) VerticalSpacingParNone False]
         BDFSeq list ->
           filterAndLimit . fmap sumVs . sequence <$> rec `mapM` list
         BDFCols _sig list ->
           filterAndLimit . fmap sumVs . sequence <$> rec `mapM` list
         BDFSeparator ->
-          return $ [VerticalSpacing 1 VerticalSpacingParNone]
+          return $ [VerticalSpacing 1 VerticalSpacingParNone False]
         BDFAddBaseY indent bd -> do
           mVs <- rec bd
           return $ mVs <&> \vs -> vs
@@ -639,12 +669,19 @@ getSpacings limit bridoc = rec bridoc
                          , hasOkColCount y
                          ]
           return $ mVsIndSp <&>
-            \(VerticalSpacing lsp mPsp, indSp) ->
-              VerticalSpacing lsp $ case mPsp of
-                VerticalSpacingParSome psp ->
-                  VerticalSpacingParSome $ max psp $ getMaxVS indSp -- TODO
-                VerticalSpacingParNone -> spMakePar indSp
-                VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
+            \(VerticalSpacing lsp mPsp _, indSp) ->
+              VerticalSpacing
+                lsp
+                (case mPsp of
+                  VerticalSpacingParSome psp ->
+                    VerticalSpacingParSome $ max psp $ getMaxVS indSp -- TODO
+                  VerticalSpacingParNone -> spMakePar indSp
+                  VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom)
+                (  mPsp == VerticalSpacingParNone
+                && _vs_paragraph indSp == VerticalSpacingParNone
+                && _vs_parFlag indSp
+                )
+
         BDFPar{} -> error "BDPar with indent in getSpacing"
         BDFAlt [] -> error "empty BDAlt"
         -- BDAlt (alt:_) -> rec alt
@@ -661,7 +698,7 @@ getSpacings limit bridoc = rec bridoc
                       -- this.
         BDFAnnotationPrior _annKey bd -> rec bd
         BDFAnnotationPost  _annKey bd -> rec bd
-        BDFLines [] -> return $ [VerticalSpacing 0 VerticalSpacingParNone]
+        BDFLines [] -> return $ [VerticalSpacing 0 VerticalSpacingParNone False]
         BDFLines ls@(_:_) -> do
           -- we simply assume that lines is only used "properly", i.e. in
           -- such a way that the first line can be treated "as a part of the
@@ -671,7 +708,7 @@ getSpacings limit bridoc = rec bridoc
           lSpss <- rec `mapM` ls
           return $ filterAndLimit
                  $ Control.Lens.transposeOf traverse lSpss <&> \lSps ->
-                     VerticalSpacing 0 (spMakePar $ maxVs lSps)
+                     VerticalSpacing 0 (spMakePar $ maxVs lSps) False
           -- lSpss@(mVs:_) <- rec `mapM` ls
           -- return $ case Control.Lens.transposeOf traverse lSpss of -- TODO: we currently only
           --                      -- consider the first alternative for the
@@ -692,13 +729,19 @@ getSpacings limit bridoc = rec bridoc
                                    $ _conf_layout
                                    $ config
                 BrIndentSpecial i -> i
-          return $ mVs <&> \(VerticalSpacing lsp psp) ->
-            VerticalSpacing (lsp + addInd) psp
+          return $ mVs <&> \(VerticalSpacing lsp psp parFlag) ->
+            VerticalSpacing (lsp + addInd) psp parFlag
         BDFNonBottomSpacing bd -> do
           mVs <- rec bd
           return $ if null mVs
-            then [VerticalSpacing 0 VerticalSpacingParNonBottom]
+            then [VerticalSpacing 0 VerticalSpacingParNonBottom False]
             else mVs <&> \vs -> vs { _vs_paragraph = VerticalSpacingParNonBottom}
+        BDFSetParSpacing bd -> do
+          mVs <- rec bd
+          return $ mVs <&> \vs -> vs { _vs_parFlag = True }
+        BDFForceParSpacing bd -> do
+          mVs <- rec bd
+          return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
         BDFProhibitMTEL bd -> rec bd
 #if INSERTTRACESGETSPACING
       case brdc of
@@ -713,31 +756,42 @@ getSpacings limit bridoc = rec bridoc
       return result
     maxVs :: [VerticalSpacing] -> VerticalSpacing
     maxVs = foldl'
-      (\(VerticalSpacing x1 x2) (VerticalSpacing y1 y2) ->
-          VerticalSpacing (max x1 y1) (case (x2, y2) of
-            (x, VerticalSpacingParNone) -> x
-            (VerticalSpacingParNone, x) -> x
-            (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-            (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-            (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ max x y))
-      (VerticalSpacing 0 VerticalSpacingParNone)
+      (\(VerticalSpacing x1 x2 _) (VerticalSpacing y1 y2 _) ->
+          VerticalSpacing
+            (max x1 y1)
+            (case (x2, y2) of
+              (x, VerticalSpacingParNone) -> x
+              (VerticalSpacingParNone, x) -> x
+              (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
+              (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
+              (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ max x y)
+            False)
+      (VerticalSpacing 0 VerticalSpacingParNone False)
     sumVs :: [VerticalSpacing] -> VerticalSpacing
-    sumVs = foldl'
-      (\(VerticalSpacing x1 x2) (VerticalSpacing y1 y2) ->
-          VerticalSpacing (x1 + y1) (case (x2, y2) of
-            (x, VerticalSpacingParNone) -> x
-            (VerticalSpacingParNone, x) -> x
-            (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-            (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-            (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ x + y))
-      (VerticalSpacing 0 VerticalSpacingParNone)
+    sumVs sps = foldl' go initial sps
+     where
+      go (VerticalSpacing x1 x2 x3) (VerticalSpacing y1 y2 _) = VerticalSpacing
+        (x1 + y1)
+        (case (x2, y2) of
+          (x, VerticalSpacingParNone) -> x
+          (VerticalSpacingParNone, x) -> x
+          (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
+          (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
+          (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ x + y)
+        x3
+      singleline x = _vs_paragraph x == VerticalSpacingParNone
+      isPar      x = _vs_parFlag x
+      parFlag = case sps of
+        [] -> True
+        _ -> all singleline (List.init sps) && isPar (List.last sps)
+      initial = VerticalSpacing 0 VerticalSpacingParNone parFlag
     getMaxVS :: VerticalSpacing -> Int
-    getMaxVS (VerticalSpacing x1 x2) = x1 `max` case x2 of
+    getMaxVS (VerticalSpacing x1 x2 _) = x1 `max` case x2 of
       VerticalSpacingParSome i -> i
       VerticalSpacingParNone -> 0
       VerticalSpacingParNonBottom -> 999
     spMakePar :: VerticalSpacing -> VerticalSpacingPar
-    spMakePar (VerticalSpacing x1 x2) = case x2 of
+    spMakePar (VerticalSpacing x1 x2 _) = case x2 of
       VerticalSpacingParSome i -> VerticalSpacingParSome $ x1 `max` i
       VerticalSpacingParNone -> VerticalSpacingParSome $ x1
       VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
@@ -1042,6 +1096,8 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDAnnotationPost{}  -> Nothing
   BDEnsureIndent{}    -> Nothing
   BDProhibitMTEL{}    -> Nothing
+  BDSetParSpacing{}   -> Nothing
+  BDForceParSpacing{} -> Nothing
   BDNonBottomSpacing x -> Just x
 
 -- prepare layouting by translating BDPar's, replacing them with Indents and
@@ -1106,6 +1162,8 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDLines [] -> error "briDocLineLength BDLines []"
     BDEnsureIndent _ bd -> rec bd
     BDProhibitMTEL bd -> rec bd
+    BDSetParSpacing bd -> rec bd
+    BDForceParSpacing bd -> rec bd
     BDNonBottomSpacing bd -> rec bd
 
 layoutBriDocM
@@ -1249,6 +1307,8 @@ layoutBriDocM = \case
             layoutWriteAppendMultiline $ Text.pack $ comment
             -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDNonBottomSpacing bd -> layoutBriDocM bd
+  BDSetParSpacing bd -> layoutBriDocM bd
+  BDForceParSpacing bd -> layoutBriDocM bd
   BDProhibitMTEL bd -> do
     -- set flag to True for this child, but disable afterwards.
     -- two hard aspects

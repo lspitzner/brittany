@@ -112,6 +112,8 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
   EmptyLocalBinds     ->
     return $ Nothing
 
+-- TODO: we don't need the `LHsExpr RdrName` anymore, now that there is
+-- parSpacing stuff.B
 layoutGrhs :: LGRHS RdrName (LHsExpr RdrName) -> ToBriDocM ([BriDocNumbered], BriDocNumbered, LHsExpr RdrName)
 layoutGrhs lgrhs@(L _ (GRHS guards body))
   = do
@@ -175,15 +177,11 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
         (patPartInline ++ [guardPart])
       , docSeq
         [ appSep $ return binderDoc
-        , lineMod $ return body
+        , docForceSingleline $ return body
         , wherePart
         ]
       ]
-    | [(guards, body, bodyRaw)] <- [clauseDocs]
-    , let lineMod = case mWhereDocs of
-            Nothing | isExpressionTypeHeadPar bodyRaw ->
-              docAddBaseY BrIndentRegular
-            _ -> docForceSingleline
+    | [(guards, body, _bodyRaw)] <- [clauseDocs]
     , let guardPart = case guards of
             [] -> docEmpty
             [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g, docSeparator]
@@ -207,15 +205,11 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
           (patPartInline ++ [guardPart])
         , docSeq
           [ appSep $ return binderDoc
-          , lineMod $ return body
+          , docForceParSpacing $ return body
           ]
         ]
       ] ++ wherePartMultiLine
-    | [(guards, body, bodyRaw)] <- [clauseDocs]
-    , let lineMod = case mWhereDocs of
-            Nothing | isExpressionTypeHeadPar bodyRaw ->
-              docAddBaseY BrIndentRegular
-            _ -> docForceSingleline
+    | [(guards, body, _bodyRaw)] <- [clauseDocs]
     , let guardPart = case guards of
             [] -> docEmpty
             [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g, docSeparator]
@@ -250,7 +244,7 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
           (patPartInline ++ [appSep guardPart])
         , docSeq
           [ appSep $ return binderDoc
-          , lineMod $ docAddBaseY BrIndentRegular $ return body
+          , docForceParSpacing $ docAddBaseY BrIndentRegular $ return body
           -- , lineMod $ docAlt
           --   [ docSetBaseY $ return body
           --   , docAddBaseY BrIndentRegular $ return body
@@ -258,10 +252,7 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
           ]
         ]
       ] ++ wherePartMultiLine
-    | [(guards, body, bodyRaw)] <- [clauseDocs]
-    , let lineMod = case () of
-            _ | isExpressionTypeHeadPar bodyRaw -> id
-            _ -> docForceSingleline
+    | [(guards, body, _bodyRaw)] <- [clauseDocs]
     , let guardPart = case guards of
             [] -> docEmpty
             [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g]
@@ -274,8 +265,7 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
     $ [ docSeq (patPartInline ++ [appSep $ guardPart, return binderDoc])
       , docEnsureIndent BrIndentRegular
       $ docNonBottomSpacing
-      $ docLines
-      $ [ docAddBaseY BrIndentRegular $ return body ]
+      $ (docAddBaseY BrIndentRegular $ return body)
       ] ++ wherePartMultiLine
     | [(guards, body, _)] <- [clauseDocs]
     , let guardPart = case guards of
