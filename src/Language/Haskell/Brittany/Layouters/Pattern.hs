@@ -73,6 +73,12 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       , docSeparator
       , docLit $ Text.pack "}"
       ]
+  ConPatIn lname (RecCon (HsRecFields [] (Just 0))) -> do
+    let t = lrdrNameToText lname
+    docSeq
+      [ appSep $ docLit t
+      , docLit $ Text.pack "{..}"
+      ]
   TuplePat args boxity _ -> do
     argDocs <- docSharedWrapper layoutPat `mapM` args
     case boxity of
@@ -113,6 +119,9 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   BangPat pat1 -> do
     patDoc <- docSharedWrapper layoutPat pat1
     docSeq [docLit $ Text.pack "!", patDoc]
+  LazyPat pat1 -> do
+    patDoc <- docSharedWrapper layoutPat pat1
+    docSeq [docLit $ Text.pack "~", patDoc]
   NPat llit@(L _ (OverLit olit _ _ _)) _ _ _ -> do
     docWrapNode llit $ allocateNode $ overLitValBriDoc olit
 
