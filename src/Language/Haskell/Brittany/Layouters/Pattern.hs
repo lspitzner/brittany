@@ -53,11 +53,10 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     docLit $ t <> Text.pack "{}"
   ConPatIn lname (RecCon (HsRecFields fs@(_:_) Nothing)) -> do
     let t = lrdrNameToText lname
-    fds <- fs `forM` \(L _ (HsRecField (L _ (FieldOcc lnameF _)) fPat _)) -> do
-      -- special casing for some record special thingy..
-      fExpDoc <- case fPat of
-        (L _ (VarPat (L _ (Unqual x)))) | occNameString x == "pun-right-hand-side" -> return Nothing
-        _ -> Just <$> docSharedWrapper layoutPat fPat
+    fds <- fs `forM` \(L _ (HsRecField (L _ (FieldOcc lnameF _)) fPat pun)) -> do
+      fExpDoc <- if pun
+        then return Nothing
+        else Just <$> docSharedWrapper layoutPat fPat
       return $ (lrdrNameToText lnameF, fExpDoc)
     docSeq
       [ appSep $ docLit t

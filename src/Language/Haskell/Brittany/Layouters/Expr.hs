@@ -462,8 +462,10 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     docLit $ t <> Text.pack "{}"
   RecordCon lname _ _ (HsRecFields fs@(_:_) Nothing) -> do
     let t = lrdrNameToText lname
-    ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr _)) -> do
-      fExpDoc <- docSharedWrapper layoutExpr fExpr
+    ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr pun)) -> do
+      fExpDoc <- if pun
+        then return Nothing
+        else Just <$> docSharedWrapper layoutExpr fExpr
       return $ (fieldl, lrdrNameToText lnameF, fExpDoc)
     docAlt
       [ docSetParSpacing
@@ -474,16 +476,22 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
               , appSep $ docLit $ fd1n
-              , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docWrapNode fd1l $ docAddBaseY BrIndentRegular $ fd1e
-                      ]
+              , case fd1e of
+                  Just x -> docSeq
+                    [ appSep $ docLit $ Text.pack "="
+                    , docWrapNode fd1l $ docAddBaseY BrIndentRegular $ x
+                    ]
+                  Nothing -> docEmpty
               ]
             lineR = fdr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
               , appSep $ docLit $ fText
-              , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docWrapNode lfield $ docAddBaseY BrIndentRegular fDoc
-                      ]
+              , case fDoc of
+                  Just x -> docSeq
+                    [ appSep $ docLit $ Text.pack "="
+                    , docWrapNode lfield $ docAddBaseY BrIndentRegular x
+                    ]
+                  Nothing -> docEmpty
               ]
             lineN = docLit $ Text.pack "}"
             in [line1] ++ lineR ++ [lineN])
@@ -497,8 +505,10 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   RecordUpd rExpr fields@(_:_) _ _ _ _ -> do
     rExprDoc <- docSharedWrapper layoutExpr rExpr
     rFs@((rF1f, rF1n, rF1e):rFr) <- fields
-      `forM` \lfield@(L _ (HsRecField (L _ ambName) rFExpr _)) -> do
-        rFExpDoc <- docSharedWrapper layoutExpr rFExpr
+      `forM` \lfield@(L _ (HsRecField (L _ ambName) rFExpr pun)) -> do
+        rFExpDoc <- if pun
+          then return Nothing
+          else Just <$> docSharedWrapper layoutExpr rFExpr
         return $ case ambName of
           Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
           Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
@@ -509,11 +519,14 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         [ appSep rExprDoc
         , appSep $ docLit $ Text.pack "{"
         , appSep $ docSeq $ List.intersperse docCommaSep
-                $ rFs <&> \(lfield, fieldStr, fieldDoc) ->
+                $ rFs <&> \case
+                  (lfield, fieldStr, Just fieldDoc) ->
                     docSeq [ appSep $ docWrapNode lfield $ docLit fieldStr
                           , appSep $ docLit $ Text.pack "="
                           , docForceSingleline fieldDoc
                           ]
+                  (lfield, fieldStr, Nothing) ->
+                    docWrapNode lfield $ docLit fieldStr
         , docLit $ Text.pack "}"
         ]
       -- wild-indentation block
@@ -523,16 +536,20 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
               , appSep $ docLit $ rF1n
-              , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docForceSingleline $ rF1e
-                      ]
+              , case rF1e of
+                  Just x -> docSeq [ appSep $ docLit $ Text.pack "="
+                                   , docForceSingleline $ x
+                                   ]
+                  Nothing -> docEmpty
               ]
             lineR = rFr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
               , appSep $ docWrapNode lfield $ docLit $ fText
-              , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docForceSingleline fDoc
-                      ]
+              , case fDoc of
+                  Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
+                                    , docForceSingleline x
+                                    ]
+                  Nothing -> docEmpty
               ]
             lineN = docLit $ Text.pack "}"
             in [line1] ++ lineR ++ [lineN]
@@ -546,16 +563,20 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
               , appSep $ docWrapNode rF1f $ docLit $ rF1n
-              , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docAddBaseY BrIndentRegular $ rF1e
-                      ]
+              , case rF1e of
+                  Just x -> docSeq [ appSep $ docLit $ Text.pack "="
+                                   , docAddBaseY BrIndentRegular $ x
+                                   ]
+                  Nothing -> docEmpty
               ]
             lineR = rFr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
               , appSep $ docWrapNode lfield $ docLit $ fText
-              , docSeq [ appSep $ docLit $ Text.pack "="
-                      , docAddBaseY BrIndentRegular fDoc
-                      ]
+              , case fDoc of
+                  Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
+                                    , docAddBaseY BrIndentRegular x
+                                    ]
+                  Nothing -> docEmpty
               ]
             lineN = docLit $ Text.pack "}"
             in [line1] ++ lineR ++ [lineN])
