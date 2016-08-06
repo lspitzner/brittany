@@ -617,8 +617,10 @@ getSpacing !bridoc = rec bridoc
 
 getSpacings :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m)
   => Int -> BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
-getSpacings limit bridoc = rec bridoc
+getSpacings limit bridoc = preFilterLimit <$> rec bridoc
   where
+    preFilterLimit :: [VerticalSpacing] -> [VerticalSpacing]
+    preFilterLimit = take (3*limit)
     memoWithKey :: Memo.MonadMemo k v m1 => k -> m1 v -> m1 v
     memoWithKey k v = Memo.memo (const v) k
     rec :: BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
@@ -631,16 +633,14 @@ getSpacings limit bridoc = rec bridoc
               VerticalSpacingParSome i -> i <= colMax
               VerticalSpacingParNonBottom -> True
       let filterAndLimit :: [VerticalSpacing] -> [VerticalSpacing]
-          filterAndLimit = forceList
-                         . take limit
+          filterAndLimit = take limit
                          . filter hasOkColCount
-                         . take (100*limit) -- we need to limit here in case
+                         . preFilterLimit   -- we need to limit here in case
                                             -- that the input list is
                                             -- _large_ with a similarly _large_
                                             -- prefix not passing hasOkColCount
                                             -- predicate.
-                                            -- TODO: 100 is arbitrary.
-          forceList l = foldl (flip seq) l l
+                                            -- TODO: 3 is arbitrary.
       result <- case brdc of
         -- BDWrapAnnKey _annKey bd -> rec bd
         BDFEmpty ->
@@ -648,9 +648,9 @@ getSpacings limit bridoc = rec bridoc
         BDFLit t ->
           return $ [VerticalSpacing (Text.length t) VerticalSpacingParNone False]
         BDFSeq list ->
-          filterAndLimit . fmap sumVs . sequence <$> rec `mapM` list
+          fmap sumVs . sequence . fmap filterAndLimit <$> rec `mapM` list
         BDFCols _sig list ->
-          filterAndLimit . fmap sumVs . sequence <$> rec `mapM` list
+          fmap sumVs . sequence . fmap filterAndLimit <$> rec `mapM` list
         BDFSeparator ->
           return $ [VerticalSpacing 1 VerticalSpacingParNone False]
         BDFAddBaseY indent bd -> do
@@ -689,14 +689,12 @@ getSpacings limit bridoc = rec bridoc
         BDFIndentLevelPushCur bd -> rec bd
         BDFIndentLevelPop bd -> rec bd
         BDFPar BrIndentNone sameLine indented -> do
-          mVss <- rec sameLine
-          indSps <- rec indented
+          mVss   <- filterAndLimit <$> rec sameLine
+          indSps <- filterAndLimit <$> rec indented
           let mVsIndSp = take limit
                        $ [ (x,y)
                          | x<-mVss
                          , y<-indSps
-                         , hasOkColCount x
-                         , hasOkColCount y
                          ]
           return $ mVsIndSp <&>
             \(VerticalSpacing lsp mPsp _, indSp) ->
@@ -716,11 +714,11 @@ getSpacings limit bridoc = rec bridoc
         BDFAlt [] -> error "empty BDAlt"
         -- BDAlt (alt:_) -> rec alt
         BDFAlt alts -> do
-          r <- filterAndLimit . join <$> (rec `mapM` alts)
-          return r
+          r <- rec `mapM` alts
+          return $ filterAndLimit =<< r
         BDFForceMultiline  bd -> rec bd
         BDFForceSingleline bd -> do
-          mVs <- rec bd
+          mVs <- filterAndLimit <$> rec bd
           return $ filter ((==VerticalSpacingParNone) . _vs_paragraph) mVs
         BDFForwardLineMode bd -> rec bd
         BDFExternal{} ->
@@ -735,7 +733,7 @@ getSpacings limit bridoc = rec bridoc
           -- paragraph". That most importantly means that Lines should never
           -- be inserted anywhere but at the start of the line. A
           -- counterexample would be anything like Seq[Lit "foo", Lines].
-          lSpss <- rec `mapM` ls
+          lSpss <- fmap filterAndLimit <$> rec `mapM` ls
           let worbled = fmap reverse
                       $ sequence
                       $ reverse
@@ -744,7 +742,7 @@ getSpacings limit bridoc = rec bridoc
                 VerticalSpacing (_vs_sameLine lSp1) 
                                 (spMakePar $ maxVs lSps)
                                 False
-          return $ filterAndLimit $ summed
+          return $ summed
           -- lSpss@(mVs:_) <- rec `mapM` ls
           -- return $ case Control.Lens.transposeOf traverse lSpss of -- TODO: we currently only
           --                      -- consider the first alternative for the
@@ -776,12 +774,12 @@ getSpacings limit bridoc = rec bridoc
           mVs <- rec bd
           return $ mVs <&> \vs -> vs { _vs_parFlag = True }
         BDFForceParSpacing bd -> do
-          mVs <- rec bd
+          mVs <- preFilterLimit <$> rec bd
           return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
         BDFProhibitMTEL bd -> rec bd
         BDFDebug s bd -> do
           r <- rec bd
-          tellDebugMess $ "getSpacings: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): vs=" ++ show r
+          tellDebugMess $ "getSpacings: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): vs=" ++ show (take 9 r)
           return r
 #if INSERTTRACESGETSPACING
       case brdc of
@@ -790,7 +788,7 @@ getSpacings limit bridoc = rec bridoc
         _ -> mTell $ Seq.fromList ["getSpacing: visiting: "
                             ++ show {-(toConstr $ brdc)-} (briDocToDoc $ unwrapBriDocNumbered (0, brdc))
                            , " -> "
-                            ++ show result
+                            ++ show (take 9 result)
                            ]
 #endif
       return result
