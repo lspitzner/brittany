@@ -444,17 +444,15 @@ basicExpressionTests = do
       |]
     it "2" $ roundTripEqual $
       [text|
-      func =
+      func = lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
         lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
-          lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
-          lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
       |]
     it "3" $ roundTripEqual $
       [text|
-      func =
-        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd lakjsdlajsdljas
-                                                      lakjsdlajsdljas
-                                                      lakjsdlajsdljas
+      func = lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd lakjsdlajsdljas
+                                                           lakjsdlajsdljas
+                                                           lakjsdlajsdljas
       |]
   describe "sections" $ do
     it "left" $ roundTripEqual $
@@ -602,4 +600,30 @@ regressionTests = do
                      Int -> -- currently used width in current line (after indent)
                             -- used to accurately calc placing of the current-line
                             LayoutDesc -> Int
+      |]
+  it "some indentation thingy" $ do
+    roundTripEqual $
+      [text|
+      func =
+        ( lkjadljasldjalskdjaldjalsdjkalsdjlaksdjlasjdlajsaldskj
+        $ abc
+        $ def
+        $ ghi
+        $ jkl
+        )
+      |]
+  it "parenthesized operator" $ do
+    roundTripEqual $
+      [text|
+      buildG bounds0 edges0 = accumArray (flip (:)) [] bounds0 (map reassoc edges0)
+       where
+        reassoc (v, e, w) = (v, (e, w))
+      |]
+  it "record pattern matching stuff" $ do
+    roundTripEqual $
+      [text|
+      downloadRepoPackage = case repo of
+        RepoLocal {..}    -> return ()
+        RepoLocal { abc } -> return ()
+        RepoLocal{}       -> return ()
       |]
