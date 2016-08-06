@@ -107,11 +107,11 @@ parsePrintModule
 parsePrintModule conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
-  case parseResult of
-    Left (_, s) -> return $ Left $ "parsing error: " ++ s
+  return $ case parseResult of
+    Left (_, s) -> Left $ "parsing error: " ++ s
     Right (anns, parsedModule) ->
       let (errs, ltext) = pPrintModule conf anns parsedModule
-      in return $ if null errs
+      in if null errs
         then Right $ TextL.toStrict $ ltext
         else
           let errStrs = errs <&> \case
