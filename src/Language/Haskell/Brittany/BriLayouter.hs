@@ -631,7 +631,15 @@ getSpacings limit bridoc = rec bridoc
               VerticalSpacingParSome i -> i <= colMax
               VerticalSpacingParNonBottom -> True
       let filterAndLimit :: [VerticalSpacing] -> [VerticalSpacing]
-          filterAndLimit = forceList . take limit . filter hasOkColCount
+          filterAndLimit = forceList
+                         . take limit
+                         . filter hasOkColCount
+                         . take (100*limit) -- we need to limit here in case
+                                            -- that the input list is
+                                            -- _large_ with a similarly _large_
+                                            -- prefix not passing hasOkColCount
+                                            -- predicate.
+                                            -- TODO: 100 is arbitrary.
           forceList l = foldl (flip seq) l l
       result <- case brdc of
         -- BDWrapAnnKey _annKey bd -> rec bd
@@ -730,7 +738,8 @@ getSpacings limit bridoc = rec bridoc
           lSpss <- rec `mapM` ls
           let worbled = fmap reverse
                       $ sequence
-                      $ reverse lSpss
+                      $ reverse
+                      $ lSpss
               summed = worbled <&> \lSps@(lSp1:_) ->
                 VerticalSpacing (_vs_sameLine lSp1) 
                                 (spMakePar $ maxVs lSps)

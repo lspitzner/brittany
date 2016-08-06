@@ -56,13 +56,15 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           docCols ColCasePattern
             $ (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
     docAlt
-      [ docSeq
+      [ docSetParSpacing
+      $ docSeq
         [ docLit $ Text.pack "\\"
         , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
         , appSep $ docLit $ Text.pack "->"
         , docWrapNode lgrhs $ docForceParSpacing bodyDoc
         ]
-      , docAddBaseY BrIndentRegular
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
       $ docPar
         (docSeq
           [ docLit $ Text.pack "\\"
@@ -118,6 +120,12 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     expDoc2 <- docSharedWrapper layoutExpr exp2
     docAlt
       [ docSeq [appSep $ docForceSingleline expDoc1, docForceSingleline expDoc2]
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docSeq
+        [ appSep $ docForceSingleline expDoc1
+        , docForceParSpacing expDoc2
+        ]
       , docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
@@ -472,7 +480,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       $ docAddBaseY BrIndentRegular
       $ docPar
           (docLit t)
-          (docLines $ let
+          (docNonBottomSpacing $ docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
               , appSep $ docLit $ fd1n
