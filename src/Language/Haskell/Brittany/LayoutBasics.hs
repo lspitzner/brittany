@@ -193,7 +193,7 @@ lrdrNameToTextAnn ast@(L _ n) = do
   return $ case Map.lookup (ExactPrint.Types.mkAnnKey ast) anns of
     Nothing -> t
     Just (ExactPrint.Types.Ann _ _ _ aks _ _) -> case n of
-      Exact{} -> t
+      Exact{} | t == Text.pack "()" -> t
       _ | any (hasUni AnnBackquote) aks -> Text.pack "`" <> t <> Text.pack "`"
       _ | any (hasUni AnnOpenP)     aks -> Text.pack "(" <> t <> Text.pack ")"
       _ | otherwise -> t
