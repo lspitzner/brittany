@@ -405,8 +405,25 @@ transformAlts briDoc
               }
             rec x
           return $ reWrap $ BDFLines (l':lr')
-        BDFEnsureIndent indent bd ->
-          reWrap . BDFEnsureIndent indent <$> rec bd
+        BDFEnsureIndent indent bd -> do
+          acp <- mGet
+          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
+          let indAdd = case indent of
+                BrIndentNone -> 0
+                BrIndentRegular -> indAmount
+                BrIndentSpecial i -> i
+          mSet $ acp { _acp_indentPrep = 0 -- TODO: i am not sure this is valid,
+                                           -- in general.
+                     , _acp_indent = _acp_indent acp + indAdd
+                     , _acp_line = _acp_line acp + indAdd
+                     }
+          r <- rec bd
+          acp' <- mGet
+          mSet $ acp' { _acp_indent = _acp_indent acp }
+          return $ case indent of
+            BrIndentNone -> r
+            BrIndentRegular ->   reWrap $ BDFEnsureIndent (BrIndentSpecial indAdd) r
+            BrIndentSpecial i -> reWrap $ BDFEnsureIndent (BrIndentSpecial i) r
         BDFNonBottomSpacing bd -> rec bd
         BDFSetParSpacing bd -> rec bd
         BDFForceParSpacing bd -> rec bd
@@ -963,8 +980,8 @@ transformSimplifyFloating = stepBO .> stepFull
       --   Just $ BDCols sig (BDEnsureIndent indent col : (BDAddBaseY indent <$> colr))
       -- not sure if the following rule is necessary; tests currently are
       -- unaffected.
-      BDEnsureIndent indent (BDLines lines) ->
-        Just $ BDLines $ BDEnsureIndent indent <$> lines
+      -- BDEnsureIndent indent (BDLines lines) ->
+      --   Just $ BDLines $ BDEnsureIndent indent <$> lines
       -- post floating in
       BDAnnotationPost annKey1 (BDPar ind line indented) ->
         Just $ BDPar ind line $ BDAnnotationPost annKey1 indented
@@ -1048,8 +1065,8 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   -- ensureIndent float-in
   -- not sure if the following rule is necessary; tests currently are
   -- unaffected.
-  BDEnsureIndent indent (BDLines lines) ->
-    Just $ BDLines $ BDEnsureIndent indent <$> lines
+  -- BDEnsureIndent indent (BDLines lines) ->
+  --   Just $ BDLines $ BDEnsureIndent indent <$> lines
   -- matching col special transformation
   BDCols sig1 cols1@(_:_)
     | BDLines lines@(_:_:_) <- List.last cols1
