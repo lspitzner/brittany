@@ -1345,9 +1345,12 @@ layoutBriDocM = \case
         Nothing -> return ()
         Just posts -> do
           posts `forM_` \( ExactPrint.Types.Comment comment _ _
-                          , ExactPrint.Types.DP (x, y)
+                          , ExactPrint.Types.DP (y, x)
                           ) -> do
-            layoutMoveToCommentPos x y
+            -- evil hack for CPP:
+            case comment of
+              ('#':_) -> layoutMoveToCommentPos y (-999)
+              _       -> layoutMoveToCommentPos y x
             -- fixedX <- fixMoveToLineByIsNewline x
             -- replicateM_ fixedX layoutWriteNewline
             -- layoutMoveToIndentCol y
