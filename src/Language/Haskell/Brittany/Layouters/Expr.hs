@@ -577,7 +577,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         e1Doc <- docSharedWrapper layoutExpr e1
         docSeq
           [ docLit $ Text.pack "["
-          , docForceSingleline e1Doc
+          , appSep $ docForceSingleline e1Doc
           , docLit $ Text.pack "..]"
           ]
       FromThen e1 e2 -> do
@@ -586,8 +586,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         docSeq
           [ docLit $ Text.pack "["
           , docForceSingleline e1Doc
-          , docLit $ Text.pack ","
-          , docForceSingleline e2Doc
+          , appSep $ docLit $ Text.pack ","
+          , appSep $ docForceSingleline e2Doc
           , docLit $ Text.pack "..]"
           ]
       FromTo e1 eN -> do
@@ -595,8 +595,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         eNDoc <- docSharedWrapper layoutExpr eN
         docSeq
           [ docLit $ Text.pack "["
-          , docForceSingleline e1Doc
-          , docLit $ Text.pack ".."
+          , appSep $ docForceSingleline e1Doc
+          , appSep $ docLit $ Text.pack ".."
           , docForceSingleline eNDoc
           , docLit $ Text.pack "]"
           ]
@@ -607,9 +607,9 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         docSeq
           [ docLit $ Text.pack "["
           , docForceSingleline e1Doc
-          , docLit $ Text.pack ","
-          , docForceSingleline e2Doc
-          , docLit $ Text.pack ".."
+          , appSep $ docLit $ Text.pack ","
+          , appSep $ docForceSingleline e2Doc
+          , appSep $ docLit $ Text.pack ".."
           , docForceSingleline eNDoc
           , docLit $ Text.pack "]"
           ]

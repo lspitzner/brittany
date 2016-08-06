@@ -33,8 +33,18 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
   BindStmt lPat expr _ _ _ -> do
     patDoc <- docSharedWrapper layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
-    docCols ColBindStmt
-      [appSep patDoc, docSeq [appSep $ docLit $ Text.pack "<-", expDoc]]
+    docAlt
+      [ docCols ColBindStmt
+        [ appSep patDoc
+        , docSeq [appSep $ docLit $ Text.pack "<-", docForceParSpacing expDoc]
+        ]
+      , docCols ColBindStmt
+        [ appSep patDoc
+        , docAddBaseY BrIndentRegular
+        $ docPar (docLit $ Text.pack "<-")
+                 (expDoc)
+        ]
+      ]
   LetStmt binds -> layoutLocalBinds binds >>= \case
     Nothing ->
       docLit $ Text.pack "let" -- i just tested
@@ -55,7 +65,7 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
     Just bindDocs@(bindDoc1:bindDocr) -> do
       -- TODO: the indentation here is screwed up. needs docSetIndentLevel and
       -- SetBaseY based layouting, not cols.
-      docAlt
+      docSetBaseY $ docAlt
         [ docLines
         $ (docCols ColDoLet
             [ appSep $ docLit $ Text.pack "let"
