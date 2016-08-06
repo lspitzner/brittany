@@ -728,9 +728,14 @@ getSpacings limit bridoc = rec bridoc
           -- be inserted anywhere but at the start of the line. A
           -- counterexample would be anything like Seq[Lit "foo", Lines].
           lSpss <- rec `mapM` ls
-          return $ filterAndLimit
-                 $ Control.Lens.transposeOf traverse lSpss <&> \lSps ->
-                     VerticalSpacing 0 (spMakePar $ maxVs lSps) False
+          let worbled = fmap reverse
+                      $ sequence
+                      $ reverse lSpss
+              summed = worbled <&> \lSps@(lSp1:_) ->
+                VerticalSpacing (_vs_sameLine lSp1) 
+                                (spMakePar $ maxVs lSps)
+                                False
+          return $ filterAndLimit $ summed
           -- lSpss@(mVs:_) <- rec `mapM` ls
           -- return $ case Control.Lens.transposeOf traverse lSpss of -- TODO: we currently only
           --                      -- consider the first alternative for the
