@@ -412,6 +412,10 @@ transformAlts briDoc
         BDFForceParSpacing bd -> rec bd
         BDFProhibitMTEL bd ->
           reWrap . BDFProhibitMTEL <$> rec bd
+        BDFDebug s bd -> do
+          acp :: AltCurPos <- mGet
+          tellDebugMess $ "transformAlts: BDFDEBUG " ++ s ++ " (node-id=" ++ show brDcId ++ "): acp=" ++ show acp
+          reWrap . BDFDebug s <$> rec bd
     processSpacingSimple :: (MonadMultiReader
                                                      Config m,
                                                    MonadMultiState AltCurPos m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m ()
@@ -439,7 +443,7 @@ getSpacing :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq Strin
 getSpacing !bridoc = rec bridoc
  where
   rec :: BriDocNumbered -> m (LineModeValidity VerticalSpacing)
-  rec (_, brDc) = do
+  rec (brDcId, brDc) = do
     config <- mAsk
     result <- case brDc of
       -- BDWrapAnnKey _annKey bd -> rec bd
@@ -550,11 +554,12 @@ getSpacing !bridoc = rec bridoc
         mVs <- rec bd
         return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
       BDFProhibitMTEL bd -> rec bd
+      BDFDebug s bd -> do
+        r <- rec bd
+        tellDebugMess $ "getSpacing: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): mVs=" ++ show r
+        return r
 #if INSERTTRACESGETSPACING
-    mTell $ Seq.singleton ("getSpacing: visiting: "
-                          ++ show (toConstr $ brDc)
-                          ++ " -> "
-                          ++ show result)
+    tellDebugMess $ "getSpacing: visiting: " ++ show (toConstr $ brDc) ++ " -> " ++ show result
 #endif
     return result
   maxVs :: [LineModeValidity VerticalSpacing] -> LineModeValidity VerticalSpacing
@@ -743,6 +748,10 @@ getSpacings limit bridoc = rec bridoc
           mVs <- rec bd
           return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
         BDFProhibitMTEL bd -> rec bd
+        BDFDebug s bd -> do
+          r <- rec bd
+          tellDebugMess $ "getSpacings: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): vs=" ++ show r
+          return r
 #if INSERTTRACESGETSPACING
       case brdc of
         BDFAnnotationPrior{} -> return ()
@@ -837,6 +846,8 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDCols sig $ List.init cols ++ [BDAnnotationPost annKey1 $ List.last cols]
       BDAnnotationPost annKey1 (BDAddBaseY indent x) ->
         Just $ BDAddBaseY indent $ BDAnnotationPost annKey1 x
+      BDAnnotationPost annKey1 (BDDebug s x) ->
+        Just $ BDDebug s $ BDAnnotationPost annKey1 x
       _ -> Nothing
     descendPrior = transformDownMay $ \case
       -- prior floating in
@@ -850,22 +861,32 @@ transformSimplifyFloating = stepBO .> stepFull
          Just $ BDCols sig (BDAnnotationPrior annKey1 l:lr)
       BDAnnotationPrior annKey1 (BDAddBaseY indent x) ->
          Just $ BDAddBaseY indent $ BDAnnotationPrior annKey1 x
+      BDAnnotationPrior annKey1 (BDDebug s x) ->
+         Just $ BDDebug s $ BDAnnotationPrior annKey1 x
       _ -> Nothing
     descendBYPush = transformDownMay $ \case
       BDBaseYPushCur (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (BDBaseYPushCur (List.head cols) : List.tail cols)
+      BDBaseYPushCur (BDDebug s x) ->
+        Just $ BDDebug s (BDBaseYPushCur x)
       _ -> Nothing
     descendBYPop = transformDownMay $ \case
       BDBaseYPop (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (List.init cols ++ [BDBaseYPop (List.last cols)])
+      BDBaseYPop (BDDebug s x) ->
+        Just $ BDDebug s (BDBaseYPop x)
       _ -> Nothing
     descendILPush = transformDownMay $ \case
       BDIndentLevelPushCur (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (BDIndentLevelPushCur (List.head cols) : List.tail cols)
+      BDIndentLevelPushCur (BDDebug s x) ->
+        Just $ BDDebug s (BDIndentLevelPushCur x)
       _ -> Nothing
     descendILPop = transformDownMay $ \case
       BDIndentLevelPop (BDCols sig cols@(_:_)) ->
         Just $ BDCols sig (List.init cols ++ [BDIndentLevelPop (List.last cols)])
+      BDIndentLevelPop (BDDebug s x) ->
+        Just $ BDDebug s (BDIndentLevelPop x)
       _ -> Nothing
     descendAddB = transformDownMay $ \case
       -- AddIndent floats into Lines.
@@ -891,6 +912,8 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDBaseYPushCur (BDAddBaseY ind x)
       BDAddBaseY ind (BDBaseYPop x) ->
         Just $ BDBaseYPop (BDAddBaseY ind x)
+      BDAddBaseY ind (BDDebug s x) ->
+        Just $ BDDebug s (BDAddBaseY ind x)
       _ -> Nothing
     stepBO :: BriDoc -> BriDoc
     stepBO = -- traceFunctionWith "stepBO" (show . briDocToDocWithAnns) (show . briDocToDocWithAnns) $
@@ -1098,6 +1121,7 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDProhibitMTEL{}    -> Nothing
   BDSetParSpacing{}   -> Nothing
   BDForceParSpacing{} -> Nothing
+  BDDebug{}           -> Nothing
   BDNonBottomSpacing x -> Just x
 
 -- prepare layouting by translating BDPar's, replacing them with Indents and
@@ -1165,6 +1189,7 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDSetParSpacing bd -> rec bd
     BDForceParSpacing bd -> rec bd
     BDNonBottomSpacing bd -> rec bd
+    BDDebug _ bd -> rec bd
 
 layoutBriDocM
   :: forall w m
@@ -1325,6 +1350,9 @@ layoutBriDocM = \case
     state' <- mGet
     when (_lstate_inhibitMTEL state') $ do
       mSet $ state' { _lstate_inhibitMTEL = _lstate_inhibitMTEL state }
+  BDDebug s bd -> do
+    mTell $ Text.Builder.fromText $ Text.pack $ "{-" ++ s ++ "-}"
+    layoutBriDocM bd
   where
     -- alignColsPar :: [BriDoc]
     --           -> m ()

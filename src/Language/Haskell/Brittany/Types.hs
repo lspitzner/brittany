@@ -238,6 +238,7 @@ data BriDoc
                           --       still work, but i should probably completely
                           --       remove it, as i have no proper usecase for
                           --       it anymore.
+  | BDDebug String BriDoc
   deriving (Data.Data.Data, Eq, Ord)
 
 data BriDocF f
@@ -282,6 +283,7 @@ data BriDocF f
                           --       still work, but i should probably completely
                           --       remove it, as i have no proper usecase for
                           --       it anymore.
+  | BDFDebug String (f (BriDocF f))
 
 -- deriving instance Data.Data.Data (BriDocF Identity)
 deriving instance Data.Data.Data (BriDocF ((,) Int))
@@ -314,11 +316,12 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDSetParSpacing bd)          = plate BDSetParSpacing |* bd
   uniplate (BDForceParSpacing bd)        = plate BDForceParSpacing |* bd
   uniplate (BDProhibitMTEL bd)           = plate BDProhibitMTEL |* bd
+  uniplate (BDDebug s bd)                = plate BDDebug |- s |* bd
 
 newtype NodeAllocIndex = NodeAllocIndex Int
 
 unwrapBriDocNumbered :: BriDocNumbered -> BriDoc
-unwrapBriDocNumbered = snd .> \case
+unwrapBriDocNumbered tpl = case snd tpl of
   BDFEmpty -> BDEmpty
   BDFLit t -> BDLit t
   BDFSeq list -> BDSeq $ rec <$> list
@@ -343,6 +346,7 @@ unwrapBriDocNumbered = snd .> \case
   BDFSetParSpacing bd -> BDSetParSpacing $ rec bd
   BDFForceParSpacing bd -> BDForceParSpacing $ rec bd
   BDFProhibitMTEL bd -> BDProhibitMTEL $ rec bd
+  BDFDebug s bd -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
  where
   rec = unwrapBriDocNumbered
 
@@ -372,6 +376,7 @@ briDocSeqSpine = \case
   BDSetParSpacing bd -> briDocSeqSpine bd
   BDForceParSpacing bd -> briDocSeqSpine bd
   BDProhibitMTEL bd -> briDocSeqSpine bd
+  BDDebug _s bd -> briDocSeqSpine bd
 
 briDocForceSpine :: BriDoc -> BriDoc
 briDocForceSpine bd = briDocSeqSpine bd `seq` bd
