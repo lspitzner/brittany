@@ -142,23 +142,26 @@ configParser = do
 --   , infoIntersperse = True
 --   }
 
-readMergePersConfig :: ConfigF Maybe -> System.IO.FilePath -> MaybeT IO Config
-readMergePersConfig conf path = do
+readMergePersConfig
+  :: System.IO.FilePath -> Bool -> ConfigF Maybe -> MaybeT IO (ConfigF Maybe)
+readMergePersConfig path shouldCreate conf = do
   exists <- liftIO $ System.Directory.doesFileExist path
-  if exists
-    then do
-      contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
-      fileConf <- case Data.Yaml.decodeEither contents of
-        Left e -> do
-          liftIO $ putStrLn $ "error reading in brittany config from " ++ path ++ ":"
-          liftIO $ putStrLn e
-          mzero
-        Right x -> return x
-      return $ cZip fromMaybeIdentity staticDefaultConfig
-             $ cZip (<|>) conf fileConf
-    else do
-      liftIO $ ByteString.writeFile path
-             $ Data.Yaml.encode
-             $ cMap (Just . runIdentity) staticDefaultConfig
-      return $ cZip fromMaybeIdentity staticDefaultConfig
-             $ conf
+  if
+    | exists -> do
+        contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
+        fileConf <- case Data.Yaml.decodeEither contents of
+          Left e -> do
+            liftIO
+              $ putStrLn
+              $ "error reading in brittany config from " ++ path ++ ":"
+            liftIO $ putStrLn e
+            mzero
+          Right x -> return x
+        return $ (cZip (<|>) conf fileConf)
+    | shouldCreate -> do
+        liftIO $ ByteString.writeFile path
+               $ Data.Yaml.encode
+               $ cMap (Just . runIdentity) staticDefaultConfig
+        return $ conf
+    | otherwise -> do
+        return conf

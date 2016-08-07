@@ -131,6 +131,7 @@ executable brittany
     , strict
     , monad-memo
     , safe
+    , filepath >=1.4.1.0 && <1.5
     }
   hs-source-dirs:      src-brittany
   default-language:    Haskell2010

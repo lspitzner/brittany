@@ -40,6 +40,8 @@ import           DataTreePrint
 import           UI.Butcher.Monadic
 
 import qualified System.Exit
+import qualified System.Directory as Directory
+import qualified System.FilePath.Posix as FilePath
 
 import Paths_brittany
 
@@ -119,12 +121,9 @@ mainCmdParser = do
       _ -> do
         liftIO $ putStrErrLn $ "more than one output, aborting"
         System.Exit.exitWith (System.Exit.ExitFailure 50)
-    let configPath = maybe "brittany.yaml" id $ listToMaybe $ reverse configPaths
-    config <- do
-      may <- runMaybeT $ readMergePersConfig cmdlineConfig configPath
-      case may of
-        Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 50)
-        Just x -> return x
+    config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
+      Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 50)
+      Just x -> return x
     when (runIdentity $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showTree config) $ return ()
     liftIO $ do
@@ -214,3 +213,20 @@ mainCmdParser = do
         ]
       then trace "----"
       else id
+
+readConfigs :: ConfigF Maybe -> [System.IO.FilePath] -> MaybeT IO Config
+readConfigs cmdlineConfig configPaths = do
+  let defLocalConfigPath = "brittany.yaml"
+  userBritPath <- liftIO $ Directory.getAppUserDataDirectory "brittany"
+  let defUserConfigPath = userBritPath FilePath.</> "config.yaml"
+  merged <- case configPaths of
+    [] -> do
+      liftIO $ Directory.createDirectoryIfMissing False userBritPath
+      return cmdlineConfig
+        >>= readMergePersConfig defLocalConfigPath False
+        >>= readMergePersConfig defUserConfigPath True
+    -- TODO: ensure that paths exist ?
+    paths -> foldl (\prev p -> prev >>= readMergePersConfig p False)
+                   (return cmdlineConfig)
+                   paths
+  return $ cZip fromMaybeIdentity staticDefaultConfig merged
