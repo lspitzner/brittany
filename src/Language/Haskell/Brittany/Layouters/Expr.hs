@@ -687,8 +687,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     -- TODO
     briDocByExact lexpr
   EWildPat{} -> do
-    -- TODO
-    briDocByExact lexpr
+    docLit $ Text.pack "_"
   EAsPat{} -> do
     -- TODO
     briDocByExact lexpr

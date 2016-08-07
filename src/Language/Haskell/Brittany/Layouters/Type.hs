@@ -575,5 +575,5 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     briDocByExact ltype
   HsCoreTy{} -> -- TODO
     briDocByExact ltype
-  HsWildCardTy{} -> -- TODO
-    briDocByExact ltype
+  HsWildCardTy _ ->
+    docLit $ Text.pack "_"
