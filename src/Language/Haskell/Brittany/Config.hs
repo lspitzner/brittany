@@ -8,6 +8,7 @@ module Language.Haskell.Brittany.Config
   , configParser
   , staticDefaultConfig
   , readMergePersConfig
+  , showConfigYaml
   )
 where
 
@@ -177,3 +178,8 @@ readMergePersConfig path shouldCreate conf = do
         return $ conf
     | otherwise -> do
         return conf
+
+showConfigYaml :: Config -> String
+showConfigYaml = Data.ByteString.Char8.unpack
+               . Data.Yaml.encode
+               . cMap (\(Identity x) -> Just x)

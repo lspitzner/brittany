@@ -99,7 +99,7 @@ mainCmdParser = do
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 50)
       Just x -> return x
     when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
-      trace (showTree config) $ return ()
+      trace (showConfigYaml config) $ return ()
     let ghcOptions = config
                    & _conf_forward
                    & _options_ghc
