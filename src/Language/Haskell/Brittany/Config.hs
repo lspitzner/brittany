@@ -95,7 +95,7 @@ configParser = do
   outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
   wError <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
 
-  optionsGhc <- addFlagStringParam "" ["ghc-options"] "STRING" mempty
+  optionsGhc <- addFlagStringParam "" ["ghc-options"] "STRING" (flagHelp $ parDoc "allows to define default language extensions. The parameter is forwarded to ghc. Note that currently these options are applied _after_ the pragmas read in from the input.")
   
   return $ Config
     { _conf_debug = DebugConfig
