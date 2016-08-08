@@ -27,11 +27,14 @@ linear in the size of the input (although the constant factor is not small).
 
 # Important notes
 
+- Requires `ghc`>=8
 - `-XCPP` is not officially supported (yet).
-- Some commandline flags mentioned in the help don't work yet (and won't even
-  be parsed correctly.)
-- Creates a `brittany.yaml` config file _in the current directory_. I am aware
-  that this behaviour is not optimal.
+- ~~Some commandline flags mentioned in the help don't work yet (and won't even
+  be parsed correctly.)~~ (fixed in 0.4.0.0)
+- ~~Creates a `brittany.yaml` config file _in the current directory_. I am aware
+  that this behaviour is not optimal.~~ (fixed in 0.5.0.0; now creates user
+  config file in `~/.brittany`; still reads `brittany.conf` in current dir if
+  present.)
 - Currently some unhandled syntactical constructs don't raise errors; in such
   cases the output will contain ghc-exactprint'ed code and some debugging
   comment. This could easily make the output invalid haskell.
@@ -45,3 +48,22 @@ linear in the size of the input (although the constant factor is not small).
 - Currently one mode of operation: Transform a single module. By default read
   from `stdin` and written to `stdout`, but commandline arguments allow to
   read/write from/to files.
+- For stdin/stdout usage it makes sense to enable certain syntactic extensions
+  by default, i.e. to add something like this to your `~/.brittany/config`:
+
+  ~~~~
+  _conf_forward:
+    _options_ghc:
+    - -XLambdaCase
+    - -XMultiWayIf
+    - -XGADTs
+    - -XPatternGuards
+    - -XViewPatterns
+    - -XRecursiveDo
+    - -XTupleSections
+    - -XExplicitForAll
+    - -XImplicitParams
+    - -XQuasiQuotes
+    - -XTemplateHaskell
+    - -XBangPatterns
+  ~~~~
