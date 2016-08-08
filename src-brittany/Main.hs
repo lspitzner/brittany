@@ -6,17 +6,6 @@ module Main where
 
 #include "prelude.inc"
 
-import DynFlags ( getDynFlags )
-import GHC ( runGhc, GenLocated(L), moduleNameString )
-import qualified Parser as GHC.Parser
-import RdrName ( RdrName(..) )
-import Control.Monad.IO.Class
-import GHC.Paths (libdir)
-import HsSyn
-import SrcLoc ( SrcSpan, Located )
--- import Outputable ( ppr, runSDoc )
--- import DynFlags ( unsafeGlobalDynFlags )
-
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
@@ -28,7 +17,6 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Debug.Trace as Trace
 
 import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany.LayoutBasics
 import Language.Haskell.Brittany
 import Language.Haskell.Brittany.Config
 import Language.Haskell.Brittany.Config.Types
@@ -93,20 +81,6 @@ mainCmdParser = do
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
-    -- runGhc (Just libdir) $ do
-    --   dynflags <- getDynFlags
-    --   input <- liftIO $ readFile "local/Sample.hs"
-    --   let parseOutput = runParser dynflags parserModule input
-    --   liftIO $ case parseOutput of
-    --     Failure msg strloc -> do
-    --       putStrLn "some failed parse"
-    --       putStrLn msg
-    --       print strloc
-    --     Parsed a -> putStrLn "some successful parse."
-    --     Partial a (x,y) -> do
-    --       putStrLn "some partial parse"
-    --       print x
-    --       print y
     inputPathM <- case inputPaths of
       [] -> do
         return Nothing

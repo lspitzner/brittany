@@ -26,14 +26,17 @@ library {
   hs-source-dirs:
     src
   exposed-modules: {
-    Language.Haskell.Brittany.Prelude
     Language.Haskell.Brittany
+    Language.Haskell.Brittany.Prelude
     Language.Haskell.Brittany.Types
     Language.Haskell.Brittany.Utils
     Language.Haskell.Brittany.Config
     Language.Haskell.Brittany.Config.Types
+  }
+  other-modules: {
     Language.Haskell.Brittany.LayoutBasics
     Language.Haskell.Brittany.BriLayouter
+    Language.Haskell.Brittany.ExactPrintUtils
     Language.Haskell.Brittany.Layouters.Type
     Language.Haskell.Brittany.Layouters.Decl
     Language.Haskell.Brittany.Layouters.Expr

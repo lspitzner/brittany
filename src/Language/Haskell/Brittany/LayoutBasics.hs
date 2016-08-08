@@ -67,7 +67,6 @@ module Language.Haskell.Brittany.LayoutBasics
   , docDebug
   , briDocByExact
   , briDocByExactNoComment
-  , fromMaybeIdentity
   , foldedAnnKeys
   , unknownNodeError
   , appSep
@@ -1085,11 +1084,6 @@ docForceMultiline bdm = allocateNode . BDFForceMultiline =<< bdm
 
 docEnsureIndent :: BrIndent -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
-
-
-fromMaybeIdentity :: Identity a -> Maybe a -> Identity a
-fromMaybeIdentity x y = Data.Coerce.coerce
-                      $ fromMaybe (Data.Coerce.coerce x) y
 
 unknownNodeError
   :: Data.Data.Data ast => String -> ast -> ToBriDocM BriDocNumbered
