@@ -201,11 +201,11 @@ traceIfDumpConf :: (MonadMultiReader
                                        Config m,
                                      Show a)
                 => String
-                -> (DebugConfig -> Identity Bool)
+                -> (DebugConfig -> Identity (Semigroup.Last Bool))
                 -> a
                 -> m ()
 traceIfDumpConf s accessor val = do
-  whenM (mAsk <&> _conf_debug .> accessor .> runIdentity) $ do
+  whenM (mAsk <&> _conf_debug .> accessor .> confUnpack) $ do
     trace ("---- " ++ s ++ " ----\n" ++ show val) $ return ()
 
 tellDebugMess :: MonadMultiWriter

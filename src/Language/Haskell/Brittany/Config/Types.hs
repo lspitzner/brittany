@@ -17,39 +17,53 @@ import Control.Lens
 
 import Data.Data ( Data )
 
+import Data.Coerce ( Coercible, coerce )
 
+import Data.Semigroup.Generic
+
+import Data.Semigroup ( Last )
+
+
+
+confUnpack :: Coercible a b => Identity a -> b
+confUnpack (Identity x) = coerce x
 
 data DebugConfigF f = DebugConfig
-  { _dconf_dump_config                :: f Bool
-  , _dconf_dump_annotations           :: f Bool
-  , _dconf_dump_ast_unknown           :: f Bool
-  , _dconf_dump_ast_full              :: f Bool
-  , _dconf_dump_bridoc_raw            :: f Bool
-  , _dconf_dump_bridoc_simpl_alt      :: f Bool
-  , _dconf_dump_bridoc_simpl_floating :: f Bool
-  , _dconf_dump_bridoc_simpl_par      :: f Bool
-  , _dconf_dump_bridoc_simpl_columns  :: f Bool
-  , _dconf_dump_bridoc_simpl_indent   :: f Bool
-  , _dconf_dump_bridoc_final          :: f Bool
+  { _dconf_dump_config                :: f (Semigroup.Last Bool)
+  , _dconf_dump_annotations           :: f (Semigroup.Last Bool)
+  , _dconf_dump_ast_unknown           :: f (Semigroup.Last Bool)
+  , _dconf_dump_ast_full              :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_raw            :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_alt      :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_floating :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_par      :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_columns  :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_indent   :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_final          :: f (Semigroup.Last Bool)
   }
   deriving (Generic)
 
 data LayoutConfigF f = LayoutConfig
-  { _lconfig_cols :: f Int -- the thing that has default 80.
-  , _lconfig_indentPolicy :: f IndentPolicy
-  , _lconfig_indentAmount :: f Int
-  , _lconfig_indentWhereSpecial :: f Bool -- indent where only 1 sometimes (TODO).
-  , _lconfig_indentListSpecial  :: f Bool -- use some special indentation for ","
-                                          -- when creating zero-indentation
-                                          -- multi-line list literals.
-  , _lconfig_importColumn :: f Int
-  , _lconfig_altChooser :: f AltChooser
+  { _lconfig_cols         :: f (Last Int) -- the thing that has default 80.
+  , _lconfig_indentPolicy :: f (Last IndentPolicy)
+  , _lconfig_indentAmount :: f (Last Int)
+  , _lconfig_indentWhereSpecial :: f (Last Bool) -- indent where only 1 sometimes (TODO).
+  , _lconfig_indentListSpecial  :: f (Last Bool) -- use some special indentation for ","
+                                                 -- when creating zero-indentation
+                                                 -- multi-line list literals.
+  , _lconfig_importColumn :: f (Last Int)
+  , _lconfig_altChooser :: f (Last AltChooser)
+  }
+  deriving (Generic)
+
+data ForwardOptionsF f = ForwardOptions
+  { _options_ghc :: f [String]
   }
   deriving (Generic)
 
 data ErrorHandlingConfigF f = ErrorHandlingConfig
-  { _econf_produceOutputOnErrors :: f Bool
-  , _econf_Werror :: f Bool
+  { _econf_produceOutputOnErrors :: f (Semigroup.Last Bool)
+  , _econf_Werror                :: f (Semigroup.Last Bool)
   }
   deriving (Generic)
 
@@ -57,6 +71,7 @@ data ConfigF f = Config
   { _conf_debug :: DebugConfigF f
   , _conf_layout :: LayoutConfigF f
   , _conf_errorHandling :: ErrorHandlingConfigF f
+  , _conf_forward :: ForwardOptionsF f
   }
   deriving (Generic)
 
@@ -64,22 +79,39 @@ data ConfigF f = Config
 deriving instance Show (DebugConfigF Identity)
 deriving instance Show (LayoutConfigF Identity)
 deriving instance Show (ErrorHandlingConfigF Identity)
+deriving instance Show (ForwardOptionsF Identity)
 deriving instance Show (ConfigF Identity)
 
 deriving instance Show (DebugConfigF Maybe)
 deriving instance Show (LayoutConfigF Maybe)
 deriving instance Show (ErrorHandlingConfigF Maybe)
+deriving instance Show (ForwardOptionsF Maybe)
 deriving instance Show (ConfigF Maybe)
 
 deriving instance Data (DebugConfigF Identity)
 deriving instance Data (LayoutConfigF Identity)
 deriving instance Data (ErrorHandlingConfigF Identity)
+deriving instance Data (ForwardOptionsF Identity)
 deriving instance Data (ConfigF Identity)
+
+instance Semigroup.Semigroup (DebugConfigF Maybe) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (LayoutConfigF Maybe) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (ErrorHandlingConfigF Maybe) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (ForwardOptionsF Maybe) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (ConfigF Maybe) where
+  (<>) = gmappend
 
 type Config = ConfigF Identity
 type DebugConfig = DebugConfigF Identity
 type LayoutConfig = LayoutConfigF Identity
 type ErrorHandlingConfig = ErrorHandlingConfigF Identity
+
+instance FromJSON a => FromJSON (Semigroup.Last a) where
+instance ToJSON a => ToJSON (Semigroup.Last a) where
 
 instance FromJSON (DebugConfigF Maybe)
 instance ToJSON   (DebugConfigF Maybe)
@@ -94,6 +126,9 @@ instance ToJSON   (LayoutConfigF Maybe)
 
 instance FromJSON (ErrorHandlingConfigF Maybe)
 instance ToJSON   (ErrorHandlingConfigF Maybe)
+
+instance FromJSON (ForwardOptionsF Maybe)
+instance ToJSON   (ForwardOptionsF Maybe)
 
 instance FromJSON (ConfigF Maybe)
 instance ToJSON   (ConfigF Maybe)
@@ -146,30 +181,33 @@ data AltChooser = AltChooserSimpleQuick -- always choose last alternative.
 staticDefaultConfig :: Config
 staticDefaultConfig = Config
     { _conf_debug = DebugConfig
-      { _dconf_dump_config           = Identity False
-      , _dconf_dump_annotations      = Identity False
-      , _dconf_dump_ast_unknown      = Identity False
-      , _dconf_dump_ast_full         = Identity False
-      , _dconf_dump_bridoc_raw            = Identity False
-      , _dconf_dump_bridoc_simpl_alt      = Identity False
-      , _dconf_dump_bridoc_simpl_floating = Identity False
-      , _dconf_dump_bridoc_simpl_par      = Identity False
-      , _dconf_dump_bridoc_simpl_columns  = Identity False
-      , _dconf_dump_bridoc_simpl_indent   = Identity False
-      , _dconf_dump_bridoc_final          = Identity False
+      { _dconf_dump_config           = coerce False
+      , _dconf_dump_annotations      = coerce False
+      , _dconf_dump_ast_unknown      = coerce False
+      , _dconf_dump_ast_full         = coerce False
+      , _dconf_dump_bridoc_raw            = coerce False
+      , _dconf_dump_bridoc_simpl_alt      = coerce False
+      , _dconf_dump_bridoc_simpl_floating = coerce False
+      , _dconf_dump_bridoc_simpl_par      = coerce False
+      , _dconf_dump_bridoc_simpl_columns  = coerce False
+      , _dconf_dump_bridoc_simpl_indent   = coerce False
+      , _dconf_dump_bridoc_final          = coerce False
       }
     , _conf_layout = LayoutConfig
-      { _lconfig_cols               = Identity 80
-      , _lconfig_indentPolicy       = Identity IndentPolicyFree
-      , _lconfig_indentAmount       = Identity 2
-      , _lconfig_indentWhereSpecial = Identity True
-      , _lconfig_indentListSpecial  = Identity True
-      , _lconfig_importColumn       = Identity 60
-      , _lconfig_altChooser         = Identity $ AltChooserBoundedSearch 3
+      { _lconfig_cols               = coerce (80 :: Int)
+      , _lconfig_indentPolicy       = coerce IndentPolicyFree
+      , _lconfig_indentAmount       = coerce (2 :: Int)
+      , _lconfig_indentWhereSpecial = coerce True
+      , _lconfig_indentListSpecial  = coerce True
+      , _lconfig_importColumn       = coerce (60 :: Int)
+      , _lconfig_altChooser         = coerce (AltChooserBoundedSearch 3)
       }
     , _conf_errorHandling = ErrorHandlingConfig
-      { _econf_produceOutputOnErrors = Identity False
-      , _econf_Werror                = Identity False
+      { _econf_produceOutputOnErrors = coerce False
+      , _econf_Werror                = coerce False
+      }
+    , _conf_forward = ForwardOptions
+      { _options_ghc = Identity []
       }
     }
 
@@ -211,11 +249,17 @@ instance CZip ErrorHandlingConfigF where
     (f x1 y1)
     (f x2 y2)
 
+instance CZip ForwardOptionsF where
+  cZip f (ForwardOptions x1)
+         (ForwardOptions y1) = ForwardOptions
+    (f x1 y1)
+
 instance CZip ConfigF where
-  cZip f (Config x1 x2 x3) (Config y1 y2 y3) = Config
+  cZip f (Config x1 x2 x3 x4) (Config y1 y2 y3 y4) = Config
     (cZip f x1 y1)
     (cZip f x2 y2)
     (cZip f x3 y3)
+    (cZip f x4 y4)
 
 cMap :: CZip k => (forall a . f a -> g a) -> k f -> k g
 cMap f c = cZip (\_ -> f) c c

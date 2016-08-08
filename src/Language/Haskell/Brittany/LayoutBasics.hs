@@ -208,7 +208,7 @@ lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
       else x
 
 askIndent :: (MonadMultiReader Config m) => m Int
-askIndent = runIdentity . _lconfig_indentAmount . _conf_layout <$> mAsk
+askIndent = confUnpack . _lconfig_indentAmount . _conf_layout <$> mAsk
 
 layoutWriteAppend :: (MonadMultiWriter
                                                  Text.Builder.Builder m,
@@ -475,7 +475,7 @@ layoutWithAddBaseCol m = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutWithAddBaseCol")
 #endif
-  amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
+  amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   state <- mGet
   layoutBaseYPushInternal $ lstate_baseY state + amount
   m
@@ -493,7 +493,7 @@ layoutWithAddBaseColBlock m = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutWithAddBaseColBlock")
 #endif
-  amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
+  amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   state <- mGet
   layoutBaseYPushInternal $ lstate_baseY state + amount
   layoutWriteEnsureBlock

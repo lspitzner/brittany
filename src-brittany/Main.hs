@@ -16,11 +16,11 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 
 import qualified Debug.Trace as Trace
 
-import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany
-import Language.Haskell.Brittany.Config
-import Language.Haskell.Brittany.Config.Types
-import Language.Haskell.Brittany.Utils
+import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany
+import           Language.Haskell.Brittany.Config
+import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.Utils
 
 import qualified Text.PrettyPrint as PP
 
@@ -98,20 +98,24 @@ mainCmdParser = do
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 50)
       Just x -> return x
-    when (runIdentity $ _dconf_dump_config $ _conf_debug $ config) $ do
+    when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showTree config) $ return ()
+    let ghcOptions = config
+                   & _conf_forward
+                   & _options_ghc
+                   & runIdentity
     liftIO $ do
       parseResult <- case inputPathM of
-        Nothing -> ExactPrint.Parsers.parseModuleFromString "stdin"
+        Nothing -> parseModuleFromString ghcOptions "stdin"
                    =<< System.IO.hGetContents System.IO.stdin
-        Just p -> ExactPrint.parseModule p
+        Just p -> parseModule ghcOptions p
       case parseResult of
         Left left -> do
           putStrErrLn "parse error:"
           printErr left
           System.Exit.exitWith (System.Exit.ExitFailure 60)
         Right (anns, parsedSource) -> do
-          when (config & _conf_debug .> _dconf_dump_ast_full .> runIdentity) $ do
+          when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
             let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
             trace ("---- ast ----\n" ++ show val) $ return ()
           -- mapM_ printErr (Map.toList anns)
@@ -135,7 +139,7 @@ mainCmdParser = do
                 uns `forM_` \case
                   LayoutErrorUnknownNode str ast -> do
                     putStrErrLn str
-                    when (config & _conf_debug & _dconf_dump_ast_unknown & runIdentity) $ do
+                    when (config & _conf_debug & _dconf_dump_ast_unknown & confUnpack) $ do
                       putStrErrLn $ "  " ++ show (astToDoc ast)
                   _ -> error "cannot happen (TM)"
               warns@(LayoutWarning{}:_) -> do
@@ -157,13 +161,13 @@ mainCmdParser = do
           let hasErrors = case config
                                & _conf_errorHandling
                                & _econf_Werror
-                               & runIdentity of
+                               & confUnpack of
                 False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
                 True  -> not $ null errsWarns
               outputOnErrs = config
                            & _conf_errorHandling
                            & _econf_produceOutputOnErrors
-                           & runIdentity
+                           & confUnpack
           let shouldOutput = not suppressOutput
                           && (not hasErrors || outputOnErrs)
 
@@ -175,15 +179,15 @@ mainCmdParser = do
             System.Exit.exitWith (System.Exit.ExitFailure 70)
   where
     addTraceSep conf = if foldr1 (||)
-        [ runIdentity $ _dconf_dump_annotations conf
-        , runIdentity $ _dconf_dump_ast_unknown conf
-        , runIdentity $ _dconf_dump_ast_full conf
-        , runIdentity $ _dconf_dump_bridoc_raw conf
-        , runIdentity $ _dconf_dump_bridoc_simpl_alt conf
-        , runIdentity $ _dconf_dump_bridoc_simpl_floating conf
-        , runIdentity $ _dconf_dump_bridoc_simpl_columns conf
-        , runIdentity $ _dconf_dump_bridoc_simpl_indent conf
-        , runIdentity $ _dconf_dump_bridoc_final conf
+        [ confUnpack $ _dconf_dump_annotations conf
+        , confUnpack $ _dconf_dump_ast_unknown conf
+        , confUnpack $ _dconf_dump_ast_full conf
+        , confUnpack $ _dconf_dump_bridoc_raw conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_alt conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_floating conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_columns conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_indent conf
+        , confUnpack $ _dconf_dump_bridoc_final conf
         ]
       then trace "----"
       else id

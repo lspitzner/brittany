@@ -237,7 +237,7 @@ transformAlts briDoc
         BDFSeparator  -> processSpacingSimple bdX $> bdX
         BDFAddBaseY indent bd -> do
           acp <- mGet
-          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
+          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
           let indAdd = case indent of
                 BrIndentNone -> 0
                 BrIndentRegular -> indAmount
@@ -266,7 +266,7 @@ transformAlts briDoc
         BDFIndentLevelPop bd -> do
           reWrap . BDFIndentLevelPop <$> rec bd
         BDFPar indent sameLine indented -> do
-          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
+          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
           let indAdd = case indent of
                 BrIndentNone -> 0
                 BrIndentRegular -> indAmount
@@ -289,7 +289,7 @@ transformAlts briDoc
                                         -- fail-early approach; BDEmpty does not
                                         -- make sense semantically for Alt[].
         BDFAlt alts -> do
-          altChooser <- mAsk <&> _conf_layout .> _lconfig_altChooser .> runIdentity
+          altChooser <- mAsk <&> _conf_layout .> _lconfig_altChooser .> confUnpack
           case altChooser of
             AltChooserSimpleQuick -> do
               rec $ head alts
@@ -407,7 +407,7 @@ transformAlts briDoc
           return $ reWrap $ BDFLines (l':lr')
         BDFEnsureIndent indent bd -> do
           acp <- mGet
-          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> runIdentity
+          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
           let indAdd = case indent of
                 BrIndentNone -> 0
                 BrIndentRegular -> indAmount
@@ -449,12 +449,12 @@ transformAlts briDoc
     hasSpace1 _ _ _ = error "ghc exhaustive check is insufficient"
     hasSpace2 :: LayoutConfig -> AltCurPos -> VerticalSpacing -> Bool
     hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNone _)
-      = line + sameLine <= runIdentity (_lconfig_cols lconf)
+      = line + sameLine <= confUnpack (_lconfig_cols lconf)
     hasSpace2 lconf (AltCurPos line indent indentPrep _) (VerticalSpacing sameLine (VerticalSpacingParSome par) _)
-      = line + sameLine <= runIdentity (_lconfig_cols lconf)
-        && indent + indentPrep + par <= runIdentity (_lconfig_cols lconf)
+      = line + sameLine <= confUnpack (_lconfig_cols lconf)
+        && indent + indentPrep + par <= confUnpack (_lconfig_cols lconf)
     hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNonBottom _)
-      = line + sameLine <= runIdentity (_lconfig_cols lconf)
+      = line + sameLine <= confUnpack (_lconfig_cols lconf)
 
 getSpacing :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m (LineModeValidity VerticalSpacing)
 getSpacing !bridoc = rec bridoc
@@ -481,7 +481,7 @@ getSpacing !bridoc = rec bridoc
               VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
               VerticalSpacingParSome i -> VerticalSpacingParSome $ case indent of
                 BrIndentNone      -> i
-                BrIndentRegular   -> i + ( runIdentity
+                BrIndentRegular   -> i + ( confUnpack
                                          $ _lconfig_indentAmount
                                          $ _conf_layout
                                          $ config
@@ -550,7 +550,7 @@ getSpacing !bridoc = rec bridoc
         mVs <- rec bd
         let addInd = case indent of
               BrIndentNone      -> 0
-              BrIndentRegular   -> runIdentity
+              BrIndentRegular   -> confUnpack
                                  $ _lconfig_indentAmount
                                  $ _conf_layout
                                  $ config
@@ -626,7 +626,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
     rec :: BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
     rec (brDcId, brdc) = memoWithKey brDcId $ do
       config <- mAsk
-      let colMax = config & _conf_layout & _lconfig_cols & runIdentity
+      let colMax = config & _conf_layout & _lconfig_cols & confUnpack
       let hasOkColCount (VerticalSpacing lsp psp _) =
             lsp <= colMax && case psp of
               VerticalSpacingParNone -> True
@@ -661,7 +661,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                 VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
                 VerticalSpacingParSome i -> VerticalSpacingParSome $ case indent of
                   BrIndentNone      -> i
-                  BrIndentRegular   -> i + ( runIdentity
+                  BrIndentRegular   -> i + ( confUnpack
                                            $ _lconfig_indentAmount
                                            $ _conf_layout
                                            $ config
@@ -758,7 +758,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           mVs <- rec bd
           let addInd = case indent of
                 BrIndentNone      -> 0
-                BrIndentRegular   -> runIdentity
+                BrIndentRegular   -> confUnpack
                                    $ _lconfig_indentAmount
                                    $ _conf_layout
                                    $ config
@@ -1396,7 +1396,7 @@ layoutBriDocM = \case
     alignColsLines :: [BriDoc]
               -> m ()
     alignColsLines l = do -- colInfos `forM_` \colInfo -> do
-      colMax <- mAsk <&> _conf_layout .> _lconfig_cols .> runIdentity
+      colMax <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
       sequence_ $ List.intersperse layoutWriteEnsureNewlineBlock $ colInfos <&> processInfo colMax (_cbs_map finalState)
       where
         (colInfos, finalState) = StateS.runState (mergeBriDocs l) (ColBuildState IntMapS.empty 0)

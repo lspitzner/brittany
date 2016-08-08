@@ -60,8 +60,12 @@ import qualified Data.Yaml
 
 import UI.Butcher.Monadic
 
+import qualified System.Console.CmdArgs.Explicit as CmdArgs
+
 import Language.Haskell.Brittany.Config.Types
 import Language.Haskell.Brittany.Utils
+
+import Data.Coerce ( Coercible, coerce )
 
 
 
@@ -89,20 +93,22 @@ configParser = do
 
   outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
   wError <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
+
+  optionsGhc <- addFlagStringParam "" ["ghc-options"] "STRING" mempty
   
   return $ Config
     { _conf_debug = DebugConfig
-      { _dconf_dump_config       = falseToNothing dumpConfig
-      , _dconf_dump_annotations  = falseToNothing dumpAnnotations
-      , _dconf_dump_ast_unknown  = falseToNothing dumpUnknownAST
-      , _dconf_dump_ast_full     = falseToNothing dumpCompleteAST
-      , _dconf_dump_bridoc_raw            = falseToNothing dumpBriDocRaw
-      , _dconf_dump_bridoc_simpl_alt      = falseToNothing dumpBriDocAlt
-      , _dconf_dump_bridoc_simpl_par      = falseToNothing dumpBriDocPar
-      , _dconf_dump_bridoc_simpl_floating = falseToNothing dumpBriDocFloating
-      , _dconf_dump_bridoc_simpl_columns  = falseToNothing dumpBriDocColumns
-      , _dconf_dump_bridoc_simpl_indent   = falseToNothing dumpBriDocIndent
-      , _dconf_dump_bridoc_final          = falseToNothing dumpBriDocFinal
+      { _dconf_dump_config       = wrapLast $ falseToNothing dumpConfig
+      , _dconf_dump_annotations  = wrapLast $ falseToNothing dumpAnnotations
+      , _dconf_dump_ast_unknown  = wrapLast $ falseToNothing dumpUnknownAST
+      , _dconf_dump_ast_full     = wrapLast $ falseToNothing dumpCompleteAST
+      , _dconf_dump_bridoc_raw            = wrapLast $ falseToNothing dumpBriDocRaw
+      , _dconf_dump_bridoc_simpl_alt      = wrapLast $ falseToNothing dumpBriDocAlt
+      , _dconf_dump_bridoc_simpl_par      = wrapLast $ falseToNothing dumpBriDocPar
+      , _dconf_dump_bridoc_simpl_floating = wrapLast $ falseToNothing dumpBriDocFloating
+      , _dconf_dump_bridoc_simpl_columns  = wrapLast $ falseToNothing dumpBriDocColumns
+      , _dconf_dump_bridoc_simpl_indent   = wrapLast $ falseToNothing dumpBriDocIndent
+      , _dconf_dump_bridoc_final          = wrapLast $ falseToNothing dumpBriDocFinal
       }
     , _conf_layout = LayoutConfig
       { _lconfig_cols               = listLastMaybe cols
@@ -114,11 +120,17 @@ configParser = do
       , _lconfig_altChooser         = Nothing
       }
     , _conf_errorHandling = ErrorHandlingConfig
-      { _econf_produceOutputOnErrors = falseToNothing outputOnErrors
-      , _econf_Werror                = falseToNothing wError
+      { _econf_produceOutputOnErrors = wrapLast $ falseToNothing outputOnErrors
+      , _econf_Werror                = wrapLast $ falseToNothing wError
+      }
+    , _conf_forward = ForwardOptions
+      { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs
+                       | not $ null optionsGhc
+                       ]
       }
     }
     where falseToNothing = Bool.bool Nothing (Just True)
+          wrapLast = fmap Semigroup.Last
           listLastMaybe = listToMaybe . reverse
 
 -- configParser :: Parser Config
@@ -157,7 +169,7 @@ readMergePersConfig path shouldCreate conf = do
             liftIO $ putStrLn e
             mzero
           Right x -> return x
-        return $ (cZip (<|>) conf fileConf)
+        return $ fileConf Semigroup.<> conf
     | shouldCreate -> do
         liftIO $ ByteString.writeFile path
                $ Data.Yaml.encode

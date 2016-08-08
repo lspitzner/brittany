@@ -388,6 +388,8 @@ import qualified Data.Bool as Bool
 import qualified GHC.OldList as List
 -- import qualified Text.Printf as Printf
 
+import qualified Data.Semigroup as Semigroup
+
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as ByteStringL
 
@@ -425,6 +427,7 @@ import qualified Control.Monad.Trans.State.Strict as StateS
 -- import qualified Control.Monad.Trans.Writer as Writer
 -- import qualified Control.Monad.Trans.Writer.Lazy as WriterL
 -- import qualified Control.Monad.Trans.Writer.Strict as Writer
+import qualified Control.Monad.Trans.Either as EitherT
 
 import qualified Data.Strict.Maybe as Strict
 
@@ -442,7 +445,7 @@ import Data.Char ( Char )
 import Data.Either ( Either(..) )
 import Data.IORef ( IORef )
 import Data.Maybe ( Maybe(..) )
-import Data.Monoid ( Endo(..), All(..), Any(..), Sum(..), Product(..), First(..), Last(..), Alt(..), )
+import Data.Monoid ( Endo(..), All(..), Any(..), Sum(..), Product(..), Alt(..), )
 import Data.Ord ( Ordering(..), Down(..) )
 import Data.Ratio ( Ratio, Rational )
 import Data.String ( String )

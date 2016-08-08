@@ -154,7 +154,7 @@ layoutPatternBindFinal binderDoc mPatDoc clauseDocs mWhereDocs = do
   whereIndent <- mAsk
                  <&> _conf_layout
                  .>  _lconfig_indentWhereSpecial
-                 .>  runIdentity
+                 .>  confUnpack
                  .>  Bool.bool BrIndentRegular (BrIndentSpecial 1)
   -- TODO: apart from this, there probably are more nodes below which could
   --       be shared between alternatives.
