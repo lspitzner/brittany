@@ -1,6 +1,8 @@
 # brittany
 haskell source code formatter
 
+![Output sample](https://github.com/lspitzner/brittany/raw/master/brittany-sample.gif)
+
 This project's goals roughly are to:
 
 - Be idempotent (this also directly ensures that only valid haskell is
