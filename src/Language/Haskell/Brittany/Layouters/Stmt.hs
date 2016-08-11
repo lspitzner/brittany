@@ -62,25 +62,16 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
         (docLit $ Text.pack "let")
         (docSetIndentLevel $ return bindDoc)
       ]
-    Just bindDocs@(bindDoc1:bindDocr) -> do
-      -- TODO: the indentation here is screwed up. needs docSetIndentLevel and
-      -- SetBaseY based layouting, not cols.
-      docSetBaseY $ docAlt
-        [ docLines
-        $ (docCols ColDoLet
-            [ appSep $ docLit $ Text.pack "let"
-            , docSetIndentLevel $ return bindDoc1
-            ])
-        : (bindDocr <&> \bindDoc ->
-           docCols ColDoLet
-            [ docEnsureIndent (BrIndentSpecial 4) docEmpty
-            , docSetIndentLevel $ return bindDoc
-            ])
-        , docAddBaseY BrIndentRegular
-        $ docPar
-          (docLit $ Text.pack "let")
-          (docSetIndentLevel $ docLines $ return <$> bindDocs)
+    Just bindDocs -> docAlt
+      [ docSeq
+        [ appSep $ docLit $ Text.pack "let"
+        , docSetIndentLevel $ docLines $ return <$> bindDocs
         ]
+      , docAddBaseY BrIndentRegular
+      $ docPar
+        (docLit $ Text.pack "let")
+        (docSetIndentLevel $ docLines $ return <$> bindDocs)
+      ]
   BodyStmt expr _ _ _ -> do
     expDoc <- docSharedWrapper layoutExpr expr
     docAddBaseY BrIndentRegular $ expDoc
