@@ -373,7 +373,7 @@ import qualified Data.Bool as Bool
 -- import qualified Data.Complex as Complex
 -- import qualified Data.Either as Either
 -- import qualified Data.Eq as Eq
--- import qualified Data.Foldable as Foldable
+import qualified Data.Foldable as Foldable
 -- import qualified Data.Fixed as Fixed
 -- import qualified Data.Functor.Identity as Identity
 -- import qualified Data.IORef as IORef

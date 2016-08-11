@@ -15,7 +15,7 @@ import           Language.Haskell.Brittany.Types
 import           Language.Haskell.Brittany.LayoutBasics
 
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..) )
 import           SrcLoc ( SrcSpan )
 import           HsSyn
 import           Name
@@ -467,9 +467,12 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     briDocByExact lexpr
   RecordCon lname _ _ (HsRecFields [] Nothing) -> do
     let t = lrdrNameToText lname
-    docLit $ t <> Text.pack "{}"
+    docWrapNode lname $ docSeq
+      [ docNodeAnnKW lexpr (Just AnnOpenC) $ docLit $ t <> Text.pack "{"
+      , docLit $ Text.pack "}"
+      ]
   RecordCon lname _ _ (HsRecFields fs@(_:_) Nothing) -> do
-    let t = lrdrNameToText lname
+    let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
     ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr pun)) -> do
       fExpDoc <- if pun
         then return Nothing
@@ -479,15 +482,15 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       [ docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
-          (docLit t)
+          (docNodeAnnKW lexpr Nothing $ nameDoc)
           (docNonBottomSpacing $ docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docLit $ fd1n
+              , docWrapNodePrior fd1l $ appSep $ docLit $ fd1n
               , case fd1e of
                   Just x -> docSeq
                     [ appSep $ docLit $ Text.pack "="
-                    , docWrapNode fd1l $ docAddBaseY BrIndentRegular $ x
+                    , docWrapNodeRest fd1l $ docAddBaseY BrIndentRegular $ x
                     ]
                   Nothing -> docEmpty
               ]
@@ -495,9 +498,9 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               [ appSep $ docLit $ Text.pack ","
               , appSep $ docLit $ fText
               , case fDoc of
-                  Just x -> docSeq
+                  Just x -> docWrapNode lfield $ docSeq
                     [ appSep $ docLit $ Text.pack "="
-                    , docWrapNode lfield $ docAddBaseY BrIndentRegular x
+                    , docAddBaseY BrIndentRegular x
                     ]
                   Nothing -> docEmpty
               ]

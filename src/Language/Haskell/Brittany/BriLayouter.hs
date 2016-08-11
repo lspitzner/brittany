@@ -99,6 +99,8 @@ layoutBriDoc ast briDoc = do
   
   anns :: ExactPrint.Types.Anns <- mAsk
   let filteredAnns = filterAnns ast anns
+
+  traceIfDumpConf "bridoc annotations filtered/transformed" _dconf_dump_annotations $ annsDoc filteredAnns
   
   let state = LayoutState
         { _lstate_baseYs         = [0]
@@ -108,8 +110,7 @@ layoutBriDoc ast briDoc = do
                                              -- thing properly.
         , _lstate_indLevels      = [0]
         , _lstate_indLevelLinger = 0
-        , _lstate_commentsPrior = extractCommentsPrior filteredAnns
-        , _lstate_commentsPost  = extractCommentsPost  filteredAnns
+        , _lstate_comments       = filteredAnns
         , _lstate_commentCol  = Nothing
         , _lstate_addSepSpace = Nothing
         , _lstate_inhibitMTEL = False
@@ -118,9 +119,9 @@ layoutBriDoc ast briDoc = do
   state' <- MultiRWSS.withMultiStateS state
           $ layoutBriDocM briDoc'
   
-  let remainingComments = Map.elems (_lstate_commentsPrior state')
-                       ++ Map.elems (_lstate_commentsPost  state')
-  remainingComments `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fmap fst)
+  let remainingComments =
+        extractAllComments =<< Map.elems (_lstate_comments state')
+  remainingComments `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fst)
   
   return $ ()
 
@@ -204,7 +205,7 @@ transformAlts briDoc
     --         BDForwardLineMode bd    -> BDFForwardLineMode <$> go bd
     --         BDExternal k ks c t         -> return $ BDFExternal k ks c t
     --         BDAnnotationPrior annKey bd -> BDFAnnotationPrior annKey <$> go bd
-    --         BDAnnotationPost  annKey bd -> BDFAnnotationPost  annKey <$> go bd
+    --         BDAnnotationPost  annKey bd -> BDFAnnotationRest  annKey <$> go bd
     --         BDLines lines         -> BDFLines <$> go `mapM` lines
     --         BDEnsureIndent ind bd -> BDFEnsureIndent ind <$> go bd
     --         BDProhibitMTEL bd     -> BDFProhibitMTEL <$> go bd
@@ -218,7 +219,7 @@ transformAlts briDoc
         acp :: AltCurPos <- mGet
         tellDebugMess $ "transformAlts: visiting: " ++ case brDc of
           BDFAnnotationPrior annKey _ -> show (toConstr brDc, annKey, acp)
-          BDFAnnotationPost annKey _ -> show (toConstr brDc, annKey, acp)
+          BDFAnnotationRest annKey _ -> show (toConstr brDc, annKey, acp)
           _ -> show (toConstr brDc, acp)
 #endif
       let reWrap = (,) brDcId
@@ -392,8 +393,10 @@ transformAlts briDoc
           mSet $ acp { _acp_forceMLFlag = altLineModeDecay $ _acp_forceMLFlag acp }
           bd' <- rec bd
           return $ reWrap $ BDFAnnotationPrior annKey bd'
-        BDFAnnotationPost annKey bd ->
-          reWrap . BDFAnnotationPost annKey <$> rec bd
+        BDFAnnotationRest annKey bd ->
+          reWrap . BDFAnnotationRest annKey <$> rec bd
+        BDFAnnotationKW annKey kw bd ->
+          reWrap . BDFAnnotationKW annKey kw <$> rec bd
         BDFLines [] -> return $ reWrap BDFEmpty -- evil transformation. or harmless.
         BDFLines (l:lr) -> do
           ind <- _acp_indent <$> mGet
@@ -536,7 +539,8 @@ getSpacing !bridoc = rec bridoc
         $ LineModeValid
         $ VerticalSpacing 999 VerticalSpacingParNone False
       BDFAnnotationPrior _annKey bd -> rec bd
-      BDFAnnotationPost  _annKey bd -> rec bd
+      BDFAnnotationKW _annKey _kw bd -> rec bd
+      BDFAnnotationRest  _annKey bd -> rec bd
       BDFLines [] -> return
         $ LineModeValid
         $ VerticalSpacing 0 VerticalSpacingParNone False
@@ -725,7 +729,8 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           return $ [] -- yes, we just assume that we cannot properly layout
                       -- this.
         BDFAnnotationPrior _annKey bd -> rec bd
-        BDFAnnotationPost  _annKey bd -> rec bd
+        BDFAnnotationKW _annKey _kw bd -> rec bd
+        BDFAnnotationRest  _annKey bd -> rec bd
         BDFLines [] -> return $ [VerticalSpacing 0 VerticalSpacingParNone False]
         BDFLines ls@(_:_) -> do
           -- we simply assume that lines is only used "properly", i.e. in
@@ -784,7 +789,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
 #if INSERTTRACESGETSPACING
       case brdc of
         BDFAnnotationPrior{} -> return ()
-        BDFAnnotationPost{} -> return ()
+        BDFAnnotationRest{} -> return ()
         _ -> mTell $ Seq.fromList ["getSpacing: visiting: "
                             ++ show {-(toConstr $ brdc)-} (briDocToDoc $ unwrapBriDocNumbered (0, brdc))
                            , " -> "
@@ -863,21 +868,6 @@ transformSimplifyFloating = stepBO .> stepFull
   -- UPDATE: by now, stepBO does more than stepFull; for semantic equivalence
   --         the push/pop cases would need to be copied over
   where
-    descendPost = transformDownMay $ \case
-      -- post floating in
-      BDAnnotationPost annKey1 (BDPar ind line indented) ->
-        Just $ BDPar ind line $ BDAnnotationPost annKey1 indented
-      BDAnnotationPost annKey1 (BDSeq list) ->
-        Just $ BDSeq $ List.init list ++ [BDAnnotationPost annKey1 $ List.last list]
-      BDAnnotationPost annKey1 (BDLines list) ->
-        Just $ BDLines $ List.init list ++ [BDAnnotationPost annKey1 $ List.last list]
-      BDAnnotationPost annKey1 (BDCols sig cols) ->
-        Just $ BDCols sig $ List.init cols ++ [BDAnnotationPost annKey1 $ List.last cols]
-      BDAnnotationPost annKey1 (BDAddBaseY indent x) ->
-        Just $ BDAddBaseY indent $ BDAnnotationPost annKey1 x
-      BDAnnotationPost annKey1 (BDDebug s x) ->
-        Just $ BDDebug s $ BDAnnotationPost annKey1 x
-      _ -> Nothing
     descendPrior = transformDownMay $ \case
       -- prior floating in
       BDAnnotationPrior annKey1 (BDPar ind line indented) ->
@@ -892,6 +882,36 @@ transformSimplifyFloating = stepBO .> stepFull
          Just $ BDAddBaseY indent $ BDAnnotationPrior annKey1 x
       BDAnnotationPrior annKey1 (BDDebug s x) ->
          Just $ BDDebug s $ BDAnnotationPrior annKey1 x
+      _ -> Nothing
+    descendRest = transformDownMay $ \case
+      -- post floating in
+      BDAnnotationRest annKey1 (BDPar ind line indented) ->
+        Just $ BDPar ind line $ BDAnnotationRest annKey1 indented
+      BDAnnotationRest annKey1 (BDSeq list) ->
+        Just $ BDSeq $ List.init list ++ [BDAnnotationRest annKey1 $ List.last list]
+      BDAnnotationRest annKey1 (BDLines list) ->
+        Just $ BDLines $ List.init list ++ [BDAnnotationRest annKey1 $ List.last list]
+      BDAnnotationRest annKey1 (BDCols sig cols) ->
+        Just $ BDCols sig $ List.init cols ++ [BDAnnotationRest annKey1 $ List.last cols]
+      BDAnnotationRest annKey1 (BDAddBaseY indent x) ->
+        Just $ BDAddBaseY indent $ BDAnnotationRest annKey1 x
+      BDAnnotationRest annKey1 (BDDebug s x) ->
+        Just $ BDDebug s $ BDAnnotationRest annKey1 x
+      _ -> Nothing
+    descendKW = transformDownMay $ \case
+      -- post floating in
+      BDAnnotationKW annKey1 kw (BDPar ind line indented) ->
+        Just $ BDPar ind line $ BDAnnotationKW annKey1 kw indented
+      BDAnnotationKW annKey1 kw (BDSeq list) ->
+        Just $ BDSeq $ List.init list ++ [BDAnnotationKW annKey1 kw $ List.last list]
+      BDAnnotationKW annKey1 kw (BDLines list) ->
+        Just $ BDLines $ List.init list ++ [BDAnnotationKW annKey1 kw $ List.last list]
+      BDAnnotationKW annKey1 kw (BDCols sig cols) ->
+        Just $ BDCols sig $ List.init cols ++ [BDAnnotationKW annKey1 kw $ List.last cols]
+      BDAnnotationKW annKey1 kw (BDAddBaseY indent x) ->
+        Just $ BDAddBaseY indent $ BDAnnotationKW annKey1 kw x
+      BDAnnotationKW annKey1 kw (BDDebug s x) ->
+        Just $ BDDebug s $ BDAnnotationKW annKey1 kw x
       _ -> Nothing
     descendBYPush = transformDownMay $ \case
       BDBaseYPushCur (BDCols sig cols@(_:_)) ->
@@ -931,8 +951,10 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDPar (mergeIndents ind1 ind2) line indented
       BDAddBaseY ind (BDAnnotationPrior annKey1 x) ->
         Just $ BDAnnotationPrior annKey1 (BDAddBaseY ind x)
-      BDAddBaseY ind (BDAnnotationPost annKey1 x) ->
-        Just $ BDAnnotationPost annKey1 (BDAddBaseY ind x)
+      BDAddBaseY ind (BDAnnotationRest annKey1 x) ->
+        Just $ BDAnnotationRest annKey1 (BDAddBaseY ind x)
+      BDAddBaseY ind (BDAnnotationKW annKey1 kw x) ->
+        Just $ BDAnnotationKW annKey1 kw (BDAddBaseY ind x)
       BDAddBaseY ind (BDSeq list) ->
         Just $ BDSeq $ List.init list ++ [BDAddBaseY ind (List.last list)]
       BDAddBaseY _ lit@BDLit{} ->
@@ -950,7 +972,8 @@ transformSimplifyFloating = stepBO .> stepFull
       where
         f = \case
           x@BDAnnotationPrior{}    -> descendPrior x
-          x@BDAnnotationPost{}     -> descendPost  x
+          x@BDAnnotationKW{}       -> descendKW x
+          x@BDAnnotationRest{}     -> descendRest  x
           x@BDAddBaseY{}           -> descendAddB  x
           x@BDBaseYPushCur{}       -> descendBYPush x
           x@BDBaseYPop{}           -> descendBYPop x
@@ -995,14 +1018,14 @@ transformSimplifyFloating = stepBO .> stepFull
       -- BDEnsureIndent indent (BDLines lines) ->
       --   Just $ BDLines $ BDEnsureIndent indent <$> lines
       -- post floating in
-      BDAnnotationPost annKey1 (BDPar ind line indented) ->
-        Just $ BDPar ind line $ BDAnnotationPost annKey1 indented
-      BDAnnotationPost annKey1 (BDSeq list) ->
-        Just $ BDSeq $ List.init list ++ [BDAnnotationPost annKey1 $ List.last list]
-      BDAnnotationPost annKey1 (BDLines list) ->
-        Just $ BDLines $ List.init list ++ [BDAnnotationPost annKey1 $ List.last list]
-      BDAnnotationPost annKey1 (BDCols sig cols) ->
-        Just $ BDCols sig $ List.init cols ++ [BDAnnotationPost annKey1 $ List.last cols]
+      BDAnnotationRest annKey1 (BDPar ind line indented) ->
+        Just $ BDPar ind line $ BDAnnotationRest annKey1 indented
+      BDAnnotationRest annKey1 (BDSeq list) ->
+        Just $ BDSeq $ List.init list ++ [BDAnnotationRest annKey1 $ List.last list]
+      BDAnnotationRest annKey1 (BDLines list) ->
+        Just $ BDLines $ List.init list ++ [BDAnnotationRest annKey1 $ List.last list]
+      BDAnnotationRest annKey1 (BDCols sig cols) ->
+        Just $ BDCols sig $ List.init cols ++ [BDAnnotationRest annKey1 $ List.last cols]
       _ -> Nothing
 
 transformSimplifyPar :: BriDoc -> BriDoc
@@ -1068,12 +1091,18 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDAnnotationPrior annKey1 (BDCols sig (l:lr)) ->
     Just $ BDCols sig (BDAnnotationPrior annKey1 l:lr)
   -- post floating in
-  BDAnnotationPost annKey1 (BDSeq list) ->
-    Just $ BDSeq $ List.init list ++ [BDAnnotationPost annKey1 $ List.last list]
-  BDAnnotationPost annKey1 (BDLines list) ->
-    Just $ BDLines $ List.init list ++ [BDAnnotationPost annKey1 $ List.last list]
-  BDAnnotationPost annKey1 (BDCols sig cols) ->
-    Just $ BDCols sig $ List.init cols ++ [BDAnnotationPost annKey1 $ List.last cols]
+  BDAnnotationRest annKey1 (BDSeq list) ->
+    Just $ BDSeq $ List.init list ++ [BDAnnotationRest annKey1 $ List.last list]
+  BDAnnotationRest annKey1 (BDLines list) ->
+    Just $ BDLines $ List.init list ++ [BDAnnotationRest annKey1 $ List.last list]
+  BDAnnotationRest annKey1 (BDCols sig cols) ->
+    Just $ BDCols sig $ List.init cols ++ [BDAnnotationRest annKey1 $ List.last cols]
+  BDAnnotationKW annKey1 kw (BDSeq list) ->
+    Just $ BDSeq $ List.init list ++ [BDAnnotationKW annKey1 kw $ List.last list]
+  BDAnnotationKW annKey1 kw (BDLines list) ->
+    Just $ BDLines $ List.init list ++ [BDAnnotationKW annKey1 kw $ List.last list]
+  BDAnnotationKW annKey1 kw (BDCols sig cols) ->
+    Just $ BDCols sig $ List.init cols ++ [BDAnnotationKW annKey1 kw $ List.last cols]
   -- ensureIndent float-in
   -- not sure if the following rule is necessary; tests currently are
   -- unaffected.
@@ -1145,7 +1174,8 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDExternal{}        -> Nothing
   BDLines{}           -> Nothing
   BDAnnotationPrior{} -> Nothing
-  BDAnnotationPost{}  -> Nothing
+  BDAnnotationKW{}    -> Nothing
+  BDAnnotationRest{}  -> Nothing
   BDEnsureIndent{}    -> Nothing
   BDProhibitMTEL{}    -> Nothing
   BDSetParSpacing{}   -> Nothing
@@ -1173,10 +1203,12 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
     Just $ BDLines $ filter isNotEmpty $ lines >>= \case
       BDLines l -> l
       x -> [x]
-  BDAddBaseY i (BDAnnotationPost k x)  ->
-    Just $ BDAnnotationPost k (BDAddBaseY i x)
   BDAddBaseY i (BDAnnotationPrior k x) ->
     Just $ BDAnnotationPrior k (BDAddBaseY i x)
+  BDAddBaseY i (BDAnnotationKW k kw x)  ->
+    Just $ BDAnnotationKW k kw (BDAddBaseY i x)
+  BDAddBaseY i (BDAnnotationRest k x)  ->
+    Just $ BDAnnotationRest k (BDAddBaseY i x)
   BDAddBaseY i (BDSeq l) ->
     Just $ BDSeq $ List.init l ++ [BDAddBaseY i $ List.last l]
   BDAddBaseY i (BDCols sig l) ->
@@ -1210,7 +1242,8 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDForwardLineMode bd -> rec bd
     BDExternal _ _ _ t -> return $ Text.length t
     BDAnnotationPrior _ bd -> rec bd
-    BDAnnotationPost  _ bd -> rec bd
+    BDAnnotationKW _ _ bd -> rec bd
+    BDAnnotationRest  _ bd -> rec bd
     BDLines (l:_) -> rec l
     BDLines [] -> error "briDocLineLength BDLines []"
     BDEnsureIndent _ bd -> rec bd
@@ -1305,64 +1338,105 @@ layoutBriDocM = \case
       state <- mGet
       let filterF k _ = not $ k `Set.member` subKeys
       mSet $ state
-        { _lstate_commentsPrior = Map.filterWithKey filterF
-                                $ _lstate_commentsPrior state
-        , _lstate_commentsPost  = Map.filterWithKey filterF
-                                $ _lstate_commentsPost  state
+        { _lstate_comments = Map.filterWithKey filterF
+                           $ _lstate_comments state
         }
   BDAnnotationPrior annKey bd -> do
-    do
+    state <- mGet
+    let m   = _lstate_comments state
+    let allowMTEL = not (_lstate_inhibitMTEL state)
+                 && Data.Either.isRight (_lstate_curYOrAddNewline state)
+    mAnn <- do
+      let mAnn = ExactPrint.annPriorComments <$> Map.lookup annKey m
+      mSet $ state
+       { _lstate_comments =
+           Map.adjust (\ann -> ann { ExactPrint.annPriorComments = [] }) annKey m
+       }
+      return mAnn
+    case mAnn of
+      Nothing -> when allowMTEL $ moveToExactAnn annKey
+      Just [] -> when allowMTEL $ moveToExactAnn annKey
+      Just priors -> do
+        -- layoutResetSepSpace
+        priors `forM_` \( ExactPrint.Types.Comment comment _ _
+                        , ExactPrint.Types.DP (y, x)
+                        ) -> do
+          -- evil hack for CPP:
+          case comment of
+            ('#':_) -> layoutMoveToCommentPos y (-999)
+            _       -> layoutMoveToCommentPos y x
+          -- fixedX <- fixMoveToLineByIsNewline x
+          -- replicateM_ fixedX layoutWriteNewline
+          -- layoutMoveToIndentCol y
+          layoutWriteAppendMultiline $ Text.pack $ comment
+          -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
+        when allowMTEL $ moveToExactAnn annKey
+    layoutBriDocM bd
+  BDAnnotationKW annKey keyword bd -> do
+    layoutBriDocM bd
+    mAnn <- do
       state <- mGet
-      let m   = _lstate_commentsPrior state
-      let allowMTEL = not (_lstate_inhibitMTEL state)
-                   && Data.Either.isRight (_lstate_curYOrAddNewline state)
-      mAnn <- do
-        let mAnn = Map.lookup annKey m
-        mSet $ state { _lstate_commentsPrior = Map.delete annKey m }
-        return mAnn
-      case mAnn of
-        Nothing -> when allowMTEL $ moveToExactAnn annKey
-        Just [] -> when allowMTEL $ moveToExactAnn annKey
-        Just priors -> do
-          -- layoutResetSepSpace
-          priors `forM_` \( ExactPrint.Types.Comment comment _ _
+      let m   = _lstate_comments state
+      let mAnn = ExactPrint.annsDP <$> Map.lookup annKey m
+      let mToSpan = case mAnn of
+            Just anns | keyword==Nothing -> Just anns
+            Just ((ExactPrint.Types.G kw1, _):annR)
+              | keyword==Just kw1        -> Just annR
+            _                            -> Nothing
+      case mToSpan of
+        Just anns -> do
+          let (comments, rest) = flip spanMaybe anns $ \case
+                (ExactPrint.Types.AnnComment x, dp) -> Just (x, dp)
+                _ -> Nothing
+          mSet $ state
+            { _lstate_comments =
+                Map.adjust (\ann -> ann { ExactPrint.annsDP = rest })
+                           annKey
+                           m
+            }
+          return $ [ comments | not $ null comments ]
+        _ -> return Nothing
+    forM_ mAnn $ mapM_ $ \( ExactPrint.Types.Comment comment _ _
                           , ExactPrint.Types.DP (y, x)
                           ) -> do
-            -- evil hack for CPP:
-            case comment of
-              ('#':_) -> layoutMoveToCommentPos y (-999)
-              _       -> layoutMoveToCommentPos y x
-            -- fixedX <- fixMoveToLineByIsNewline x
-            -- replicateM_ fixedX layoutWriteNewline
-            -- layoutMoveToIndentCol y
-            layoutWriteAppendMultiline $ Text.pack $ comment
-            -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
-          when allowMTEL $ moveToExactAnn annKey
+      -- evil hack for CPP:
+      case comment of
+        ('#':_) -> layoutMoveToCommentPos y (-999)
+        _       -> layoutMoveToCommentPos y x
+      -- fixedX <- fixMoveToLineByIsNewline x
+      -- replicateM_ fixedX layoutWriteNewline
+      -- layoutMoveToIndentCol y
+      layoutWriteAppendMultiline $ Text.pack $ comment
+      -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
+  BDAnnotationRest annKey bd -> do
     layoutBriDocM bd
-  BDAnnotationPost annKey bd -> do
-    layoutBriDocM bd
-    do
-      mAnn <- do
-        state <- mGet
-        let m   = _lstate_commentsPost state
-        let mAnn = Map.lookup annKey m
-        mSet $ state { _lstate_commentsPost = Map.delete annKey m }
-        return mAnn
-      case mAnn of
-        Nothing -> return ()
-        Just posts -> do
-          posts `forM_` \( ExactPrint.Types.Comment comment _ _
+    mAnn <- do
+      state <- mGet
+      let m   = _lstate_comments state
+      let mAnn = extractAllComments <$> Map.lookup annKey m
+      mSet $ state
+        { _lstate_comments =
+            Map.adjust (\ann -> ann { ExactPrint.annFollowingComments = []
+                                    , ExactPrint.annPriorComments = []
+                                    , ExactPrint.annsDP = []
+                                    }
+                       )
+                       annKey
+                       m
+        }
+      return mAnn
+    forM_ mAnn $ mapM_ $ \( ExactPrint.Types.Comment comment _ _
                           , ExactPrint.Types.DP (y, x)
                           ) -> do
-            -- evil hack for CPP:
-            case comment of
-              ('#':_) -> layoutMoveToCommentPos y (-999)
-              _       -> layoutMoveToCommentPos y x
-            -- fixedX <- fixMoveToLineByIsNewline x
-            -- replicateM_ fixedX layoutWriteNewline
-            -- layoutMoveToIndentCol y
-            layoutWriteAppendMultiline $ Text.pack $ comment
-            -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
+      -- evil hack for CPP:
+      case comment of
+        ('#':_) -> layoutMoveToCommentPos y (-999)
+        _       -> layoutMoveToCommentPos y x
+      -- fixedX <- fixMoveToLineByIsNewline x
+      -- replicateM_ fixedX layoutWriteNewline
+      -- layoutMoveToIndentCol y
+      layoutWriteAppendMultiline $ Text.pack $ comment
+      -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDNonBottomSpacing bd -> layoutBriDocM bd
   BDSetParSpacing bd -> layoutBriDocM bd
   BDForceParSpacing bd -> layoutBriDocM bd

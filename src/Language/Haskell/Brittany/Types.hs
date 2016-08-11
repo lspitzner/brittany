@@ -17,11 +17,11 @@ import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId )
 import           SrcLoc ( SrcSpan )
 
 import           Language.Haskell.GHC.ExactPrint ( AnnKey, Comment )
-import           Language.Haskell.GHC.ExactPrint.Types ( Anns, DeltaPos, mkAnnKey )
+import           Language.Haskell.GHC.ExactPrint.Types ( KeywordId, Anns, DeltaPos, mkAnnKey )
 
 import           Language.Haskell.Brittany.Config.Types
 
@@ -30,9 +30,6 @@ import           Data.Generics.Uniplate.Direct as Uniplate
 
 
 type PPM a = MultiRWSS.MultiRWS '[Config, ExactPrint.Anns] '[Text.Builder.Builder, [LayoutError], Seq String] '[] a
-
-type PriorMap = Map AnnKey [(Comment, DeltaPos)]
-type PostMap  = Map AnnKey [(Comment, DeltaPos)]
 
 data LayoutState = LayoutState
   { _lstate_baseYs         :: [Int]
@@ -56,10 +53,7 @@ data LayoutState = LayoutState
                                   -- on the first indented element have an
                                   -- annotation offset relative to the last
                                   -- non-indented element, which is confusing.
-  , _lstate_commentsPrior :: PriorMap -- map of "true" pre-node comments that
-                                      -- really _should_ be included in the
-                                      -- output.
-  , _lstate_commentsPost  :: PostMap  -- similarly, for post-node comments.
+  , _lstate_comments      :: Anns
   , _lstate_commentCol    :: Maybe Int -- this communicates two things:
                                        -- firstly, that cursor is currently
                                        -- at the end of a comment (so needs
@@ -221,7 +215,8 @@ data BriDoc
                Bool -- should print extra comment ?
                Text
   | BDAnnotationPrior AnnKey BriDoc
-  | BDAnnotationPost  AnnKey BriDoc
+  | BDAnnotationKW AnnKey (Maybe AnnKeywordId) BriDoc
+  | BDAnnotationRest  AnnKey BriDoc
   | BDLines [BriDoc]
   | BDEnsureIndent BrIndent BriDoc
   -- the following constructors are only relevant for the alt transformation
@@ -270,7 +265,8 @@ data BriDocF f
                Bool -- should print extra comment ?
                Text
   | BDFAnnotationPrior AnnKey (f (BriDocF f))
-  | BDFAnnotationPost  AnnKey (f (BriDocF f))
+  | BDFAnnotationKW AnnKey (Maybe AnnKeywordId) (f (BriDocF f))
+  | BDFAnnotationRest  AnnKey (f (BriDocF f))
   | BDFLines [(f (BriDocF f))]
   | BDFEnsureIndent BrIndent (f (BriDocF f))
   | BDFForceMultiline (f (BriDocF f))
@@ -307,7 +303,8 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDForwardLineMode bd)        = plate BDForwardLineMode |* bd
   uniplate x@BDExternal{}                = plate x
   uniplate (BDAnnotationPrior annKey bd) = plate BDAnnotationPrior |- annKey |* bd
-  uniplate (BDAnnotationPost  annKey bd) = plate BDAnnotationPost  |- annKey |* bd
+  uniplate (BDAnnotationKW annKey kw bd) = plate BDAnnotationKW |- annKey |- kw |* bd
+  uniplate (BDAnnotationRest  annKey bd) = plate BDAnnotationRest  |- annKey |* bd
   uniplate (BDLines lines)               = plate BDLines ||* lines
   uniplate (BDEnsureIndent ind bd)       = plate BDEnsureIndent |- ind |* bd
   uniplate (BDForceMultiline  bd)        = plate BDForceMultiline |* bd
@@ -337,7 +334,8 @@ unwrapBriDocNumbered tpl = case snd tpl of
   BDFForwardLineMode bd -> BDForwardLineMode $ rec bd
   BDFExternal k ks c t -> BDExternal k ks c t
   BDFAnnotationPrior annKey bd -> BDAnnotationPrior annKey $ rec bd
-  BDFAnnotationPost  annKey bd -> BDAnnotationPost  annKey $ rec bd
+  BDFAnnotationKW annKey kw bd -> BDAnnotationKW annKey kw $ rec bd
+  BDFAnnotationRest  annKey bd -> BDAnnotationRest  annKey $ rec bd
   BDFLines lines -> BDLines $ rec <$> lines
   BDFEnsureIndent ind bd -> BDEnsureIndent ind $ rec bd
   BDFForceMultiline  bd -> BDForceMultiline $ rec bd
@@ -367,7 +365,8 @@ briDocSeqSpine = \case
   BDForwardLineMode bd -> briDocSeqSpine bd
   BDExternal{} -> ()
   BDAnnotationPrior _annKey bd -> briDocSeqSpine bd
-  BDAnnotationPost  _annKey bd -> briDocSeqSpine bd
+  BDAnnotationKW _annKey _kw bd -> briDocSeqSpine bd
+  BDAnnotationRest  _annKey bd -> briDocSeqSpine bd
   BDLines lines -> foldl' (\(!()) -> briDocSeqSpine) () lines
   BDEnsureIndent _ind bd -> briDocSeqSpine bd
   BDForceMultiline  bd -> briDocSeqSpine bd

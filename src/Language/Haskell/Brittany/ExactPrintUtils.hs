@@ -4,6 +4,7 @@ module Language.Haskell.Brittany.ExactPrintUtils
   ( parseModule
   , parseModuleFromString
   , commentAnnFixTransform
+  , commentAnnFixTransformGlob
   )
 where
 
@@ -54,6 +55,9 @@ import qualified Debug.Trace as Trace
 import Language.Haskell.Brittany.Types
 import Language.Haskell.Brittany.Config.Types
 import Language.Haskell.Brittany.LayoutBasics
+import Language.Haskell.Brittany.Utils
+
+import DataTreePrint
 
 
 
@@ -114,16 +118,67 @@ parseModuleFromString args fp str =
 
 -----------
 
--- data LNode = forall a . LNode (Located a)
--- 
--- commentAnnFixTransformGlob :: GHC.ParsedSource -> ExactPrint.Transform ()
--- commentAnnFixTransformGlob modul = do
---   let extract :: forall a . SYB.Data a => a -> Seq LNode
---       extract = const Seq.empty `SYB.ext1Q` (Seq.singleton . LNode)
---   let nodes  = SYB.everything (<>) extract modul
---   let comp = _
---   let sorted = Seq.sortBy (comparing _) nodes
---   _
+commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()
+commentAnnFixTransformGlob ast = do
+  let extract :: forall a . SYB.Data a => a -> Seq (SrcSpan, ExactPrint.AnnKey)
+      extract = -- traceFunctionWith "extract" (show . SYB.typeOf) show $
+                const Seq.empty `SYB.ext2Q` (\(L a b) -> f1 a b)
+       where
+        f1 b c = (const Seq.empty `SYB.extQ` f2 c) b
+        f2 c l = Seq.singleton (l, ExactPrint.mkAnnKey (L l c))
+        -- i wonder if there is a way to avoid re-constructing the L above..
+  let nodes = SYB.everything (<>) extract ast
+  let annsMap :: Map GHC.RealSrcLoc ExactPrint.AnnKey
+      annsMap = Map.fromListWith
+        (flip const)
+        [ (GHC.realSrcSpanEnd span, annKey)
+        | (GHC.RealSrcSpan span, annKey) <- Foldable.toList nodes
+        ]
+  nodes `forM_` (snd .> processComs annsMap)
+ where
+  processComs annsMap annKey1 = do
+    mAnn <- State.Class.gets fst <&> Map.lookup annKey1
+    mAnn `forM_` \ann1 -> do
+      let priors  = ExactPrint.annPriorComments ann1
+          follows = ExactPrint.annFollowingComments ann1
+          assocs  = ExactPrint.annsDP ann1
+      let processCom
+            :: (ExactPrint.Comment, ExactPrint.DeltaPos)
+            -> ExactPrint.TransformT Identity Bool
+          processCom comPair@(com, _) =
+            case GHC.srcSpanStart $ ExactPrint.commentIdentifier com of
+              GHC.UnhelpfulLoc{}    -> return True -- retain comment at current node.
+              GHC.RealSrcLoc comLoc -> case Map.lookupLE comLoc annsMap of
+                Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
+                  (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
+                    move $> False
+                  (x,y) | x==y -> move $> False
+                  _ -> return True
+                 where
+                  ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
+                  ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
+                  loc1 = GHC.srcSpanStart annKeyLoc1
+                  loc2 = GHC.srcSpanStart annKeyLoc2
+                  move = ExactPrint.modifyAnnsT $ \anns ->
+                    let ann2  = Data.Maybe.fromJust $ Map.lookup annKey2 anns
+                        ann2' = ann2
+                          { ExactPrint.annFollowingComments =
+                              ExactPrint.annFollowingComments ann2 ++ [comPair]
+                          }
+                    in  Map.insert annKey2 ann2' anns
+                _ -> return True -- retain comment at current node.
+      priors'  <- flip filterM priors processCom
+      follows' <- flip filterM follows $ processCom
+      assocs'  <- flip filterM assocs $ \case
+        (ExactPrint.AnnComment com, dp) -> processCom (com, dp)
+        _                               -> return True
+      let ann1' = ann1 { ExactPrint.annPriorComments     = priors'
+                       , ExactPrint.annFollowingComments = follows'
+                       , ExactPrint.annsDP               = assocs'
+                       }
+      ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
+  
+
 
 commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
 commentAnnFixTransform modul = SYB.everything (>>) genF modul
@@ -142,14 +197,6 @@ moveTrailingComments :: (Data.Data.Data a,Data.Data.Data b)
                      => GHC.Located a -> GHC.Located b -> ExactPrint.Transform ()
 moveTrailingComments astFrom astTo = do
   let
-    breakHet :: (a -> Either b c) -> [a] -> ([b],[c])
-    breakHet _ [] = ([],[])
-    breakHet fn (a1:aR) = case fn a1 of
-      Left  b -> (b:bs,cs)
-      Right c -> (bs,c:cs)
-     where
-      (bs,cs) = breakHet fn aR
-          
     k1 = ExactPrint.mkAnnKey astFrom
     k2 = ExactPrint.mkAnnKey astTo
     moveComments ans = ans'
@@ -158,7 +205,7 @@ moveTrailingComments astFrom astTo = do
         an2 = Data.Maybe.fromJust $ Map.lookup k2 ans
         cs1f = ExactPrint.annFollowingComments an1
         cs2f = ExactPrint.annFollowingComments an2
-        (comments, nonComments) = flip breakHet (ExactPrint.annsDP an1)
+        (comments, nonComments) = flip breakEither (ExactPrint.annsDP an1)
              $ \case
                (ExactPrint.AnnComment com, dp) -> Left (com, dp)
                x -> Right x

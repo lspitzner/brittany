@@ -17,6 +17,8 @@ module Language.Haskell.Brittany.Utils
   , tellDebugMess
   , tellDebugMessShow
   , briDocToDocWithAnns
+  , breakEither
+  , spanMaybe
   )
 where
 
@@ -228,7 +230,8 @@ briDocToDoc = astToDoc . removeAnnotations
  where
   removeAnnotations = Uniplate.transform $ \case
     BDAnnotationPrior _ x -> x
-    BDAnnotationPost  _ x -> x
+    BDAnnotationKW _ _ x  -> x
+    BDAnnotationRest  _ x -> x
     x -> x
 
 briDocToDocWithAnns :: BriDoc -> PP.Doc
@@ -236,3 +239,17 @@ briDocToDocWithAnns = astToDoc
 
 annsDoc :: ExactPrint.Types.Anns -> PP.Doc
 annsDoc = printTreeWithCustom 100 customLayouterNoAnnsF . fmap (ShowIsId . show)
+
+breakEither :: (a -> Either b c) -> [a] -> ([b],[c])
+breakEither _ [] = ([],[])
+breakEither fn (a1:aR) = case fn a1 of
+  Left  b -> (b:bs,cs)
+  Right c -> (bs,c:cs)
+  where
+    (bs,cs) = breakEither fn aR
+
+spanMaybe :: (a -> Maybe b) -> [a] -> ([b], [a]) 
+spanMaybe f (x1:xR) | Just y <- f x1 = (y:ys, xs)
+  where
+    (ys, xs) = spanMaybe f xR
+spanMaybe _ xs = ([], xs)

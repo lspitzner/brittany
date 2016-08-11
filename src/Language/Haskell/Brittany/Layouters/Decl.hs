@@ -44,13 +44,13 @@ layoutSig lsig@(L _loc sig) = docWrapNode lsig $ case sig of
     typeDoc <- docSharedWrapper layoutType typ
     docAlt
       [ docSeq
-        [ appSep $ docPostComment lsig $ docLit nameStr
+        [ appSep $ docWrapNodeRest lsig $ docLit nameStr
         , appSep $ docLit $ Text.pack "::"
         , docForceSingleline typeDoc
         ]
       , docAddBaseY BrIndentRegular
       $ docPar
-        (docPostComment lsig $ docLit nameStr)
+        (docWrapNodeRest lsig $ docLit nameStr)
         ( docCols ColTyOpPrefix
           [ docLit $ Text.pack ":: "
           , docAddBaseY (BrIndentSpecial 3) $ typeDoc
@@ -139,7 +139,7 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match _ pats _ (GRHSs grhs
         : (spacifyDocs $ docForceSingleline <$> ps)
       (Nothing, ps) -> docCols ColPatterns
         $ (List.intersperse docSeparator $ docForceSingleline <$> ps)
-    clauseDocs <- docWrapNodePost lmatch $ layoutGrhs `mapM` grhss
+    clauseDocs <- docWrapNodeRest lmatch $ layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
     layoutPatternBindFinal binderDoc (Just patDoc) clauseDocs mWhereDocs
 

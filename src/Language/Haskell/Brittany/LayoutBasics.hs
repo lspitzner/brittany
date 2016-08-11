@@ -37,8 +37,7 @@ module Language.Haskell.Brittany.LayoutBasics
   , layoutWritePriorComments
   , layoutWritePostComments
   , layoutRemoveIndentLevelLinger
-  , extractCommentsPrior
-  , extractCommentsPost
+  , extractAllComments
   , filterAnns
   , ppmMoveToExactLoc
   , docEmpty
@@ -48,10 +47,10 @@ module Language.Haskell.Brittany.LayoutBasics
   , docCols
   , docSeq
   , docPar
-  , docPostComment
+  , docNodeAnnKW
   , docWrapNode
   , docWrapNodePrior
-  , docWrapNodePost
+  , docWrapNodeRest
   , docForceSingleline
   , docForceMultiline
   , docEnsureIndent
@@ -60,7 +59,8 @@ module Language.Haskell.Brittany.LayoutBasics
   , docSetIndentLevel
   , docSeparator
   , docAnnotationPrior
-  , docAnnotationPost
+  , docAnnotationKW
+  , docAnnotationRest
   , docNonBottomSpacing
   , docSetParSpacing
   , docForceParSpacing
@@ -86,9 +86,10 @@ where
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint.Utils
 
-import Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation )
+import Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation, KeywordId )
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
@@ -638,10 +639,13 @@ layoutWritePriorComments :: (Data.Data.Data ast,
 layoutWritePriorComments ast = do
   mAnn <- do
     state <- mGet
-    let key = ExactPrint.Types.mkAnnKey ast
-    let m   = _lstate_commentsPrior state
-    let mAnn = Map.lookup key m
-    mSet $ state { _lstate_commentsPrior = Map.delete key m }
+    let key  = ExactPrint.Types.mkAnnKey ast
+    let anns = _lstate_comments state
+    let mAnn = ExactPrint.annPriorComments <$> Map.lookup key anns
+    mSet $ state
+      { _lstate_comments =
+          Map.adjust (\ann -> ann { ExactPrint.annPriorComments = [] }) key anns
+      }
     return mAnn
 #if INSERTTRACES
   tellDebugMessShow ("layoutWritePriorComments", ExactPrint.Types.mkAnnKey ast, mAnn)
@@ -668,10 +672,15 @@ layoutWritePostComments :: (Data.Data.Data ast,
 layoutWritePostComments ast = do
   mAnn <- do
     state <- mGet
-    let key = ExactPrint.Types.mkAnnKey ast
-    let m   = _lstate_commentsPost state
-    let mAnn = Map.lookup key m
-    mSet $ state { _lstate_commentsPost = Map.delete key m }
+    let key  = ExactPrint.Types.mkAnnKey ast
+    let anns = _lstate_comments state
+    let mAnn = ExactPrint.annFollowingComments <$> Map.lookup key anns
+    mSet $ state
+      { _lstate_comments =
+          Map.adjust (\ann -> ann { ExactPrint.annFollowingComments = [] })
+                     key
+                     anns
+      }
     return mAnn
 #if INSERTTRACES
   tellDebugMessShow ("layoutWritePostComments", ExactPrint.Types.mkAnnKey ast, mAnn)
@@ -725,30 +734,26 @@ layoutIndentRestorePostComment = do
 --   layoutWritePostComments x
 --   layoutIndentRestorePostComment
 
-extractCommentsPrior :: ExactPrint.Types.Anns -> PriorMap
-extractCommentsPrior anns = flip Map.mapMaybe anns $ \ann ->
-  [r | let r = ExactPrint.Types.annPriorComments ann, not (null r)]
-extractCommentsPost  :: ExactPrint.Types.Anns -> PostMap
-extractCommentsPost  anns = flip Map.mapMaybe anns $ \ann ->
-  [ r
-  | let annDPs = ExactPrint.Types.annsDP ann >>= \case
-                 (ExactPrint.Types.AnnComment comment, dp) -> [(comment, dp)]
-                 _ -> []
-  , let following = ExactPrint.Types.annFollowingComments ann
-  , let r = following ++ annDPs
-  , not (null r)
-  ]
+extractAllComments
+  :: ExactPrint.Annotation -> [(ExactPrint.Comment, ExactPrint.DeltaPos)]
+extractAllComments ann =
+  ExactPrint.annPriorComments ann
+    ++ ExactPrint.annFollowingComments ann
+    ++ (ExactPrint.annsDP ann >>= \case
+         (ExactPrint.AnnComment com, dp) -> [(com, dp)]
+         _ -> []
+       )
 
 
 foldedAnnKeys :: Data.Data.Data ast
               => ast
-              -> Set ExactPrint.Types.AnnKey
+              -> Set ExactPrint.AnnKey
 foldedAnnKeys ast = everything
   Set.union
   (\x -> maybe
          Set.empty
          Set.singleton
-         [ gmapQi 1 (\t -> ExactPrint.Types.mkAnnKey $ L l t) x
+         [ gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
          | locTyCon == typeRepTyCon (typeOf x)
          , l <- gmapQi 0 cast x
          ]
@@ -759,8 +764,8 @@ foldedAnnKeys ast = everything
 
 filterAnns :: Data.Data.Data ast
            => ast
-           -> ExactPrint.Types.Anns
-           -> ExactPrint.Types.Anns
+           -> ExactPrint.Anns
+           -> ExactPrint.Anns
 filterAnns ast anns =
   Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast) anns
 
@@ -927,11 +932,17 @@ docSetIndentLevel bdm = do
 docSeparator :: ToBriDocM BriDocNumbered
 docSeparator = allocateNode BDFSeparator
 
-docAnnotationPrior :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docAnnotationPrior
+  :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docAnnotationPrior annKey bdm = allocateNode . BDFAnnotationPrior annKey =<< bdm
 
-docAnnotationPost :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
-docAnnotationPost  annKey bdm = allocateNode . BDFAnnotationPost annKey =<< bdm
+docAnnotationKW
+  :: AnnKey -> Maybe AnnKeywordId -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docAnnotationKW annKey kw bdm = allocateNode . BDFAnnotationKW annKey kw =<< bdm
+
+docAnnotationRest
+  :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docAnnotationRest annKey bdm = allocateNode . BDFAnnotationRest annKey =<< bdm
 
 docNonBottomSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing =<< bdm
@@ -954,29 +965,14 @@ docCommaSep = appSep $ docLit $ Text.pack ","
 docParenLSep :: ToBriDocM BriDocNumbered
 docParenLSep = appSep $ docLit $ Text.pack "("
 
-
-docPostComment :: (Data.Data.Data ast)
-               => GenLocated SrcSpan ast
-               -> ToBriDocM BriDocNumbered
-               -> ToBriDocM BriDocNumbered
-docPostComment ast bdm = do
-  bd <- bdm
-  allocateNode $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast) bd
-
--- docWrapNode :: ( Data.Data.Data ast)
---             => GenLocated SrcSpan ast
---             -> ToBriDocM BriDocNumbered
---             -> ToBriDocM BriDocNumbered
--- docWrapNode ast bdm = do
---   bd <- bdm
---   i1 <- allocNodeIndex
---   i2 <- allocNodeIndex
---   return
---     $ (,) i1
---     $ BDFAnnotationPrior (ExactPrint.Types.mkAnnKey ast)
---     $ (,) i2
---     $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast)
---     $ bd
+docNodeAnnKW
+  :: Data.Data.Data ast
+  => GenLocated SrcSpan ast
+  -> Maybe AnnKeywordId
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
+docNodeAnnKW ast kw bdm =
+  docAnnotationKW (ExactPrint.Types.mkAnnKey ast) kw bdm
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)
@@ -987,7 +983,7 @@ class DocWrapable a where
                    => GenLocated SrcSpan ast
                    -> ToBriDocM a
                    -> ToBriDocM a
-  docWrapNodePost  :: ( Data.Data.Data ast)
+  docWrapNodeRest  :: ( Data.Data.Data ast)
                    => GenLocated SrcSpan ast
                    -> ToBriDocM a
                    -> ToBriDocM a
@@ -1001,7 +997,7 @@ instance DocWrapable BriDocNumbered where
       $ (,) i1
       $ BDFAnnotationPrior (ExactPrint.Types.mkAnnKey ast)
       $ (,) i2
-      $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast)
+      $ BDFAnnotationRest (ExactPrint.Types.mkAnnKey ast)
       $ bd
   docWrapNodePrior ast bdm = do
     bd <- bdm
@@ -1010,12 +1006,12 @@ instance DocWrapable BriDocNumbered where
       $ (,) i1
       $ BDFAnnotationPrior (ExactPrint.Types.mkAnnKey ast)
       $ bd
-  docWrapNodePost ast bdm = do
+  docWrapNodeRest ast bdm = do
     bd <- bdm
     i2 <- allocNodeIndex
     return
       $ (,) i2
-      $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast)
+      $ BDFAnnotationRest (ExactPrint.Types.mkAnnKey ast)
       $ bd
 
 instance DocWrapable a => DocWrapable [a] where
@@ -1028,7 +1024,7 @@ instance DocWrapable a => DocWrapable [a] where
         return [bd']
       (bd1:bdR) | (bdN:bdM) <- reverse bdR -> do
         bd1' <- docWrapNodePrior ast (return bd1)
-        bdN' <- docWrapNodePost  ast (return bdN)
+        bdN' <- docWrapNodeRest  ast (return bdN)
         return $ [bd1'] ++ reverse bdM ++ [bdN']
       _ -> error "cannot happen (TM)"
   docWrapNodePrior ast bdsm = do
@@ -1038,12 +1034,12 @@ instance DocWrapable a => DocWrapable [a] where
       (bd1:bdR) -> do
         bd1' <- docWrapNodePrior ast (return bd1)
         return $ (bd1':bdR)
-  docWrapNodePost ast bdsm = do
+  docWrapNodeRest ast bdsm = do
     bds <- bdsm
     case reverse bds of
       [] -> return $ []
       (bdN:bdR) -> do
-        bdN' <- docWrapNodePost ast (return bdN)
+        bdN' <- docWrapNodeRest ast (return bdN)
         return $ reverse $ (bdN':bdR)
 
 instance DocWrapable ([BriDocNumbered], BriDocNumbered, a) where
@@ -1055,15 +1051,15 @@ instance DocWrapable ([BriDocNumbered], BriDocNumbered, a) where
         return $ (bds, bd', x)
       else do
         bds' <- docWrapNodePrior ast (return bds)
-        bd' <- docWrapNodePost ast (return bd)
+        bd' <- docWrapNodeRest ast (return bd)
         return $ (bds', bd', x)
   docWrapNodePrior ast stuffM = do
     (bds, bd, x) <- stuffM
     bds' <- docWrapNodePrior ast (return bds)
     return $ (bds', bd, x)
-  docWrapNodePost ast stuffM = do
+  docWrapNodeRest ast stuffM = do
     (bds, bd, x) <- stuffM
-    bd' <- docWrapNodePost ast (return bd)
+    bd' <- docWrapNodeRest ast (return bd)
     return $ (bds, bd', x)
 
 

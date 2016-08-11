@@ -43,6 +43,8 @@ import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
 import           HsSyn
 
+import           Data.HList.HList
+
 
 
 -- LayoutErrors can be non-fatal warnings, thus both are returned instead
@@ -55,18 +57,16 @@ pPrintModule
   -> GHC.ParsedSource
   -> ([LayoutError], TextL.Text)
 pPrintModule conf anns parsedModule =
-  let ((), (annsBalanced, _), _) =
-        ExactPrint.runTransform anns (commentAnnFixTransform parsedModule)
-      ((out, errs), debugStrings)
+  let ((out, errs), debugStrings)
         = runIdentity
         $ MultiRWSS.runMultiRWSTNil
         $ MultiRWSS.withMultiWriterAW
         $ MultiRWSS.withMultiWriterAW
         $ MultiRWSS.withMultiWriterW
-        $ MultiRWSS.withMultiReader annsBalanced
+        $ MultiRWSS.withMultiReader anns
         $ MultiRWSS.withMultiReader conf
         $ do
-            traceIfDumpConf "bridoc annotations" _dconf_dump_annotations $ annsDoc annsBalanced
+            traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations $ annsDoc anns
             ppModule parsedModule
       tracer = if Seq.null debugStrings
         then id
@@ -174,15 +174,29 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
       in ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY)
     _ -> return ()
 
+withTransformedAnns :: SYB.Data ast => ast -> PPM () -> PPM ()
+withTransformedAnns ast m = do
+  -- TODO: implement `local` for MultiReader/MultiRWS
+  readers@(conf :+: anns :+: HNil) <- MultiRWSS.mGetRawR
+  MultiRWSS.mPutRawR (conf :+: f anns :+: HNil)
+  m
+  MultiRWSS.mPutRawR readers
+ where
+  f anns =
+    let ((), (annsBalanced, _), _) =
+          ExactPrint.runTransform anns (commentAnnFixTransformGlob ast)
+    in  annsBalanced
+
+    
 ppDecl :: LHsDecl RdrName -> PPM ()
 ppDecl d@(L loc decl) = case decl of
   SigD sig  -> -- trace (_sigHead sig) $
-               do
+               withTransformedAnns d $ do
     -- runLayouter $ Old.layoutSig (L loc sig)
     briDoc <- briDocMToPPM $ layoutSig (L loc sig)
     layoutBriDoc d briDoc
   ValD bind -> -- trace (_bindHead bind) $
-               do
+               withTransformedAnns d $ do
     -- Old.layoutBind (L loc bind)
     briDoc <- briDocMToPPM $ do
       eitherNode <- layoutBind (L loc bind)

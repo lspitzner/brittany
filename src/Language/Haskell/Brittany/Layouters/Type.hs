@@ -113,7 +113,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           forallDoc
           ( docLines
             [ docCols ColTyOpPrefix
-              [ docPostComment ltype $ docLit $ Text.pack " . "
+              [ docWrapNodeRest ltype $ docLit $ Text.pack " . "
               , docAddBaseY (BrIndentSpecial 3)
               $ docForceSingleline contextDoc
               ]
@@ -153,7 +153,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       , docPar
           (docSeq $ docLit (Text.pack "forall") : tyVarDocLineList)
           ( docCols ColTyOpPrefix
-            [ docPostComment ltype $ docLit $ Text.pack ". "
+            [ docWrapNodeRest ltype $ docLit $ Text.pack ". "
             , return typeDoc
             ]
           )
@@ -176,7 +176,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
                   ]
             )
           ++[ docCols ColTyOpPrefix
-              [ docPostComment ltype $ docLit $ Text.pack ". "
+              [ docWrapNodeRest ltype $ docLit $ Text.pack ". "
               , return typeDoc
               ]
             ]
@@ -239,13 +239,13 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     docAlt
       [ docSeq
         [ docForceSingleline typeDoc1
-        , docPostComment ltype $ appSep $ docLit $ Text.pack " ->"
+        , docWrapNodeRest ltype $ appSep $ docLit $ Text.pack " ->"
         , docForceSingleline typeDoc2
         ]
       , docPar
         typeDoc1
         ( docCols ColTyOpPrefix
-          [ docPostComment ltype $ appSep $ docLit $ Text.pack "->"
+          [ docWrapNodeRest ltype $ appSep $ docLit $ Text.pack "->"
           , docAddBaseY (BrIndentSpecial 3)
           $ if shouldForceML then docForceMultiline typeDoc2
                              else typeDoc2
@@ -256,13 +256,13 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
-        [ docPostComment ltype $ docLit $ Text.pack "("
+        [ docWrapNodeRest ltype $ docLit $ Text.pack "("
         , docForceSingleline typeDoc1
         , docLit $ Text.pack ")"
         ]
       , docPar
           ( docCols ColTyOpPrefix
-            [ docPostComment ltype $ docParenLSep
+            [ docWrapNodeRest ltype $ docParenLSep
             , docAddBaseY (BrIndentSpecial 2) $ typeDoc1
             ])
           (docLit $ Text.pack ")")
@@ -322,13 +322,13 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
-        [ docPostComment ltype $ docLit $ Text.pack "["
+        [ docWrapNodeRest ltype $ docLit $ Text.pack "["
         , docForceSingleline typeDoc1
         , docLit $ Text.pack "]"
         ]
       , docPar
           ( docCols ColTyOpPrefix
-            [ docPostComment ltype $ docLit $ Text.pack "[ "
+            [ docWrapNodeRest ltype $ docLit $ Text.pack "[ "
             , docAddBaseY (BrIndentSpecial 2) $ typeDoc1
             ])
           (docLit $ Text.pack "]")
@@ -337,13 +337,13 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
-        [ docPostComment ltype $ docLit $ Text.pack "[:"
+        [ docWrapNodeRest ltype $ docLit $ Text.pack "[:"
         , docForceSingleline typeDoc1
         , docLit $ Text.pack ":]"
         ]
       , docPar
           ( docCols ColTyOpPrefix
-            [ docPostComment ltype $ docLit $ Text.pack "[:"
+            [ docWrapNodeRest ltype $ docLit $ Text.pack "[:"
             , docAddBaseY (BrIndentSpecial 2) $ typeDoc1
             ])
           (docLit $ Text.pack ":]")
@@ -451,7 +451,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
-        [ docPostComment ltype
+        [ docWrapNodeRest ltype
         $ docLit
         $ Text.pack ("?" ++ showSDocUnsafe (ftext ipName) ++ "::")
         , docForceSingleline typeDoc1
@@ -461,7 +461,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           $ Text.pack ("?" ++ showSDocUnsafe (ftext ipName))
           )
           (docCols ColTyOpPrefix
-            [ docPostComment ltype
+            [ docWrapNodeRest ltype
             $ docLit $ Text.pack "::"
             , docAddBaseY (BrIndentSpecial 2) typeDoc1
             ])
@@ -472,14 +472,14 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     docAlt
       [ docSeq
         [ docForceSingleline typeDoc1
-        , docPostComment ltype
+        , docWrapNodeRest ltype
         $ docLit $ Text.pack " ~ "
         , docForceSingleline typeDoc2
         ]
       , docPar
           typeDoc1
           ( docCols ColTyOpPrefix
-              [ docPostComment ltype
+              [ docWrapNodeRest ltype
               $ docLit $ Text.pack "~ "
               , docAddBaseY (BrIndentSpecial 2) typeDoc2
               ])
@@ -497,7 +497,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       , docPar
           typeDoc1
           ( docCols ColTyOpPrefix
-              [ docPostComment ltype
+              [ docWrapNodeRest ltype
               $ docLit $ Text.pack ":: "
               , docAddBaseY (BrIndentSpecial 3) kindDoc1
               ])
