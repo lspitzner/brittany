@@ -1192,17 +1192,22 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
     Just $ BDEnsureIndent ind $ BDLines $ lines ++ [indented]
   BDPar ind (BDCols sig cols) indented ->
     Just $ BDCols sig (List.init cols ++ [BDPar ind (List.last cols) indented])
+  BDPar BrIndentNone _ _ -> Nothing
   BDPar ind x indented ->
-    Just $ BDLines
-      [ BDAddBaseY ind x
-      , BDEnsureIndent ind indented
-      ]
+    Just $ BDPar BrIndentNone (BDAddBaseY ind x) (BDEnsureIndent ind indented)
+  -- BDPar ind x indented ->
+  --   Just $ BDLines
+  --     [ BDAddBaseY ind x
+  --     , BDEnsureIndent ind indented
+  --     ]
   BDLines lines | any (\case BDLines{} -> True
                              BDEmpty{} -> True
                              _ -> False) lines ->
     Just $ BDLines $ filter isNotEmpty $ lines >>= \case
       BDLines l -> l
       x -> [x]
+  BDLines [l] ->
+    Just l
   BDAddBaseY i (BDAnnotationPrior k x) ->
     Just $ BDAnnotationPrior k (BDAddBaseY i x)
   BDAddBaseY i (BDAnnotationKW k kw x)  ->
@@ -1244,8 +1249,9 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDAnnotationPrior _ bd -> rec bd
     BDAnnotationKW _ _ bd -> rec bd
     BDAnnotationRest  _ bd -> rec bd
-    BDLines ls@(_:_) ->
-      return $ maximum $ ls <&> \l -> StateS.evalState (rec l) False 
+    BDLines ls@(_:_) -> do
+      x <- StateS.get
+      return $ maximum $ ls <&> \l -> StateS.evalState (rec l) x
     BDLines [] -> error "briDocLineLength BDLines []"
     BDEnsureIndent _ bd -> rec bd
     BDProhibitMTEL bd -> rec bd
@@ -1552,9 +1558,10 @@ layoutBriDocM = \case
         let fixedPosXs = if maxX>colMax
               then let
                      factor :: Float =
-                       max 1.0 ( fromIntegral (10 + colMax - curX) -- TODO: remove arbitrary 10..
-                               / fromIntegral (maxX - curX)
-                               )
+                       -- 0.0001 as an offering to the floating point gods.
+                       min 1.0001 ( fromIntegral (10 + colMax - curX) -- TODO: remove arbitrary 10..
+                                  / fromIntegral (maxX - curX)
+                                  )
                      offsets = (subtract curX) <$> posXs
                      fixed = offsets <&> fromIntegral .> (*factor) .> truncate
                    in  fixed <&> (+curX)
