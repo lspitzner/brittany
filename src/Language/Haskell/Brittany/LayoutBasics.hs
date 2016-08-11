@@ -76,6 +76,7 @@ module Language.Haskell.Brittany.LayoutBasics
   , briDocMToPPM
   , allocateNode
   , docSharedWrapper
+  , hasAnyCommentsBelow
   )
 where
 
@@ -698,15 +699,15 @@ layoutWritePostComments ast = do
         layoutWriteAppendMultiline $ Text.pack $ comment
 
 layoutIndentRestorePostComment
-  :: ( Monad m
-     , MonadMultiState LayoutState m
+  :: ( MonadMultiState LayoutState m
      , MonadMultiWriter Text.Builder.Builder m
      , MonadMultiWriter (Seq String) m
      )
   => m ()
 layoutIndentRestorePostComment = do
-  mCommentCol <- _lstate_commentCol <$> mGet
-  eCurYAddNL  <- _lstate_curYOrAddNewline <$> mGet
+  state <- mGet
+  let mCommentCol = _lstate_commentCol state
+  let eCurYAddNL  = _lstate_curYOrAddNewline state
 #if INSERTTRACES
   tellDebugMessShow ("layoutIndentRestorePostComment", mCommentCol)
 #endif
@@ -714,7 +715,7 @@ layoutIndentRestorePostComment = do
   case (mCommentCol, eCurYAddNL) of
     (Just commentCol, Left{}) -> do
       layoutWriteEnsureNewlineBlock
-      layoutWriteEnsureAbsoluteN commentCol
+      layoutWriteEnsureAbsoluteN $ commentCol + fromMaybe 0 (_lstate_addSepSpace state)
     _                              -> return ()
 
 -- layoutWritePriorCommentsRestore :: (Data.Data.Data ast,
@@ -769,6 +770,14 @@ filterAnns :: Data.Data.Data ast
            -> ExactPrint.Anns
 filterAnns ast anns =
   Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast) anns
+
+hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyCommentsBelow ast@(L l _) = do
+  anns <- filterAnns ast <$> mAsk
+  return $ List.any (\(c, _) -> ExactPrint.commentIdentifier c > l) 
+         $ (=<<) extractAllComments
+         $ Map.elems
+         $ anns
 
 -- new BriDoc stuff
 

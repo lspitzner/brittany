@@ -596,10 +596,12 @@ regressionTests = do
   it "comment inline placement (temporary)" $ do
     roundTripEqual $
       [text|
-      func :: Int -> -- basic indentation amount
-                     Int -> -- currently used width in current line (after indent)
-                            -- used to accurately calc placing of the current-line
-                            LayoutDesc -> Int
+      func
+        :: Int -- basic indentation amount
+        -> Int -- currently used width in current line (after indent)
+               -- used to accurately calc placing of the current-line
+        -> LayoutDesc
+        -> Int
       |]
   it "some indentation thingy" $ do
     roundTripEqual $

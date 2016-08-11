@@ -37,18 +37,21 @@ import           Bag ( mapBagM )
 
 
 layoutSig :: ToBriDoc Sig
-layoutSig lsig@(L _loc sig) = docWrapNode lsig $ case sig of
-  TypeSig names (HsIB _ (HsWC _ _ typ)) -> do
+layoutSig lsig@(L _loc sig) = case sig of
+  TypeSig names (HsIB _ (HsWC _ _ typ)) -> docWrapNode lsig $ do
     nameStrs <- names `forM` lrdrNameToTextAnn
     let nameStr = Text.intercalate (Text.pack ", ") $ nameStrs
     typeDoc <- docSharedWrapper layoutType typ
-    docAlt
+    hasComments <- hasAnyCommentsBelow lsig
+    docAlt $
       [ docSeq
         [ appSep $ docWrapNodeRest lsig $ docLit nameStr
         , appSep $ docLit $ Text.pack "::"
         , docForceSingleline typeDoc
         ]
-      , docAddBaseY BrIndentRegular
+      | not hasComments
+      ] ++
+      [ docAddBaseY BrIndentRegular
       $ docPar
         (docWrapNodeRest lsig $ docLit nameStr)
         ( docCols ColTyOpPrefix
@@ -57,7 +60,7 @@ layoutSig lsig@(L _loc sig) = docWrapNode lsig $ case sig of
           ]
         )
       ]
-  _ -> briDocByExact lsig -- TODO: should not be necessary
+  _ -> briDocByExactNoComment lsig -- TODO
 
 layoutGuardLStmt :: ToBriDoc' (Stmt RdrName (LHsExpr RdrName))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
