@@ -1244,7 +1244,8 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDAnnotationPrior _ bd -> rec bd
     BDAnnotationKW _ _ bd -> rec bd
     BDAnnotationRest  _ bd -> rec bd
-    BDLines (l:_) -> rec l
+    BDLines ls@(_:_) ->
+      return $ maximum $ ls <&> \l -> StateS.evalState (rec l) False 
     BDLines [] -> error "briDocLineLength BDLines []"
     BDEnsureIndent _ bd -> rec bd
     BDProhibitMTEL bd -> rec bd
