@@ -195,6 +195,7 @@ lrdrNameToTextAnn ast@(L _ n) = do
     Just (ExactPrint.Types.Ann _ _ _ aks _ _) -> case n of
       Exact{} | t == Text.pack "()" -> t
       _ | any (hasUni AnnBackquote) aks -> Text.pack "`" <> t <> Text.pack "`"
+      _ | any (hasUni AnnCommaTuple) aks -> t
       _ | any (hasUni AnnOpenP)     aks -> Text.pack "(" <> t <> Text.pack ")"
       _ | otherwise -> t
 
