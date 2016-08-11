@@ -584,10 +584,10 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       $ docPar
           (docNodeAnnKW lexpr Nothing $ rExprDoc)
           (docNonBottomSpacing $ docLines $ let
-            line1 = docWrapNode rF1f $ docCols ColRecUpdate
+            line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docLit $ rF1n
-              , case rF1e of
+              , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
+              , docWrapNodeRest rF1f $ case rF1e of
                   Just x -> docSeq [ appSep $ docLit $ Text.pack "="
                                    , docAddBaseY BrIndentRegular $ x
                                    ]
