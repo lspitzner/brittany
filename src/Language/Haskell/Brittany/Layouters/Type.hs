@@ -236,14 +236,17 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     let shouldForceML = case typ2 of
           (L _ HsFunTy{}) -> True
           _ -> False
-    docAlt
+    hasComments <- hasAnyCommentsBelow ltype
+    docAlt $
       [ docSeq
-        [ docForceSingleline typeDoc1
-        , docWrapNodeRest ltype $ appSep $ docLit $ Text.pack " ->"
+        [ appSep $ docForceSingleline typeDoc1
+        , appSep $ docLit $ Text.pack "->"
         , docForceSingleline typeDoc2
         ]
-      , docPar
-        typeDoc1
+      | not hasComments
+      ] ++
+      [ docPar
+        (docNodeAnnKW ltype Nothing typeDoc1)
         ( docCols ColTyOpPrefix
           [ docWrapNodeRest ltype $ appSep $ docLit $ Text.pack "->"
           , docAddBaseY (BrIndentSpecial 3)

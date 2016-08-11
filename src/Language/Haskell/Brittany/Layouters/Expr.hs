@@ -220,9 +220,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               expDocLeft
               (docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight])
           ]
-  NegApp{} -> do
-    -- TODO
-    briDocByExact lexpr
+  NegApp op _ -> do
+    opDoc <- docSharedWrapper layoutExpr op
+    docSeq $ [ docLit $ Text.pack "-"
+             , opDoc
+             ]
   HsPar innerExp -> do
     innerExpDoc <- docSharedWrapper layoutExpr innerExp
     docAlt
@@ -401,11 +403,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docLines
           [ docAddBaseY BrIndentRegular
           $ docPar
-            (appSep $ docLit $ Text.pack "let")
+            (docLit $ Text.pack "let")
             (docSetIndentLevel $ docLines $ return <$> bindDocs)
           , docAddBaseY BrIndentRegular
           $ docPar
-            (appSep $ docLit $ Text.pack "in")
+            (docLit $ Text.pack "in")
             (docSetIndentLevel $ expDoc1)
           ]
         ]
@@ -504,10 +506,16 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
                     ]
                   Nothing -> docEmpty
               ]
-            lineN = docLit $ Text.pack "}"
+            lineN = docSeq
+              [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+              , docLit $ Text.pack "}"
+              ]
             in [line1] ++ lineR ++ [lineN])
       -- TODO oneliner (?)
       ]
+  RecordCon lname _ _ (HsRecFields [] (Just 0)) -> do
+    let t = lrdrNameToText lname
+    docWrapNode lname $ docLit $ t <> Text.pack " {..}"
   RecordCon{} ->
     unknownNodeError "RecordCon with puns" lexpr
   RecordUpd rExpr [] _ _ _ _ -> do
@@ -527,12 +535,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       -- singleline
       [ docSetParSpacing
       $ docSeq
-        [ appSep rExprDoc
+        [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
         , appSep $ docLit $ Text.pack "{"
         , appSep $ docSeq $ List.intersperse docCommaSep
                 $ rFs <&> \case
                   (lfield, fieldStr, Just fieldDoc) ->
-                    docSeq [ appSep $ docWrapNode lfield $ docLit fieldStr
+                    docWrapNode lfield $ docSeq
+                          [ appSep $ docLit fieldStr
                           , appSep $ docLit $ Text.pack "="
                           , docForceSingleline fieldDoc
                           ]
@@ -542,54 +551,61 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         ]
       -- wild-indentation block
       , docSeq
-        [ appSep rExprDoc
+        [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
         , docSetBaseY $ docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
               , appSep $ docLit $ rF1n
               , case rF1e of
-                  Just x -> docSeq [ appSep $ docLit $ Text.pack "="
+                  Just x -> docWrapNode rF1f $ docSeq
+                                   [ appSep $ docLit $ Text.pack "="
                                    , docForceSingleline $ x
                                    ]
                   Nothing -> docEmpty
               ]
-            lineR = rFr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
+            lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
-              , appSep $ docWrapNode lfield $ docLit $ fText
+              , appSep $ docLit $ fText
               , case fDoc of
                   Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
                                     , docForceSingleline x
                                     ]
                   Nothing -> docEmpty
               ]
-            lineN = docLit $ Text.pack "}"
+            lineN = docSeq
+              [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+              , docLit $ Text.pack "}"
+              ]
             in [line1] ++ lineR ++ [lineN]
         ]
       -- strict indentation block
       , docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
-          rExprDoc
+          (docNodeAnnKW lexpr Nothing $ rExprDoc)
           (docNonBottomSpacing $ docLines $ let
-            line1 = docCols ColRecUpdate
+            line1 = docWrapNode rF1f $ docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docWrapNode rF1f $ docLit $ rF1n
+              , appSep $ docLit $ rF1n
               , case rF1e of
                   Just x -> docSeq [ appSep $ docLit $ Text.pack "="
                                    , docAddBaseY BrIndentRegular $ x
                                    ]
                   Nothing -> docEmpty
               ]
-            lineR = rFr <&> \(lfield, fText, fDoc) -> docCols ColRecUpdate
+            lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack ","
-              , appSep $ docWrapNode lfield $ docLit $ fText
+              , appSep $ docLit $ fText
               , case fDoc of
                   Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
                                     , docAddBaseY BrIndentRegular x
                                     ]
                   Nothing -> docEmpty
               ]
-            lineN = docLit $ Text.pack "}"
+            lineN = docSeq
+              [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+              , docLit $ Text.pack "}"
+              ]
             in [line1] ++ lineR ++ [lineN])
       ]
   ExprWithTySig exp1 (HsIB _ (HsWC _ _ typ1)) -> do
