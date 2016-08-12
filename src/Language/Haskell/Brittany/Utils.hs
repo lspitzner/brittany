@@ -6,6 +6,7 @@ module Language.Haskell.Brittany.Utils
   , (%=+)
   , parDoc
   , fromMaybeIdentity
+  , fromOptionIdentity
   , traceIfDumpConf
   , mModify
   , customLayouterF
@@ -77,6 +78,11 @@ showGhc = GHC.showPpr GHC.unsafeGlobalDynFlags
 fromMaybeIdentity :: Identity a -> Maybe a -> Identity a
 fromMaybeIdentity x y = Data.Coerce.coerce
                       $ fromMaybe (Data.Coerce.coerce x) y
+
+fromOptionIdentity :: Identity a -> Option a -> Identity a
+fromOptionIdentity x y = Data.Coerce.coerce
+                       $ fromMaybe (Data.Coerce.coerce x)
+                       $ getOption y
 
 -- maximum monoid over N+0
 -- or more than N, because Num is allowed.

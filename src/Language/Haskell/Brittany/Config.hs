@@ -70,7 +70,7 @@ import Data.Coerce ( Coercible, coerce )
 
 
 
-configParser :: CmdParser Identity out (ConfigF Maybe)
+configParser :: CmdParser Identity out (ConfigF Option)
 configParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
   ind <- addFlagReadParam "" ["indent"] "AMOUNT"
@@ -112,18 +112,18 @@ configParser = do
       , _dconf_dump_bridoc_final          = wrapLast $ falseToNothing dumpBriDocFinal
       }
     , _conf_layout = LayoutConfig
-      { _lconfig_cols               = listLastMaybe cols
-      , _lconfig_indentPolicy       = Nothing
-      , _lconfig_indentAmount       = listLastMaybe ind
-      , _lconfig_indentWhereSpecial = Nothing -- falseToNothing _
-      , _lconfig_indentListSpecial  = Nothing -- falseToNothing _
-      , _lconfig_importColumn       = listLastMaybe importCol
-      , _lconfig_altChooser         = Nothing
+      { _lconfig_cols               = optionConcat cols
+      , _lconfig_indentPolicy       = mempty
+      , _lconfig_indentAmount       = optionConcat ind
+      , _lconfig_indentWhereSpecial = mempty -- falseToNothing _
+      , _lconfig_indentListSpecial  = mempty -- falseToNothing _
+      , _lconfig_importColumn       = optionConcat importCol
+      , _lconfig_altChooser         = mempty
       }
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors = wrapLast $ falseToNothing outputOnErrors
       , _econf_Werror                = wrapLast $ falseToNothing wError
-      , _econf_CPPMode               = Nothing
+      , _econf_CPPMode               = mempty
       }
     , _conf_forward = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs
@@ -131,9 +131,12 @@ configParser = do
                        ]
       }
     }
-    where falseToNothing = Bool.bool Nothing (Just True)
+    where falseToNothing = Option . Bool.bool Nothing (Just True)
+          wrapLast :: Option a -> Option (Semigroup.Last a)
           wrapLast = fmap Semigroup.Last
-          listLastMaybe = listToMaybe . reverse
+          optionConcat
+            :: (Semigroup.Semigroup (f a), Applicative f) => [a] -> Option (f a)
+          optionConcat = mconcat . fmap (pure . pure)
 
 -- configParser :: Parser Config
 -- configParser = Config
@@ -157,7 +160,7 @@ configParser = do
 --   }
 
 readMergePersConfig
-  :: System.IO.FilePath -> Bool -> ConfigF Maybe -> MaybeT IO (ConfigF Maybe)
+  :: System.IO.FilePath -> Bool -> ConfigF Option -> MaybeT IO (ConfigF Option)
 readMergePersConfig path shouldCreate conf = do
   exists <- liftIO $ System.Directory.doesFileExist path
   if
@@ -175,7 +178,7 @@ readMergePersConfig path shouldCreate conf = do
     | shouldCreate -> do
         liftIO $ ByteString.writeFile path
                $ Data.Yaml.encode
-               $ cMap (Just . runIdentity) staticDefaultConfig
+               $ cMap (Option . Just . runIdentity) staticDefaultConfig
         return $ conf
     | otherwise -> do
         return conf
@@ -183,4 +186,4 @@ readMergePersConfig path shouldCreate conf = do
 showConfigYaml :: Config -> String
 showConfigYaml = Data.ByteString.Char8.unpack
                . Data.Yaml.encode
-               . cMap (\(Identity x) -> Just x)
+               . cMap (\(Identity x) -> Option (Just x))

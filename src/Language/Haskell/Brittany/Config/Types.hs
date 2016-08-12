@@ -21,7 +21,7 @@ import Data.Coerce ( Coercible, coerce )
 
 import Data.Semigroup.Generic
 
-import Data.Semigroup ( Last )
+import Data.Semigroup ( Last, Option )
 
 
 
@@ -83,11 +83,11 @@ deriving instance Show (ErrorHandlingConfigF Identity)
 deriving instance Show (ForwardOptionsF Identity)
 deriving instance Show (ConfigF Identity)
 
-deriving instance Show (DebugConfigF Maybe)
-deriving instance Show (LayoutConfigF Maybe)
-deriving instance Show (ErrorHandlingConfigF Maybe)
-deriving instance Show (ForwardOptionsF Maybe)
-deriving instance Show (ConfigF Maybe)
+deriving instance Show (DebugConfigF Option)
+deriving instance Show (LayoutConfigF Option)
+deriving instance Show (ErrorHandlingConfigF Option)
+deriving instance Show (ForwardOptionsF Option)
+deriving instance Show (ConfigF Option)
 
 deriving instance Data (DebugConfigF Identity)
 deriving instance Data (LayoutConfigF Identity)
@@ -95,15 +95,15 @@ deriving instance Data (ErrorHandlingConfigF Identity)
 deriving instance Data (ForwardOptionsF Identity)
 deriving instance Data (ConfigF Identity)
 
-instance Semigroup.Semigroup (DebugConfigF Maybe) where
+instance Semigroup.Semigroup (DebugConfigF Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (LayoutConfigF Maybe) where
+instance Semigroup.Semigroup (LayoutConfigF Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (ErrorHandlingConfigF Maybe) where
+instance Semigroup.Semigroup (ErrorHandlingConfigF Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (ForwardOptionsF Maybe) where
+instance Semigroup.Semigroup (ForwardOptionsF Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (ConfigF Maybe) where
+instance Semigroup.Semigroup (ConfigF Option) where
   (<>) = gmappend
 
 type Config = ConfigF Identity
@@ -116,9 +116,17 @@ instance FromJSON a => FromJSON (Semigroup.Last a) where
   {-# INLINE parseJSON #-}
 instance ToJSON a => ToJSON (Semigroup.Last a) where
   toJSON (Semigroup.Last x) = toJSON x
+  {-# INLINE toJSON #-}
 
-instance FromJSON (DebugConfigF Maybe)
-instance ToJSON   (DebugConfigF Maybe)
+instance FromJSON a => FromJSON (Option a) where
+  parseJSON obj = Option <$> parseJSON obj
+  {-# INLINE parseJSON #-}
+instance ToJSON a => ToJSON (Option a) where
+  toJSON (Option x) = toJSON x
+  {-# INLINE toJSON #-}
+
+instance FromJSON (DebugConfigF Option)
+instance ToJSON   (DebugConfigF Option)
 
 instance FromJSON IndentPolicy
 instance ToJSON   IndentPolicy
@@ -127,17 +135,17 @@ instance ToJSON   AltChooser
 instance FromJSON CPPMode
 instance ToJSON   CPPMode
 
-instance FromJSON (LayoutConfigF Maybe)
-instance ToJSON   (LayoutConfigF Maybe)
+instance FromJSON (LayoutConfigF Option)
+instance ToJSON   (LayoutConfigF Option)
 
-instance FromJSON (ErrorHandlingConfigF Maybe)
-instance ToJSON   (ErrorHandlingConfigF Maybe)
+instance FromJSON (ErrorHandlingConfigF Option)
+instance ToJSON   (ErrorHandlingConfigF Option)
 
-instance FromJSON (ForwardOptionsF Maybe)
-instance ToJSON   (ForwardOptionsF Maybe)
+instance FromJSON (ForwardOptionsF Option)
+instance ToJSON   (ForwardOptionsF Option)
 
-instance FromJSON (ConfigF Maybe)
-instance ToJSON   (ConfigF Maybe)
+instance FromJSON (ConfigF Option)
+instance ToJSON   (ConfigF Option)
 
 -- instance Monoid DebugConfig where
 --   mempty = DebugConfig Nothing Nothing

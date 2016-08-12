@@ -219,7 +219,7 @@ mainCmdParser = do
       then trace "----"
       else id
 
-readConfigs :: ConfigF Maybe -> [System.IO.FilePath] -> MaybeT IO Config
+readConfigs :: ConfigF Option -> [System.IO.FilePath] -> MaybeT IO Config
 readConfigs cmdlineConfig configPaths = do
   let defLocalConfigPath = "brittany.yaml"
   userBritPath <- liftIO $ Directory.getAppUserDataDirectory "brittany"
@@ -234,4 +234,4 @@ readConfigs cmdlineConfig configPaths = do
     paths -> foldl (\prev p -> prev >>= readMergePersConfig p False)
                    (return cmdlineConfig)
                    paths
-  return $ cZip fromMaybeIdentity staticDefaultConfig merged
+  return $ cZip fromOptionIdentity staticDefaultConfig merged
