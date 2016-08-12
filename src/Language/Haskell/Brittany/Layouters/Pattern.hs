@@ -129,4 +129,4 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
 -- #else
 --   VarPat n -> return $ stringLayouter lpat $ rdrNameToText n
 -- #endif
-  _ -> briDocByExact lpat
+  _ -> unknownNodeError "" lpat

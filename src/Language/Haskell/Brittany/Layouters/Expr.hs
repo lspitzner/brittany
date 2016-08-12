@@ -38,13 +38,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     TrueExprHole oname -> docLit $ Text.pack $ occNameString oname
   HsRecFld{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsRecFld" lexpr
   HsOverLabel{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsOverLabel{}" lexpr
   HsIPVar{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsOverLabel{}" lexpr
   HsOverLit (OverLit olit _ _ _) -> do
     allocateNode $ overLitValBriDoc olit
   HsLit lit -> do
@@ -138,10 +138,10 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       ]
   HsAppType{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsAppType{}" lexpr
   HsAppTypeOut{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsAppTypeOut{}" lexpr
   OpApp expLeft@(L _ OpApp{}) expOp _ expRight -> do
     let gather :: [(LHsExpr RdrName, LHsExpr RdrName)] -> LHsExpr RdrName -> (LHsExpr RdrName, [(LHsExpr RdrName, LHsExpr RdrName)])
         gather opExprList = \case
@@ -446,7 +446,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       ]
   HsDo{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsDo{} no comp" lexpr
   ExplicitList _ _ elems@(_:_) -> do
     elemDocs <- elems `forM` docSharedWrapper layoutExpr
     docAlt
@@ -466,7 +466,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     docLit $ Text.pack "[]"
   ExplicitPArr{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "ExplicitPArr{}" lexpr
   RecordCon lname _ _ (HsRecFields [] Nothing) -> do
     let t = lrdrNameToText lname
     docWrapNode lname $ docSeq
@@ -618,7 +618,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       ]
   ExprWithTySigOut{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "ExprWithTySigOut{}" lexpr
   ArithSeq _ Nothing info ->
     case info of
       From e1 -> do
@@ -665,60 +665,60 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     unknownNodeError "ArithSeq" lexpr
   PArrSeq{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "PArrSeq{}" lexpr
   HsSCC{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsSCC{}" lexpr
   HsCoreAnn{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsCoreAnn{}" lexpr
   HsBracket{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsBracket{}" lexpr
   HsRnBracketOut{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsRnBracketOut{}" lexpr
   HsTcBracketOut{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsTcBracketOut{}" lexpr
   HsSpliceE{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsSpliceE{}" lexpr
   HsProc{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsProc{}" lexpr
   HsStatic{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsStatic{}" lexpr
   HsArrApp{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsArrApp{}" lexpr
   HsArrForm{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsArrForm{}" lexpr
   HsTick{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsTick{}" lexpr
   HsBinTick{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsBinTick{}" lexpr
   HsTickPragma{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsTickPragma{}" lexpr
   EWildPat{} -> do
     docLit $ Text.pack "_"
   EAsPat{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "EAsPat{}" lexpr
   EViewPat{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "EViewPat{}" lexpr
   ELazyPat{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "ELazyPat{}" lexpr
   HsWrap{} -> do
     -- TODO
-    briDocByExact lexpr
+    unknownNodeError "HsWrap{}" lexpr
 
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case

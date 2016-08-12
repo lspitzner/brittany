@@ -70,7 +70,7 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
     expDoc <- docSharedWrapper layoutExpr expr
     docCols ColBindStmt
       [appSep patDoc, docSeq [appSep $ docLit $ Text.pack "<-", expDoc]]
-  _ -> briDocByExact lgstmt -- TODO
+  _ -> unknownNodeError "" lgstmt -- TODO
 
 layoutBind :: ToBriDocC (HsBindLR RdrName RdrName) (Either [BriDocNumbered] BriDocNumbered)
 layoutBind lbind@(L _ bind) = case bind of
@@ -85,7 +85,7 @@ layoutBind lbind@(L _ bind) = case bind of
     mWhereDocs <- layoutLocalBinds whereBinds
     binderDoc <- docLit $ Text.pack "="
     fmap Right $ docWrapNode lbind $ layoutPatternBindFinal binderDoc (Just patDoc) clauseDocs mWhereDocs
-  _ -> Right <$> briDocByExact lbind
+  _ -> Right <$> unknownNodeError "" lbind
 
 data BagBindOrSig = BagBind (LHsBindLR RdrName RdrName)
                   | BagSig (LSig RdrName)

@@ -391,7 +391,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
         ]
   HsOpTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "HsOpTy{}" ltype
   -- HsOpTy typ1 opName typ2 -> do
   --   -- TODO: these need some proper fixing. precedences don't add up.
   --   --       maybe the parser just returns some trivial right recursion
@@ -506,7 +506,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
               ])
       ]
   HsBangTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "HsBangTy{}" ltype
   -- HsBangTy bang typ1 -> do
   --   let bangStr = case bang of
   --         HsSrcBang _ unpackness strictness ->
@@ -558,11 +558,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --     , _layouter_ast = ltype
   --     }
   HsSpliceTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "" ltype
   HsDocTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "" ltype
   HsRecTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "" ltype
   HsExplicitListTy _ typs -> do
     typDocs <- docSharedWrapper layoutType `mapM` typs
     docAlt
@@ -573,10 +573,10 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       -- TODO
       ]
   HsExplicitTupleTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "" ltype
   HsTyLit{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "" ltype
   HsCoreTy{} -> -- TODO
-    briDocByExact ltype
+    unknownNodeError "" ltype
   HsWildCardTy _ ->
     docLit $ Text.pack "_"

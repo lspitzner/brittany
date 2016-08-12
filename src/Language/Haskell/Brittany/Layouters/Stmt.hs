@@ -75,4 +75,4 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
   BodyStmt expr _ _ _ -> do
     expDoc <- docSharedWrapper layoutExpr expr
     docAddBaseY BrIndentRegular $ expDoc
-  _ -> briDocByExact lstmt
+  _ -> unknownNodeError "" lstmt
