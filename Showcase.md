@@ -140,7 +140,7 @@ layoutBriDoc ast briDoc = do
   return $ ()
 ~~~~
 
-In contrast, let us look at Chris Done's `hindent` re-formatting results for the same input, with two different styles:
+In contrast, let us look at Chris Done's `hindent` (version `4.6.4`) re-formatting results for the same input, with two different styles:
 
 ## hindent --style chris-done output
 
