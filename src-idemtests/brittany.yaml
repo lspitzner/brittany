@@ -1,6 +1,7 @@
 _conf_errorHandling:
   _econf_Werror: false
   _econf_produceOutputOnErrors: false
+  _econf_CPPMode: CPPModeNowarn
 _conf_layout:
   _lconfig_indentPolicy: IndentPolicyFree
   _lconfig_cols: 80
@@ -11,6 +12,8 @@ _conf_layout:
     contents: 3
   _lconfig_indentWhereSpecial: true
   _lconfig_indentListSpecial: true
+_conf_forward:
+  _options_ghc: []
 _conf_debug:
   _dconf_dump_annotations: false
   _dconf_dump_bridoc_simpl_par: false
@@ -23,3 +26,4 @@ _conf_debug:
   _dconf_dump_bridoc_final: false
   _dconf_dump_bridoc_raw: false
   _dconf_dump_config: false
+
