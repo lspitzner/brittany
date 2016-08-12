@@ -132,9 +132,8 @@ layoutBriDoc ast briDoc = do
 
   state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'
 
-  let remainingComments =
-        Map.elems (_lstate_commentsPrior state')
-          ++ Map.elems (_lstate_commentsPost state')
+  let remainingComments = Map.elems (_lstate_commentsPrior state')
+        ++ Map.elems (_lstate_commentsPost state')
   remainingComments
     `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fmap fst)
 
