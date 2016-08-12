@@ -111,7 +111,10 @@ type LayoutConfig = LayoutConfigF Identity
 type ErrorHandlingConfig = ErrorHandlingConfigF Identity
 
 instance FromJSON a => FromJSON (Semigroup.Last a) where
+  parseJSON obj = Semigroup.Last <$> parseJSON obj
+  {-# INLINE parseJSON #-}
 instance ToJSON a => ToJSON (Semigroup.Last a) where
+  toJSON (Semigroup.Last x) = toJSON x
 
 instance FromJSON (DebugConfigF Maybe)
 instance ToJSON   (DebugConfigF Maybe)
