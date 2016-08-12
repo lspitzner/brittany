@@ -88,8 +88,12 @@ pPrintModuleAndCheck
   -> GHC.ParsedSource
   -> IO ([LayoutError], TextL.Text)
 pPrintModuleAndCheck conf anns parsedModule = do
+  let ghcOptions     = conf & _conf_forward & _options_ghc & runIdentity
   let (errs, output) = pPrintModule conf anns parsedModule
-  parseResult <- ExactPrint.Parsers.parseModuleFromString "output" (TextL.unpack output)
+  parseResult <- parseModuleFromString ghcOptions
+                                       "output"
+                                       (\_ -> return $ Right ())
+                                       (TextL.unpack output)
   let errs' = errs ++ case parseResult of
         Left{}  -> [LayoutErrorOutputCheck]
         Right{} -> []
