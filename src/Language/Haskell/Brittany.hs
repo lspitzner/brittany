@@ -41,6 +41,7 @@ import           ApiAnnotation ( AnnKeywordId(..) )
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
+import qualified SrcLoc as GHC
 import           HsSyn
 
 import           Data.HList.HList
@@ -170,7 +171,12 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
     (ExactPrint.Types.G AnnEofPos, (ExactPrint.Types.DP (eofX,eofY))) ->
-      let cmX = foldl' (\acc (_, ExactPrint.Types.DP (x, _)) -> acc+x) 0 finalComments
+      let folder acc (kw, ExactPrint.Types.DP (x, _)) = case kw of
+            ExactPrint.Types.AnnComment cm
+              | GHC.RealSrcSpan span <- ExactPrint.Types.commentIdentifier cm
+              -> acc + x + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
+            _ -> acc + x
+          cmX = foldl' folder 0 finalComments
       in ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY)
     _ -> return ()
 
