@@ -64,6 +64,7 @@ data ForwardOptionsF f = ForwardOptions
 data ErrorHandlingConfigF f = ErrorHandlingConfig
   { _econf_produceOutputOnErrors :: f (Semigroup.Last Bool)
   , _econf_Werror                :: f (Semigroup.Last Bool)
+  , _econf_CPPMode               :: f (Semigroup.Last CPPMode)
   }
   deriving (Generic)
 
@@ -123,6 +124,8 @@ instance FromJSON IndentPolicy
 instance ToJSON   IndentPolicy
 instance FromJSON AltChooser
 instance ToJSON   AltChooser
+instance FromJSON CPPMode
+instance ToJSON   CPPMode
 
 instance FromJSON (LayoutConfigF Maybe)
 instance ToJSON   (LayoutConfigF Maybe)
@@ -181,6 +184,13 @@ data AltChooser = AltChooserSimpleQuick -- always choose last alternative.
                                         -- options having sufficient space.
   deriving (Show, Generic, Data)
 
+data CPPMode = CPPModeAbort  -- abort program on seeing -XCPP
+             | CPPModeWarn   -- warn about CPP and non-roundtripping in its
+                             -- presence.
+             | CPPModeNowarn -- silently allow CPP, if possible (i.e. input is
+                             -- file.)
+  deriving (Show, Generic, Data)
+
 staticDefaultConfig :: Config
 staticDefaultConfig = Config
     { _conf_debug = DebugConfig
@@ -208,6 +218,7 @@ staticDefaultConfig = Config
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors = coerce False
       , _econf_Werror                = coerce False
+      , _econf_CPPMode               = coerce CPPModeAbort
       }
     , _conf_forward = ForwardOptions
       { _options_ghc = Identity []
@@ -247,10 +258,11 @@ instance CZip LayoutConfigF where
     (f x7 y7)
 
 instance CZip ErrorHandlingConfigF where
-  cZip f (ErrorHandlingConfig x1 x2)
-         (ErrorHandlingConfig y1 y2) = ErrorHandlingConfig
+  cZip f (ErrorHandlingConfig x1 x2 x3)
+         (ErrorHandlingConfig y1 y2 y3) = ErrorHandlingConfig
     (f x1 y1)
     (f x2 y2)
+    (f x3 y3)
 
 instance CZip ForwardOptionsF where
   cZip f (ForwardOptions x1)

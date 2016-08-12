@@ -123,6 +123,7 @@ configParser = do
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors = wrapLast $ falseToNothing outputOnErrors
       , _econf_Werror                = wrapLast $ falseToNothing wError
+      , _econf_CPPMode               = Nothing
       }
     , _conf_forward = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs

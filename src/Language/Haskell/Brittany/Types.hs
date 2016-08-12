@@ -115,9 +115,11 @@ instance Show LayoutState where
 --   , _lsettings_initialAnns :: ExactPrint.Anns
 --   }
 
-data LayoutError = LayoutErrorUnusedComment String
-                 | LayoutWarning String
-                 | forall ast . Data.Data.Data ast => LayoutErrorUnknownNode String ast
+data LayoutError
+  = LayoutErrorUnusedComment String
+  | LayoutWarning String
+  | forall ast . Data.Data.Data ast => LayoutErrorUnknownNode String ast
+  | LayoutErrorOutputCheck
 
 data BriSpacing = BriSpacing
   { _bs_spacePastLineIndent :: Int -- space in the current,

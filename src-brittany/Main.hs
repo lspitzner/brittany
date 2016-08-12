@@ -31,6 +31,9 @@ import qualified System.Exit
 import qualified System.Directory as Directory
 import qualified System.FilePath.Posix as FilePath
 
+import qualified DynFlags as GHC
+import qualified GHC.LanguageExtensions.Type as GHC
+
 import Paths_brittany
 
 
@@ -105,16 +108,35 @@ mainCmdParser = do
                    & _options_ghc
                    & runIdentity
     liftIO $ do
+      let cppMode = config
+                  & _conf_errorHandling
+                  & _econf_CPPMode
+                  & runIdentity
+                  & Semigroup.getLast
+      let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+            then case cppMode of
+              CPPModeAbort -> do
+                return $ Left "Encountered -XCPP. Aborting."
+              CPPModeWarn -> do
+                putStrErrLn
+                  $  "Warning: Encountered -XCPP."
+                  ++ " Be warned that -XCPP is not supported and that"
+                  ++ " brittany cannot check that its output is syntactically"
+                  ++ " valid in its presence."
+                return $ Right True
+              CPPModeNowarn ->
+                return $ Right True
+            else return $ Right False
       parseResult <- case inputPathM of
-        Nothing -> parseModuleFromString ghcOptions "stdin"
+        Nothing -> parseModuleFromString ghcOptions "stdin" cppCheckFunc
                    =<< System.IO.hGetContents System.IO.stdin
-        Just p -> parseModule ghcOptions p
+        Just p -> parseModule ghcOptions p cppCheckFunc
       case parseResult of
         Left left -> do
           putStrErrLn "parse error:"
           printErr left
           System.Exit.exitWith (System.Exit.ExitFailure 60)
-        Right (anns, parsedSource) -> do
+        Right (anns, parsedSource, hasCPP) -> do
           when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
             let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
             trace ("---- ast ----\n" ++ show val) $ return ()
@@ -125,15 +147,20 @@ mainCmdParser = do
           -- let out = do
           --       decl <- someDecls
           --       ExactPrint.exactPrint decl anns
-          let (errsWarns, outLText) = pPrintModule config anns parsedSource
+          (errsWarns, outLText) <- if hasCPP
+            then return $ pPrintModule config anns parsedSource
+            else pPrintModuleAndCheck config anns parsedSource
           let customErrOrder LayoutWarning{}            = 0 :: Int
-              customErrOrder LayoutErrorUnusedComment{} = 1
-              customErrOrder LayoutErrorUnknownNode{}   = 2
+              customErrOrder LayoutErrorOutputCheck{}   = 1
+              customErrOrder LayoutErrorUnusedComment{} = 2
+              customErrOrder LayoutErrorUnknownNode{}   = 3
           when (not $ null errsWarns) $ do
             let groupedErrsWarns = Data.List.Extra.groupOn customErrOrder
                                  $ List.sortOn customErrOrder
                                  $ errsWarns
             groupedErrsWarns `forM_` \case
+              (LayoutErrorOutputCheck{}:_) -> do
+                putStrErrLn $ "ERROR: brittany pretty printer returned syntactically invalid result."
               uns@(LayoutErrorUnknownNode{}:_) -> do
                 putStrErrLn $ "ERROR: encountered unknown syntactical constructs:"
                 uns `forM_` \case

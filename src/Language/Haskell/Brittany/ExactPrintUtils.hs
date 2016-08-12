@@ -64,7 +64,8 @@ import DataTreePrint
 parseModule
   :: [String]
   -> System.IO.FilePath
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource))
+  -> (GHC.DynFlags -> IO (Either String a))
+  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
 parseModule =
   parseModuleWithCpp ExactPrint.defaultCppOptions ExactPrint.normalLayout
 
@@ -74,8 +75,9 @@ parseModuleWithCpp
   -> ExactPrint.DeltaOptions
   -> [String]
   -> System.IO.FilePath
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource))
-parseModuleWithCpp cpp opts args fp =
+  -> (GHC.DynFlags -> IO (Either String a))
+  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+parseModuleWithCpp cpp opts args fp dynCheck =
   ExactPrint.ghcWrapper $ EitherT.runEitherT $ do
     dflags0                       <- lift $ ExactPrint.initDynFlags fp
     (dflags1, leftover, warnings) <- lift $ GHC.parseDynamicFlagsCmdLine
@@ -89,17 +91,20 @@ parseModuleWithCpp cpp opts args fp =
       $  EitherT.left
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
+    x <- EitherT.EitherT $ liftIO $ dynCheck dflags1
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags1 fp
     EitherT.hoistEither
-      $ either (\(span, err) -> Left $ show span ++ ": " ++ err) Right
+      $ either (\(span, err) -> Left $ show span ++ ": " ++ err)
+               (\(a, m) -> Right (a, m, x))
       $ ExactPrint.postParseTransform res opts
 
 parseModuleFromString
   :: [String]
   -> System.IO.FilePath
+  -> (GHC.DynFlags -> IO (Either String a))
   -> String
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource))
-parseModuleFromString args fp str =
+  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+parseModuleFromString args fp dynCheck str =
   ExactPrint.ghcWrapper $ EitherT.runEitherT $ do
     dflags0                       <- lift $ ExactPrint.initDynFlagsPure fp str
     (dflags1, leftover, warnings) <-
@@ -112,8 +117,10 @@ parseModuleFromString args fp str =
       $  EitherT.left
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
+    x <- EitherT.EitherT $ liftIO $ dynCheck dflags1
     EitherT.hoistEither
-      $ either (\(span, err) -> Left $ show span ++ ": " ++ err) Right
+      $ either (\(span, err) -> Left $ show span ++ ": " ++ err)
+               (\(a, m) -> Right (a, m, x))
       $ ExactPrint.parseWith dflags1 fp GHC.parseModule str
 
 -----------

@@ -3,6 +3,7 @@
 module Language.Haskell.Brittany
   ( parsePrintModule
   , pPrintModule
+  , pPrintModuleAndCheck
    -- re-export from utils:
   , parseModule
   , parseModuleFromString
@@ -79,6 +80,22 @@ pPrintModule conf anns parsedModule =
   --   debugStrings `forM_` \s ->
   --     trace s $ return ()
 
+-- | Additionally checks that the output compiles again, appending an error
+-- if it does not.
+pPrintModuleAndCheck
+  :: Config
+  -> ExactPrint.Types.Anns
+  -> GHC.ParsedSource
+  -> IO ([LayoutError], TextL.Text)
+pPrintModuleAndCheck conf anns parsedModule = do
+  let (errs, output) = pPrintModule conf anns parsedModule
+  parseResult <- ExactPrint.Parsers.parseModuleFromString "output" (TextL.unpack output)
+  let errs' = errs ++ case parseResult of
+        Left{}  -> [LayoutErrorOutputCheck]
+        Right{} -> []
+  return (errs', output)
+
+
 -- used for testing mostly, currently.
 parsePrintModule
   :: Config
@@ -88,17 +105,18 @@ parsePrintModule
 parsePrintModule conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
-  return $ case parseResult of
-    Left (_, s) -> Left $ "parsing error: " ++ s
-    Right (anns, parsedModule) ->
-      let (errs, ltext) = pPrintModule conf anns parsedModule
-      in if null errs
+  case parseResult of
+    Left (_, s) -> return $ Left $ "parsing error: " ++ s
+    Right (anns, parsedModule) -> do
+      (errs, ltext) <- pPrintModuleAndCheck conf anns parsedModule
+      return $ if null errs
         then Right $ TextL.toStrict $ ltext
         else
           let errStrs = errs <&> \case
                 LayoutErrorUnusedComment str -> str
                 LayoutWarning str -> str
                 LayoutErrorUnknownNode str _ -> str
+                LayoutErrorOutputCheck -> "Output is not syntactically valid."
           in Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
 
 -- this approach would for with there was a pure GHC.parseDynamicFilePragma.
