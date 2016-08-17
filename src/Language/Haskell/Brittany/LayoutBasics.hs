@@ -43,6 +43,7 @@ module Language.Haskell.Brittany.LayoutBasics
   , docEmpty
   , docLit
   , docAlt
+  , docAltFilter
   , docLines
   , docCols
   , docSeq
@@ -909,6 +910,9 @@ docExt x anns shouldAddComment = allocateNode $ BDFExternal
 
 docAlt :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
 docAlt l = allocateNode . BDFAlt =<< sequence l
+
+docAltFilter :: [(Bool, ToBriDocM BriDocNumbered)] -> ToBriDocM BriDocNumbered
+docAltFilter = docAlt . map snd . filter fst
 
 
 docSeq :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered

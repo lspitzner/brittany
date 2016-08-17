@@ -639,3 +639,12 @@ regressionTests = do
             utargets''              = "foo"
         return ()
       |]
+  it "list comprehension comment placement" $ do
+    roundTripEqual $
+      [text|
+      func =
+        [ (thing, take 10 alts) --TODO: select best ones
+        | (thing, _got, alts@(_:_)) <- nosuchFooThing
+        , gast                      <- award
+        ]
+      |]

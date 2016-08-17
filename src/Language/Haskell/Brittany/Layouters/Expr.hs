@@ -424,18 +424,31 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
                                     ; MonadComp -> True
                                     ; _ -> False } -> do
     stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
-    docAlt
-      [ docSeq
-        [ appSep $ docLit $ Text.pack "["
-        , appSep $ docForceSingleline $ List.last stmtDocs
+    hasComments <- hasAnyCommentsBelow lexpr
+    docAltFilter
+      [ (,) (not hasComments)
+      $ docSeq
+        [ docNodeAnnKW lexpr Nothing
+        $ appSep
+        $ docLit
+        $ Text.pack "["
+        , docNodeAnnKW lexpr (Just AnnOpenS)
+        $ appSep
+        $ docForceSingleline
+        $ List.last stmtDocs
         , appSep $ docLit $ Text.pack "|"
         , docSeq $ List.intersperse docCommaSep
                 $ fmap docForceSingleline $ List.init stmtDocs
         , docLit $ Text.pack " ]"
         ]
-      , let
+      , (,) True
+      $ let
           start = docCols ColListComp
-                    [appSep $ docLit $ Text.pack "[", List.last stmtDocs]
+                    [ docNodeAnnKW lexpr Nothing
+                    $ appSep $ docLit $ Text.pack "["
+                    , docNodeAnnKW lexpr (Just AnnOpenS)
+                    $ List.last stmtDocs
+                    ]
           (s1:sM) = List.init stmtDocs
           line1 = docCols ColListComp
                     [appSep $ docLit $ Text.pack "|", s1]
