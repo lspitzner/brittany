@@ -648,3 +648,12 @@ regressionTests = do
         , gast                      <- award
         ]
       |]
+  it "if-then-else comment placement" $ do
+    roundTripEqual $
+      [text|
+      func = if x
+        then if y -- y is important
+          then foo
+          else bar
+        else Nothing
+      |]

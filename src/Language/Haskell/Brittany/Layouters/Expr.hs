@@ -296,8 +296,10 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     ifExprDoc   <- docSharedWrapper layoutExpr ifExpr
     thenExprDoc <- docSharedWrapper layoutExpr thenExpr
     elseExprDoc <- docSharedWrapper layoutExpr elseExpr
-    docAlt
-      [ docSeq
+    hasComments <- hasAnyCommentsBelow lexpr
+    docAltFilter
+      [ (,) (not hasComments)
+      $ docSeq
         [ appSep $ docLit $ Text.pack "if"
         , appSep $ docForceSingleline ifExprDoc
         , appSep $ docLit $ Text.pack "then"
@@ -305,11 +307,15 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , appSep $ docLit $ Text.pack "else"
         , docForceSingleline elseExprDoc
         ]
-      , docSetParSpacing
+      , (,) True
+      $ docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
           ( docAddBaseY (BrIndentSpecial 3)
-          $ docSeq [appSep $ docLit $ Text.pack "if", docForceSingleline ifExprDoc])
+          $ docSeq
+            [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
+            , docNodeAnnKW lexpr (Just AnnIf) $ docForceSingleline ifExprDoc
+            ])
           (docLines
             [ docAddBaseY BrIndentRegular
             $ docAlt
@@ -324,10 +330,14 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               $ docPar (docLit $ Text.pack "else") elseExprDoc
               ]
             ])
-      , docAddBaseY BrIndentRegular
+      , (,) True
+      $ docAddBaseY BrIndentRegular
       $ docPar
           ( docAddBaseY (BrIndentSpecial 3)
-          $ docSeq [appSep $ docLit $ Text.pack "if", ifExprDoc])
+          $ docSeq
+            [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
+            , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
+            ])
           (docLines
             [ docAddBaseY BrIndentRegular
             $ docAlt
@@ -342,9 +352,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               $ docPar (docLit $ Text.pack "else") elseExprDoc
               ]
             ])
-      , docLines
+      , (,) True
+      $ docLines
         [ docAddBaseY (BrIndentSpecial 3)
-        $ docSeq [appSep $ docLit $ Text.pack "if", ifExprDoc]
+        $ docSeq
+          [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
+          , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
+          ]
         , docAddBaseY BrIndentRegular
         $ docPar (docLit $ Text.pack "then") thenExprDoc
         , docAddBaseY BrIndentRegular
