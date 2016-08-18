@@ -318,6 +318,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             ])
           (docLines
             [ docAddBaseY BrIndentRegular
+            $ docNodeAnnKW lexpr (Just AnnThen)
             $ docAlt
               [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
               , docAddBaseY BrIndentRegular
@@ -340,6 +341,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             ])
           (docLines
             [ docAddBaseY BrIndentRegular
+            $ docNodeAnnKW lexpr (Just AnnThen)
             $ docAlt
               [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
               , docAddBaseY BrIndentRegular
@@ -359,7 +361,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
           , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
           ]
-        , docAddBaseY BrIndentRegular
+        , docNodeAnnKW lexpr (Just AnnThen)
+        $ docAddBaseY BrIndentRegular
         $ docPar (docLit $ Text.pack "then") thenExprDoc
         , docAddBaseY BrIndentRegular
         $ docPar (docLit $ Text.pack "else") elseExprDoc
@@ -374,7 +377,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   HsLet binds exp1 -> do
     expDoc1 <- docSharedWrapper layoutExpr exp1
     mBindDocs <- layoutLocalBinds binds
-    case mBindDocs of
+    -- this `docSetIndentLevel` might seem out of place, but is here due to
+    -- ghc-exactprint's DP handling of "let" in particular.
+    -- Just pushing another indentation level is a straightforward approach
+    -- to making brittany idempotent, even though the result is non-optimal
+    -- if "let" is moved horizontally as part of the transformation, as the
+    -- comments before the first let item are moved horizontally with it.
+    docSetIndentLevel $ case mBindDocs of
       Just [bindDoc] -> docAlt
         [ docSeq
           [ appSep $ docLit $ Text.pack "let"
@@ -389,7 +398,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             ]
           , docSeq
             [ appSep $ docLit $ Text.pack "in "
-            , docSetIndentLevel $ expDoc1
+            , docSetBaseY $ expDoc1
             ]
           ]
         , docLines
@@ -400,7 +409,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           , docAddBaseY BrIndentRegular
           $ docPar
             (appSep $ docLit $ Text.pack "in")
-            (docSetIndentLevel $ expDoc1)
+            (docSetBaseY $ expDoc1)
           ]
         ]
       Just bindDocs@(_:_) -> docAlt
@@ -411,7 +420,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             ]
           , docSeq
             [ appSep $ docLit $ Text.pack "in "
-            , docSetIndentLevel $ expDoc1
+            , docSetBaseY $ expDoc1
             ]
           ]
         , docLines
@@ -422,7 +431,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           , docAddBaseY BrIndentRegular
           $ docPar
             (docLit $ Text.pack "in")
-            (docSetIndentLevel $ expDoc1)
+            (docSetBaseY $ expDoc1)
           ]
         ]
       _ -> docSeq [appSep $ docLit $ Text.pack "let in", expDoc1]
@@ -582,9 +591,9 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docSetBaseY $ docLines $ let
             line1 = docCols ColRecUpdate
               [ appSep $ docLit $ Text.pack "{"
-              , appSep $ docLit $ rF1n
+              , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
               , case rF1e of
-                  Just x -> docWrapNode rF1f $ docSeq
+                  Just x -> docWrapNodeRest rF1f $ docSeq
                                    [ appSep $ docLit $ Text.pack "="
                                    , docForceSingleline $ x
                                    ]
