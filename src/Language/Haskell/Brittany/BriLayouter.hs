@@ -1517,17 +1517,35 @@ layoutBriDocM = \case
     --     (colInfos, finalState) = StateS.runState (mergeBriDocs l) (ColBuildState IntMapS.empty 0)
     alignColsLines :: [BriDoc]
               -> m ()
-    alignColsLines l = do -- colInfos `forM_` \colInfo -> do
-      colMax <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
-      sequence_ $ List.intersperse layoutWriteEnsureNewlineBlock $ colInfos <&> processInfo colMax (_cbs_map finalState)
+    alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
+      curX <- do
+        state <- mGet
+        return $ either id (const 0) (_lstate_curYOrAddNewline state)
+               + fromMaybe 0 (_lstate_addSepSpace state)
+      colMax    <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
+      sequence_ $ List.intersperse layoutWriteEnsureNewlineBlock
+                $ colInfos <&> processInfo (processedMap curX colMax)
       where
-        (colInfos, finalState) = StateS.runState (mergeBriDocs l) (ColBuildState IntMapS.empty 0)
+        (colInfos, finalState) = StateS.runState (mergeBriDocs bridocs)
+                                                 (ColBuildState IntMapS.empty 0)
+        processedMap :: Int -> Int -> ColMap2
+        processedMap curX colMax =
+          _cbs_map finalState <&> \colss ->
+            let maxCols = Foldable.foldl1 (zipWith max) colss
+                (_, posXs) = mapAccumL (\acc x -> (acc+x,acc)) curX maxCols
+                counter count l =
+                  if List.last posXs + List.last l <=colMax
+                    then count + 1
+                    else count
+                ratio = fromIntegral (foldl counter (0::Int) colss)
+                      / fromIntegral (length colss)
+            in  (ratio, maxCols, colss)
     briDocToColInfo :: BriDoc -> StateS.State ColBuildState ColInfo
     briDocToColInfo = \case
       BDCols sig list -> withAlloc $ \ind -> do
         subInfos <- mapM briDocToColInfo list
         let lengths = briDocLineLength <$> list
-        return $ (lengths, ColInfo ind sig (zip lengths subInfos))
+        return $ (Seq.singleton lengths, ColInfo ind sig (zip lengths subInfos))
       bd -> return $ ColInfoNo bd
 
     mergeBriDocs :: [BriDoc] -> StateS.State ColBuildState [ColInfo]
@@ -1558,14 +1576,14 @@ layoutBriDocM = \case
             let (Just spaces) = IntMapS.lookup infoInd m
             StateS.put s
               { _cbs_map = IntMapS.insert infoInd
-                                          (zipWith max spaces curLengths)
+                                          (spaces Seq.|> curLengths)
                                           m
               }
           return $ ColInfo infoInd colSig (zip curLengths infos)
         | otherwise -> briDocToColInfo bd
       bd            -> return $ ColInfoNo bd
     
-    withAlloc :: (ColIndex -> StateS.State ColBuildState (ColSpace, ColInfo))
+    withAlloc :: (ColIndex -> StateS.State ColBuildState (ColSpaces, ColInfo))
               -> StateS.State ColBuildState ColInfo
     withAlloc f = do
       cbs <- StateS.get
@@ -1576,18 +1594,20 @@ layoutBriDocM = \case
         $ c { _cbs_map = IntMapS.insert ind space $ _cbs_map c }
       return info
 
-    processInfo :: Int -> ColMap -> ColInfo -> m ()
-    processInfo colMax m = \case
+    processInfo :: ColMap2 -> ColInfo -> m ()
+    processInfo m = \case
       ColInfoStart -> error "should not happen (TM)"
       ColInfoNo doc -> layoutBriDocM doc
       ColInfo ind _ list -> do
+        colMax    <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
+        alignMode <- mAsk <&> _conf_layout .> _lconfig_columnAlignMode .> confUnpack
         curX <- do
           state <- mGet
           return $ either id (const 0) (_lstate_curYOrAddNewline state)
                  + fromMaybe 0 (_lstate_addSepSpace state)
         -- tellDebugMess $ show curX
-        let Just cols = IntMapS.lookup ind m
-        let (maxX, posXs) = (mapAccumL (\acc x -> (acc+x,acc)) curX cols)
+        let Just (ratio, maxCols, _colss) = IntMapS.lookup ind m
+        let (maxX, posXs) = mapAccumL (\acc x -> (acc+x,acc)) curX maxCols
         -- handle the cases that the vertical alignment leads to more than max
         -- cols:
         -- this is not a full fix, and we must correct individually in addition.
@@ -1596,37 +1616,46 @@ layoutBriDocM = \case
         -- sizes in such a way that it works _if_ we have sizes (*factor)
         -- in each column. but in that line, in the last column, we will be
         -- forced to occupy the full vertical space, not reduced by any factor.
-        let fixedPosXs = if maxX>colMax
-              then let
-                     factor :: Float =
-                       -- 0.0001 as an offering to the floating point gods.
-                       min 1.0001 ( fromIntegral (10 + colMax - curX) -- TODO: remove arbitrary 10..
-                                  / fromIntegral (maxX - curX)
-                                  )
-                     offsets = (subtract curX) <$> posXs
-                     fixed = offsets <&> fromIntegral .> (*factor) .> truncate
-                   in  fixed <&> (+curX)
-              else posXs
-        -- fixing overflows, act II.
-        if List.last fixedPosXs + fst (List.last list) > colMax
-          then -- we are doomed. there is no space in the world for us.
-               -- or our children.
-            list `forM_` (snd .> processInfoIgnore)
-            -- we COULD do some fancy put-as-much-to-the-right-as-possible
-            -- here. could. dunno if that would look good even, though.
-          else zip fixedPosXs list `forM_` \(destX, x) -> do
-            layoutWriteEnsureAbsoluteN destX
-            processInfo colMax m (snd x)
+        let fixedPosXs = case alignMode of
+              ColumnAlignModeAnimouslyScale i | maxX>colMax -> fixed <&> (+curX)
+                where
+                  factor :: Float = 
+                    -- 0.0001 as an offering to the floating point gods.
+                    min 1.0001 ( fromIntegral (i + colMax - curX)
+                               / fromIntegral (maxX - curX)
+                               )
+                  offsets = (subtract curX) <$> posXs
+                  fixed = offsets <&> fromIntegral .> (*factor) .> truncate
+              _ -> posXs
+        let alignAct = zip fixedPosXs list `forM_` \(destX, x) -> do
+              layoutWriteEnsureAbsoluteN destX
+              processInfo m (snd x)
+            noAlignAct = list `forM_` (snd .> processInfoIgnore)
+            animousAct =
+              -- per-item check if there is overflowing.
+              if List.last fixedPosXs + fst (List.last list) > colMax
+                then noAlignAct
+                else alignAct
+        case alignMode of
+          ColumnAlignModeDisabled                      -> noAlignAct
+          ColumnAlignModeUnanimously | maxX<=colMax    -> alignAct
+          ColumnAlignModeUnanimously                   -> noAlignAct
+          ColumnAlignModeMajority limit | ratio>=limit -> animousAct
+          ColumnAlignModeMajority{}                    -> noAlignAct
+          ColumnAlignModeAnimouslyScale{}              -> animousAct
+          ColumnAlignModeAnimously                     -> animousAct
+          ColumnAlignModeAlways                        -> alignAct
     processInfoIgnore :: ColInfo -> m ()
     processInfoIgnore = \case
       ColInfoStart -> error "should not happen (TM)"
       ColInfoNo doc -> layoutBriDocM doc
       ColInfo _ _ list -> list `forM_` (snd .> processInfoIgnore)
 
-
-type ColIndex = Int
-type ColSpace = [Int]
-type ColMap = IntMapS.IntMap {- ColIndex -} ColSpace
+type ColIndex  = Int
+type ColSpace  = [Int]
+type ColSpaces = Seq [Int]
+type ColMap1 = IntMapS.IntMap {- ColIndex -} ColSpaces
+type ColMap2 = IntMapS.IntMap {- ColIndex -} (Float, ColSpace, ColSpaces)
 
 data ColInfo
   = ColInfoStart -- start value to begin the mapAccumL.
@@ -1634,6 +1663,6 @@ data ColInfo
   | ColInfo ColIndex ColSig [(Int, ColInfo)]
 
 data ColBuildState = ColBuildState
-  { _cbs_map :: ColMap
+  { _cbs_map :: ColMap1
   , _cbs_index :: ColIndex
   }

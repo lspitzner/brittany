@@ -636,7 +636,7 @@ regressionTests = do
         let (primaryPkg, otherPkgs) = selectPrimaryLocalPackage pwd pkgs'
             (bproblems, x) = resolveBuildTargets primaryPkg otherPkgs utargets''
             -- default local dir target if there's no given target
-            utargets''              = "foo"
+            utargets'' = "foo"
         return ()
       |]
   it "list comprehension comment placement" $ do

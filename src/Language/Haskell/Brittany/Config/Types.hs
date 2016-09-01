@@ -52,7 +52,8 @@ data LayoutConfigF f = LayoutConfig
                                                  -- when creating zero-indentation
                                                  -- multi-line list literals.
   , _lconfig_importColumn :: f (Last Int)
-  , _lconfig_altChooser :: f (Last AltChooser)
+  , _lconfig_altChooser      :: f (Last AltChooser)
+  , _lconfig_columnAlignMode :: f (Last ColumnAlignMode)
   }
   deriving (Generic)
 
@@ -132,6 +133,8 @@ instance FromJSON IndentPolicy
 instance ToJSON   IndentPolicy
 instance FromJSON AltChooser
 instance ToJSON   AltChooser
+instance FromJSON ColumnAlignMode
+instance ToJSON   ColumnAlignMode
 instance FromJSON CPPMode
 instance ToJSON   CPPMode
 
@@ -192,6 +195,29 @@ data AltChooser = AltChooserSimpleQuick -- always choose last alternative.
                                         -- options having sufficient space.
   deriving (Show, Generic, Data)
 
+data ColumnAlignMode
+  = ColumnAlignModeDisabled
+    -- ^ Make no column alignments whatsoever
+  | ColumnAlignModeUnanimously
+    -- ^ Make column alignments only if it does not cause overflow for any of
+    -- the affected lines.
+  | ColumnAlignModeMajority Float
+    -- ^ If at least (ratio::Float) of the aligned elements have sufficient
+    -- space for the alignment, act like ColumnAlignModeAnimously; otherwise
+    -- act like ColumnAlignModeDisabled.
+  | ColumnAlignModeAnimouslyScale Int
+    -- ^ Scale back columns to some degree if their sum leads to overflow.
+    -- This is done in a linear fashion.
+    -- The Int specifies additional columns to be added to column maximum for
+    -- scaling calculation purposes.
+  | ColumnAlignModeAnimously
+    -- ^ Decide on a case-by-case basis if alignment would cause overflow.
+    -- If it does, cancel all alignments for this (nested) column description.
+  -- ColumnAlignModeAnimouslySome -- potentially to implement
+  | ColumnAlignModeAlways
+    -- ^ Always respect column alignments, even if it makes stuff overflow.
+  deriving (Show, Generic, Data)
+
 data CPPMode = CPPModeAbort  -- abort program on seeing -XCPP
              | CPPModeWarn   -- warn about CPP and non-roundtripping in its
                              -- presence.
@@ -222,6 +248,7 @@ staticDefaultConfig = Config
       , _lconfig_indentListSpecial  = coerce True
       , _lconfig_importColumn       = coerce (60 :: Int)
       , _lconfig_altChooser         = coerce (AltChooserBoundedSearch 3)
+      , _lconfig_columnAlignMode    = coerce (ColumnAlignModeMajority 0.7)
       }
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors = coerce False
@@ -255,8 +282,8 @@ instance CZip DebugConfigF where
     (f x11 y11)
 
 instance CZip LayoutConfigF where
-  cZip f (LayoutConfig x1 x2 x3 x4 x5 x6 x7)
-         (LayoutConfig y1 y2 y3 y4 y5 y6 y7) = LayoutConfig
+  cZip f (LayoutConfig x1 x2 x3 x4 x5 x6 x7 x8)
+         (LayoutConfig y1 y2 y3 y4 y5 y6 y7 y8) = LayoutConfig
     (f x1 y1)
     (f x2 y2)
     (f x3 y3)
@@ -264,6 +291,7 @@ instance CZip LayoutConfigF where
     (f x5 y5)
     (f x6 y6)
     (f x7 y7)
+    (f x8 y8)
 
 instance CZip ErrorHandlingConfigF where
   cZip f (ErrorHandlingConfig x1 x2 x3)

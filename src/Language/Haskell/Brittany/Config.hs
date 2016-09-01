@@ -119,6 +119,7 @@ configParser = do
       , _lconfig_indentListSpecial  = mempty -- falseToNothing _
       , _lconfig_importColumn       = optionConcat importCol
       , _lconfig_altChooser         = mempty
+      , _lconfig_columnAlignMode    = mempty
       }
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors = wrapLast $ falseToNothing outputOnErrors
