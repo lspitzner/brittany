@@ -84,7 +84,7 @@ layoutBind lbind@(L _ bind) = case bind of
     clauseDocs <- layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
     binderDoc <- docLit $ Text.pack "="
-    fmap Right $ docWrapNode lbind $ layoutPatternBindFinal Text.empty binderDoc (Just patDoc) clauseDocs mWhereDocs
+    fmap Right $ docWrapNode lbind $ layoutPatternBindFinal Nothing binderDoc (Just patDoc) clauseDocs mWhereDocs
   _ -> Right <$> unknownNodeError "" lbind
 
 data BagBindOrSig = BagBind (LHsBindLR RdrName RdrName)
@@ -144,10 +144,11 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match _ pats _ (GRHSs grhs
         $ (List.intersperse docSeparator $ docForceSingleline <$> ps)
     clauseDocs <- docWrapNodeRest lmatch $ layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
-    layoutPatternBindFinal (fromMaybe Text.empty mIdStr) binderDoc (Just patDoc) clauseDocs mWhereDocs
+    let alignmentToken = if null pats then Nothing else mIdStr
+    layoutPatternBindFinal alignmentToken binderDoc (Just patDoc) clauseDocs mWhereDocs
 
-layoutPatternBindFinal :: Text -> BriDocNumbered -> Maybe BriDocNumbered -> [([BriDocNumbered], BriDocNumbered, LHsExpr RdrName)] -> Maybe [BriDocNumbered] -> ToBriDocM BriDocNumbered
-layoutPatternBindFinal idStr binderDoc mPatDoc clauseDocs mWhereDocs = do
+layoutPatternBindFinal :: Maybe Text -> BriDocNumbered -> Maybe BriDocNumbered -> [([BriDocNumbered], BriDocNumbered, LHsExpr RdrName)] -> Maybe [BriDocNumbered] -> ToBriDocM BriDocNumbered
+layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = do
   let patPartInline = case mPatDoc of
         Nothing -> []
         Just patDoc -> [appSep $ docForceSingleline $ return patDoc]
@@ -175,7 +176,7 @@ layoutPatternBindFinal idStr binderDoc mPatDoc clauseDocs mWhereDocs = do
             ]
   docAlt $
     -- one-line solution
-    [ docCols (ColBindingLine idStr)
+    [ docCols (ColBindingLine alignmentToken)
       [ docSeq
         (patPartInline ++ [guardPart])
       , docSeq
@@ -203,7 +204,7 @@ layoutPatternBindFinal idStr binderDoc mPatDoc clauseDocs mWhereDocs = do
     ] ++
     -- one-line solution + where in next line(s)
     [ docLines
-    $ [ docCols (ColBindingLine idStr)
+    $ [ docCols (ColBindingLine alignmentToken)
         [ docSeq
           (patPartInline ++ [guardPart])
         , docSeq
@@ -242,7 +243,7 @@ layoutPatternBindFinal idStr binderDoc mPatDoc clauseDocs mWhereDocs = do
     -- pattern and exactly one clause in single line, body as par;
     -- where in following lines
     [ docLines
-    $ [ docCols (ColBindingLine idStr)
+    $ [ docCols (ColBindingLine alignmentToken)
         [ docSeq
           (patPartInline ++ [appSep guardPart])
         , docSeq
