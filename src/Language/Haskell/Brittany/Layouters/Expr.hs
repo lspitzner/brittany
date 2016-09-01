@@ -56,13 +56,32 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           docCols ColCasePattern
             $ (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
     docAlt
-      [ docSetParSpacing
+      [ -- single line
+        docSeq
+        [ docLit $ Text.pack "\\"
+        , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
+        , appSep $ docLit $ Text.pack "->"
+        , docWrapNode lgrhs $ docForceSingleline bodyDoc
+        ]
+        -- double line
+      , docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+        (docSeq
+          [ docLit $ Text.pack "\\"
+          , docWrapNode lmatch $ appSep $ docForceSingleline funcPatternPartLine
+          , docLit $ Text.pack "->"
+          ])
+        (docWrapNode lgrhs $ docForceSingleline bodyDoc)
+        -- wrapped par spacing
+      , docSetParSpacing
       $ docSeq
         [ docLit $ Text.pack "\\"
         , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
         , appSep $ docLit $ Text.pack "->"
         , docWrapNode lgrhs $ docForceParSpacing bodyDoc
         ]
+        -- conservative
       , docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
@@ -195,12 +214,12 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             , appSep $ docForceSingleline expDocOp
             , docForceSingleline expDocRight
             ]
-          , -- line + freely indented block for right expression
-            docSeq
-            [ appSep $ docForceSingleline expDocLeft
-            , appSep $ docForceSingleline expDocOp
-            , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
-            ]
+          -- , -- line + freely indented block for right expression
+          --   docSeq
+          --   [ appSep $ docForceSingleline expDocLeft
+          --   , appSep $ docForceSingleline expDocOp
+          --   , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
+          --   ]
           , -- two-line
             docAddBaseY BrIndentRegular
           $ docPar
