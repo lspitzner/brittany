@@ -36,6 +36,7 @@ linear in the size of the input (although the constant factor is not small).
 - `-XCPP` is not officially supported (yet).
 - ~~Some commandline flags mentioned in the help don't work yet (and won't even
   be parsed correctly.)~~ (fixed in 0.4.0.0)
+- some config values can not be configured via commandline yet.
 - ~~Creates a `brittany.yaml` config file _in the current directory_.~~
   (fixed in 0.5.0.0; now creates user config file in `~/.brittany`;
   still reads `brittany.yaml` in current dir if present.)
@@ -70,7 +71,8 @@ cabal new-build brittany/
   from `stdin` and written to `stdout`, but commandline arguments allow to
   read/write from/to files.
 - For stdin/stdout usage it makes sense to enable certain syntactic extensions
-  by default, i.e. to add something like this to your `~/.brittany/config`:
+  by default, i.e. to add something like this to your
+  `~/.brittany/config.yaml` (execute `brittany` once to create default):
 
   ~~~~
   _conf_forward:
