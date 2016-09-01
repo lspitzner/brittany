@@ -30,7 +30,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
   HsTyVar name -> do
     t <- lrdrNameToTextAnn name
-    docLit t
+    docWrapNode name $ docLit t
   HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts@(_:_)) typ2)) -> do
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- bndrs `forM` \case
@@ -184,11 +184,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
   x@(HsQualTy (L _ []) _) ->
     unknownNodeError "HsQualTy [] _" x
-  HsQualTy (L _ cntxts@(_:_)) typ1 -> do
+  HsQualTy lcntxts@(L _ cntxts@(_:_)) typ1 -> do
     typeDoc <- docSharedWrapper layoutType typ1
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
     let
-      contextDoc = case cntxtDocs of
+      contextDoc = docWrapNode lcntxts $ case cntxtDocs of
         [x] -> x
         _ -> docAlt
           [ let
