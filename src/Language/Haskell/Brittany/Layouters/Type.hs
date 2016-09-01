@@ -364,7 +364,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       docs <- docSharedWrapper layoutType `mapM` typs
       docAlt
         [ docSeq $ [docLit $ Text.pack "("]
-               ++ List.intersperse docCommaSep docs
+               ++ List.intersperse docCommaSep (docForceSingleline <$> docs)
                ++ [docLit $ Text.pack ")"]
         , let
             start = docCols ColTyOpPrefix [docParenLSep, head docs]
