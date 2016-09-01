@@ -385,12 +385,15 @@ briDocForceSpine bd = briDocSeqSpine bd `seq` bd
 
 data VerticalSpacingPar
   = VerticalSpacingParNone -- no indented lines
-  | VerticalSpacingParSome Int -- indented lines, requiring this much vertical
-                               -- space at most
-  | VerticalSpacingParNonBottom -- indented lines, with an unknown amount of
-                                -- space required. parents should consider this
-                                -- as a valid option, but provide as much space
-                                -- as possible.
+  | VerticalSpacingParSome   Int -- indented lines, requiring this much 
+                                 -- vertical space at most
+  | VerticalSpacingParAlways Int -- indented lines, requiring this much
+                                 -- vertical space at most, but should
+                                 -- be considered as having space for
+                                 -- any spacing validity check.
+    -- TODO: it might be wrong not to extend "always" to the none case, i.e.
+    -- we might get better properties of spacing operators by having a
+    -- product like (Normal|Always, None|Some Int).
   deriving (Eq, Show)
 
 data VerticalSpacing

@@ -456,7 +456,7 @@ transformAlts briDoc
     hasSpace2 lconf (AltCurPos line indent indentPrep _) (VerticalSpacing sameLine (VerticalSpacingParSome par) _)
       = line + sameLine <= confUnpack (_lconfig_cols lconf)
         && indent + indentPrep + par <= confUnpack (_lconfig_cols lconf)
-    hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParNonBottom _)
+    hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParAlways{} _)
       = line + sameLine <= confUnpack (_lconfig_cols lconf)
 
 getSpacing :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m (LineModeValidity VerticalSpacing)
@@ -465,6 +465,7 @@ getSpacing !bridoc = rec bridoc
   rec :: BriDocNumbered -> m (LineModeValidity VerticalSpacing)
   rec (brDcId, brDc) = do
     config <- mAsk
+    let colMax = config & _conf_layout & _lconfig_cols & confUnpack
     result <- case brDc of
       -- BDWrapAnnKey _annKey bd -> rec bd
       BDFEmpty ->
@@ -481,7 +482,14 @@ getSpacing !bridoc = rec bridoc
         return $ mVs <&> \vs -> vs
           { _vs_paragraph = case _vs_paragraph vs of
               VerticalSpacingParNone -> VerticalSpacingParNone
-              VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
+              VerticalSpacingParAlways i -> VerticalSpacingParAlways $ case indent of
+                BrIndentNone      -> i
+                BrIndentRegular   -> i + ( confUnpack
+                                         $ _lconfig_indentAmount
+                                         $ _conf_layout
+                                         $ config
+                                         )
+                BrIndentSpecial j -> i + j
               VerticalSpacingParSome i -> VerticalSpacingParSome $ case indent of
                 BrIndentNone      -> i
                 BrIndentRegular   -> i + ( confUnpack
@@ -503,8 +511,8 @@ getSpacing !bridoc = rec bridoc
                                (case _vs_paragraph vs of
                                   VerticalSpacingParNone -> 0
                                   VerticalSpacingParSome i -> i
-                                  VerticalSpacingParNonBottom -> 999)
-          , _vs_paragraph = VerticalSpacingParNonBottom
+                                  VerticalSpacingParAlways i -> min colMax i)
+          , _vs_paragraph = VerticalSpacingParAlways 0
           }
       BDFBaseYPop bd -> rec bd
       BDFIndentLevelPushCur bd -> rec bd
@@ -518,9 +526,9 @@ getSpacing !bridoc = rec bridoc
             , indSp <- mIndSp
             , lineMax <- getMaxVS $ mIndSp
             , let pspResult = case mPsp of
-                    VerticalSpacingParSome psp  -> VerticalSpacingParSome $ max psp lineMax
-                    VerticalSpacingParNone      -> VerticalSpacingParSome $ lineMax
-                    VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
+                    VerticalSpacingParSome psp   -> VerticalSpacingParSome $ max psp lineMax
+                    VerticalSpacingParNone       -> VerticalSpacingParSome $ lineMax
+                    VerticalSpacingParAlways psp -> VerticalSpacingParAlways $ max psp lineMax
             , let parFlagResult =  mPsp == VerticalSpacingParNone
                                 && _vs_paragraph indSp ==  VerticalSpacingParNone
                                 && _vs_parFlag indSp
@@ -566,7 +574,7 @@ getSpacing !bridoc = rec bridoc
         return
           $   mVs
           <|> LineModeValid (VerticalSpacing 0
-                                             VerticalSpacingParNonBottom
+                                             (VerticalSpacingParAlways colMax)
                                              False)
       BDFSetParSpacing bd -> do
         mVs <- rec bd
@@ -589,9 +597,14 @@ getSpacing !bridoc = rec bridoc
         VerticalSpacing (max x1 y1) (case (x2, y2) of
           (x, VerticalSpacingParNone) -> x
           (VerticalSpacingParNone, x) -> x
-          (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-          (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-          (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ max x y) False))
+          (VerticalSpacingParAlways i, VerticalSpacingParAlways j) ->
+            VerticalSpacingParAlways $ max i j
+          (VerticalSpacingParAlways i, VerticalSpacingParSome j) ->
+            VerticalSpacingParAlways $ max i j
+          (VerticalSpacingParSome j, VerticalSpacingParAlways i) ->
+            VerticalSpacingParAlways $ max i j
+          (VerticalSpacingParSome x, VerticalSpacingParSome y) ->
+            VerticalSpacingParSome $ max x y) False))
     (LineModeValid $ VerticalSpacing 0 VerticalSpacingParNone False)
   sumVs :: [LineModeValidity VerticalSpacing] -> LineModeValidity VerticalSpacing
   sumVs sps = foldl' (liftM2 go) initial sps
@@ -601,9 +614,14 @@ getSpacing !bridoc = rec bridoc
       (case (x2, y2) of
         (x, VerticalSpacingParNone) -> x
         (VerticalSpacingParNone, x) -> x
-        (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-        (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-        (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ x + y)
+        (VerticalSpacingParAlways i, VerticalSpacingParAlways j) ->
+          VerticalSpacingParAlways $ i+j
+        (VerticalSpacingParAlways i, VerticalSpacingParSome j) ->
+          VerticalSpacingParAlways $ i+j
+        (VerticalSpacingParSome i, VerticalSpacingParAlways j) ->
+          VerticalSpacingParAlways $ i+j
+        (VerticalSpacingParSome x, VerticalSpacingParSome y) ->
+          VerticalSpacingParSome $ x + y)
       x3
     singleline (LineModeValid x) = _vs_paragraph x == VerticalSpacingParNone
     singleline _                 = False
@@ -617,7 +635,7 @@ getSpacing !bridoc = rec bridoc
   getMaxVS = fmap $ \(VerticalSpacing x1 x2 _) -> x1 `max` case x2 of
     VerticalSpacingParSome i -> i
     VerticalSpacingParNone -> 0
-    VerticalSpacingParNonBottom -> 999
+    VerticalSpacingParAlways i -> i
 
 getSpacings :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m)
   => Int -> BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
@@ -635,7 +653,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
             lsp <= colMax && case psp of
               VerticalSpacingParNone -> True
               VerticalSpacingParSome i -> i <= colMax
-              VerticalSpacingParNonBottom -> True
+              VerticalSpacingParAlways{} -> True
       let filterAndLimit :: [VerticalSpacing] -> [VerticalSpacing]
           filterAndLimit = take limit
                          . filter hasOkColCount
@@ -662,7 +680,14 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           return $ mVs <&> \vs -> vs
             { _vs_paragraph = case _vs_paragraph vs of
                 VerticalSpacingParNone -> VerticalSpacingParNone
-                VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
+                VerticalSpacingParAlways i -> VerticalSpacingParAlways $ case indent of
+                  BrIndentNone      -> i
+                  BrIndentRegular   -> i + ( confUnpack
+                                           $ _lconfig_indentAmount
+                                           $ _conf_layout
+                                           $ config
+                                           )
+                  BrIndentSpecial j -> i + j
                 VerticalSpacingParSome i -> VerticalSpacingParSome $ case indent of
                   BrIndentNone      -> i
                   BrIndentRegular   -> i + ( confUnpack
@@ -684,10 +709,11 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                                  (case _vs_paragraph vs of
                                   VerticalSpacingParNone -> 0
                                   VerticalSpacingParSome i -> i
-                                  VerticalSpacingParNonBottom -> 999)
+                                  VerticalSpacingParAlways i -> min colMax i)
             , _vs_paragraph = case _vs_paragraph vs of
                 VerticalSpacingParNone -> VerticalSpacingParNone
-                _ -> VerticalSpacingParNonBottom
+                VerticalSpacingParSome i -> VerticalSpacingParAlways i -- TODO: is this correct?
+                VerticalSpacingParAlways i -> VerticalSpacingParAlways i
             }
         BDFBaseYPop bd -> rec bd
         BDFIndentLevelPushCur bd -> rec bd
@@ -708,7 +734,8 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                   VerticalSpacingParSome psp ->
                     VerticalSpacingParSome $ max psp $ getMaxVS indSp -- TODO
                   VerticalSpacingParNone -> spMakePar indSp
-                  VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom)
+                  VerticalSpacingParAlways psp ->
+                    VerticalSpacingParAlways $ max psp $ getMaxVS indSp)
                 (  mPsp == VerticalSpacingParNone
                 && _vs_paragraph indSp == VerticalSpacingParNone
                 && _vs_parFlag indSp
@@ -773,8 +800,13 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFNonBottomSpacing bd -> do
           mVs <- rec bd
           return $ if null mVs
-            then [VerticalSpacing 0 VerticalSpacingParNonBottom False]
-            else mVs <&> \vs -> vs { _vs_paragraph = VerticalSpacingParNonBottom}
+            then [VerticalSpacing 0 (VerticalSpacingParAlways colMax) False]
+            else mVs <&> \vs -> vs
+              { _vs_paragraph = case _vs_paragraph vs of
+                  VerticalSpacingParNone -> VerticalSpacingParNone
+                  VerticalSpacingParAlways i -> VerticalSpacingParAlways i
+                  VerticalSpacingParSome i -> VerticalSpacingParAlways i
+              }
         BDFSetParSpacing bd -> do
           mVs <- rec bd
           return $ mVs <&> \vs -> vs { _vs_parFlag = True }
@@ -805,9 +837,14 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
             (case (x2, y2) of
               (x, VerticalSpacingParNone) -> x
               (VerticalSpacingParNone, x) -> x
-              (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-              (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
-              (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ max x y)
+              (VerticalSpacingParAlways i, VerticalSpacingParAlways j) ->
+                VerticalSpacingParAlways $ max i j
+              (VerticalSpacingParAlways i, VerticalSpacingParSome j) ->
+                VerticalSpacingParAlways $ max i j
+              (VerticalSpacingParSome i, VerticalSpacingParAlways j) ->
+                VerticalSpacingParAlways $ max i j
+              (VerticalSpacingParSome x, VerticalSpacingParSome y) ->
+                VerticalSpacingParSome $ max x y)
             False)
       (VerticalSpacing 0 VerticalSpacingParNone False)
     sumVs :: [VerticalSpacing] -> VerticalSpacing
@@ -818,8 +855,12 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         (case (x2, y2) of
           (x, VerticalSpacingParNone) -> x
           (VerticalSpacingParNone, x) -> x
-          (_, VerticalSpacingParNonBottom) -> VerticalSpacingParNonBottom
-          (VerticalSpacingParNonBottom, _) -> VerticalSpacingParNonBottom
+          (VerticalSpacingParAlways i, VerticalSpacingParAlways j) ->
+            VerticalSpacingParAlways $ i+j
+          (VerticalSpacingParAlways i, VerticalSpacingParSome j) ->
+            VerticalSpacingParAlways $ i+j
+          (VerticalSpacingParSome i, VerticalSpacingParAlways j) ->
+            VerticalSpacingParAlways $ i+j
           (VerticalSpacingParSome x, VerticalSpacingParSome y) -> VerticalSpacingParSome $ x + y)
         x3
       singleline x = _vs_paragraph x == VerticalSpacingParNone
@@ -832,12 +873,12 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
     getMaxVS (VerticalSpacing x1 x2 _) = x1 `max` case x2 of
       VerticalSpacingParSome i -> i
       VerticalSpacingParNone -> 0
-      VerticalSpacingParNonBottom -> 999
+      VerticalSpacingParAlways i -> i
     spMakePar :: VerticalSpacing -> VerticalSpacingPar
     spMakePar (VerticalSpacing x1 x2 _) = case x2 of
       VerticalSpacingParSome i -> VerticalSpacingParSome $ x1 `max` i
       VerticalSpacingParNone -> VerticalSpacingParSome $ x1
-      VerticalSpacingParNonBottom -> VerticalSpacingParNonBottom
+      VerticalSpacingParAlways i -> VerticalSpacingParAlways $ x1 `max` i
 
 
 -- note that this is not total, and cannot be with that exact signature.

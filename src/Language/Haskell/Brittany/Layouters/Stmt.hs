@@ -56,21 +56,21 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
     Just [bindDoc] -> docAlt
       [ docCols ColDoLet
         [ appSep $ docLit $ Text.pack "let"
-        , docSetIndentLevel $ return bindDoc
+        , docSetBaseAndIndent $ return bindDoc
         ]
       , docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "let")
-        (docSetIndentLevel $ return bindDoc)
+        (docSetBaseAndIndent $ return bindDoc)
       ]
     Just bindDocs -> docAlt
       [ docSeq
         [ appSep $ docLit $ Text.pack "let"
-        , docSetIndentLevel $ docLines $ return <$> bindDocs
+        , docSetBaseAndIndent $ docLines $ return <$> bindDocs
         ]
       , docAddBaseY BrIndentRegular
       $ docPar
         (docLit $ Text.pack "let")
-        (docSetIndentLevel $ docLines $ return <$> bindDocs)
+        (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
       ]
   BodyStmt expr _ _ _ -> do
     expDoc <- docSharedWrapper layoutExpr expr

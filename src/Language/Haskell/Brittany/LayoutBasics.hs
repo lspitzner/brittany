@@ -66,6 +66,7 @@ module Language.Haskell.Brittany.LayoutBasics
   , docSetParSpacing
   , docForceParSpacing
   , docDebug
+  , docSetBaseAndIndent
   , briDocByExact
   , briDocByExactNoComment
   , foldedAnnKeys
@@ -942,6 +943,9 @@ docSetIndentLevel bdm = do
   n1 <- allocateNode $ BDFIndentLevelPushCur bd
   n2 <- allocateNode $ BDFIndentLevelPop n1
   return n2
+
+docSetBaseAndIndent :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docSetBaseAndIndent = docSetBaseY . docSetIndentLevel
 
 docSeparator :: ToBriDocM BriDocNumbered
 docSeparator = allocateNode BDFSeparator

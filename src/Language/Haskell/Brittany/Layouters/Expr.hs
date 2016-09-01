@@ -80,7 +80,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
     docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
       (docLit $ Text.pack "\\case")
-      (docSetIndentLevel $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
+      (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
   HsApp exp1@(L _ HsApp{}) exp2 -> do
     let gather :: [LHsExpr RdrName] -> LHsExpr RdrName -> (LHsExpr RdrName, [LHsExpr RdrName])
         gather list = \case
@@ -282,14 +282,14 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           , appSep $ docForceSingleline cExpDoc
           , docLit $ Text.pack "of"
           ])
-        (docSetIndentLevel $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
+        (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
       , docPar
           ( docAddBaseY BrIndentRegular
           $ docPar (docLit $ Text.pack "case") cExpDoc
           )
           ( docAddBaseY BrIndentRegular
           $ docPar (docLit $ Text.pack "of")
-            (docSetIndentLevel $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
+            (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
           )
       ]
   HsIf _ ifExpr thenExpr elseExpr -> do
@@ -394,7 +394,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docLines
           [ docSeq
             [ appSep $ docLit $ Text.pack "let"
-            , docSetIndentLevel $ return bindDoc
+            , docSetBaseAndIndent $ return bindDoc
             ]
           , docSeq
             [ appSep $ docLit $ Text.pack "in "
@@ -405,7 +405,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           [ docAddBaseY BrIndentRegular
           $ docPar
             (appSep $ docLit $ Text.pack "let")
-            (docSetIndentLevel $ return bindDoc)
+            (docSetBaseAndIndent $ return bindDoc)
           , docAddBaseY BrIndentRegular
           $ docPar
             (appSep $ docLit $ Text.pack "in")
@@ -416,7 +416,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         [ docLines
           [ docSeq
             [ appSep $ docLit $ Text.pack "let"
-            , docSetIndentLevel $ docLines $ return <$> bindDocs
+            , docSetBaseAndIndent $ docLines $ return <$> bindDocs
             ]
           , docSeq
             [ appSep $ docLit $ Text.pack "in "
@@ -427,7 +427,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           [ docAddBaseY BrIndentRegular
           $ docPar
             (docLit $ Text.pack "let")
-            (docSetIndentLevel $ docLines $ return <$> bindDocs)
+            (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
           , docAddBaseY BrIndentRegular
           $ docPar
             (docLit $ Text.pack "in")
@@ -442,7 +442,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       $ docAddBaseY BrIndentRegular
       $ docPar
           (docLit $ Text.pack "do")
-          (docSetIndentLevel $ docNonBottomSpacing $ docLines stmtDocs)
+          (docSetBaseAndIndent $ docNonBottomSpacing $ docLines stmtDocs)
   HsDo x  (L _ stmts) _ | case x of { ListComp -> True
                                     ; MonadComp -> True
                                     ; _ -> False } -> do
