@@ -146,7 +146,7 @@ data ColSig
     -- Has variable number of columns depending on the number of patterns.
   | ColPatterns
   | ColCasePattern
-  | ColBindingLine
+  | ColBindingLine Text
     -- e.g. "func pat pat = expr"
     --       1111111111111222222
     -- or   "pat | stmt -> expr"

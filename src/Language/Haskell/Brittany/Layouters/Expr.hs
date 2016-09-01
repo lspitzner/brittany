@@ -392,7 +392,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     binderDoc <- docLit $ Text.pack " ->"
     docAddBaseY BrIndentRegular $ docPar
       (docLit $ Text.pack "if")
-      (layoutPatternBindFinal binderDoc Nothing clauseDocs Nothing)
+      (layoutPatternBindFinal Text.empty binderDoc Nothing clauseDocs Nothing)
   HsLet binds exp1 -> do
     expDoc1 <- docSharedWrapper layoutExpr exp1
     mBindDocs <- layoutLocalBinds binds
