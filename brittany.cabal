@@ -34,14 +34,20 @@ library {
     Language.Haskell.Brittany.Config.Types
   }
   other-modules: {
-    Language.Haskell.Brittany.LayoutBasics
-    Language.Haskell.Brittany.BriLayouter
+    Language.Haskell.Brittany.LayouterBasics
+    Language.Haskell.Brittany.BackendUtils
+    Language.Haskell.Brittany.Backend
     Language.Haskell.Brittany.ExactPrintUtils
     Language.Haskell.Brittany.Layouters.Type
     Language.Haskell.Brittany.Layouters.Decl
     Language.Haskell.Brittany.Layouters.Expr
     Language.Haskell.Brittany.Layouters.Stmt
     Language.Haskell.Brittany.Layouters.Pattern
+    Language.Haskell.Brittany.Transformations.Alt
+    Language.Haskell.Brittany.Transformations.Floating
+    Language.Haskell.Brittany.Transformations.Par
+    Language.Haskell.Brittany.Transformations.Columns
+    Language.Haskell.Brittany.Transformations.Indent
   }
   ghc-options: {
     -Wall

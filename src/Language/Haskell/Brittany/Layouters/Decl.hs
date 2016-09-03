@@ -17,7 +17,7 @@ where
 #include "prelude.inc"
 
 import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayoutBasics
+import           Language.Haskell.Brittany.LayouterBasics
 import           Language.Haskell.Brittany.Config.Types
 
 import           RdrName ( RdrName(..) )

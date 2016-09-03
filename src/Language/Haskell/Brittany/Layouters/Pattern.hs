@@ -11,7 +11,7 @@ where
 #include "prelude.inc"
 
 import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayoutBasics
+import           Language.Haskell.Brittany.LayouterBasics
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )

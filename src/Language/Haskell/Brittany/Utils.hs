@@ -20,6 +20,8 @@ module Language.Haskell.Brittany.Utils
   , briDocToDocWithAnns
   , breakEither
   , spanMaybe
+  , transformUp
+  , transformDownMay
   )
 where
 
@@ -263,3 +265,14 @@ spanMaybe f (x1:xR) | Just y <- f x1 = (y : ys, xs)
  where
   (ys, xs) = spanMaybe f xR
 spanMaybe _ xs                       = ([], xs)
+
+-- TODO: move to uniplate upstream?
+-- aka `transform`
+transformUp :: Uniplate.Uniplate on => (on -> on) -> (on -> on)
+transformUp f = g where g = f . Uniplate.descend g
+_transformDown :: Uniplate.Uniplate on => (on -> on) -> (on -> on)
+_transformDown f = g where g = Uniplate.descend g . f
+transformDownMay :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
+transformDownMay f = g where g x = maybe x (Uniplate.descend g) $ f x
+_transformDownRec :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
+_transformDownRec f = g where g x = maybe (Uniplate.descend g x) g $ f x

@@ -16,57 +16,19 @@ where
 
 #include "prelude.inc"
 
-import DynFlags ( getDynFlags )
-import GHC ( runGhc, GenLocated(L), moduleNameString )
-import qualified Parser        as GHC
-import qualified ApiAnnotation as GHC
-import qualified DynFlags      as GHC
-import qualified FastString    as GHC
-import qualified GHC           as GHC hiding (parseModule)
-import qualified HeaderInfo    as GHC
-import qualified Lexer         as GHC
-import qualified MonadUtils    as GHC
-import qualified Outputable    as GHC
-import qualified Parser        as GHC
-import qualified SrcLoc        as GHC
-import qualified StringBuffer  as GHC
-import RdrName ( RdrName(..) )
-import Control.Monad.IO.Class
-import GHC.Paths (libdir)
-import HsSyn
-import SrcLoc ( SrcSpan, Located )
--- import Outputable ( ppr, runSDoc )
--- import DynFlags ( unsafeGlobalDynFlags )
-
-import           ApiAnnotation ( AnnKeywordId(..) )
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
-import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
-import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint.Preprocess
-import qualified Data.Map as Map
-
-import qualified Data.Text.Lazy.Builder as Text.Builder
-
-import qualified Debug.Trace as Trace
-
-import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany.LayoutBasics
-
--- import Data.Aeson
-import GHC.Generics
-import Control.Lens
+import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.LayouterBasics
 
 import qualified Data.Yaml
 
-import UI.Butcher.Monadic
+import           UI.Butcher.Monadic
 
 import qualified System.Console.CmdArgs.Explicit as CmdArgs
 
-import Language.Haskell.Brittany.Config.Types
-import Language.Haskell.Brittany.Utils
+import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.Utils
 
-import Data.Coerce ( Coercible, coerce )
+import           Data.Coerce ( Coercible, coerce )
 
 
 

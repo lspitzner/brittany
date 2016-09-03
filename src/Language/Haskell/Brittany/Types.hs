@@ -350,6 +350,10 @@ unwrapBriDocNumbered tpl = case snd tpl of
  where
   rec = unwrapBriDocNumbered
 
+isNotEmpty :: BriDoc -> Bool
+isNotEmpty BDEmpty = False
+isNotEmpty _       = True
+
 -- this might not work. is not used anywhere either.
 briDocSeqSpine :: BriDoc -> ()
 briDocSeqSpine = \case

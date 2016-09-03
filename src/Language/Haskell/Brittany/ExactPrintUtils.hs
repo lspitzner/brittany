@@ -12,52 +12,30 @@ where
 
 #include "prelude.inc"
 
-import DynFlags ( getDynFlags )
-import GHC ( runGhc, GenLocated(L), moduleNameString )
-import qualified Parser        as GHC
-import qualified ApiAnnotation as GHC
+import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.LayouterBasics
+import           Language.Haskell.Brittany.Utils
+
+import           DynFlags ( getDynFlags )
+import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import qualified DynFlags      as GHC
-import qualified FastString    as GHC
 import qualified GHC           as GHC hiding (parseModule)
-import qualified HeaderInfo    as GHC
-import qualified Lexer         as GHC
-import qualified MonadUtils    as GHC
-import qualified Outputable    as GHC
 import qualified Parser        as GHC
 import qualified SrcLoc        as GHC
-import qualified StringBuffer  as GHC
-import RdrName ( RdrName(..) )
-import Control.Monad.IO.Class
-import HsSyn
-import SrcLoc ( SrcSpan, Located )
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
-import           Name
-import qualified FastString
-import           BasicTypes
+import           HsSyn
+import           SrcLoc ( SrcSpan, Located )
+import           RdrName ( RdrName(..) )
 
-import           ApiAnnotation ( AnnKeywordId(..) )
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Annotate   as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Types      as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Parsers    as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Delta as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Delta      as ExactPrint
 
 import qualified Data.Generics as SYB
-
-import qualified Data.Map as Map
-
-import qualified Data.Text.Lazy.Builder as Text.Builder
-
-import qualified Debug.Trace as Trace
-
-import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany.Config.Types
-import Language.Haskell.Brittany.LayoutBasics
-import Language.Haskell.Brittany.Utils
-
-import DataTreePrint
 
 
 

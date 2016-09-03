@@ -15,34 +15,35 @@ where
 #include "prelude.inc"
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
-import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint.Preprocess
 
 import qualified Data.Generics as SYB
 
-import qualified Data.Map as Map
-
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
-import qualified Debug.Trace as Trace
+import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.LayouterBasics
 
-import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany.Config.Types
-import Language.Haskell.Brittany.LayoutBasics
 import           Language.Haskell.Brittany.Layouters.Type
 import           Language.Haskell.Brittany.Layouters.Decl
 import           Language.Haskell.Brittany.Utils
-import           Language.Haskell.Brittany.BriLayouter
+import           Language.Haskell.Brittany.Backend
+import           Language.Haskell.Brittany.BackendUtils
 import           Language.Haskell.Brittany.ExactPrintUtils
+
+import           Language.Haskell.Brittany.Transformations.Alt
+import           Language.Haskell.Brittany.Transformations.Floating
+import           Language.Haskell.Brittany.Transformations.Par
+import           Language.Haskell.Brittany.Transformations.Columns
+import           Language.Haskell.Brittany.Transformations.Indent
 
 import qualified GHC as GHC hiding (parseModule)
 import           ApiAnnotation ( AnnKeywordId(..) )
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
-import qualified SrcLoc as GHC
 import           HsSyn
 
 import           Data.HList.HList
@@ -249,3 +250,77 @@ _bindHead = \case
   FunBind fId _ _ _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
   PatBind _pat _ _ _ ([], []) -> "PatBind smth"
   _ -> "unknown bind"
+
+
+
+layoutBriDoc :: Data.Data.Data ast => ast -> BriDocNumbered -> PPM ()
+layoutBriDoc ast briDoc = do
+  -- first step: transform the briDoc.
+  briDoc'                       <- MultiRWSS.withMultiStateS BDEmpty $ do
+    traceIfDumpConf "bridoc raw" _dconf_dump_bridoc_raw
+      $ briDocToDoc
+      $ unwrapBriDocNumbered
+      $ briDoc
+    -- bridoc transformation: remove alts
+    transformAlts briDoc >>= mSet
+    mGet
+      >>= traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt
+      .   briDocToDoc
+    -- bridoc transformation: float stuff in
+    mGet <&> transformSimplifyFloating >>= mSet
+    mGet
+      >>= traceIfDumpConf "bridoc post-floating"
+                          _dconf_dump_bridoc_simpl_floating
+      .   briDocToDoc
+    -- bridoc transformation: par removal
+    mGet <&> transformSimplifyPar >>= mSet
+    mGet
+      >>= traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par
+      .   briDocToDoc
+    -- bridoc transformation: float stuff in
+    mGet <&> transformSimplifyColumns >>= mSet
+    mGet
+      >>= traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns
+      .   briDocToDoc
+    -- -- bridoc transformation: indent
+    mGet <&> transformSimplifyIndent >>= mSet
+    mGet
+      >>= traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent
+      .   briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final
+      .   briDocToDoc
+    -- -- convert to Simple type
+    -- simpl <- mGet <&> transformToSimple
+    -- return simpl
+
+  anns :: ExactPrint.Types.Anns <- mAsk
+  let filteredAnns = filterAnns ast anns
+
+  traceIfDumpConf "bridoc annotations filtered/transformed"
+                  _dconf_dump_annotations
+    $ annsDoc filteredAnns
+
+  let state = LayoutState
+        { _lstate_baseYs           = [0]
+        , _lstate_curYOrAddNewline = Right 0 -- important that we use left here
+                                             -- because moveToAnn stuff of the
+                                             -- first node needs to do its
+                                             -- thing properly.
+        , _lstate_indLevels        = [0]
+        , _lstate_indLevelLinger   = 0
+        , _lstate_comments         = filteredAnns
+        , _lstate_commentCol       = Nothing
+        , _lstate_addSepSpace      = Nothing
+        , _lstate_inhibitMTEL      = False
+        }
+
+  state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'
+
+  let
+    remainingComments =
+      extractAllComments =<< Map.elems (_lstate_comments state')
+  remainingComments
+    `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fst)
+
+  return $ ()

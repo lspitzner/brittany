@@ -522,6 +522,9 @@ import Prelude                            ( Char
                                           , Traversable
                                           )
 
+import Data.Function                      ( fix
+                                          )
+
 import Data.Foldable                      ( foldl'
                                           , foldr'
                                           , fold
