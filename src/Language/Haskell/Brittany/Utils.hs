@@ -76,13 +76,11 @@ showGhc :: (GHC.Outputable a) => a -> String
 showGhc = GHC.showPpr GHC.unsafeGlobalDynFlags
 
 fromMaybeIdentity :: Identity a -> Maybe a -> Identity a
-fromMaybeIdentity x y = Data.Coerce.coerce
-                      $ fromMaybe (Data.Coerce.coerce x) y
+fromMaybeIdentity x y = Data.Coerce.coerce $ fromMaybe (Data.Coerce.coerce x) y
 
 fromOptionIdentity :: Identity a -> Option a -> Identity a
-fromOptionIdentity x y = Data.Coerce.coerce
-                       $ fromMaybe (Data.Coerce.coerce x)
-                       $ getOption y
+fromOptionIdentity x y =
+  Data.Coerce.coerce $ fromMaybe (Data.Coerce.coerce x) $ getOption y
 
 -- maximum monoid over N+0
 -- or more than N, because Num is allowed.
@@ -101,61 +99,68 @@ data A x = A ShowIsId x deriving Data
 
 customLayouterF :: ExactPrint.Types.Anns -> LayouterF
 customLayouterF anns layoutF =
-    DataToLayouter $ f `extQ` showIsId
-                       `extQ` fastString
-                       `extQ` bytestring
-                       `extQ` occName
-                       `extQ` srcSpan
-                       `ext2Q` located
-  where
-    DataToLayouter f = defaultLayouterF layoutF
-    simpleLayouter :: String -> NodeLayouter
-    simpleLayouter s = NodeLayouter (length s) False (const $ PP.text s)
-    showIsId :: ShowIsId -> NodeLayouter
-    showIsId (ShowIsId s) = NodeLayouter (length s + 2) True $ \case
-      Left True -> PP.parens $ PP.text s
-      Left False -> PP.text s
-      Right _ -> PP.text s      
-    fastString = simpleLayouter . ("{FastString: "++) . (++"}") . show :: GHC.FastString -> NodeLayouter
-    bytestring = simpleLayouter . show :: B.ByteString -> NodeLayouter
-    occName    = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
-    srcSpan :: GHC.SrcSpan -> NodeLayouter
-    srcSpan ss = simpleLayouter
-               -- $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
-               $ "{" ++ showGhc ss ++ "}"
-    located :: (Data b,Data loc) => GHC.GenLocated loc b -> NodeLayouter
-    located (GHC.L ss a) = runDataToLayouter layoutF $ A annStr a
-      where
-        annStr = case cast ss of
-          Just (s :: GHC.SrcSpan) -> ShowIsId
-            $ show (ExactPrint.Utils.getAnnotationEP (GHC.L s a) anns)
-          Nothing -> ShowIsId "nnnnnnnn"
+  DataToLayouter
+    $       f
+    `extQ`  showIsId
+    `extQ`  fastString
+    `extQ`  bytestring
+    `extQ`  occName
+    `extQ`  srcSpan
+    `ext2Q` located
+ where
+  DataToLayouter f = defaultLayouterF layoutF
+  simpleLayouter :: String -> NodeLayouter
+  simpleLayouter s = NodeLayouter (length s) False (const $ PP.text s)
+  showIsId :: ShowIsId -> NodeLayouter
+  showIsId (ShowIsId s) = NodeLayouter (length s + 2) True $ \case
+    Left  True -> PP.parens $ PP.text s
+    Left  False -> PP.text s
+    Right _    -> PP.text s
+  fastString =
+    simpleLayouter . ("{FastString: "++) . (++"}") . show :: GHC.FastString
+      -> NodeLayouter
+  bytestring = simpleLayouter . show :: B.ByteString -> NodeLayouter
+  occName = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
+  srcSpan :: GHC.SrcSpan -> NodeLayouter
+  srcSpan ss = simpleLayouter
+             -- $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
+                              $ "{" ++ showGhc ss ++ "}"
+  located :: (Data b, Data loc) => GHC.GenLocated loc b -> NodeLayouter
+  located (GHC.L ss a) = runDataToLayouter layoutF $ A annStr a
+   where
+    annStr = case cast ss of
+      Just (s :: GHC.SrcSpan) ->
+        ShowIsId $ show (ExactPrint.Utils.getAnnotationEP (GHC.L s a) anns)
+      Nothing -> ShowIsId "nnnnnnnn"
 
 customLayouterNoAnnsF :: LayouterF
 customLayouterNoAnnsF layoutF =
-    DataToLayouter $ f `extQ` showIsId
-                       `extQ` fastString
-                       `extQ` bytestring
-                       `extQ` occName
-                       `extQ` srcSpan
-                       `ext2Q` located
-  where
-    DataToLayouter f = defaultLayouterF layoutF
-    simpleLayouter :: String -> NodeLayouter
-    simpleLayouter s = NodeLayouter (length s) False (const $ PP.text s)
-    showIsId :: ShowIsId -> NodeLayouter
-    showIsId (ShowIsId s) = NodeLayouter (length s + 2) True $ \case
-      Left True -> PP.parens $ PP.text s
-      Left False -> PP.text s
-      Right _ -> PP.text s      
-    fastString = simpleLayouter . ("{FastString: "++) . (++"}") . show :: GHC.FastString -> NodeLayouter
-    bytestring = simpleLayouter . show :: B.ByteString -> NodeLayouter
-    occName    = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
-    srcSpan :: GHC.SrcSpan -> NodeLayouter
-    srcSpan ss = simpleLayouter
-               $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
-    located :: (Data b) => GHC.GenLocated loc b -> NodeLayouter
-    located (GHC.L _ss a) = runDataToLayouter layoutF a
+  DataToLayouter
+    $       f
+    `extQ`  showIsId
+    `extQ`  fastString
+    `extQ`  bytestring
+    `extQ`  occName
+    `extQ`  srcSpan
+    `ext2Q` located
+ where
+  DataToLayouter f = defaultLayouterF layoutF
+  simpleLayouter :: String -> NodeLayouter
+  simpleLayouter s = NodeLayouter (length s) False (const $ PP.text s)
+  showIsId :: ShowIsId -> NodeLayouter
+  showIsId (ShowIsId s) = NodeLayouter (length s + 2) True $ \case
+    Left  True -> PP.parens $ PP.text s
+    Left  False -> PP.text s
+    Right _    -> PP.text s
+  fastString =
+    simpleLayouter . ("{FastString: "++) . (++"}") . show :: GHC.FastString
+      -> NodeLayouter
+  bytestring = simpleLayouter . show :: B.ByteString -> NodeLayouter
+  occName = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
+  srcSpan :: GHC.SrcSpan -> NodeLayouter
+  srcSpan ss = simpleLayouter $ "{" ++ showSDoc_ (GHC.ppr ss) ++ "}"
+  located :: (Data b) => GHC.GenLocated loc b -> NodeLayouter
+  located (GHC.L _ss a) = runDataToLayouter layoutF a
 
 -- displayBriDocTree :: BriDoc -> PP.Doc
 -- displayBriDocTree = \case
@@ -205,13 +210,12 @@ customLayouterNoAnnsF layoutF =
 --                               : [PP.text "," <+> displayBriDocSimpleTree t | t<-xr]
 --                              ++ [PP.text "]"]
 
-traceIfDumpConf :: (MonadMultiReader
-                                       Config m,
-                                     Show a)
-                => String
-                -> (DebugConfig -> Identity (Semigroup.Last Bool))
-                -> a
-                -> m ()
+traceIfDumpConf
+  :: (MonadMultiReader Config m, Show a)
+  => String
+  -> (DebugConfig -> Identity (Semigroup.Last Bool))
+  -> a
+  -> m ()
 traceIfDumpConf s accessor val = do
   whenM (mAsk <&> _conf_debug .> accessor .> confUnpack) $ do
     trace ("---- " ++ s ++ " ----\n" ++ show val) $ return ()
@@ -237,8 +241,8 @@ briDocToDoc = astToDoc . removeAnnotations
   removeAnnotations = Uniplate.transform $ \case
     BDAnnotationPrior _ x -> x
     BDAnnotationKW _ _ x  -> x
-    BDAnnotationRest  _ x -> x
-    x -> x
+    BDAnnotationRest _ x  -> x
+    x                     -> x
 
 briDocToDocWithAnns :: BriDoc -> PP.Doc
 briDocToDocWithAnns = astToDoc
@@ -246,16 +250,16 @@ briDocToDocWithAnns = astToDoc
 annsDoc :: ExactPrint.Types.Anns -> PP.Doc
 annsDoc = printTreeWithCustom 100 customLayouterNoAnnsF . fmap (ShowIsId . show)
 
-breakEither :: (a -> Either b c) -> [a] -> ([b],[c])
-breakEither _ [] = ([],[])
+breakEither :: (a -> Either b c) -> [a] -> ([b], [c])
+breakEither _  []      = ([], [])
 breakEither fn (a1:aR) = case fn a1 of
-  Left  b -> (b:bs,cs)
-  Right c -> (bs,c:cs)
-  where
-    (bs,cs) = breakEither fn aR
+  Left  b -> (b : bs, cs)
+  Right c -> (bs, c : cs)
+ where
+  (bs, cs) = breakEither fn aR
 
-spanMaybe :: (a -> Maybe b) -> [a] -> ([b], [a]) 
-spanMaybe f (x1:xR) | Just y <- f x1 = (y:ys, xs)
-  where
-    (ys, xs) = spanMaybe f xR
-spanMaybe _ xs = ([], xs)
+spanMaybe :: (a -> Maybe b) -> [a] -> ([b], [a])
+spanMaybe f (x1:xR) | Just y <- f x1 = (y : ys, xs)
+ where
+  (ys, xs) = spanMaybe f xR
+spanMaybe _ xs                       = ([], xs)

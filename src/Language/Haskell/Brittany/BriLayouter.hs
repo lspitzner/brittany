@@ -66,64 +66,78 @@ import qualified Control.Monad.Trans.Writer.Strict as WriterS
 
 
 
-layoutBriDoc :: Data.Data.Data ast
-             => ast
-             -> BriDocNumbered
-             -> PPM ()
+layoutBriDoc :: Data.Data.Data ast => ast -> BriDocNumbered -> PPM ()
 layoutBriDoc ast briDoc = do
   -- first step: transform the briDoc.
-  briDoc' <- MultiRWSS.withMultiStateS BDEmpty $ do
+  briDoc'                       <- MultiRWSS.withMultiStateS BDEmpty $ do
     traceIfDumpConf "bridoc raw" _dconf_dump_bridoc_raw
       $ briDocToDoc
       $ unwrapBriDocNumbered
       $ briDoc
     -- bridoc transformation: remove alts
     transformAlts briDoc >>= mSet
-    mGet >>= traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt . briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt
+      .   briDocToDoc
     -- bridoc transformation: float stuff in
     mGet <&> transformSimplifyFloating >>= mSet
-    mGet >>= traceIfDumpConf "bridoc post-floating" _dconf_dump_bridoc_simpl_floating . briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc post-floating"
+                          _dconf_dump_bridoc_simpl_floating
+      .   briDocToDoc
     -- bridoc transformation: par removal
     mGet <&> transformSimplifyPar >>= mSet
-    mGet >>= traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par . briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par
+      .   briDocToDoc
     -- bridoc transformation: float stuff in
     mGet <&> transformSimplifyColumns >>= mSet
-    mGet >>= traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns . briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns
+      .   briDocToDoc
     -- -- bridoc transformation: indent
     mGet <&> transformSimplifyIndent >>= mSet
-    mGet >>= traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent . briDocToDoc
-    mGet >>= traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final . briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent
+      .   briDocToDoc
+    mGet
+      >>= traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final
+      .   briDocToDoc
     -- -- convert to Simple type
     -- simpl <- mGet <&> transformToSimple
     -- return simpl
-  
+
   anns :: ExactPrint.Types.Anns <- mAsk
   let filteredAnns = filterAnns ast anns
 
-  traceIfDumpConf "bridoc annotations filtered/transformed" _dconf_dump_annotations $ annsDoc filteredAnns
-  
+  traceIfDumpConf "bridoc annotations filtered/transformed"
+                  _dconf_dump_annotations
+    $ annsDoc filteredAnns
+
   let state = LayoutState
-        { _lstate_baseYs         = [0]
+        { _lstate_baseYs           = [0]
         , _lstate_curYOrAddNewline = Right 0 -- important that we use left here
                                              -- because moveToAnn stuff of the
                                              -- first node needs to do its
                                              -- thing properly.
-        , _lstate_indLevels      = [0]
-        , _lstate_indLevelLinger = 0
-        , _lstate_comments       = filteredAnns
-        , _lstate_commentCol  = Nothing
-        , _lstate_addSepSpace = Nothing
-        , _lstate_inhibitMTEL = False
+        , _lstate_indLevels        = [0]
+        , _lstate_indLevelLinger   = 0
+        , _lstate_comments         = filteredAnns
+        , _lstate_commentCol       = Nothing
+        , _lstate_addSepSpace      = Nothing
+        , _lstate_inhibitMTEL      = False
         }
 
-  state' <- MultiRWSS.withMultiStateS state
-          $ layoutBriDocM briDoc'
-  
-  let remainingComments =
-        extractAllComments =<< Map.elems (_lstate_comments state')
-  remainingComments `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fst)
-  
+  state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'
+
+  let
+    remainingComments =
+      extractAllComments =<< Map.elems (_lstate_comments state')
+  remainingComments
+    `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fst)
+
   return $ ()
+
 
 data AltCurPos = AltCurPos
   { _acp_line :: Int -- chars in the current line
@@ -142,16 +156,16 @@ data AltLineModeState
   deriving (Show)
 
 altLineModeDecay :: AltLineModeState -> AltLineModeState
-altLineModeDecay AltLineModeStateNone = AltLineModeStateNone
+altLineModeDecay AltLineModeStateNone            = AltLineModeStateNone
 altLineModeDecay (AltLineModeStateForceML False) = AltLineModeStateForceML True
-altLineModeDecay (AltLineModeStateForceML True) = AltLineModeStateNone
-altLineModeDecay AltLineModeStateForceSL = AltLineModeStateForceSL
-altLineModeDecay AltLineModeStateContradiction = AltLineModeStateContradiction
+altLineModeDecay (AltLineModeStateForceML True ) = AltLineModeStateNone
+altLineModeDecay AltLineModeStateForceSL         = AltLineModeStateForceSL
+altLineModeDecay AltLineModeStateContradiction   = AltLineModeStateContradiction
 
 altLineModeRefresh :: AltLineModeState -> AltLineModeState
-altLineModeRefresh AltLineModeStateNone = AltLineModeStateNone
-altLineModeRefresh AltLineModeStateForceML{} = AltLineModeStateForceML False
-altLineModeRefresh AltLineModeStateForceSL = AltLineModeStateForceSL
+altLineModeRefresh AltLineModeStateNone          = AltLineModeStateNone
+altLineModeRefresh AltLineModeStateForceML{}     = AltLineModeStateForceML False
+altLineModeRefresh AltLineModeStateForceSL       = AltLineModeStateForceSL
 altLineModeRefresh AltLineModeStateContradiction = AltLineModeStateContradiction
 
 mergeLineMode :: AltCurPos -> AltLineModeState -> AltCurPos
@@ -159,7 +173,8 @@ mergeLineMode acp s = case (_acp_forceMLFlag acp, s) of
   (AltLineModeStateContradiction, _) -> acp
   (AltLineModeStateNone, x) -> acp { _acp_forceMLFlag = x }
   (AltLineModeStateForceSL, AltLineModeStateForceSL) -> acp
-  (AltLineModeStateForceML{}, AltLineModeStateForceML{}) -> acp { _acp_forceMLFlag = s }
+  (AltLineModeStateForceML{}, AltLineModeStateForceML{}) ->
+    acp { _acp_forceMLFlag = s }
   _ -> acp { _acp_forceMLFlag = AltLineModeStateContradiction }
 
 -- removes any BDAlt's from the BriDoc
@@ -170,10 +185,12 @@ transformAlts
      )
   => BriDocNumbered
   -> MultiRWSS.MultiRWS r w s BriDoc
-transformAlts briDoc
-    = MultiRWSS.withMultiStateA
-        (AltCurPos 0 0 0 AltLineModeStateNone)
-    $ Memo.startEvalMemoT $ fmap unwrapBriDocNumbered $ rec $ briDoc
+transformAlts briDoc =
+  MultiRWSS.withMultiStateA (AltCurPos 0 0 0 AltLineModeStateNone)
+    $ Memo.startEvalMemoT
+    $ fmap unwrapBriDocNumbered
+    $ rec
+    $ briDoc
   where
     -- this funtion is exponential by nature and cannot be improved in any
     -- way i can think of, and if tried. (stupid StableNames.)
@@ -459,7 +476,11 @@ transformAlts briDoc
     hasSpace2 lconf (AltCurPos line _indent _ _) (VerticalSpacing sameLine VerticalSpacingParAlways{} _)
       = line + sameLine <= confUnpack (_lconfig_cols lconf)
 
-getSpacing :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m (LineModeValidity VerticalSpacing)
+getSpacing
+  :: forall m
+   . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m)
+  => BriDocNumbered
+  -> m (LineModeValidity VerticalSpacing)
 getSpacing !bridoc = rec bridoc
  where
   rec :: BriDocNumbered -> m (LineModeValidity VerticalSpacing)
@@ -637,8 +658,12 @@ getSpacing !bridoc = rec bridoc
     VerticalSpacingParNone -> 0
     VerticalSpacingParAlways i -> i
 
-getSpacings :: forall m . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m)
-  => Int -> BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
+getSpacings
+  :: forall m
+   . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m)
+  => Int
+  -> BriDocNumbered
+  -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
 getSpacings limit bridoc = preFilterLimit <$> rec bridoc
   where
     preFilterLimit :: [VerticalSpacing] -> [VerticalSpacing]
@@ -883,21 +908,21 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
 
 -- note that this is not total, and cannot be with that exact signature.
 mergeIndents :: BrIndent -> BrIndent -> BrIndent
-mergeIndents BrIndentNone x = x
-mergeIndents x BrIndentNone = x
+mergeIndents BrIndentNone        x                   = x
+mergeIndents x                   BrIndentNone        = x
 mergeIndents (BrIndentSpecial i) (BrIndentSpecial j) = BrIndentSpecial (max i j)
-mergeIndents _ _ = error "mergeIndents"
+mergeIndents _                   _                   = error "mergeIndents"
 
 
 -- TODO: move to uniplate upstream?
 -- aka `transform`
-transformUp  :: Uniplate.Uniplate on => (on -> on) -> (on -> on)
+transformUp :: Uniplate.Uniplate on => (on -> on) -> (on -> on)
 transformUp f = g where g = f . Uniplate.descend g
 _transformDown :: Uniplate.Uniplate on => (on -> on) -> (on -> on)
 _transformDown f = g where g = Uniplate.descend g . f
-transformDownMay  :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
+transformDownMay :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
 transformDownMay f = g where g x = maybe x (Uniplate.descend g) $ f x
-_transformDownRec  :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
+_transformDownRec :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
 _transformDownRec f = g where g x = maybe (Uniplate.descend g x) g $ f x
 
 
@@ -1078,29 +1103,31 @@ transformSimplifyPar = transformUp $ \case
   --   Just $ BDPar ind1 line (BDLines [p1, p2])
   x@(BDPar _ (BDPar _ BDPar{} _) _) -> x
   BDPar ind1 (BDPar ind2 line p1) (BDLines indenteds) ->
-    BDPar ind1 line (BDLines (BDEnsureIndent ind2 p1: indenteds))
+    BDPar ind1 line (BDLines (BDEnsureIndent ind2 p1 : indenteds))
   BDPar ind1 (BDPar ind2 line p1) p2 ->
     BDPar ind1 line (BDLines [BDEnsureIndent ind2 p1, p2])
-  BDLines lines | any (\case BDLines{} -> True
-                             BDEmpty{} -> True
-                             _ -> False) lines ->
-    case go lines of
-      [] -> BDEmpty
-      [x] -> x
-      xs -> BDLines xs
-    where
-      go = (=<<) $ \case
-        BDLines l -> go l
-        BDEmpty -> []
-        x -> [x]
-  BDLines []  -> BDEmpty
-  BDLines [x] -> x
+  BDLines lines | any ( \case
+                        BDLines{} -> True
+                        BDEmpty{} -> True
+                        _         -> False
+                      )
+                      lines  -> case go lines of
+    []  -> BDEmpty
+    [x] -> x
+    xs  -> BDLines xs
+   where
+    go = (=<<) $ \case
+      BDLines l -> go l
+      BDEmpty   -> []
+      x         -> [x]
+  BDLines []                    -> BDEmpty
+  BDLines [x]                   -> x
   -- BDCols sig cols | BDPar ind line indented <- List.last cols ->
   --   Just $ BDPar ind (BDCols sig (List.init cols ++ [line])) indented
   -- BDPar BrIndentNone line indented ->
   --   Just $ BDLines [line, indented]
   BDEnsureIndent BrIndentNone x -> x
-  x -> x
+  x                             -> x
 
 isNotEmpty :: BriDoc -> Bool
 isNotEmpty BDEmpty = False
@@ -1243,28 +1270,29 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
   --     [ BDAddBaseY ind x
   --     , BDEnsureIndent ind indented
   --     ]
-  BDLines lines | any (\case BDLines{} -> True
-                             BDEmpty{} -> True
-                             _ -> False) lines ->
+  BDLines lines | any ( \case
+                        BDLines{} -> True
+                        BDEmpty{} -> True
+                        _         -> False
+                      )
+                      lines ->
     Just $ BDLines $ filter isNotEmpty $ lines >>= \case
       BDLines l -> l
-      x -> [x]
-  BDLines [l] ->
-    Just l
+      x         -> [x]
+  BDLines [l] -> Just l
   BDAddBaseY i (BDAnnotationPrior k x) ->
     Just $ BDAnnotationPrior k (BDAddBaseY i x)
-  BDAddBaseY i (BDAnnotationKW k kw x)  ->
+  BDAddBaseY i (BDAnnotationKW k kw x) ->
     Just $ BDAnnotationKW k kw (BDAddBaseY i x)
-  BDAddBaseY i (BDAnnotationRest k x)  ->
+  BDAddBaseY i (BDAnnotationRest k x) ->
     Just $ BDAnnotationRest k (BDAddBaseY i x)
   BDAddBaseY i (BDSeq l) ->
     Just $ BDSeq $ List.init l ++ [BDAddBaseY i $ List.last l]
   BDAddBaseY i (BDCols sig l) ->
     Just $ BDCols sig $ List.init l ++ [BDAddBaseY i $ List.last l]
-  BDAddBaseY _ lit@BDLit{} ->
-    Just lit
+  BDAddBaseY _ lit@BDLit{} -> Just lit
 
-  _ -> Nothing
+  _                        -> Nothing
 
 
 briDocLineLength :: BriDoc -> Int
@@ -1273,35 +1301,35 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
                           -- appended at the current position.
  where
   rec = \case
-    BDEmpty -> return $ 0
-    BDLit t -> StateS.put False $> Text.length t
-    BDSeq    bds -> sum <$> rec `mapM` bds
-    BDCols _ bds -> sum <$> rec `mapM` bds
+    BDEmpty                 -> return $ 0
+    BDLit t                 -> StateS.put False $> Text.length t
+    BDSeq bds               -> sum <$> rec `mapM` bds
+    BDCols _ bds            -> sum <$> rec `mapM` bds
     BDSeparator -> StateS.get >>= \b -> StateS.put True $> if b then 0 else 1
-    BDAddBaseY _ bd -> rec bd
-    BDBaseYPushCur bd -> rec bd
-    BDBaseYPop bd -> rec bd
+    BDAddBaseY _ bd         -> rec bd
+    BDBaseYPushCur       bd -> rec bd
+    BDBaseYPop           bd -> rec bd
     BDIndentLevelPushCur bd -> rec bd
-    BDIndentLevelPop bd -> rec bd
-    BDPar _ line _ -> rec line
-    BDAlt{} -> error "briDocLineLength BDAlt"
-    BDForceMultiline  bd -> rec bd
-    BDForceSingleline bd -> rec bd
-    BDForwardLineMode bd -> rec bd
-    BDExternal _ _ _ t -> return $ Text.length t
-    BDAnnotationPrior _ bd -> rec bd
-    BDAnnotationKW _ _ bd -> rec bd
-    BDAnnotationRest  _ bd -> rec bd
-    BDLines ls@(_:_) -> do
+    BDIndentLevelPop     bd -> rec bd
+    BDPar _ line _          -> rec line
+    BDAlt{}                 -> error "briDocLineLength BDAlt"
+    BDForceMultiline  bd    -> rec bd
+    BDForceSingleline bd    -> rec bd
+    BDForwardLineMode bd    -> rec bd
+    BDExternal _ _ _ t      -> return $ Text.length t
+    BDAnnotationPrior _ bd  -> rec bd
+    BDAnnotationKW _ _ bd   -> rec bd
+    BDAnnotationRest _ bd   -> rec bd
+    BDLines ls@(_:_)        -> do
       x <- StateS.get
       return $ maximum $ ls <&> \l -> StateS.evalState (rec l) x
-    BDLines [] -> error "briDocLineLength BDLines []"
-    BDEnsureIndent _ bd -> rec bd
-    BDProhibitMTEL bd -> rec bd
-    BDSetParSpacing bd -> rec bd
-    BDForceParSpacing bd -> rec bd
-    BDNonBottomSpacing bd -> rec bd
-    BDDebug _ bd -> rec bd
+    BDLines []              -> error "briDocLineLength BDLines []"
+    BDEnsureIndent _ bd     -> rec bd
+    BDProhibitMTEL     bd   -> rec bd
+    BDSetParSpacing    bd   -> rec bd
+    BDForceParSpacing  bd   -> rec bd
+    BDNonBottomSpacing bd   -> rec bd
+    BDDebug _ bd            -> rec bd
 
 layoutBriDocM
   :: forall w m

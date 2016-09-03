@@ -149,31 +149,34 @@ commentAnnFixTransformGlob ast = do
       let priors  = ExactPrint.annPriorComments ann1
           follows = ExactPrint.annFollowingComments ann1
           assocs  = ExactPrint.annsDP ann1
-      let processCom
-            :: (ExactPrint.Comment, ExactPrint.DeltaPos)
-            -> ExactPrint.TransformT Identity Bool
-          processCom comPair@(com, _) =
-            case GHC.srcSpanStart $ ExactPrint.commentIdentifier com of
-              GHC.UnhelpfulLoc{}    -> return True -- retain comment at current node.
-              GHC.RealSrcLoc comLoc -> case Map.lookupLE comLoc annsMap of
-                Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
-                  (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
-                    move $> False
-                  (x,y) | x==y -> move $> False
-                  _ -> return True
-                 where
-                  ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
-                  ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
-                  loc1 = GHC.srcSpanStart annKeyLoc1
-                  loc2 = GHC.srcSpanStart annKeyLoc2
-                  move = ExactPrint.modifyAnnsT $ \anns ->
-                    let ann2  = Data.Maybe.fromJust $ Map.lookup annKey2 anns
-                        ann2' = ann2
-                          { ExactPrint.annFollowingComments =
-                              ExactPrint.annFollowingComments ann2 ++ [comPair]
-                          }
-                    in  Map.insert annKey2 ann2' anns
-                _ -> return True -- retain comment at current node.
+      let
+        processCom
+          :: (ExactPrint.Comment, ExactPrint.DeltaPos)
+          -> ExactPrint.TransformT Identity Bool
+        processCom comPair@(com, _) =
+          case GHC.srcSpanStart $ ExactPrint.commentIdentifier com of
+            GHC.UnhelpfulLoc{}    -> return True -- retain comment at current node.
+            GHC.RealSrcLoc comLoc -> case Map.lookupLE comLoc annsMap of
+              Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
+                (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
+                  move $> False
+                (x, y) | x == y -> move $> False
+                _               -> return True
+               where
+                ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
+                ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
+                loc1                              = GHC.srcSpanStart annKeyLoc1
+                loc2                              = GHC.srcSpanStart annKeyLoc2
+                move = ExactPrint.modifyAnnsT $ \anns ->
+                  let
+                    ann2  = Data.Maybe.fromJust $ Map.lookup annKey2 anns
+                    ann2' = ann2
+                      { ExactPrint.annFollowingComments =
+                          ExactPrint.annFollowingComments ann2 ++ [comPair]
+                      }
+                  in
+                    Map.insert annKey2 ann2' anns
+              _ -> return True -- retain comment at current node.
       priors'  <- flip filterM priors processCom
       follows' <- flip filterM follows $ processCom
       assocs'  <- flip filterM assocs $ \case

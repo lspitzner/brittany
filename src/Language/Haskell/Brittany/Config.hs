@@ -73,36 +73,42 @@ import Data.Coerce ( Coercible, coerce )
 configParser :: CmdParser Identity out (ConfigF Option)
 configParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
-  ind <- addFlagReadParam "" ["indent"] "AMOUNT"
-    (flagHelpStr "spaces per indentation level")
-  cols <- addFlagReadParam "" ["columns"] "AMOUNT"
-    (flagHelpStr "target max columns (80 is an old default for this)")
-  importCol <- addFlagReadParam "" ["import-col"] "N"
-    (flagHelpStr "column to align import lists at")
+  ind                <- addFlagReadParam "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
+  cols               <- addFlagReadParam "" ["columns"] "AMOUNT" (flagHelpStr "target max columns (80 is an old default for this)")
+  importCol          <- addFlagReadParam "" ["import-col"] "N" (flagHelpStr "column to align import lists at")
 
-  dumpConfig      <- addSimpleBoolFlag "" ["dump-config"] (flagHelp $ parDoc "dump the programs full config (commandline + file + defaults)")
-  dumpAnnotations <- addSimpleBoolFlag "" ["dump-annotations"] (flagHelp $ parDoc "dump the full annotations returned by ghc-exactprint")
-  dumpUnknownAST  <- addSimpleBoolFlag "" ["dump-ast-unknown"] (flagHelp $ parDoc "dump the ast for any nodes not transformed, but copied as-is by brittany")
-  dumpCompleteAST <- addSimpleBoolFlag "" ["dump-ast-full"] (flagHelp $ parDoc "dump the full ast")
-  dumpBriDocRaw      <- addSimpleBoolFlag "" ["dump-bridoc-raw"]      (flagHelp $ parDoc "dump the pre-transformation bridoc")
-  dumpBriDocAlt      <- addSimpleBoolFlag "" ["dump-bridoc-alt"]      (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: alt")
-  dumpBriDocPar      <- addSimpleBoolFlag "" ["dump-bridoc-par"]      (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: par")
-  dumpBriDocFloating <- addSimpleBoolFlag "" ["dump-bridoc-floating"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: floating")
-  dumpBriDocColumns  <- addSimpleBoolFlag "" ["dump-bridoc-columns"]  (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: columns")
-  dumpBriDocIndent   <- addSimpleBoolFlag "" ["dump-bridoc-indent"]   (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: indent")
-  dumpBriDocFinal    <- addSimpleBoolFlag "" ["dump-bridoc-final"]    (flagHelp $ parDoc "dump the post-transformation bridoc")
+  dumpConfig         <- addSimpleBoolFlag "" ["dump-config"] (flagHelp $ parDoc "dump the programs full config (commandline + file + defaults)")
+  dumpAnnotations    <- addSimpleBoolFlag "" ["dump-annotations"] (flagHelp $ parDoc "dump the full annotations returned by ghc-exactprint")
+  dumpUnknownAST     <- addSimpleBoolFlag "" ["dump-ast-unknown"] (flagHelp $ parDoc "dump the ast for any nodes not transformed, but copied as-is by brittany")
+  dumpCompleteAST    <- addSimpleBoolFlag "" ["dump-ast-full"] (flagHelp $ parDoc "dump the full ast")
+  dumpBriDocRaw      <- addSimpleBoolFlag "" ["dump-bridoc-raw"] (flagHelp $ parDoc "dump the pre-transformation bridoc")
+  dumpBriDocAlt      <- addSimpleBoolFlag "" ["dump-bridoc-alt"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: alt")
+  dumpBriDocPar      <- addSimpleBoolFlag "" ["dump-bridoc-par"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: par")
+  dumpBriDocFloating <- addSimpleBoolFlag ""
+                                          ["dump-bridoc-floating"]
+                                          (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: floating")
+  dumpBriDocColumns  <- addSimpleBoolFlag "" ["dump-bridoc-columns"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: columns")
+  dumpBriDocIndent   <- addSimpleBoolFlag "" ["dump-bridoc-indent"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: indent")
+  dumpBriDocFinal    <- addSimpleBoolFlag "" ["dump-bridoc-final"] (flagHelp $ parDoc "dump the post-transformation bridoc")
 
   outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
-  wError <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
+  wError             <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
 
-  optionsGhc <- addFlagStringParam "" ["ghc-options"] "STRING" (flagHelp $ parDoc "allows to define default language extensions. The parameter is forwarded to ghc. Note that currently these options are applied _after_ the pragmas read in from the input.")
-  
+  optionsGhc         <- addFlagStringParam
+    ""
+    ["ghc-options"]
+    "STRING"
+    ( flagHelp
+    $ parDoc
+        "allows to define default language extensions. The parameter is forwarded to ghc. Note that currently these options are applied _after_ the pragmas read in from the input."
+    )
+
   return $ Config
-    { _conf_debug = DebugConfig
-      { _dconf_dump_config       = wrapLast $ falseToNothing dumpConfig
-      , _dconf_dump_annotations  = wrapLast $ falseToNothing dumpAnnotations
-      , _dconf_dump_ast_unknown  = wrapLast $ falseToNothing dumpUnknownAST
-      , _dconf_dump_ast_full     = wrapLast $ falseToNothing dumpCompleteAST
+    { _conf_debug         = DebugConfig
+      { _dconf_dump_config                = wrapLast $ falseToNothing dumpConfig
+      , _dconf_dump_annotations           = wrapLast $ falseToNothing dumpAnnotations
+      , _dconf_dump_ast_unknown           = wrapLast $ falseToNothing dumpUnknownAST
+      , _dconf_dump_ast_full              = wrapLast $ falseToNothing dumpCompleteAST
       , _dconf_dump_bridoc_raw            = wrapLast $ falseToNothing dumpBriDocRaw
       , _dconf_dump_bridoc_simpl_alt      = wrapLast $ falseToNothing dumpBriDocAlt
       , _dconf_dump_bridoc_simpl_par      = wrapLast $ falseToNothing dumpBriDocPar
@@ -111,7 +117,7 @@ configParser = do
       , _dconf_dump_bridoc_simpl_indent   = wrapLast $ falseToNothing dumpBriDocIndent
       , _dconf_dump_bridoc_final          = wrapLast $ falseToNothing dumpBriDocFinal
       }
-    , _conf_layout = LayoutConfig
+    , _conf_layout        = LayoutConfig
       { _lconfig_cols               = optionConcat cols
       , _lconfig_indentPolicy       = mempty
       , _lconfig_indentAmount       = optionConcat ind
@@ -126,18 +132,16 @@ configParser = do
       , _econf_Werror                = wrapLast $ falseToNothing wError
       , _econf_CPPMode               = mempty
       }
-    , _conf_forward = ForwardOptions
-      { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs
-                       | not $ null optionsGhc
-                       ]
+    , _conf_forward       = ForwardOptions
+      { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]
       }
     }
-    where falseToNothing = Option . Bool.bool Nothing (Just True)
-          wrapLast :: Option a -> Option (Semigroup.Last a)
-          wrapLast = fmap Semigroup.Last
-          optionConcat
-            :: (Semigroup.Semigroup (f a), Applicative f) => [a] -> Option (f a)
-          optionConcat = mconcat . fmap (pure . pure)
+ where
+  falseToNothing = Option . Bool.bool Nothing (Just True)
+  wrapLast :: Option a -> Option (Semigroup.Last a)
+  wrapLast = fmap Semigroup.Last
+  optionConcat :: (Semigroup.Semigroup (f a), Applicative f) => [a] -> Option (f a)
+  optionConcat = mconcat . fmap (pure . pure)
 
 -- configParser :: Parser Config
 -- configParser = Config

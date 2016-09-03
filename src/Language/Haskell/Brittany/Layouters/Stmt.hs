@@ -28,51 +28,50 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Layouters.Expr
 
 layoutStmt :: ToBriDoc' (StmtLR RdrName RdrName (LHsExpr RdrName))
 layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
-  LastStmt body False _ -> do
+  LastStmt body False _    -> do
     layoutExpr body
   BindStmt lPat expr _ _ _ -> do
     patDoc <- fmap return $ colsWrapPat =<< layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
     docAlt
-      [ docCols ColBindStmt
+      [ docCols
+        ColBindStmt
         [ appSep patDoc
         , docSeq [appSep $ docLit $ Text.pack "<-", docForceParSpacing expDoc]
         ]
-      , docCols ColBindStmt
+      , docCols
+        ColBindStmt
         [ appSep patDoc
         , docAddBaseY BrIndentRegular
-        $ docPar (docLit $ Text.pack "<-")
-                 (expDoc)
+          $ docPar (docLit $ Text.pack "<-") (expDoc)
         ]
       ]
-  LetStmt binds -> layoutLocalBinds binds >>= \case
-    Nothing ->
-      docLit $ Text.pack "let" -- i just tested
+  LetStmt binds            -> layoutLocalBinds binds >>= \case
+    Nothing        -> docLit $ Text.pack "let" -- i just tested
                                -- it, and it is
                                -- indeed allowed.
                                -- heh.
-    Just [] ->
-      docLit $ Text.pack "let" -- this probably never happens
+    Just []        -> docLit $ Text.pack "let" -- this probably never happens
     Just [bindDoc] -> docAlt
-      [ docCols ColDoLet
+      [ docCols
+        ColDoLet
         [ appSep $ docLit $ Text.pack "let"
         , docSetBaseAndIndent $ return bindDoc
         ]
-      , docAddBaseY BrIndentRegular $ docPar
-        (docLit $ Text.pack "let")
-        (docSetBaseAndIndent $ return bindDoc)
+      , docAddBaseY BrIndentRegular
+        $ docPar (docLit $ Text.pack "let")
+                 (docSetBaseAndIndent $ return bindDoc)
       ]
-    Just bindDocs -> docAlt
+    Just bindDocs  -> docAlt
       [ docSeq
         [ appSep $ docLit $ Text.pack "let"
         , docSetBaseAndIndent $ docLines $ return <$> bindDocs
         ]
-      , docAddBaseY BrIndentRegular
-      $ docPar
+      , docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "let")
         (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
       ]
-  BodyStmt expr _ _ _ -> do
+  BodyStmt expr _ _ _      -> do
     expDoc <- docSharedWrapper layoutExpr expr
     docAddBaseY BrIndentRegular $ expDoc
-  _ -> unknownNodeError "" lstmt
+  _                        -> unknownNodeError "" lstmt

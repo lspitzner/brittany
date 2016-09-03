@@ -225,11 +225,11 @@ readConfigs cmdlineConfig configPaths = do
   userBritPath <- liftIO $ Directory.getAppUserDataDirectory "brittany"
   let defUserConfigPath = userBritPath FilePath.</> "config.yaml"
   merged <- case configPaths of
-    [] -> do
+    []    -> do
       liftIO $ Directory.createDirectoryIfMissing False userBritPath
       return cmdlineConfig
         >>= readMergePersConfig defLocalConfigPath False
-        >>= readMergePersConfig defUserConfigPath True
+        >>= readMergePersConfig defUserConfigPath  True
     -- TODO: ensure that paths exist ?
     paths -> foldl (\prev p -> prev >>= readMergePersConfig p False)
                    (return cmdlineConfig)

@@ -135,11 +135,13 @@ traceLocal x = do
 traceLocal _ = return ()
 #endif
 
-processDefault :: (ExactPrint.Annotate.Annotate ast, MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiReader ExactPrint.Types.Anns m)
-               => GenLocated SrcSpan ast
-               -> m ()
+processDefault
+  :: ( ExactPrint.Annotate.Annotate ast
+     , MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiReader ExactPrint.Types.Anns m
+     )
+  => GenLocated SrcSpan ast
+  -> m ()
 processDefault x = do
   anns <- mAsk
   let str = ExactPrint.exactPrint x anns
@@ -152,55 +154,66 @@ processDefault x = do
     "\n" -> return ()
     _    -> mTell $ Text.Builder.fromString $ str
 
-briDocByExact :: (ExactPrint.Annotate.Annotate ast) => GenLocated SrcSpan ast -> ToBriDocM BriDocNumbered
+-- | Use ExactPrint's output for this node; add a newly generated inline comment
+-- at insertion position (meant to point out to the user that this node is
+-- not handled by brittany yet). Useful when starting implementing new
+-- syntactic constructs when children are not handled yet.
+briDocByExact
+  :: (ExactPrint.Annotate.Annotate ast)
+  => GenLocated SrcSpan ast
+  -> ToBriDocM BriDocNumbered
 briDocByExact ast = do
   anns <- mAsk
-  traceIfDumpConf "ast" _dconf_dump_ast_unknown
-    (printTreeWithCustom 100 (customLayouterF anns) ast)
+  traceIfDumpConf "ast"
+                  _dconf_dump_ast_unknown
+                  (printTreeWithCustom 100 (customLayouterF anns) ast)
   docExt ast anns True
 
-briDocByExactNoComment :: (ExactPrint.Annotate.Annotate ast) => GenLocated SrcSpan ast -> ToBriDocM BriDocNumbered
+-- | Use ExactPrint's output for this node.
+briDocByExactNoComment
+  :: (ExactPrint.Annotate.Annotate ast)
+  => GenLocated SrcSpan ast
+  -> ToBriDocM BriDocNumbered
 briDocByExactNoComment ast = do
   anns <- mAsk
-  traceIfDumpConf "ast" _dconf_dump_ast_unknown
-    (printTreeWithCustom 100 (customLayouterF anns) ast)
+  traceIfDumpConf "ast"
+                  _dconf_dump_ast_unknown
+                  (printTreeWithCustom 100 (customLayouterF anns) ast)
   docExt ast anns False
 
 rdrNameToText :: RdrName -> Text
 -- rdrNameToText = Text.pack . show . flip runSDoc unsafeGlobalDynFlags . ppr
-rdrNameToText ( Unqual occname     ) = Text.pack $ occNameString occname
-rdrNameToText ( Qual mname occname ) = Text.pack $ moduleNameString mname 
-                                                ++ "."
-                                                ++ occNameString occname
-rdrNameToText ( Orig modul occname ) = Text.pack $ moduleNameString (moduleName modul)
-                                                ++ occNameString occname
-rdrNameToText ( Exact name )         = Text.pack $ getOccString name
+rdrNameToText (Unqual occname) = Text.pack $ occNameString occname
+rdrNameToText (Qual mname occname) =
+  Text.pack $ moduleNameString mname ++ "." ++ occNameString occname
+rdrNameToText (Orig modul occname) =
+  Text.pack $ moduleNameString (moduleName modul) ++ occNameString occname
+rdrNameToText (Exact name) = Text.pack $ getOccString name
 
 lrdrNameToText :: GenLocated l RdrName -> Text
 lrdrNameToText (L _ n) = rdrNameToText n
 
-lrdrNameToTextAnn :: ( MonadMultiReader Config m
-                     , MonadMultiReader (Map AnnKey Annotation) m
-                     )
-                  => GenLocated SrcSpan RdrName
-                  -> m Text
+lrdrNameToTextAnn
+  :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
+  => GenLocated SrcSpan RdrName
+  -> m Text
 lrdrNameToTextAnn ast@(L _ n) = do
   anns <- mAsk
   let t = rdrNameToText n
-  let hasUni x (ExactPrint.Types.G y, _) = x==y
-      hasUni _ _ = False
+  let hasUni x (ExactPrint.Types.G y, _) = x == y
+      hasUni _ _                         = False
   -- TODO: in general: we should _always_ process all annotaiton stuff here.
   --       whatever we don't probably should have had some effect on the
   --       output. in such cases, resorting to byExact is probably the safe
   --       choice.
   return $ case Map.lookup (ExactPrint.Types.mkAnnKey ast) anns of
-    Nothing -> t
+    Nothing                                   -> t
     Just (ExactPrint.Types.Ann _ _ _ aks _ _) -> case n of
-      Exact{} | t == Text.pack "()" -> t
-      _ | any (hasUni AnnBackquote) aks -> Text.pack "`" <> t <> Text.pack "`"
+      Exact{} | t == Text.pack "()"      -> t
+      _ | any (hasUni AnnBackquote) aks  -> Text.pack "`" <> t <> Text.pack "`"
       _ | any (hasUni AnnCommaTuple) aks -> t
-      _ | any (hasUni AnnOpenP)     aks -> Text.pack "(" <> t <> Text.pack ")"
-      _ | otherwise -> t
+      _ | any (hasUni AnnOpenP) aks      -> Text.pack "(" <> t <> Text.pack ")"
+      _ | otherwise                      -> t
 
 lrdrNameToTextAnnTypeEqualityIsSpecial
   :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
@@ -209,18 +222,19 @@ lrdrNameToTextAnnTypeEqualityIsSpecial
 lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
   x <- lrdrNameToTextAnn ast
   return $ if x == Text.pack "Data.Type.Equality~"
-      then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
-      else x
+    then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
+    else x
 
 askIndent :: (MonadMultiReader Config m) => m Int
 askIndent = confUnpack . _lconfig_indentAmount . _conf_layout <$> mAsk
 
-layoutWriteAppend :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => Text
-                  -> m ()
+layoutWriteAppend
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Text
+  -> m ()
 layoutWriteAppend t = do
   traceLocal ("layoutWriteAppend", t)
   state <- mGet
@@ -250,32 +264,32 @@ layoutWriteAppend t = do
     , _lstate_addSepSpace = Nothing
     }
 
-layoutWriteAppendSpaces :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => Int
-                  -> m ()
+layoutWriteAppendSpaces
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Int
+  -> m ()
 layoutWriteAppendSpaces i = do
   traceLocal ("layoutWriteAppendSpaces", i)
-  unless (i==0) $ do
+  unless (i == 0) $ do
     state <- mGet
-    mSet $ state { _lstate_addSepSpace = Just
-                                       $ maybe i (+i)
-                                       $ _lstate_addSepSpace state
-                 }
+    mSet $ state
+      { _lstate_addSepSpace = Just $ maybe i (+i) $ _lstate_addSepSpace state
+      }
 
-layoutWriteAppendMultiline :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => Text
-                  -> m ()
+layoutWriteAppendMultiline
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Text
+  -> m ()
 layoutWriteAppendMultiline t = do
   traceLocal ("layoutWriteAppendMultiline", t)
   case Text.lines t of
-    [] ->
-      layoutWriteAppend t -- need to write empty, too.
+    []     -> layoutWriteAppend t -- need to write empty, too.
     (l:lr) -> do
       layoutWriteAppend l
       lr `forM_` \x -> do
@@ -283,17 +297,18 @@ layoutWriteAppendMultiline t = do
         layoutWriteAppend x
 
 -- adds a newline and adds spaces to reach the base column.
-layoutWriteNewlineBlock :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => m ()
+layoutWriteNewlineBlock
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => m ()
 layoutWriteNewlineBlock = do
   traceLocal ("layoutWriteNewlineBlock")
   state <- mGet
   mSet $ state { _lstate_curYOrAddNewline = Right 1
-               , _lstate_addSepSpace = Just $ lstate_baseY state
-               , _lstate_inhibitMTEL = False
+               , _lstate_addSepSpace      = Just $ lstate_baseY state
+               , _lstate_inhibitMTEL      = False
                }
 
 -- layoutMoveToIndentCol :: ( MonadMultiState LayoutState m
@@ -310,13 +325,12 @@ layoutWriteNewlineBlock = do
 --         else _lstate_indLevelLinger state + i - _lstate_curY state
 --     }
 
-layoutSetCommentCol :: ( MonadMultiState LayoutState m
-  , MonadMultiWriter (Seq String) m )
-   => m ()
+layoutSetCommentCol
+  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
 layoutSetCommentCol = do
   state <- mGet
   let col = case _lstate_curYOrAddNewline state of
-        Left i -> i + fromMaybe 0 (_lstate_addSepSpace state)
+        Left i  -> i + fromMaybe 0 (_lstate_addSepSpace state)
         Right{} -> lstate_baseY state
   traceLocal ("layoutSetCommentCol", col)
   unless (Data.Maybe.isJust $ _lstate_commentCol state)
@@ -337,90 +351,93 @@ layoutMoveToCommentPos y x = do
     then do
       mSet state
         { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
-          Left i -> if y==0 then Left i else Right y
+          Left i  -> if y == 0 then Left i else Right y
           Right{} -> Right y
         , _lstate_addSepSpace = Just $ case _lstate_curYOrAddNewline state of
-            Left{} -> if y==0
-              then x
-              else _lstate_indLevelLinger state + x
-            Right{} -> _lstate_indLevelLinger state + x
+          Left{}  -> if y == 0 then x else _lstate_indLevelLinger state + x
+          Right{} -> _lstate_indLevelLinger state + x
         }
     else do
       mSet state
         { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
-          Left i -> if y==0 then Left i else Right y
+          Left i  -> if y == 0 then Left i else Right y
           Right{} -> Right y
-        , _lstate_addSepSpace = Just $ if y==0
-              then x
-              else _lstate_indLevelLinger state + x
+        , _lstate_addSepSpace = Just
+          $ if y == 0 then x else _lstate_indLevelLinger state + x
         , _lstate_commentCol = Just $ case _lstate_curYOrAddNewline state of
-            Left i -> i + fromMaybe 0 (_lstate_addSepSpace state)
-            Right{} -> lstate_baseY state
+          Left i  -> i + fromMaybe 0 (_lstate_addSepSpace state)
+          Right{} -> lstate_baseY state
         }
 
 -- | does _not_ add spaces to again reach the current base column.
-layoutWriteNewline :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => m ()
+layoutWriteNewline
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => m ()
 layoutWriteNewline = do
   traceLocal ("layoutWriteNewline")
   state <- mGet
-  mSet $ state { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
-                  Left{} -> Right 1
-                  Right i -> Right (i+1)
-               , _lstate_addSepSpace = Nothing
-               , _lstate_inhibitMTEL = False
-               }
+  mSet $ state
+    { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
+      Left{}  -> Right 1
+      Right i -> Right (i + 1)
+    , _lstate_addSepSpace      = Nothing
+    , _lstate_inhibitMTEL      = False
+    }
 
-layoutWriteEnsureNewlineBlock :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => m ()
+layoutWriteEnsureNewlineBlock
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => m ()
 layoutWriteEnsureNewlineBlock = do
   traceLocal ("layoutWriteEnsureNewlineBlock")
   state <- mGet
   mSet $ state
     { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
-        Left{} -> Right 1
-        Right i -> Right $ max 1 i
-    , _lstate_addSepSpace = Just $ lstate_baseY state
-    , _lstate_inhibitMTEL = False
-    , _lstate_commentCol = Nothing
+      Left{}  -> Right 1
+      Right i -> Right $ max 1 i
+    , _lstate_addSepSpace      = Just $ lstate_baseY state
+    , _lstate_inhibitMTEL      = False
+    , _lstate_commentCol       = Nothing
     }
 
-layoutWriteEnsureBlock :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => m ()
+layoutWriteEnsureBlock
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => m ()
 layoutWriteEnsureBlock = do
   traceLocal ("layoutWriteEnsureBlock")
   state <- mGet
   let
     diff = case (_lstate_addSepSpace state, _lstate_curYOrAddNewline state) of
-      (Nothing, Left i) -> lstate_baseY state - i
+      (Nothing, Left i ) -> lstate_baseY state - i
       (Nothing, Right{}) -> lstate_baseY state
-      (Just sp, Left i) -> max sp (lstate_baseY state - i)
+      (Just sp, Left i ) -> max sp (lstate_baseY state - i)
       (Just sp, Right{}) -> max sp (lstate_baseY state)
   -- when (diff>0) $ layoutWriteNewlineBlock
   when (diff > 0) $ do
     mSet $ state { _lstate_addSepSpace = Just $ diff }
 
-layoutWriteEnsureAbsoluteN :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => Int -> m ()
+layoutWriteEnsureAbsoluteN
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Int
+  -> m ()
 layoutWriteEnsureAbsoluteN n = do
   state <- mGet
   let diff = case _lstate_curYOrAddNewline state of
-        Left i -> n-i
+        Left i  -> n - i
         Right{} -> n
   traceLocal ("layoutWriteEnsureAbsoluteN", n, diff)
-  when (diff>0) $ do
+  when (diff > 0) $ do
     mSet $ state { _lstate_addSepSpace = Just diff -- this always sets to
                                             -- at least (Just 1), so we won't
                                             -- overwrite any old value in any
@@ -448,7 +465,7 @@ layoutIndentLevelPushInternal
 layoutIndentLevelPushInternal i = do
   traceLocal ("layoutIndentLevelPushInternal", i)
   mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
-                    , _lstate_indLevels = i : _lstate_indLevels s
+                    , _lstate_indLevels      = i : _lstate_indLevels s
                     }
 
 layoutIndentLevelPopInternal
@@ -456,7 +473,7 @@ layoutIndentLevelPopInternal
 layoutIndentLevelPopInternal = do
   traceLocal ("layoutIndentLevelPopInternal")
   mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
-                    , _lstate_indLevels = List.tail $ _lstate_indLevels s
+                    , _lstate_indLevels      = List.tail $ _lstate_indLevels s
                     }
 
 layoutRemoveIndentLevelLinger :: ( MonadMultiState LayoutState m
@@ -469,13 +486,14 @@ layoutRemoveIndentLevelLinger = do
   mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
                     }
 
-layoutWithAddBaseCol :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               ,MonadMultiReader Config m
-                                               , MonadMultiWriter (Seq String) m)
-                  => m ()
-                  -> m ()
+layoutWithAddBaseCol
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiReader Config m
+     , MonadMultiWriter (Seq String) m
+     )
+  => m ()
+  -> m ()
 layoutWithAddBaseCol m = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutWithAddBaseCol")
@@ -521,13 +539,14 @@ layoutWithAddBaseColNBlock amount m = do
   m
   layoutBaseYPopInternal
 
-layoutWithAddBaseColN :: (MonadMultiWriter
-                                                 Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
-                  => Int
-                  -> m ()
-                  -> m ()
+layoutWithAddBaseColN
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Int
+  -> m ()
+  -> m ()
 layoutWithAddBaseColN amount m = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutWithAddBaseColN", amount)
@@ -543,10 +562,11 @@ layoutBaseYPushCur = do
   traceLocal ("layoutBaseYPushCur")
   state <- mGet
   case _lstate_commentCol state of
-    Nothing -> case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
-      (Left i, Just j) -> layoutBaseYPushInternal (i+j)
-      (Left i, Nothing) -> layoutBaseYPushInternal i
-      (Right{}, _) -> layoutBaseYPushInternal $ lstate_baseY state
+    Nothing ->
+      case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
+        (Left i , Just j ) -> layoutBaseYPushInternal (i + j)
+        (Left i , Nothing) -> layoutBaseYPushInternal i
+        (Right{}, _      ) -> layoutBaseYPushInternal $ lstate_baseY state
     Just cCol -> layoutBaseYPushInternal cCol
 
 layoutBaseYPop
@@ -561,9 +581,9 @@ layoutIndentLevelPushCur = do
   traceLocal ("layoutIndentLevelPushCur")
   state <- mGet
   let y = case (_lstate_curYOrAddNewline state, _lstate_addSepSpace state) of
-        (Left i, Just j)   -> i + j
-        (Left i, Nothing)  -> i
-        (Right{}, Just j)  -> j
+        (Left i , Just j ) -> i + j
+        (Left i , Nothing) -> i
+        (Right{}, Just j ) -> j
         (Right{}, Nothing) -> 0
   layoutIndentLevelPushInternal y
   layoutBaseYPushInternal y
@@ -588,7 +608,8 @@ layoutAddSepSpace = do
   tellDebugMessShow ("layoutAddSepSpace")
 #endif
   state <- mGet
-  mSet $ state { _lstate_addSepSpace = Just $ fromMaybe 1 $ _lstate_addSepSpace state }
+  mSet $ state
+    { _lstate_addSepSpace = Just $ fromMaybe 1 $ _lstate_addSepSpace state }
 
 -- TODO: when refactoring is complete, the other version of this method
 -- can probably be removed.
@@ -604,22 +625,25 @@ moveToExactAnn annKey = do
   traceLocal ("moveToExactAnn", annKey)
   anns <- mAsk
   case Map.lookup annKey anns of
-    Nothing -> return ()
+    Nothing  -> return ()
     Just ann -> do
       -- curY <- mGet <&> _lstate_curY
       let ExactPrint.Types.DP (y, _x) = ExactPrint.Types.annEntryDelta ann
       -- mModify $ \state -> state { _lstate_addNewline = Just x }
       mModify $ \state ->
         let upd = case _lstate_curYOrAddNewline state of
-              Left i -> if y==0 then Left i else Right y
+              Left  i -> if y == 0 then Left i else Right y
               Right i -> Right $ max y i
-        in state
-          { _lstate_curYOrAddNewline = upd
-          , _lstate_addSepSpace = if Data.Either.isRight upd
-              then _lstate_commentCol state <|> _lstate_addSepSpace state <|> Just (lstate_baseY state)
-              else Nothing
-          , _lstate_commentCol = Nothing
-          }
+        in  state
+              { _lstate_curYOrAddNewline = upd
+              , _lstate_addSepSpace      = if Data.Either.isRight upd
+                then
+                  _lstate_commentCol state
+                    <|> _lstate_addSepSpace state
+                    <|> Just (lstate_baseY state)
+                else Nothing
+              , _lstate_commentCol       = Nothing
+              }
 -- fixMoveToLineByIsNewline :: MonadMultiState
 --                                                   LayoutState m => Int -> m Int
 -- fixMoveToLineByIsNewline x = do
@@ -628,18 +652,22 @@ moveToExactAnn annKey = do
 --     then x-1
 --     else x
 
-ppmMoveToExactLoc :: MonadMultiWriter Text.Builder.Builder m
-                  => ExactPrint.Types.DeltaPos
-                  -> m ()
-ppmMoveToExactLoc (ExactPrint.Types.DP (x,y)) = do
+ppmMoveToExactLoc
+  :: MonadMultiWriter Text.Builder.Builder m
+  => ExactPrint.Types.DeltaPos
+  -> m ()
+ppmMoveToExactLoc (ExactPrint.Types.DP (x, y)) = do
   replicateM_ x $ mTell $ Text.Builder.fromString "\n"
   replicateM_ y $ mTell $ Text.Builder.fromString " "
 
-layoutWritePriorComments :: (Data.Data.Data ast,
-                                               MonadMultiWriter Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                              , MonadMultiWriter (Seq String) m)
-                         => GenLocated SrcSpan ast -> m ()
+layoutWritePriorComments
+  :: ( Data.Data.Data ast
+     , MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => GenLocated SrcSpan ast
+  -> m ()
 layoutWritePriorComments ast = do
   mAnn <- do
     state <- mGet
@@ -743,49 +771,43 @@ extractAllComments
 extractAllComments ann =
   ExactPrint.annPriorComments ann
     ++ ExactPrint.annFollowingComments ann
-    ++ (ExactPrint.annsDP ann >>= \case
+    ++ ( ExactPrint.annsDP ann >>= \case
          (ExactPrint.AnnComment com, dp) -> [(com, dp)]
-         _ -> []
+         _                               -> []
        )
 
 
-foldedAnnKeys :: Data.Data.Data ast
-              => ast
-              -> Set ExactPrint.AnnKey
+foldedAnnKeys :: Data.Data.Data ast => ast -> Set ExactPrint.AnnKey
 foldedAnnKeys ast = everything
   Set.union
-  (\x -> maybe
-         Set.empty
-         Set.singleton
-         [ gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
-         | locTyCon == typeRepTyCon (typeOf x)
-         , l <- gmapQi 0 cast x
-         ]
+  ( \x -> maybe Set.empty
+                Set.singleton
+                [ gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
+                | locTyCon == typeRepTyCon (typeOf x)
+                , l <- gmapQi 0 cast x
+                ]
   )
   ast
  where
   locTyCon = typeRepTyCon (typeOf (L () ()))
 
-filterAnns :: Data.Data.Data ast
-           => ast
-           -> ExactPrint.Anns
-           -> ExactPrint.Anns
+filterAnns :: Data.Data.Data ast => ast -> ExactPrint.Anns -> ExactPrint.Anns
 filterAnns ast anns =
   Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast) anns
 
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) = do
   anns <- filterAnns ast <$> mAsk
-  return $ List.any (\(c, _) -> ExactPrint.commentIdentifier c > l) 
-         $ (=<<) extractAllComments
-         $ Map.elems
-         $ anns
+  return
+    $ List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
+    $ (=<<) extractAllComments
+    $ Map.elems
+    $ anns
 
 -- new BriDoc stuff
 
-allocateNode :: MonadMultiState NodeAllocIndex m
-              => BriDocFInt
-             -> m BriDocNumbered
+allocateNode
+  :: MonadMultiState NodeAllocIndex m => BriDocFInt -> m BriDocNumbered
 allocateNode bd = do
   i <- allocNodeIndex
   return (i, bd)
@@ -793,7 +815,7 @@ allocateNode bd = do
 allocNodeIndex :: MonadMultiState NodeAllocIndex m => m Int
 allocNodeIndex = do
   NodeAllocIndex i <- mGet
-  mSet $ NodeAllocIndex (i+1)
+  mSet $ NodeAllocIndex (i + 1)
   return i
 
 -- docEmpty :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
@@ -901,13 +923,17 @@ docEmpty = allocateNode BDFEmpty
 docLit :: Text -> ToBriDocM BriDocNumbered
 docLit t = allocateNode $ BDFLit t
 
-docExt :: (ExactPrint.Annotate.Annotate ast)
-       => GenLocated SrcSpan ast -> ExactPrint.Types.Anns -> Bool -> ToBriDocM BriDocNumbered
+docExt
+  :: (ExactPrint.Annotate.Annotate ast)
+  => GenLocated SrcSpan ast
+  -> ExactPrint.Types.Anns
+  -> Bool
+  -> ToBriDocM BriDocNumbered
 docExt x anns shouldAddComment = allocateNode $ BDFExternal
-                  (ExactPrint.Types.mkAnnKey x)
-                  (foldedAnnKeys x)
-                  shouldAddComment
-                  (Text.pack $ ExactPrint.exactPrint x anns)
+  (ExactPrint.Types.mkAnnKey x)
+  (foldedAnnKeys x)
+  shouldAddComment
+  (Text.pack $ ExactPrint.exactPrint x anns)
 
 docAlt :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
 docAlt l = allocateNode . BDFAlt =<< sequence l
@@ -955,7 +981,10 @@ docAnnotationPrior
 docAnnotationPrior annKey bdm = allocateNode . BDFAnnotationPrior annKey =<< bdm
 
 docAnnotationKW
-  :: AnnKey -> Maybe AnnKeywordId -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+  :: AnnKey
+  -> Maybe AnnKeywordId
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
 docAnnotationKW annKey kw bdm = allocateNode . BDFAnnotationKW annKey kw =<< bdm
 
 docAnnotationRest
@@ -1110,11 +1139,12 @@ instance DocWrapable ([BriDocNumbered], BriDocNumbered, a) where
 
 
 
-docPar :: ToBriDocM BriDocNumbered
-       -> ToBriDocM BriDocNumbered
-       -> ToBriDocM BriDocNumbered
+docPar
+  :: ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
 docPar lineM indentedM = do
-  line <- lineM
+  line     <- lineM
   indented <- indentedM
   allocateNode $ BDFPar BrIndentNone line indented
 
@@ -1124,7 +1154,8 @@ docForceSingleline bdm = allocateNode . BDFForceSingleline =<< bdm
 docForceMultiline :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docForceMultiline bdm = allocateNode . BDFForceMultiline =<< bdm
 
-docEnsureIndent :: BrIndent -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docEnsureIndent
+  :: BrIndent -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 
 unknownNodeError
@@ -1140,13 +1171,14 @@ spacifyDocs ds = fmap appSep (List.init ds) ++ [List.last ds]
 briDocMToPPM :: ToBriDocM a -> PPM a
 briDocMToPPM m = do
   readers <- MultiRWSS.mGetRawR
-  let ((x, errs), debugs) = runIdentity
-                          $ MultiRWSS.runMultiRWSTNil
-                          $ MultiRWSS.withMultiStateA (NodeAllocIndex 1)
-                          $ MultiRWSS.withMultiReaders readers
-                          $ MultiRWSS.withMultiWriterAW
-                          $ MultiRWSS.withMultiWriterAW
-                          $ m
+  let ((x, errs), debugs) =
+        runIdentity
+          $ MultiRWSS.runMultiRWSTNil
+          $ MultiRWSS.withMultiStateA (NodeAllocIndex 1)
+          $ MultiRWSS.withMultiReaders readers
+          $ MultiRWSS.withMultiWriterAW
+          $ MultiRWSS.withMultiWriterAW
+          $ m
   mTell debugs
   mTell errs
   return x

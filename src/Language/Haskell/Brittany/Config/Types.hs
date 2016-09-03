@@ -227,38 +227,38 @@ data CPPMode = CPPModeAbort  -- abort program on seeing -XCPP
 
 staticDefaultConfig :: Config
 staticDefaultConfig = Config
-    { _conf_debug = DebugConfig
-      { _dconf_dump_config           = coerce False
-      , _dconf_dump_annotations      = coerce False
-      , _dconf_dump_ast_unknown      = coerce False
-      , _dconf_dump_ast_full         = coerce False
-      , _dconf_dump_bridoc_raw            = coerce False
-      , _dconf_dump_bridoc_simpl_alt      = coerce False
-      , _dconf_dump_bridoc_simpl_floating = coerce False
-      , _dconf_dump_bridoc_simpl_par      = coerce False
-      , _dconf_dump_bridoc_simpl_columns  = coerce False
-      , _dconf_dump_bridoc_simpl_indent   = coerce False
-      , _dconf_dump_bridoc_final          = coerce False
-      }
-    , _conf_layout = LayoutConfig
-      { _lconfig_cols               = coerce (80 :: Int)
-      , _lconfig_indentPolicy       = coerce IndentPolicyFree
-      , _lconfig_indentAmount       = coerce (2 :: Int)
-      , _lconfig_indentWhereSpecial = coerce True
-      , _lconfig_indentListSpecial  = coerce True
-      , _lconfig_importColumn       = coerce (60 :: Int)
-      , _lconfig_altChooser         = coerce (AltChooserBoundedSearch 3)
-      , _lconfig_columnAlignMode    = coerce (ColumnAlignModeMajority 0.7)
-      }
-    , _conf_errorHandling = ErrorHandlingConfig
-      { _econf_produceOutputOnErrors = coerce False
-      , _econf_Werror                = coerce False
-      , _econf_CPPMode               = coerce CPPModeAbort
-      }
-    , _conf_forward = ForwardOptions
-      { _options_ghc = Identity []
-      }
+  { _conf_debug         = DebugConfig
+    { _dconf_dump_config                = coerce False
+    , _dconf_dump_annotations           = coerce False
+    , _dconf_dump_ast_unknown           = coerce False
+    , _dconf_dump_ast_full              = coerce False
+    , _dconf_dump_bridoc_raw            = coerce False
+    , _dconf_dump_bridoc_simpl_alt      = coerce False
+    , _dconf_dump_bridoc_simpl_floating = coerce False
+    , _dconf_dump_bridoc_simpl_par      = coerce False
+    , _dconf_dump_bridoc_simpl_columns  = coerce False
+    , _dconf_dump_bridoc_simpl_indent   = coerce False
+    , _dconf_dump_bridoc_final          = coerce False
     }
+  , _conf_layout        = LayoutConfig
+    { _lconfig_cols               = coerce (80 :: Int)
+    , _lconfig_indentPolicy       = coerce IndentPolicyFree
+    , _lconfig_indentAmount       = coerce (2 :: Int)
+    , _lconfig_indentWhereSpecial = coerce True
+    , _lconfig_indentListSpecial  = coerce True
+    , _lconfig_importColumn       = coerce (60 :: Int)
+    , _lconfig_altChooser         = coerce (AltChooserBoundedSearch 3)
+    , _lconfig_columnAlignMode    = coerce (ColumnAlignModeMajority 0.7)
+    }
+  , _conf_errorHandling = ErrorHandlingConfig
+    { _econf_produceOutputOnErrors = coerce False
+    , _econf_Werror                = coerce False
+    , _econf_CPPMode               = coerce CPPModeAbort
+    }
+  , _conf_forward       = ForwardOptions
+    { _options_ghc = Identity []
+    }
+  }
 
 -- TODO: automate writing instances for this to get
 --       the above Monoid instance for free.

@@ -59,8 +59,9 @@ pPrintModule
   -> GHC.ParsedSource
   -> ([LayoutError], TextL.Text)
 pPrintModule conf anns parsedModule =
-  let ((out, errs), debugStrings)
-        = runIdentity
+  let
+    ((out, errs), debugStrings) =
+      runIdentity
         $ MultiRWSS.runMultiRWSTNil
         $ MultiRWSS.withMultiWriterAW
         $ MultiRWSS.withMultiWriterAW
@@ -68,13 +69,18 @@ pPrintModule conf anns parsedModule =
         $ MultiRWSS.withMultiReader anns
         $ MultiRWSS.withMultiReader conf
         $ do
-            traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations $ annsDoc anns
+            traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
+              $ annsDoc anns
             ppModule parsedModule
-      tracer = if Seq.null debugStrings
-        then id
-        else trace ("---- DEBUGMESSAGES ---- ")
-           . foldr (seq . join trace) id debugStrings
-  in tracer $ (errs, Text.Builder.toLazyText out)
+    tracer =
+      if Seq.null debugStrings
+      then
+        id
+      else
+        trace ("---- DEBUGMESSAGES ---- ")
+          . foldr (seq . join trace) id debugStrings
+  in
+    tracer $ (errs, Text.Builder.toLazyText out)
   -- unless () $ do
   --   
   --   debugStrings `forM_` \s ->
@@ -101,27 +107,25 @@ pPrintModuleAndCheck conf anns parsedModule = do
 
 
 -- used for testing mostly, currently.
-parsePrintModule
-  :: Config
-  -> String
-  -> Text
-  -> IO (Either String Text)
+parsePrintModule :: Config -> String -> Text -> IO (Either String Text)
 parsePrintModule conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
   case parseResult of
-    Left (_, s) -> return $ Left $ "parsing error: " ++ s
+    Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
     Right (anns, parsedModule) -> do
       (errs, ltext) <- pPrintModuleAndCheck conf anns parsedModule
       return $ if null errs
         then Right $ TextL.toStrict $ ltext
         else
-          let errStrs = errs <&> \case
-                LayoutErrorUnusedComment str -> str
-                LayoutWarning str -> str
-                LayoutErrorUnknownNode str _ -> str
-                LayoutErrorOutputCheck -> "Output is not syntactically valid."
-          in Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
+          let
+            errStrs = errs <&> \case
+              LayoutErrorUnusedComment str -> str
+              LayoutWarning            str -> str
+              LayoutErrorUnknownNode str _ -> str
+              LayoutErrorOutputCheck -> "Output is not syntactically valid."
+          in
+            Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
 
 -- this approach would for with there was a pure GHC.parseDynamicFilePragma.
 -- Unfortunately that does not exist yet, so we cannot provide a nominally
@@ -166,40 +170,40 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
     return $ case Map.lookup (ExactPrint.Types.mkAnnKey lmod) anns of
       Nothing -> (anns, [])
       Just mAnn ->
-        let
-          modAnnsDp = ExactPrint.Types.annsDP mAnn
-          isWhere (ExactPrint.Types.G AnnWhere) = True
-          isWhere _ = False
-          isEof   (ExactPrint.Types.G AnnEofPos) = True
-          isEof   _ = False
-          whereInd = List.findIndex (isWhere . fst) modAnnsDp
-          eofInd   = List.findIndex (isEof   . fst) modAnnsDp
-          (pre, post) = case (whereInd, eofInd) of
-            (Nothing, Nothing) -> ([], modAnnsDp)
-            (Just i, Nothing) -> List.splitAt (i+1) modAnnsDp
-            (Nothing, Just _i) -> ([], modAnnsDp)
-            (Just i, Just j) -> List.splitAt (min (i+1) j) modAnnsDp
-          mAnn' = mAnn { ExactPrint.Types.annsDP = pre }
-          anns' = Map.insert (ExactPrint.Types.mkAnnKey lmod) mAnn' anns
-        in (anns', post)
+        let modAnnsDp = ExactPrint.Types.annsDP mAnn
+            isWhere (ExactPrint.Types.G AnnWhere) = True
+            isWhere _                             = False
+            isEof (ExactPrint.Types.G AnnEofPos) = True
+            isEof _                              = False
+            whereInd    = List.findIndex (isWhere . fst) modAnnsDp
+            eofInd      = List.findIndex (isEof . fst) modAnnsDp
+            (pre, post) = case (whereInd, eofInd) of
+              (Nothing, Nothing) -> ([], modAnnsDp)
+              (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
+              (Nothing, Just _i) -> ([], modAnnsDp)
+              (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
+            mAnn'       = mAnn { ExactPrint.Types.annsDP = pre }
+            anns'       = Map.insert (ExactPrint.Types.mkAnnKey lmod) mAnn' anns
+        in  (anns', post)
   MultiRWSS.withMultiReader anns' $ processDefault emptyModule
   decls `forM_` ppDecl
-  let
-    finalComments = filter (fst .> \case ExactPrint.Types.AnnComment{} -> True
-                                         _ -> False)
-                           post
+  let finalComments = filter ( fst .> \case
+                               ExactPrint.Types.AnnComment{} -> True
+                               _                             -> False
+                             )
+                             post
   post `forM_` \case
     (ExactPrint.Types.AnnComment (ExactPrint.Types.Comment cmStr _ _), l) -> do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
-    (ExactPrint.Types.G AnnEofPos, (ExactPrint.Types.DP (eofX,eofY))) ->
+    (ExactPrint.Types.G AnnEofPos, (ExactPrint.Types.DP (eofX, eofY))) ->
       let folder acc (kw, ExactPrint.Types.DP (x, _)) = case kw of
             ExactPrint.Types.AnnComment cm
               | GHC.RealSrcSpan span <- ExactPrint.Types.commentIdentifier cm
               -> acc + x + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
             _ -> acc + x
           cmX = foldl' folder 0 finalComments
-      in ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY)
+      in  ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY)
     _ -> return ()
 
 withTransformedAnns :: SYB.Data ast => ast -> PPM () -> PPM ()
@@ -229,15 +233,15 @@ ppDecl d@(L loc decl) = case decl of
     briDoc <- briDocMToPPM $ do
       eitherNode <- layoutBind (L loc bind)
       case eitherNode of
-        Left ns -> docLines $ return <$> ns
+        Left  ns -> docLines $ return <$> ns
         Right n -> return n
     layoutBriDoc d briDoc
-  _         ->
-    briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc d
+  _         -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc d
 
 _sigHead :: Sig RdrName -> String
 _sigHead = \case
-  TypeSig names _ -> "TypeSig " ++ intercalate "," (Text.unpack . lrdrNameToText <$> names)
+  TypeSig names _ ->
+    "TypeSig " ++ intercalate "," (Text.unpack . lrdrNameToText <$> names)
   _ -> "unknown sig"
 
 _bindHead :: HsBind RdrName -> String

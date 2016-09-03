@@ -777,19 +777,19 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
 
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case
-  HsChar       t _c           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
-  HsCharPrim   t _c           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
-  HsString     t _fastString  -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ FastString.unpackFS fastString
-  HsStringPrim t _byteString  -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ Data.ByteString.Char8.unpack byteString
-  HsInt        t _i           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsIntPrim    t _i           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsWordPrim   t _i           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsInt64Prim  t _i           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsWord64Prim t _i           -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsInteger    t _i _type     -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsRat        (FL t _) _type -> BDFLit $ Text.pack t
-  HsFloatPrim  (FL t _)       -> BDFLit $ Text.pack t
-  HsDoublePrim (FL t _)       -> BDFLit $ Text.pack t
+  HsChar       t _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
+  HsCharPrim   t _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
+  HsString     t _fastString -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ FastString.unpackFS fastString
+  HsStringPrim t _byteString -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ Data.ByteString.Char8.unpack byteString
+  HsInt        t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsIntPrim    t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsWordPrim   t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsInt64Prim  t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsWord64Prim t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsInteger t _i _type       -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsRat (FL t _) _type       -> BDFLit $ Text.pack t
+  HsFloatPrim  (FL t _)      -> BDFLit $ Text.pack t
+  HsDoublePrim (FL t _)      -> BDFLit $ Text.pack t
 
 overLitValBriDoc :: OverLitVal -> BriDocFInt
 overLitValBriDoc = \case

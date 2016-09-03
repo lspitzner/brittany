@@ -296,88 +296,89 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDCols sig list)             = plate BDCols |- sig ||* list
   uniplate x@BDSeparator                 = plate x
   uniplate (BDAddBaseY ind bd)           = plate BDAddBaseY |- ind |* bd
-  uniplate (BDBaseYPushCur bd)           = plate BDBaseYPushCur |* bd
-  uniplate (BDBaseYPop bd)               = plate BDBaseYPop |* bd
+  uniplate (BDBaseYPushCur       bd)     = plate BDBaseYPushCur |* bd
+  uniplate (BDBaseYPop           bd)     = plate BDBaseYPop |* bd
   uniplate (BDIndentLevelPushCur bd)     = plate BDIndentLevelPushCur |* bd
-  uniplate (BDIndentLevelPop bd)         = plate BDIndentLevelPop |* bd
+  uniplate (BDIndentLevelPop     bd)     = plate BDIndentLevelPop |* bd
   uniplate (BDPar ind line indented)     = plate BDPar |- ind |* line |* indented
-  uniplate (BDAlt alts)                  = plate BDAlt ||* alts
-  uniplate (BDForwardLineMode bd)        = plate BDForwardLineMode |* bd
+  uniplate (BDAlt             alts)      = plate BDAlt ||* alts
+  uniplate (BDForwardLineMode bd  )      = plate BDForwardLineMode |* bd
   uniplate x@BDExternal{}                = plate x
   uniplate (BDAnnotationPrior annKey bd) = plate BDAnnotationPrior |- annKey |* bd
   uniplate (BDAnnotationKW annKey kw bd) = plate BDAnnotationKW |- annKey |- kw |* bd
-  uniplate (BDAnnotationRest  annKey bd) = plate BDAnnotationRest  |- annKey |* bd
+  uniplate (BDAnnotationRest annKey bd)  = plate BDAnnotationRest |- annKey |* bd
   uniplate (BDLines lines)               = plate BDLines ||* lines
   uniplate (BDEnsureIndent ind bd)       = plate BDEnsureIndent |- ind |* bd
-  uniplate (BDForceMultiline  bd)        = plate BDForceMultiline |* bd
-  uniplate (BDForceSingleline bd)        = plate BDForceSingleline |* bd
+  uniplate (BDForceMultiline   bd)       = plate BDForceMultiline |* bd
+  uniplate (BDForceSingleline  bd)       = plate BDForceSingleline |* bd
   uniplate (BDNonBottomSpacing bd)       = plate BDNonBottomSpacing |* bd
-  uniplate (BDSetParSpacing bd)          = plate BDSetParSpacing |* bd
-  uniplate (BDForceParSpacing bd)        = plate BDForceParSpacing |* bd
-  uniplate (BDProhibitMTEL bd)           = plate BDProhibitMTEL |* bd
+  uniplate (BDSetParSpacing    bd)       = plate BDSetParSpacing |* bd
+  uniplate (BDForceParSpacing  bd)       = plate BDForceParSpacing |* bd
+  uniplate (BDProhibitMTEL     bd)       = plate BDProhibitMTEL |* bd
   uniplate (BDDebug s bd)                = plate BDDebug |- s |* bd
 
 newtype NodeAllocIndex = NodeAllocIndex Int
 
 unwrapBriDocNumbered :: BriDocNumbered -> BriDoc
 unwrapBriDocNumbered tpl = case snd tpl of
-  BDFEmpty -> BDEmpty
-  BDFLit t -> BDLit t
-  BDFSeq list -> BDSeq $ rec <$> list
-  BDFCols sig list -> BDCols sig $ rec <$> list
-  BDFSeparator -> BDSeparator
-  BDFAddBaseY ind bd -> BDAddBaseY ind $ rec bd
-  BDFBaseYPushCur bd -> BDBaseYPushCur $ rec bd
-  BDFBaseYPop bd -> BDBaseYPop $ rec bd
-  BDFIndentLevelPushCur bd -> BDIndentLevelPushCur $ rec bd
-  BDFIndentLevelPop bd -> BDIndentLevelPop $ rec bd
-  BDFPar ind line indented -> BDPar ind (rec line) (rec indented)
-  BDFAlt alts -> BDAlt $ rec <$> alts -- not that this will happen
-  BDFForwardLineMode bd -> BDForwardLineMode $ rec bd
-  BDFExternal k ks c t -> BDExternal k ks c t
+  BDFEmpty                     -> BDEmpty
+  BDFLit t                     -> BDLit t
+  BDFSeq list                  -> BDSeq $ rec <$> list
+  BDFCols sig list             -> BDCols sig $ rec <$> list
+  BDFSeparator                 -> BDSeparator
+  BDFAddBaseY ind bd           -> BDAddBaseY ind $ rec bd
+  BDFBaseYPushCur       bd     -> BDBaseYPushCur $ rec bd
+  BDFBaseYPop           bd     -> BDBaseYPop $ rec bd
+  BDFIndentLevelPushCur bd     -> BDIndentLevelPushCur $ rec bd
+  BDFIndentLevelPop     bd     -> BDIndentLevelPop $ rec bd
+  BDFPar ind line indented     -> BDPar ind (rec line) (rec indented)
+  BDFAlt             alts      -> BDAlt $ rec <$> alts -- not that this will happen
+  BDFForwardLineMode bd        -> BDForwardLineMode $ rec bd
+  BDFExternal k ks c t         -> BDExternal k ks c t
   BDFAnnotationPrior annKey bd -> BDAnnotationPrior annKey $ rec bd
   BDFAnnotationKW annKey kw bd -> BDAnnotationKW annKey kw $ rec bd
-  BDFAnnotationRest  annKey bd -> BDAnnotationRest  annKey $ rec bd
-  BDFLines lines -> BDLines $ rec <$> lines
-  BDFEnsureIndent ind bd -> BDEnsureIndent ind $ rec bd
-  BDFForceMultiline  bd -> BDForceMultiline $ rec bd
-  BDFForceSingleline bd -> BDForceSingleline $ rec bd
-  BDFNonBottomSpacing bd -> BDNonBottomSpacing $ rec bd
-  BDFSetParSpacing bd -> BDSetParSpacing $ rec bd
-  BDFForceParSpacing bd -> BDForceParSpacing $ rec bd
-  BDFProhibitMTEL bd -> BDProhibitMTEL $ rec bd
-  BDFDebug s bd -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
+  BDFAnnotationRest annKey bd  -> BDAnnotationRest annKey $ rec bd
+  BDFLines lines               -> BDLines $ rec <$> lines
+  BDFEnsureIndent ind bd       -> BDEnsureIndent ind $ rec bd
+  BDFForceMultiline   bd       -> BDForceMultiline $ rec bd
+  BDFForceSingleline  bd       -> BDForceSingleline $ rec bd
+  BDFNonBottomSpacing bd       -> BDNonBottomSpacing $ rec bd
+  BDFSetParSpacing    bd       -> BDSetParSpacing $ rec bd
+  BDFForceParSpacing  bd       -> BDForceParSpacing $ rec bd
+  BDFProhibitMTEL     bd       -> BDProhibitMTEL $ rec bd
+  BDFDebug s bd                -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
  where
   rec = unwrapBriDocNumbered
 
+-- this might not work. is not used anywhere either.
 briDocSeqSpine :: BriDoc -> ()
 briDocSeqSpine = \case
-  BDEmpty -> ()
-  BDLit _t -> ()
-  BDSeq list      -> foldl' ((briDocSeqSpine .) . seq) () list
-  BDCols _sig list -> foldl' ((briDocSeqSpine .) . seq) () list
-  BDSeparator -> ()
-  BDAddBaseY _ind bd -> briDocSeqSpine bd
-  BDBaseYPushCur bd     -> briDocSeqSpine bd
-  BDBaseYPop bd     -> briDocSeqSpine bd
-  BDIndentLevelPushCur bd -> briDocSeqSpine bd
-  BDIndentLevelPop bd -> briDocSeqSpine bd
+  BDEmpty                       -> ()
+  BDLit _t                      -> ()
+  BDSeq list                    -> foldl' ((briDocSeqSpine.) . seq) () list
+  BDCols _sig list              -> foldl' ((briDocSeqSpine.) . seq) () list
+  BDSeparator                   -> ()
+  BDAddBaseY _ind bd            -> briDocSeqSpine bd
+  BDBaseYPushCur       bd       -> briDocSeqSpine bd
+  BDBaseYPop           bd       -> briDocSeqSpine bd
+  BDIndentLevelPushCur bd       -> briDocSeqSpine bd
+  BDIndentLevelPop     bd       -> briDocSeqSpine bd
   BDPar _ind line indented -> briDocSeqSpine line `seq` briDocSeqSpine indented
-  BDAlt alts -> foldl' (\(!()) -> briDocSeqSpine) () alts
-  BDForwardLineMode bd -> briDocSeqSpine bd
-  BDExternal{} -> ()
-  BDAnnotationPrior _annKey bd -> briDocSeqSpine bd
+  BDAlt             alts        -> foldl' (\(!()) -> briDocSeqSpine) () alts
+  BDForwardLineMode bd          -> briDocSeqSpine bd
+  BDExternal{}                  -> ()
+  BDAnnotationPrior _annKey bd  -> briDocSeqSpine bd
   BDAnnotationKW _annKey _kw bd -> briDocSeqSpine bd
-  BDAnnotationRest  _annKey bd -> briDocSeqSpine bd
-  BDLines lines -> foldl' (\(!()) -> briDocSeqSpine) () lines
-  BDEnsureIndent _ind bd -> briDocSeqSpine bd
-  BDForceMultiline  bd -> briDocSeqSpine bd
-  BDForceSingleline bd -> briDocSeqSpine bd
-  BDNonBottomSpacing bd -> briDocSeqSpine bd
-  BDSetParSpacing bd -> briDocSeqSpine bd
-  BDForceParSpacing bd -> briDocSeqSpine bd
-  BDProhibitMTEL bd -> briDocSeqSpine bd
-  BDDebug _s bd -> briDocSeqSpine bd
+  BDAnnotationRest _annKey bd   -> briDocSeqSpine bd
+  BDLines lines                 -> foldl' (\(!()) -> briDocSeqSpine) () lines
+  BDEnsureIndent _ind bd        -> briDocSeqSpine bd
+  BDForceMultiline   bd         -> briDocSeqSpine bd
+  BDForceSingleline  bd         -> briDocSeqSpine bd
+  BDNonBottomSpacing bd         -> briDocSeqSpine bd
+  BDSetParSpacing    bd         -> briDocSeqSpine bd
+  BDForceParSpacing  bd         -> briDocSeqSpine bd
+  BDProhibitMTEL     bd         -> briDocSeqSpine bd
+  BDDebug _s bd                 -> briDocSeqSpine bd
 
 briDocForceSpine :: BriDoc -> BriDoc
 briDocForceSpine bd = briDocSeqSpine bd `seq` bd
