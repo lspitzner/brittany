@@ -669,3 +669,13 @@ regressionTests = do
             x1' <- docSeq [prepElem, return x1]
             return $ x1' Seq.<| xR
       |]
+  it "type signature multiline forcing issue" $ do
+    roundTripEqual $
+      [text|
+      layoutWriteNewlineBlock
+        :: ( MonadMultiWriter Text.Builder.Builder m
+           , MonadMultiState LayoutState m
+           , MonadMultiWriter (Seq String) m
+           )
+        => m ()
+      |]

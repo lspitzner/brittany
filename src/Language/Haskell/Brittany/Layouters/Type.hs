@@ -39,6 +39,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         d <- docSharedWrapper layoutType kind
         return $ (lrdrNameToText lrdrName, Just $ d)
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
+    let maybeForceML = case typ2 of
+          (L _ HsFunTy{}) -> docForceMultiline
+          _               -> id
     let
       tyVarDocLineList = tyVarDocs >>= \case
         (tname, Nothing) -> [docLit $ Text.pack " " <> tname]
@@ -119,7 +122,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
               ]
             , docCols ColTyOpPrefix
               [ docLit $ Text.pack "=> "
-              , docAddBaseY (BrIndentSpecial 3) $ docForceMultiline $ typeDoc
+              , docAddBaseY (BrIndentSpecial 3) $ maybeForceML $ typeDoc
               ]
             ]
           )
@@ -212,6 +215,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
                       ]
             in docPar open $ docLines $ list ++ [close]
           ]
+    let maybeForceML = case typ1 of
+          (L _ HsFunTy{}) -> docForceMultiline
+          _               -> id
     docAlt
       -- (Foo a b c) => a b -> c
       [ docSeq
@@ -226,16 +232,16 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           (docForceSingleline contextDoc)
           ( docCols ColTyOpPrefix
             [ docLit $ Text.pack "=> "
-            , docAddBaseY (BrIndentSpecial 3) $ docForceMultiline typeDoc
+            , docAddBaseY (BrIndentSpecial 3) $ maybeForceML typeDoc
             ]
           )
       ]
   HsFunTy typ1 typ2 -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     typeDoc2 <- docSharedWrapper layoutType typ2
-    let shouldForceML = case typ2 of
-          (L _ HsFunTy{}) -> True
-          _ -> False
+    let maybeForceML = case typ2 of
+          (L _ HsFunTy{}) -> docForceMultiline
+          _               -> id
     hasComments <- hasAnyCommentsBelow ltype
     docAlt $
       [ docSeq
@@ -250,8 +256,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         ( docCols ColTyOpPrefix
           [ docWrapNodeRest ltype $ appSep $ docLit $ Text.pack "->"
           , docAddBaseY (BrIndentSpecial 3)
-          $ if shouldForceML then docForceMultiline typeDoc2
-                             else typeDoc2
+          $ maybeForceML typeDoc2
           ]
         )
       ]
