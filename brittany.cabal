@@ -15,10 +15,12 @@ cabal-version:       >=1.10
 flag brittany-dev
   description: dev options
   default: False
+  manual: True
 
 flag brittany-dev-lib
   description: set buildable false for anything but lib
   default: False
+  manual: True
 
 library {
   default-language:
@@ -35,8 +37,8 @@ library {
   }
   other-modules: {
     Language.Haskell.Brittany.LayouterBasics
-    Language.Haskell.Brittany.BackendUtils
     Language.Haskell.Brittany.Backend
+    Language.Haskell.Brittany.BackendUtils
     Language.Haskell.Brittany.ExactPrintUtils
     Language.Haskell.Brittany.Layouters.Type
     Language.Haskell.Brittany.Layouters.Decl
@@ -236,7 +238,6 @@ test-suite unittests
   }
   ghc-options: {
     -Wall
-    -fprof-auto -fprof-cafs -fno-spec-constr
     -j
     -fno-warn-unused-imports
     -fno-warn-orphans
