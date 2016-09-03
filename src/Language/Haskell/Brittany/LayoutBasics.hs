@@ -1060,6 +1060,34 @@ instance DocWrapable a => DocWrapable [a] where
         bdN' <- docWrapNodeRest ast (return bdN)
         return $ reverse $ (bdN':bdR)
 
+instance DocWrapable a => DocWrapable (Seq a) where
+  docWrapNode ast bdsm = do
+    bds <- bdsm
+    case Seq.viewl bds of
+      Seq.EmptyL -> return $ Seq.empty -- TODO: this might be bad. maybe. then again, not really. well.
+      bd1 Seq.:< rest -> case Seq.viewr rest of
+        Seq.EmptyR -> do
+          bd1' <- docWrapNode ast (return bd1)
+          return $ Seq.singleton bd1'
+        bdM Seq.:> bdN -> do
+          bd1' <- docWrapNodePrior ast (return bd1)
+          bdN' <- docWrapNodeRest  ast (return bdN)
+          return $ (bd1' Seq.<| bdM) Seq.|> bdN'
+  docWrapNodePrior ast bdsm = do
+    bds <- bdsm
+    case Seq.viewl bds of
+      Seq.EmptyL -> return $ Seq.empty
+      bd1 Seq.:< bdR -> do
+        bd1' <- docWrapNodePrior ast (return bd1)
+        return $ bd1' Seq.<| bdR
+  docWrapNodeRest ast bdsm = do
+    bds <- bdsm
+    case Seq.viewr bds of
+      Seq.EmptyR -> return $ Seq.empty
+      bdR Seq.:> bdN -> do
+        bdN' <- docWrapNodeRest ast (return bdN)
+        return $ bdR Seq.|> bdN'
+
 instance DocWrapable ([BriDocNumbered], BriDocNumbered, a) where
   docWrapNode ast stuffM = do
     (bds, bd, x) <- stuffM

@@ -393,8 +393,8 @@ import qualified Data.Semigroup as Semigroup
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as ByteStringL
 
-import qualified Data.IntMap as IntMap
--- import qualified Data.IntMap.Lazy as IntMapL
+-- import qualified Data.IntMap as IntMap
+import qualified Data.IntMap.Lazy as IntMapL
 import qualified Data.IntMap.Strict as IntMapS
 -- import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map

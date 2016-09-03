@@ -1118,6 +1118,8 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
     filter isNotEmpty list >>= \case
       BDSeq l -> l
       x -> [x]
+  BDSeq (BDCols sig1 cols1@(_:_):rest) ->
+    Just $ BDCols sig1 (List.init cols1 ++ [BDSeq (List.last cols1:rest)])
   BDLines lines | any (\case BDLines{} -> True
                              BDEmpty{} -> True
                              _ -> False) lines ->
@@ -1528,10 +1530,24 @@ layoutBriDocM = \case
       where
         (colInfos, finalState) = StateS.runState (mergeBriDocs bridocs)
                                                  (ColBuildState IntMapS.empty 0)
+        maxZipper :: [Int] -> [Int] -> [Int]
+        maxZipper [] ys = ys
+        maxZipper xs [] = xs
+        maxZipper (x:xr) (y:yr) = max x y : maxZipper xr yr
         processedMap :: Int -> Int -> ColMap2
-        processedMap curX colMax =
-          _cbs_map finalState <&> \colss ->
-            let maxCols = Foldable.foldl1 (zipWith max) colss
+        processedMap curX colMax = fix $ \result ->
+          _cbs_map finalState <&> \colSpacingss ->
+            let colss = colSpacingss <&> \spss -> case reverse spss of
+                  [] -> []
+                  (xN:xR) -> reverse $ fLast xN : fmap fInit xR
+                  where
+                    fLast (ColumnSpacingLeaf len)  = len
+                    fLast (ColumnSpacingRef len _) = len
+                    fInit (ColumnSpacingLeaf len) = len
+                    fInit (ColumnSpacingRef _ i) = case IntMapL.lookup i result of
+                      Nothing           -> 0
+                      Just (_, maxs, _) -> sum maxs
+                maxCols = Foldable.foldl1 maxZipper colss
                 (_, posXs) = mapAccumL (\acc x -> (acc+x,acc)) curX maxCols
                 counter count l =
                   if List.last posXs + List.last l <=colMax
@@ -1544,9 +1560,15 @@ layoutBriDocM = \case
     briDocToColInfo = \case
       BDCols sig list -> withAlloc $ \ind -> do
         subInfos <- mapM briDocToColInfo list
-        let lengths = briDocLineLength <$> list
-        return $ (Seq.singleton lengths, ColInfo ind sig (zip lengths subInfos))
+        let lengthInfos = zip (briDocLineLength <$> list) subInfos
+        let trueSpacings = getTrueSpacings lengthInfos
+        return $ (Seq.singleton trueSpacings, ColInfo ind sig lengthInfos)
       bd -> return $ ColInfoNo bd
+
+    getTrueSpacings :: [(Int, ColInfo)] -> [ColumnSpacing]
+    getTrueSpacings lengthInfos = lengthInfos <&> \case
+      (len, ColInfo i _ _) -> ColumnSpacingRef len i
+      (len, _)              -> ColumnSpacingLeaf len
 
     mergeBriDocs :: [BriDoc] -> StateS.State ColBuildState [ColInfo]
     mergeBriDocs bds = mergeBriDocsW ColInfoStart bds
@@ -1570,20 +1592,21 @@ layoutBriDocM = \case
           infos <- zip (snd <$> subLengthsInfos) subDocs
             `forM` uncurry mergeInfoBriDoc
           let curLengths = briDocLineLength <$> subDocs
+          let trueSpacings = getTrueSpacings (zip curLengths infos)
           do -- update map
             s <- StateS.get
             let m = _cbs_map s
             let (Just spaces) = IntMapS.lookup infoInd m
             StateS.put s
               { _cbs_map = IntMapS.insert infoInd
-                                          (spaces Seq.|> curLengths)
+                                          (spaces Seq.|> trueSpacings)
                                           m
               }
           return $ ColInfo infoInd colSig (zip curLengths infos)
         | otherwise -> briDocToColInfo bd
       bd            -> return $ ColInfoNo bd
     
-    withAlloc :: (ColIndex -> StateS.State ColBuildState (ColSpaces, ColInfo))
+    withAlloc :: (ColIndex -> StateS.State ColBuildState (ColumnBlocks ColumnSpacing, ColInfo))
               -> StateS.State ColBuildState ColInfo
     withAlloc f = do
       cbs <- StateS.get
@@ -1652,15 +1675,26 @@ layoutBriDocM = \case
       ColInfo _ _ list -> list `forM_` (snd .> processInfoIgnore)
 
 type ColIndex  = Int
-type ColSpace  = [Int]
-type ColSpaces = Seq [Int]
-type ColMap1 = IntMapS.IntMap {- ColIndex -} ColSpaces
-type ColMap2 = IntMapS.IntMap {- ColIndex -} (Float, ColSpace, ColSpaces)
+
+data ColumnSpacing
+  = ColumnSpacingLeaf Int
+  | ColumnSpacingRef Int Int
+
+type ColumnBlock  a = [a]
+type ColumnBlocks a = Seq [a]
+type ColMap1 = IntMapL.IntMap {- ColIndex -} (ColumnBlocks ColumnSpacing)
+type ColMap2 = IntMapL.IntMap {- ColIndex -} (Float, ColumnBlock Int, ColumnBlocks Int)
+                                          -- (ratio of hasSpace, maximum, raw)
 
 data ColInfo
   = ColInfoStart -- start value to begin the mapAccumL.
   | ColInfoNo BriDoc
   | ColInfo ColIndex ColSig [(Int, ColInfo)]
+
+instance Show ColInfo where
+  show ColInfoStart = "ColInfoStart"
+  show ColInfoNo{} = "ColInfoNo{}"
+  show (ColInfo ind sig list) = "ColInfo " ++ show ind ++ " " ++ show sig ++ " " ++ show list
 
 data ColBuildState = ColBuildState
   { _cbs_map :: ColMap1

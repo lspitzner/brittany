@@ -50,7 +50,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   HsLit lit -> do
     allocateNode $ litBriDoc lit
   HsLam (MG (L _ [lmatch@(L _ (Match _ pats _ (GRHSs [lgrhs@(L _ (GRHS [] body))] (L _ EmptyLocalBinds))))]) _ _ _) -> do
-    patDocs <- pats `forM` docSharedWrapper layoutPat
+    patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
     bodyDoc <- docAddBaseY BrIndentRegular <$> docSharedWrapper layoutExpr body
     let funcPatternPartLine =
           docCols ColCasePattern

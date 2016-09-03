@@ -69,7 +69,9 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
     patDoc <- docSharedWrapper layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
     docCols ColBindStmt
-      [appSep patDoc, docSeq [appSep $ docLit $ Text.pack "<-", expDoc]]
+      [ appSep $ colsWrapPat =<< patDoc
+      , docSeq [appSep $ docLit $ Text.pack "<-", expDoc]
+      ]
   _ -> unknownNodeError "" lgstmt -- TODO
 
 layoutBind :: ToBriDocC (HsBindLR RdrName RdrName) (Either [BriDocNumbered] BriDocNumbered)
@@ -80,11 +82,11 @@ layoutBind lbind@(L _ bind) = case bind of
     funcPatDocs <- docWrapNode lbind $ docWrapNode lmatches $ layoutPatternBind (Just idStr) binderDoc `mapM` matches
     return $ Left $ funcPatDocs
   PatBind pat (GRHSs grhss whereBinds) _ _ ([], []) -> do
-    patDoc <- layoutPat pat
+    patDocs <- colsWrapPat =<< layoutPat pat
     clauseDocs <- layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
     binderDoc <- docLit $ Text.pack "="
-    fmap Right $ docWrapNode lbind $ layoutPatternBindFinal Nothing binderDoc (Just patDoc) clauseDocs mWhereDocs
+    fmap Right $ docWrapNode lbind $ layoutPatternBindFinal Nothing binderDoc (Just patDocs) clauseDocs mWhereDocs
   _ -> Right <$> unknownNodeError "" lbind
 
 data BagBindOrSig = BagBind (LHsBindLR RdrName RdrName)
@@ -127,7 +129,7 @@ layoutGrhs lgrhs@(L _ (GRHS guards body))
 layoutPatternBind :: Maybe Text -> BriDocNumbered -> LMatch RdrName (LHsExpr RdrName) -> ToBriDocM BriDocNumbered
 layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match _ pats _ (GRHSs grhss whereBinds)))
   = do
-    patDocs <- docSharedWrapper layoutPat `mapM` pats
+    patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
     let isInfix = isInfixMatch match
     patDoc <- docWrapNodePrior lmatch $ case (mIdStr, patDocs) of
       (Just idStr, p1:pr) | isInfix -> docCols ColPatternsFuncInfix

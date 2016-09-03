@@ -31,7 +31,7 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
   LastStmt body False _ -> do
     layoutExpr body
   BindStmt lPat expr _ _ _ -> do
-    patDoc <- docSharedWrapper layoutPat lPat
+    patDoc <- fmap return $ colsWrapPat =<< layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
     docAlt
       [ docCols ColBindStmt
