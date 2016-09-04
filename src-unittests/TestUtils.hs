@@ -50,7 +50,7 @@ defaultTestConfig = Config
     , _lconfig_indentListSpecial  = coerce True
     , _lconfig_importColumn       = coerce (60 :: Int)
     , _lconfig_altChooser         = coerce $ AltChooserBoundedSearch 3
-    , _lconfig_columnAlignMode    = coerce ColumnAlignModeUnanimously
+    , _lconfig_columnAlignMode    = coerce (ColumnAlignModeMajority 0.7)
     }
   , _conf_errorHandling = _conf_errorHandling staticDefaultConfig
   , _conf_forward       = ForwardOptions

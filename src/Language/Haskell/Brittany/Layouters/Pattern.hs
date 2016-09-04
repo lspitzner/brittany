@@ -31,10 +31,11 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   VarPat n   -> fmap Seq.singleton $ docLit $ lrdrNameToText n
   LitPat lit -> fmap Seq.singleton $ allocateNode $ litBriDoc lit
   ParPat inner -> do
-    innerDocs <- layoutPat inner
-    left <- docLit $ Text.pack "("
+    left  <- docLit $ Text.pack "("
     right <- docLit $ Text.pack ")"
-    return $ (left Seq.<| innerDocs) Seq.|> right
+    innerDocs <- colsWrapPat =<< layoutPat inner
+    return $ Seq.empty Seq.|> left Seq.|> innerDocs Seq.|> right
+    -- return $ (left Seq.<| innerDocs) Seq.|> right
     -- case Seq.viewl innerDocs of
     --   Seq.EmptyL -> fmap return $ docLit $ Text.pack "()" -- this should never occur..
     --   x1 Seq.:< rest -> case Seq.viewr rest of

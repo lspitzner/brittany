@@ -305,10 +305,11 @@ layoutBriDocM = \case
         maxZipper (x:xr) (y:yr) = max x y : maxZipper xr yr
         processedMap :: Int -> Int -> ColMap2
         processedMap curX colMax = fix $ \result ->
-          _cbs_map finalState <&> \colSpacingss ->
+          _cbs_map finalState <&> \(lastFlag, colSpacingss) ->
             let colss = colSpacingss <&> \spss -> case reverse spss of
                   [] -> []
-                  (xN:xR) -> reverse $ fLast xN : fmap fInit xR
+                  (xN:xR) -> reverse
+                    $ (if lastFlag then fLast else fInit) xN : fmap fInit xR
                   where
                     fLast (ColumnSpacingLeaf len)  = len
                     fLast (ColumnSpacingRef len _) = len
@@ -325,10 +326,12 @@ layoutBriDocM = \case
                 ratio = fromIntegral (foldl counter (0::Int) colss)
                       / fromIntegral (length colss)
             in  (ratio, maxCols, colss)
-    briDocToColInfo :: BriDoc -> StateS.State ColBuildState ColInfo
-    briDocToColInfo = \case
-      BDCols sig list -> withAlloc $ \ind -> do
-        subInfos <- mapM briDocToColInfo list
+    briDocToColInfo :: Bool -> BriDoc -> StateS.State ColBuildState ColInfo
+    briDocToColInfo lastFlag = \case
+      BDCols sig list -> withAlloc lastFlag $ \ind -> do
+        let isLastList =
+              if lastFlag then (== length list) <$> [1..] else repeat False
+        subInfos <- zip isLastList list `forM` uncurry briDocToColInfo
         let lengthInfos = zip (briDocLineLength <$> list) subInfos
         let trueSpacings = getTrueSpacings lengthInfos
         return $ (Seq.singleton trueSpacings, ColInfo ind sig lengthInfos)
@@ -345,45 +348,49 @@ layoutBriDocM = \case
     mergeBriDocsW :: ColInfo -> [BriDoc] -> StateS.State ColBuildState [ColInfo]
     mergeBriDocsW _ [] = return []
     mergeBriDocsW lastInfo (bd:bdr) = do
-      info <- mergeInfoBriDoc lastInfo bd
+      info <- mergeInfoBriDoc True lastInfo bd
       infor <- mergeBriDocsW info bdr
       return $ info : infor
 
-    mergeInfoBriDoc :: ColInfo
+    mergeInfoBriDoc :: Bool
+                    -> ColInfo
                     -> BriDoc
                     -> StateS.StateT ColBuildState Identity ColInfo
-    mergeInfoBriDoc ColInfoStart = briDocToColInfo
-    mergeInfoBriDoc ColInfoNo{}  = briDocToColInfo
-    mergeInfoBriDoc (ColInfo infoInd infoSig subLengthsInfos) = \case
-      bd@(BDCols colSig subDocs)
+    mergeInfoBriDoc lastFlag ColInfoStart = briDocToColInfo lastFlag
+    mergeInfoBriDoc lastFlag ColInfoNo{}  = briDocToColInfo lastFlag
+    mergeInfoBriDoc lastFlag (ColInfo infoInd infoSig subLengthsInfos) = \case
+      brdc@(BDCols colSig subDocs)
         | infoSig == colSig
         && length subLengthsInfos == length subDocs -> do
-          infos <- zip (snd <$> subLengthsInfos) subDocs
-            `forM` uncurry mergeInfoBriDoc
+          let isLastList =
+                if lastFlag then (== length subDocs) <$> [1..] else repeat False
+          infos <- zip3 isLastList (snd <$> subLengthsInfos) subDocs
+            `forM` \(lf, info, bd) -> mergeInfoBriDoc lf info bd
           let curLengths = briDocLineLength <$> subDocs
           let trueSpacings = getTrueSpacings (zip curLengths infos)
           do -- update map
             s <- StateS.get
             let m = _cbs_map s
-            let (Just spaces) = IntMapS.lookup infoInd m
+            let (Just (_, spaces)) = IntMapS.lookup infoInd m
             StateS.put s
               { _cbs_map = IntMapS.insert infoInd
-                                          (spaces Seq.|> trueSpacings)
+                                          (lastFlag, spaces Seq.|> trueSpacings)
                                           m
               }
           return $ ColInfo infoInd colSig (zip curLengths infos)
-        | otherwise -> briDocToColInfo bd
-      bd            -> return $ ColInfoNo bd
+        | otherwise -> briDocToColInfo lastFlag brdc
+      brdc          -> return $ ColInfoNo brdc
     
-    withAlloc :: (ColIndex -> StateS.State ColBuildState (ColumnBlocks ColumnSpacing, ColInfo))
+    withAlloc :: Bool
+              -> (ColIndex -> StateS.State ColBuildState (ColumnBlocks ColumnSpacing, ColInfo))
               -> StateS.State ColBuildState ColInfo
-    withAlloc f = do
+    withAlloc lastFlag f = do
       cbs <- StateS.get
       let ind = _cbs_index cbs
       StateS.put $ cbs { _cbs_index = ind + 1 }
       (space, info) <- f ind
       StateS.get >>= \c -> StateS.put
-        $ c { _cbs_map = IntMapS.insert ind space $ _cbs_map c }
+        $ c { _cbs_map = IntMapS.insert ind (lastFlag, space) $ _cbs_map c }
       return info
 
     processInfo :: ColMap2 -> ColInfo -> m ()
@@ -451,7 +458,7 @@ data ColumnSpacing
 
 type ColumnBlock  a = [a]
 type ColumnBlocks a = Seq [a]
-type ColMap1 = IntMapL.IntMap {- ColIndex -} (ColumnBlocks ColumnSpacing)
+type ColMap1 = IntMapL.IntMap {- ColIndex -} (Bool, ColumnBlocks ColumnSpacing)
 type ColMap2 = IntMapL.IntMap {- ColIndex -} (Float, ColumnBlock Int, ColumnBlocks Int)
                                           -- (ratio of hasSpace, maximum, raw)
 
