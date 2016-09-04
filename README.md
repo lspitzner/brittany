@@ -51,7 +51,9 @@ linear in the size of the input (although the constant factor is not small).
 
 (This does not cover _installation_. TODO)
 
-~~~~
+via `cabal new-build`
+
+~~~~.sh
 mkdir brittany-project
 cd brittany-project/
 git clone https://github.com/lspitzner/butcher.git
@@ -64,6 +66,15 @@ EOF
 # cabal new-configure -w $PATH_TO_GHC_8
 cabal new-build brittany/
 ~~~~
+
+or via `stack`
+
+~~~~.sh
+git clone https://github.com/lspitzner/brittany.git
+cd brittany
+stack build
+~~~~
+
 
 # Usage
 
