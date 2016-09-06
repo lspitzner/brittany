@@ -7,7 +7,7 @@ packages:
 - .
 - extra-dep: true
   location:
-    commit: a4e3d155d604f22dedb88fe8de3eb2f240daeea4
+    commit: e0885a4f482c063862e38db7de4319f3786c7a28
     git: git@github.com:lspitzner/butcher.git
 - extra-dep: true
   location:
