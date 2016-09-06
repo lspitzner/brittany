@@ -72,6 +72,7 @@ mainCmdParser = do
   suppressOutput <- addSimpleBoolFlag "" ["suppress-output"] (flagHelp $ parDoc "suppress the regular output, i.e. the transformed haskell source")
   _verbosity <- addSimpleCountFlag "v" ["verbose"] (flagHelp $ parDoc "[currently without effect; TODO]")
   reorderStop
+  inputParam <- addStringParamOpt "PATH" (paramHelpStr "path to input haskell source file")
   desc <- peekCmdDesc
   addCmdImpl $ void $ do
     when printVersion $ do
@@ -83,7 +84,7 @@ mainCmdParser = do
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
-    inputPathM <- case inputPaths of
+    inputPathM <- case maybeToList inputParam ++ inputPaths of
       [] -> do
         return Nothing
       [x] -> return $ Just x
