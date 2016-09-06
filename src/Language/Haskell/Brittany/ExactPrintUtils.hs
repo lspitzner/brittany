@@ -57,10 +57,12 @@ parseModuleWithCpp
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
 parseModuleWithCpp cpp opts args fp dynCheck =
   ExactPrint.ghcWrapper $ EitherT.runEitherT $ do
-    dflags0                       <- lift $ ExactPrint.initDynFlags fp
+    dflags0                       <- lift $ GHC.getSessionDynFlags
     (dflags1, leftover, warnings) <- lift $ GHC.parseDynamicFlagsCmdLine
       dflags0
       (GHC.noLoc <$> args)
+    void $ lift $ GHC.setSessionDynFlags dflags1
+    dflags2                       <- lift $ ExactPrint.initDynFlags fp
     when (not $ null leftover)
       $  EitherT.left
       $  "when parsing ghc flags: leftover flags: "
@@ -69,8 +71,8 @@ parseModuleWithCpp cpp opts args fp dynCheck =
       $  EitherT.left
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
-    x <- EitherT.EitherT $ liftIO $ dynCheck dflags1
-    res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags1 fp
+    x <- EitherT.EitherT $ liftIO $ dynCheck dflags2
+    res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
     EitherT.hoistEither
       $ either (\(span, err) -> Left $ show span ++ ": " ++ err)
                (\(a, m) -> Right (a, m, x))

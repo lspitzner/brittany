@@ -62,7 +62,7 @@ configParser = do
     "STRING"
     ( flagHelp
     $ parDoc
-        "allows to define default language extensions. The parameter is forwarded to ghc. Note that currently these options are applied _after_ the pragmas read in from the input."
+        "allows to define default language extensions. The parameter is forwarded to ghc."
     )
 
   return $ Config
