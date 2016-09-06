@@ -8,13 +8,13 @@ packages:
 - extra-dep: true
   location:
     commit: e0885a4f482c063862e38db7de4319f3786c7a28
-    git: git@github.com:lspitzner/butcher.git
+    git: https://github.com/lspitzner/butcher.git
 - extra-dep: true
   location:
     commit: 605855659b15ff190d1e9c0c9b5e981e379aed15
-    git: git@github.com:lspitzner/data-tree-print.git
+    git: https://github.com/lspitzner/data-tree-print.git
 - extra-dep: true
   location:
     commit: 85af8e4f34ff013575c9acd9675b495ee7f10180
-    git: git@github.com:lspitzner/ghc-exactprint.git
+    git: https://github.com/lspitzner/ghc-exactprint.git
 resolver: nightly-2016-09-04
