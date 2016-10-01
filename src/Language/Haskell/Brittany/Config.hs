@@ -35,9 +35,9 @@ import           Data.Coerce ( Coercible, coerce )
 configParser :: CmdParser Identity out (ConfigF Option)
 configParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
-  ind                <- addFlagReadParam "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
-  cols               <- addFlagReadParam "" ["columns"] "AMOUNT" (flagHelpStr "target max columns (80 is an old default for this)")
-  importCol          <- addFlagReadParam "" ["import-col"] "N" (flagHelpStr "column to align import lists at")
+  ind                <- addFlagReadParams "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
+  cols               <- addFlagReadParams "" ["columns"] "AMOUNT" (flagHelpStr "target max columns (80 is an old default for this)")
+  importCol          <- addFlagReadParams "" ["import-col"] "N" (flagHelpStr "column to align import lists at")
 
   dumpConfig         <- addSimpleBoolFlag "" ["dump-config"] (flagHelp $ parDoc "dump the programs full config (commandline + file + defaults)")
   dumpAnnotations    <- addSimpleBoolFlag "" ["dump-annotations"] (flagHelp $ parDoc "dump the full annotations returned by ghc-exactprint")
@@ -56,7 +56,7 @@ configParser = do
   outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
   wError             <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
 
-  optionsGhc         <- addFlagStringParam
+  optionsGhc         <- addFlagStringParams
     ""
     ["ghc-options"]
     "STRING"

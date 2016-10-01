@@ -65,9 +65,9 @@ mainCmdParser = do
   reorderStart
   printHelp <- addSimpleBoolFlag "" ["help"] mempty
   printVersion <- addSimpleBoolFlag "" ["version"] mempty
-  inputPaths <- addFlagStringParam "i" ["input"] "PATH" (flagHelpStr "path to input haskell source file")
-  outputPaths <- addFlagStringParam "o" ["output"] "PATH" (flagHelpStr "output file path")
-  configPaths <- addFlagStringParam "" ["config-file"] "PATH" (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
+  inputPaths <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "path to input haskell source file")
+  outputPaths <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file path")
+  configPaths <- addFlagStringParams "" ["config-file"] "PATH" (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
   cmdlineConfig <- configParser
   suppressOutput <- addSimpleBoolFlag "" ["suppress-output"] (flagHelp $ parDoc "suppress the regular output, i.e. the transformed haskell source")
   _verbosity <- addSimpleCountFlag "v" ["verbose"] (flagHelp $ parDoc "[currently without effect; TODO]")
