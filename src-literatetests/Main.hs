@@ -42,8 +42,8 @@ main = do
   hspec $ groups `forM_` \(groupname, tests) -> do
     describe (Text.unpack groupname) $ tests `forM_` \(name, pend, inp) -> do
       (if pend then before_ pending else id)
-        $ it (Text.unpack name) $ roundTripEqual inp
-
+        $ it (Text.unpack name)
+        $ roundTripEqual inp
  where
   -- this function might be implemented in a weirdly complex fashion; the
   -- reason being that it was copied from a somewhat more complex variant.
@@ -55,58 +55,68 @@ main = do
 --        l -> error $ "first non-empty line must start with #test footest\n" ++ show l
 --      )
 --      $   fmap (groupBy grouperT)
-    fmap (\case
+    fmap
+        ( \case
           GroupLine g:grouprest ->
             (,) g
-            $ fmap (\case
-                HeaderLine n:PendingLine:rest | Just rlines <- mapM extractNormal rest -> (n, True, Text.unlines rlines)
-                HeaderLine n:rest | Just rlines <- mapM extractNormal rest -> (n, False, Text.unlines rlines)
-                l -> error $ "first non-empty line must start with #test footest\n" ++ show l
-              )
-            $ groupBy grouperT
-            $ filter (not . lineIsSpace)
-            $ grouprest
+              $ fmap
+                  ( \case
+                    HeaderLine n:PendingLine:rest | Just rlines <- mapM
+                      extractNormal
+                      rest ->
+                      (n, True, Text.unlines rlines)
+                    HeaderLine n:rest | Just rlines <- mapM extractNormal rest ->
+                      (n, False, Text.unlines rlines)
+                    l ->
+                      error
+                        $ "first non-empty line must start with #test footest\n"
+                        ++ show l
+                  )
+              $ groupBy grouperT
+              $ filter (not . lineIsSpace)
+              $ grouprest
           l -> error $ "first non-empty line must be a #group\n" ++ show l
-      )
+        )
       $   groupBy grouperG
       $   filter (not . lineIsSpace)
       $   lineMapper
       <$> Text.lines input
    where
     extractNormal (NormalLine l) = Just l
-    extractNormal _ = Nothing
+    extractNormal _              = Nothing
     specialLineParser :: Parser InputLine
     specialLineParser = Parsec.choice
       [ [ GroupLine $ Text.pack name
-        | _      <- Parsec.try $ Parsec.string "#group"
-        , _      <- Parsec.many1 $ Parsec.oneOf " \t"
-        , name   <- Parsec.many1 $ Parsec.noneOf "\r\n:"
-        , _      <- Parsec.eof
+        | _    <- Parsec.try $ Parsec.string "#group"
+        , _    <- Parsec.many1 $ Parsec.oneOf " \t"
+        , name <- Parsec.many1 $ Parsec.noneOf "\r\n:"
+        , _    <- Parsec.eof
         ]
       , [ HeaderLine $ Text.pack name
-        | _      <- Parsec.try $ Parsec.string "#test"
-        , _      <- Parsec.many1 $ Parsec.oneOf " \t"
-        , name   <- Parsec.many1 $ Parsec.noneOf "\r\n:"
-        , _      <- Parsec.eof
+        | _    <- Parsec.try $ Parsec.string "#test"
+        , _    <- Parsec.many1 $ Parsec.oneOf " \t"
+        , name <- Parsec.many1 $ Parsec.noneOf "\r\n:"
+        , _    <- Parsec.eof
         ]
       , [ PendingLine
-        | _      <- Parsec.try $ Parsec.string "#pending"
-        , _      <- Parsec.optional $ many (Parsec.noneOf "\r\n")
-        , _      <- Parsec.eof
+        | _ <- Parsec.try $ Parsec.string "#pending"
+        , _ <- Parsec.optional $ many (Parsec.noneOf "\r\n")
+        , _ <- Parsec.eof
         ]
       , [ CommentLine
         | _ <- Parsec.many $ Parsec.oneOf " \t"
-        , _ <- Parsec.optional $ Parsec.string "##" <* many (Parsec.noneOf "\r\n")
+        , _ <-
+          Parsec.optional $ Parsec.string "##" <* many (Parsec.noneOf "\r\n")
         , _ <- Parsec.eof
         ]
       ]
     lineMapper :: Text -> InputLine
     lineMapper line = case Parsec.runParser specialLineParser () "" line of
       Left  _e -> NormalLine line
-      Right l -> l
+      Right l  -> l
     lineIsSpace :: InputLine -> Bool
     lineIsSpace CommentLine = True
-    lineIsSpace _ = False
+    lineIsSpace _           = False
     grouperG :: InputLine -> InputLine -> Bool
     grouperG _ GroupLine{} = False
     grouperG _ _           = True
