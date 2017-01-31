@@ -12,7 +12,6 @@ import NeatInterpolation
 
 import Language.Haskell.Brittany
 
-import IdentityTests
 import AsymptoticPerfTests
 
 
@@ -22,5 +21,4 @@ main = hspec $ tests
 
 tests :: Spec
 tests = do
-  describe "identity roundtrips" $ identityTests
   describe "asymptotic perf roundtrips" $ asymptoticPerfTest

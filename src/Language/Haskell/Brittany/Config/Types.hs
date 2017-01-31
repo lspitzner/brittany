@@ -12,6 +12,7 @@ where
 #include "prelude.inc"
 
 import Data.Yaml
+import qualified Data.Aeson.Types as Aeson
 import GHC.Generics
 import Control.Lens
 
@@ -77,6 +78,13 @@ data ConfigF f = Config
   }
   deriving (Generic)
 
+data ErrorHandlingConfigFMaybe = ErrorHandlingConfigMaybe
+  { _econfm_produceOutputOnErrors :: Maybe (Semigroup.Last Bool)
+  , _econfm_Werror                :: Maybe (Semigroup.Last Bool)
+  , _econfm_CPPMode               :: Maybe (Semigroup.Last CPPMode)
+  }
+  deriving (Generic)
+
 -- i wonder if any Show1 stuff could be leveraged.
 deriving instance Show (DebugConfigF Identity)
 deriving instance Show (LayoutConfigF Identity)
@@ -112,43 +120,88 @@ type DebugConfig = DebugConfigF Identity
 type LayoutConfig = LayoutConfigF Identity
 type ErrorHandlingConfig = ErrorHandlingConfigF Identity
 
-instance FromJSON a => FromJSON (Semigroup.Last a) where
-  parseJSON obj = Semigroup.Last <$> parseJSON obj
-  {-# INLINE parseJSON #-}
-instance ToJSON a => ToJSON (Semigroup.Last a) where
-  toJSON (Semigroup.Last x) = toJSON x
-  {-# INLINE toJSON #-}
+aesonDecodeOptionsBrittany :: Aeson.Options
+aesonDecodeOptionsBrittany = Aeson.defaultOptions
+  { Aeson.omitNothingFields = True
+  , Aeson.fieldLabelModifier = dropWhile (=='_')
+  }
 
-instance FromJSON a => FromJSON (Option a) where
-  parseJSON obj = Option <$> parseJSON obj
-  {-# INLINE parseJSON #-}
-instance ToJSON a => ToJSON (Option a) where
-  toJSON (Option x) = toJSON x
-  {-# INLINE toJSON #-}
+-- instance FromJSON a => FromJSON (Semigroup.Last a) where
+--   parseJSON obj = Semigroup.Last <$> parseJSON obj
+--   {-# INLINE parseJSON #-}
+-- instance ToJSON a => ToJSON (Semigroup.Last a) where
+--   toJSON (Semigroup.Last x) = toJSON x
+--   {-# INLINE toJSON #-}
+--
+-- instance FromJSON a => FromJSON (Option a) where
+--   parseJSON obj = Option <$> parseJSON obj
+--   {-# INLINE parseJSON #-}
+-- instance ToJSON a => ToJSON (Option a) where
+--   toJSON (Option x) = toJSON x
+--   {-# INLINE toJSON #-}
 
-instance FromJSON (DebugConfigF Option)
-instance ToJSON   (DebugConfigF Option)
+#define makeFromJSON(type)\
+  instance FromJSON (type) where\
+    parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+#define makeToJSON(type)\
+  instance ToJSON (type) where\
+    toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
-instance FromJSON IndentPolicy
-instance ToJSON   IndentPolicy
-instance FromJSON AltChooser
-instance ToJSON   AltChooser
-instance FromJSON ColumnAlignMode
-instance ToJSON   ColumnAlignMode
-instance FromJSON CPPMode
-instance ToJSON   CPPMode
+#define makeFromJSONMaybe(type)\
+  instance FromJSON (type Maybe) where\
+    parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+#define makeFromJSONOption(type)\
+  instance FromJSON (type Option) where\
+    parseJSON = fmap (cMap Option) . parseJSON
+#define makeToJSONMaybe(type)\
+  instance ToJSON (type Maybe) where\
+    toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
+#define makeToJSONOption(type)\
+  instance ToJSON (type Option) where\
+    toEncoding = toEncoding . cMap getOption
 
-instance FromJSON (LayoutConfigF Option)
-instance ToJSON   (LayoutConfigF Option)
+makeFromJSON(ErrorHandlingConfigFMaybe)
+makeToJSON  (ErrorHandlingConfigFMaybe)
+deriving instance Show (ErrorHandlingConfigFMaybe)
 
-instance FromJSON (ErrorHandlingConfigF Option)
-instance ToJSON   (ErrorHandlingConfigF Option)
 
-instance FromJSON (ForwardOptionsF Option)
-instance ToJSON   (ForwardOptionsF Option)
+makeFromJSONOption (DebugConfigF)
+makeFromJSONMaybe  (DebugConfigF)
+makeToJSONOption   (DebugConfigF)
+makeToJSONMaybe    (DebugConfigF)
+-- instance FromJSON (DebugConfigF Option) where
+--   parseJSON = genericParseJSON aesonDecodeOptionsBrittany
+-- instance ToJSON   (DebugConfigF Option) where
+--   toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
-instance FromJSON (ConfigF Option)
-instance ToJSON   (ConfigF Option)
+makeFromJSON (IndentPolicy)
+makeToJSON   (IndentPolicy)
+makeFromJSON (AltChooser)
+makeToJSON   (AltChooser)
+makeFromJSON (ColumnAlignMode)
+makeToJSON   (ColumnAlignMode)
+makeFromJSON (CPPMode)
+makeToJSON   (CPPMode)
+
+makeFromJSONOption (LayoutConfigF)
+makeFromJSONMaybe  (LayoutConfigF)
+makeToJSONOption   (LayoutConfigF)
+makeToJSONMaybe    (LayoutConfigF)
+
+makeFromJSONOption (ErrorHandlingConfigF)
+makeFromJSONMaybe  (ErrorHandlingConfigF)
+makeToJSONOption   (ErrorHandlingConfigF)
+makeToJSONMaybe    (ErrorHandlingConfigF)
+
+makeFromJSONOption (ForwardOptionsF)
+makeFromJSONMaybe  (ForwardOptionsF)
+makeToJSONOption   (ForwardOptionsF)
+makeToJSONMaybe    (ForwardOptionsF)
+
+makeFromJSONOption (ConfigF)
+makeFromJSONMaybe  (ConfigF)
+makeToJSONOption   (ConfigF)
+makeToJSONMaybe    (ConfigF)
 
 -- instance Monoid DebugConfig where
 --   mempty = DebugConfig Nothing Nothing

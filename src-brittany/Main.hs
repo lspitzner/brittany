@@ -39,10 +39,10 @@ import Paths_brittany
 
 
 main :: IO ()
-main = mainFromCmdParser mainCmdParser
+main = mainFromCmdParserWithHelpDesc mainCmdParser
 
-mainCmdParser :: CmdParser Identity (IO ()) ()
-mainCmdParser = do
+mainCmdParser :: CommandDesc () -> CmdParser Identity (IO ()) ()
+mainCmdParser helpDesc = do
   addCmdSynopsis "haskell source pretty printer"
   addCmdHelp $ PP.vcat $ List.intersperse (PP.text "")
     [ parDoc $ "Transforms one haskell module by reformatting"
@@ -60,7 +60,7 @@ mainCmdParser = do
             ++ " https://github.com/lspitzner/brittany/issues"
     ]
   -- addCmd "debugArgs" $ do
-  addHelpCommand
+  addHelpCommand helpDesc
   -- addButcherDebugCommand
   reorderStart
   printHelp <- addSimpleBoolFlag "" ["help"] mempty

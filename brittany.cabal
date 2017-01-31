@@ -1,5 +1,5 @@
 name:                brittany
-version:             0.7.1.0
+version:             0.8.0.0
 -- synopsis:            
 -- description:         
 license:             AllRightsReserved
@@ -50,6 +50,7 @@ library {
     Language.Haskell.Brittany.Transformations.Par
     Language.Haskell.Brittany.Transformations.Columns
     Language.Haskell.Brittany.Transformations.Indent
+    Paths_brittany
   }
   ghc-options: {
     -Wall
@@ -78,9 +79,10 @@ library {
     , bytestring >=0.10.8.1 && <0.11
     , directory >=1.2.6.2 && <1.3
     , lens
-    , butcher >=0.2.0.0 && <0.3
+    , butcher >=1.0.0.0 && <1.1
     , yaml >=0.8.18 && <0.9
-    , extra >=1.4.10 && <1.5
+    , aeson >=1.0.1.0 && <1.3
+    , extra >=1.4.10 && <1.6
     , uniplate >=1.6.12 && <1.7
     , strict >=0.3.2 && <0.4
     , monad-memo >=0.4.1 && <0.5
@@ -217,10 +219,77 @@ test-suite unittests
     }
   ghc-options:      -Wall
   main-is:          TestMain.hs
-  other-modules:    IdentityTests
-                    TestUtils
+  other-modules:    TestUtils
                     AsymptoticPerfTests
   hs-source-dirs:   src-unittests
+  default-extensions: {
+    CPP
+
+    NoImplicitPrelude
+
+    GADTs
+
+    FlexibleContexts
+    FlexibleInstances
+    ScopedTypeVariables
+    MonadComprehensions
+    LambdaCase
+    MultiWayIf
+    KindSignatures
+  }
+  ghc-options: {
+    -Wall
+    -j
+    -fno-warn-unused-imports
+    -fno-warn-orphans
+    -rtsopts
+    -with-rtsopts "-M2G"
+  }
+  if flag(brittany-dev) {
+    ghc-options: -O0 -Werror -fobject-code
+  }
+
+test-suite littests
+  if flag(brittany-dev-lib) {
+    buildable: False
+  } else {
+    buildable: True
+  }
+  type:             exitcode-stdio-1.0
+  default-language: Haskell2010
+  build-depends:
+    { brittany
+    , base >=4.9 && <4.10
+    , ghc
+    , ghc-paths
+    , ghc-exactprint
+    , transformers
+    , containers
+    , mtl
+    , text
+    , multistate
+    , syb
+    , neat-interpolation
+    , hspec
+    , data-tree-print
+    , pretty
+    , bytestring
+    , directory
+    , lens
+    , butcher
+    , yaml
+    , extra
+    , uniplate
+    , strict
+    , monad-memo
+    , safe
+    , either
+    , parsec
+    }
+  ghc-options:      -Wall
+  main-is:          Main.hs
+  other-modules:    
+  hs-source-dirs:   src-literatetests
   default-extensions: {
     CPP
 

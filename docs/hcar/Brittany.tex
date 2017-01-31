@@ -1,0 +1,54 @@
+% Brittany-LE.tex
+\begin{hcarentry}[new]{Brittany}
+\report{Lennart Spitzner}%11/16
+\status{work in progress}
+\makeheader
+
+Brittany is a Haskell source code formatting tool. It is based on
+ghc-exactprint and thus uses the ghc parser, in contrast to tools based on
+haskell-src-exts such as hindent or haskell-formatter.
+
+The goals of the project are to:
+
+\begin{compactitem}
+\item
+  support the full ghc-haskell syntax including syntactic extensions;
+\item
+  retain newlines and comments unmodified (to the degree possible when code
+  around them gets reformatted);
+\item
+  be clever about using horizontal space while not overflowing it if it cannot
+  be avoided;
+\item
+  have linear complexity in the size of the input text / the number of
+  syntactic nodes in the input.
+\item
+  support horizontal alignments (e.g. different equations/pattern matches in
+  the some function's definition).
+\end{compactitem}
+
+In contrast to other formatters brittany internally works in two steps: Firstly
+transforming the syntax tree into a document tree representation, similar to
+the document representation in general-purpose pretty-printers such as the
+\emph{pretty} package, but much more specialized for the specific purpose of
+handling a Haskell source code document. Secondly this document representation
+is transformed into the output text document. This approach allows to handle
+many different syntactic constructs in a uniform way, making it possible
+to attain the above goals with a manageable amount of work.
+
+Brittany is work in progress; currently only type signatures and function
+bindings are transformed, and not all syntactic constructs are supported.
+Nonetheless Brittany is safe to try/use as there are checks in place to
+ensure that the output is syntactically valid.
+
+Brittany requires ghc-8, and is not released on hackage yet; for a description
+of how to build it see the repository README.
+
+\FurtherReading
+{\small
+\begin{compactitem}
+  \item
+    \url{https://github.com/lspitzner/brittany}
+\end{compactitem}
+}
+\end{hcarentry}

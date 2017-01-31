@@ -7,7 +7,7 @@ packages:
 - .
 - extra-dep: true
   location:
-    commit: 8b721f7e17a20a338432f1d31ef55db5e50b8e8d
+    commit: b15f1ae585341ea312f712e63f29a0c57fa5f637
     git: https://github.com/lspitzner/butcher.git
 - extra-dep: true
   location:
@@ -17,4 +17,4 @@ packages:
   location:
     commit: 85af8e4f34ff013575c9acd9675b495ee7f10180
     git: https://github.com/lspitzner/ghc-exactprint.git
-resolver: nightly-2016-09-04
+resolver: nightly-2016-12-04
