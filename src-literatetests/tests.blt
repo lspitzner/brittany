@@ -702,6 +702,15 @@ showPackageDetailedInfo pkginfo =
 isValidPosition position | validX && validY = Just position
                          | otherwise        = Nothing
 
+#test issue-6-pattern-linebreak-validity
+## this is ugly, but at least syntactically valid.
+foo = Reflex.runSpiderHost $ ReflexHost.hostApp $ do
+  (inputEvent :: Reflex.Event Reflex.Spider String, inputFire :: String
+    -> IO Bool                                                         ) <-
+    ReflexHost.newExternalEvent
+  liftIO . forkIO . forever $ getLine >>= inputFire
+  ReflexHost.performEvent_ $ fmap (liftIO . putStrLn) inputEvent
+
 
 ###############################################################################
 ###############################################################################
@@ -738,11 +747,3 @@ isValidPosition position | validX && validY = Just position
 ##  where
 ##   role = stringProperty "WM_WINDOW_ROLE"
 
-#test linebreak
-#pending
-
-foo = Reflex.runSpiderHost $ ReflexHost.hostApp $ do
-  (inputEvent :: Reflex.Event Reflex.Spider String, inputFire :: String -> IO Bool)
-    <- ReflexHost.newExternalEvent
-  liftIO . forkIO . forever $ getLine >>= inputFire
-  ReflexHost.performEvent_ $ fmap (liftIO . putStrLn) inputEvent

@@ -109,10 +109,17 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     case Seq.viewr patDocs of
       Seq.EmptyR -> error "cannot happen ljoiuxoasdcoviuasd"
       xR Seq.:> xN -> do
-        xN' <- docSeq
+        xN' <- -- at the moment, we don't support splitting patterns into
+               -- multiple lines. but we cannot enforce pasting everything
+               -- into one line either, because the type signature will ignore
+               -- this if we overflow sufficiently.
+               -- In order to prevent syntactically invalid results in such
+               -- cases, we need the AddBaseY here.
+               -- This can all change when patterns get multiline support.
+               docAddBaseY BrIndentRegular $ docSeq
           [ appSep $ return xN
           , appSep $ docLit $ Text.pack "::"
-          , tyDoc
+          , docForceSingleline $ tyDoc
           ]
         return $ xR Seq.|> xN'
   ListPat elems _ _ ->
