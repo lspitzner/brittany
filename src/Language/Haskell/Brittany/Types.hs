@@ -158,6 +158,11 @@ data ColSig
     -- or   "pat | cond1, cond2 -> ..."
     --       1111222222222222222
     -- expected to have exactly two columns
+  | ColGuardedBody
+    -- e.g. | foofoo = 1
+    --      | bar    = 2
+    --      111111111222
+    -- expected to have exactly two columns
   | ColBindStmt
   | ColDoLet -- the non-indented variant
   | ColRecUpdate

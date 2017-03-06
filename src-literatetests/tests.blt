@@ -446,6 +446,31 @@ func = do
 ###############################################################################
 ###############################################################################
 ###############################################################################
+#group equations
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test multiple-clauses-1
+func x | x         = simple expression
+       | otherwise = 0
+
+#test multiple-clauses-2
+func x
+  | a somewhat longer guard x = "and a somewhat longer expession that does not"
+  | otherwise                 = "fit without putting the guards in new lines"
+
+#test multiple-clauses-3
+func x
+  | very long guard, another rather long guard that refers to x
+  = nontrivial expression foo bar alsdkjlasdjlasj
+  | otherwise
+  = 0
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 #group regression
 ###############################################################################
 ###############################################################################
@@ -673,6 +698,10 @@ showPackageDetailedInfo pkginfo =
               $+$ nest 4 (vcat (map disp . sort . modules $ pkginfo))
           ]
 
+#test issue 7a
+isValidPosition position | validX && validY = Just position
+                         | otherwise        = Nothing
+
 
 ###############################################################################
 ###############################################################################
@@ -682,13 +711,6 @@ showPackageDetailedInfo pkginfo =
 ###############################################################################
 ###############################################################################
 
-#test issue 7a
-#pending
-
-isValidPosition :: Position -> Maybe Position
-isValidPosition position
-  | validX && validY = Just position
-  | otherwise = Nothing
 
 
 ## this testcase is not about idempotency, but about _how_ the output differs
