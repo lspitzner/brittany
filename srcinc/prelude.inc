@@ -787,3 +787,6 @@ import Control.Monad.Trans.Maybe          ( MaybeT (..)
                                           )
 
 import Language.Haskell.Brittany.Prelude
+
+import Data.Data                          ( toConstr
+                                          )

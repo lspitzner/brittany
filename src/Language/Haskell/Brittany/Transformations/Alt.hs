@@ -450,9 +450,9 @@ getSpacing !bridoc = rec bridoc
           VerticalSpacingParNone -> mVs
           _  -> LineModeInvalid
       BDFForwardLineMode bd -> rec bd
-      BDFExternal{} -> return
-        $ LineModeValid
-        $ VerticalSpacing 999 VerticalSpacingParNone False
+      BDFExternal _ _ _ txt -> return $ LineModeValid $ case Text.lines txt of
+        [t] -> VerticalSpacing (Text.length t) VerticalSpacingParNone False
+        x   -> traceShow x $ VerticalSpacing 999 VerticalSpacingParNone False
       BDFAnnotationPrior _annKey bd -> rec bd
       BDFAnnotationKW _annKey _kw bd -> rec bd
       BDFAnnotationRest  _annKey bd -> rec bd
@@ -663,6 +663,8 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           mVs <- filterAndLimit <$> rec bd
           return $ filter ((==VerticalSpacingParNone) . _vs_paragraph) mVs
         BDFForwardLineMode bd -> rec bd
+        BDFExternal _ _ _ txt | [t] <- Text.lines txt ->
+          return $ [VerticalSpacing (Text.length t) VerticalSpacingParNone False]
         BDFExternal{} ->
           return $ [] -- yes, we just assume that we cannot properly layout
                       -- this.

@@ -185,8 +185,8 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-  x@(HsQualTy (L _ []) _) ->
-    unknownNodeError "HsQualTy [] _" x
+  (HsQualTy (L _ []) _) ->
+    briDocByExactInlineOnly "HsQualTy [] _" ltype
   HsQualTy lcntxts@(L _ cntxts@(_:_)) typ1 -> do
     typeDoc <- docSharedWrapper layoutType typ1
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
@@ -396,7 +396,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
         ]
   HsOpTy{} -> -- TODO
-    unknownNodeError "HsOpTy{}" ltype
+    briDocByExactInlineOnly "HsOpTy{}" ltype
   -- HsOpTy typ1 opName typ2 -> do
   --   -- TODO: these need some proper fixing. precedences don't add up.
   --   --       maybe the parser just returns some trivial right recursion
@@ -511,7 +511,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
               ])
       ]
   HsBangTy{} -> -- TODO
-    unknownNodeError "HsBangTy{}" ltype
+    briDocByExactInlineOnly "HsBangTy{}" ltype
   -- HsBangTy bang typ1 -> do
   --   let bangStr = case bang of
   --         HsSrcBang _ unpackness strictness ->
@@ -563,11 +563,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --     , _layouter_ast = ltype
   --     }
   HsSpliceTy{} -> -- TODO
-    unknownNodeError "" ltype
+    briDocByExactInlineOnly "" ltype
   HsDocTy{} -> -- TODO
-    unknownNodeError "" ltype
+    briDocByExactInlineOnly "" ltype
   HsRecTy{} -> -- TODO
-    unknownNodeError "" ltype
+    briDocByExactInlineOnly "" ltype
   HsExplicitListTy _ typs -> do
     typDocs <- docSharedWrapper layoutType `mapM` typs
     docAlt
@@ -578,10 +578,10 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       -- TODO
       ]
   HsExplicitTupleTy{} -> -- TODO
-    unknownNodeError "" ltype
+    briDocByExactInlineOnly "" ltype
   HsTyLit{} -> -- TODO
-    unknownNodeError "" ltype
+    briDocByExactInlineOnly "" ltype
   HsCoreTy{} -> -- TODO
-    unknownNodeError "" ltype
+    briDocByExactInlineOnly "" ltype
   HsWildCardTy _ ->
     docLit $ Text.pack "_"

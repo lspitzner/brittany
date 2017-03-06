@@ -93,6 +93,7 @@ configParser = do
       { _econf_produceOutputOnErrors = wrapLast $ falseToNothing outputOnErrors
       , _econf_Werror                = wrapLast $ falseToNothing wError
       , _econf_CPPMode               = mempty
+      , _econf_ExactPrintFallback    = mempty
       }
     , _conf_forward       = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]

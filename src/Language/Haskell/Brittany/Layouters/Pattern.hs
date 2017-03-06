@@ -129,7 +129,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
 -- #else
 --   VarPat n -> return $ stringLayouter lpat $ rdrNameToText n
 -- #endif
-  _ -> fmap return $ unknownNodeError "" lpat
+  _ -> fmap return $ briDocByExactInlineOnly "some unknown pattern" lpat
 
 colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
 colsWrapPat = docCols ColPatterns . fmap return . Foldable.toList

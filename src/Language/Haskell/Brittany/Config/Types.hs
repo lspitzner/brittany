@@ -64,9 +64,17 @@ data ForwardOptionsF f = ForwardOptions
   deriving (Generic)
 
 data ErrorHandlingConfigF f = ErrorHandlingConfig
-  { _econf_produceOutputOnErrors :: f (Semigroup.Last Bool)
-  , _econf_Werror                :: f (Semigroup.Last Bool)
-  , _econf_CPPMode               :: f (Semigroup.Last CPPMode)
+  { _econf_produceOutputOnErrors   :: f (Semigroup.Last Bool)
+  , _econf_Werror                  :: f (Semigroup.Last Bool)
+  , _econf_CPPMode                 :: f (Semigroup.Last CPPMode)
+  , _econf_ExactPrintFallback      :: f (Semigroup.Last ExactPrintFallbackMode)
+    -- ^ Determines when to fall back on the exactprint'ed output when
+    -- syntactical constructs are encountered which are not yet handled by
+    -- brittany.
+    -- Note that the "risky" setting is risky because even with the check of
+    -- the syntactic validity of the brittany output, at least in theory there
+    -- may be cases where the output is syntactically/semantically valid but
+    -- has different semantics that the code pre-transformation.
   }
   deriving (Generic)
 
@@ -182,6 +190,8 @@ makeFromJSON (ColumnAlignMode)
 makeToJSON   (ColumnAlignMode)
 makeFromJSON (CPPMode)
 makeToJSON   (CPPMode)
+makeFromJSON (ExactPrintFallbackMode)
+makeToJSON   (ExactPrintFallbackMode)
 
 makeFromJSONOption (LayoutConfigF)
 makeFromJSONMaybe  (LayoutConfigF)
@@ -278,6 +288,15 @@ data CPPMode = CPPModeAbort  -- abort program on seeing -XCPP
                              -- file.)
   deriving (Show, Generic, Data)
 
+data ExactPrintFallbackMode
+  = ExactPrintFallbackModeNever  -- never fall back on exactprinting
+  | ExactPrintFallbackModeInline -- fall back only if there are no newlines in
+                                 -- the exactprint'ed output.
+  | ExactPrintFallbackModeRisky  -- fall back even in the presence of newlines.
+                                 -- THIS MAY THEORETICALLY CHANGE SEMANTICS OF
+                                 -- A PROGRAM BY TRANSFORMING IT.
+  deriving (Show, Generic, Data)
+
 staticDefaultConfig :: Config
 staticDefaultConfig = Config
   { _conf_debug         = DebugConfig
@@ -304,9 +323,10 @@ staticDefaultConfig = Config
     , _lconfig_columnAlignMode    = coerce (ColumnAlignModeMajority 0.7)
     }
   , _conf_errorHandling = ErrorHandlingConfig
-    { _econf_produceOutputOnErrors = coerce False
-    , _econf_Werror                = coerce False
-    , _econf_CPPMode               = coerce CPPModeAbort
+    { _econf_produceOutputOnErrors   = coerce False
+    , _econf_Werror                  = coerce False
+    , _econf_CPPMode                 = coerce CPPModeAbort
+    , _econf_ExactPrintFallback      = coerce ExactPrintFallbackModeInline
     }
   , _conf_forward       = ForwardOptions
     { _options_ghc = Identity []
@@ -347,11 +367,12 @@ instance CZip LayoutConfigF where
     (f x8 y8)
 
 instance CZip ErrorHandlingConfigF where
-  cZip f (ErrorHandlingConfig x1 x2 x3)
-         (ErrorHandlingConfig y1 y2 y3) = ErrorHandlingConfig
+  cZip f (ErrorHandlingConfig x1 x2 x3 x4)
+         (ErrorHandlingConfig y1 y2 y3 y4) = ErrorHandlingConfig
     (f x1 y1)
     (f x2 y2)
     (f x3 y3)
+    (f x4 y4)
 
 instance CZip ForwardOptionsF where
   cZip f (ForwardOptions x1)

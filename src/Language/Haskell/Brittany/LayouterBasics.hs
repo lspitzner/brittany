@@ -36,6 +36,7 @@ module Language.Haskell.Brittany.LayouterBasics
   , docSetBaseAndIndent
   , briDocByExact
   , briDocByExactNoComment
+  , briDocByExactInlineOnly
   , foldedAnnKeys
   , unknownNodeError
   , appSep
@@ -118,6 +119,10 @@ briDocByExact ast = do
   docExt ast anns True
 
 -- | Use ExactPrint's output for this node.
+-- Consider that for multi-line input, the indentation of the code produced
+-- by ExactPrint might be different, and even incompatible with the indentation
+-- of its surroundings as layouted by brittany. But there are safe uses of
+-- this, e.g. for any top-level declarations.
 briDocByExactNoComment
   :: (ExactPrint.Annotate.Annotate ast)
   => GenLocated SrcSpan ast
@@ -128,6 +133,37 @@ briDocByExactNoComment ast = do
                   _dconf_dump_ast_unknown
                   (printTreeWithCustom 100 (customLayouterF anns) ast)
   docExt ast anns False
+
+-- | Use ExactPrint's output for this node, presuming that this output does
+-- not contain any newlines. If this property is not met, the semantics
+-- depend on the @econf_AllowRiskyExactPrintUse@ config flag.
+briDocByExactInlineOnly
+  :: (ExactPrint.Annotate.Annotate ast, Data ast)
+  => String
+  -> GenLocated SrcSpan ast
+  -> ToBriDocM BriDocNumbered
+briDocByExactInlineOnly infoStr ast = do
+  anns <- mAsk
+  traceIfDumpConf "ast"
+                  _dconf_dump_ast_unknown
+                  (printTreeWithCustom 100 (customLayouterF anns) ast)
+  let exactPrinted = Text.pack $ ExactPrint.exactPrint ast anns
+  fallbackMode <-
+    mAsk <&> _conf_errorHandling .> _econf_ExactPrintFallback .> confUnpack
+  let exactPrintNode = allocateNode $ BDFExternal
+        (ExactPrint.Types.mkAnnKey ast)
+        (foldedAnnKeys ast)
+        False
+        exactPrinted
+  let
+    errorAction = do
+      mTell $ [LayoutErrorUnknownNode infoStr ast]
+      docLit $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
+  case (fallbackMode, Text.lines exactPrinted) of
+    (ExactPrintFallbackModeNever, _  ) -> errorAction
+    (_                          , [_]) -> exactPrintNode
+    (ExactPrintFallbackModeRisky, _  ) -> exactPrintNode
+    _                                  -> errorAction
 
 rdrNameToText :: RdrName -> Text
 -- rdrNameToText = Text.pack . show . flip runSDoc unsafeGlobalDynFlags . ppr
