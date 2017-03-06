@@ -86,8 +86,8 @@ stack build
   `~/.brittany/config.yaml` (execute `brittany` once to create default):
 
   ~~~~
-  _conf_forward:
-    _options_ghc:
+  conf_forward:
+    options_ghc:
     - -XLambdaCase
     - -XMultiWayIf
     - -XGADTs
