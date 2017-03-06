@@ -209,9 +209,15 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
               $   return
               <$> ws
             ]
+  let singleLineGuardsDoc guards = appSep $ case guards of
+        []  -> docEmpty
+        [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g]
+        gs  -> docSeq
+            $  [appSep $ docLit $ Text.pack "|"]
+            ++ List.intersperse docCommaSep (return <$> gs)
   docAlt
     $  -- one-line solution
-       [                     docCols
+       [ docCols
          (ColBindingLine alignmentToken)
          [ docSeq (patPartInline ++ [guardPart])
          , docSeq
@@ -221,16 +227,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
            ]
          ]
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let
-         guardPart = case guards of
-           [] -> docEmpty
-           [g] ->
-             docSeq [appSep $ docLit $ Text.pack "|", return g, docSeparator]
-           gs ->
-             docSeq
-               $  [appSep $ docLit $ Text.pack "|"]
-               ++ List.intersperse docCommaSep (return <$> gs)
-               ++ [docSeparator]
+       , let guardPart = singleLineGuardsDoc guards
        , wherePart <- case mWhereDocs of
          Nothing  -> return @[] $ docEmpty
          Just [w] -> return @[] $ docSeq
@@ -251,16 +248,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
             ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let
-         guardPart = case guards of
-           [] -> docEmpty
-           [g] ->
-             docSeq [appSep $ docLit $ Text.pack "|", return g, docSeparator]
-           gs ->
-             docSeq
-               $  [appSep $ docLit $ Text.pack "|"]
-               ++ List.intersperse docCommaSep (return <$> gs)
-               ++ [docSeparator]
+       , let guardPart = singleLineGuardsDoc guards
        , Data.Maybe.isJust mWhereDocs
        ]
     ++ -- two-line solution + where in next line(s)
@@ -271,23 +259,14 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
             ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let
-         guardPart = case guards of
-           [] -> docEmpty
-           [g] ->
-             docSeq [appSep $ docLit $ Text.pack "|", return g, docSeparator]
-           gs ->
-             docSeq
-               $  [appSep $ docLit $ Text.pack "|"]
-               ++ List.intersperse docCommaSep (return <$> gs)
-               ++ [docSeparator]
+       , let guardPart = singleLineGuardsDoc guards
        ]
     ++ -- pattern and exactly one clause in single line, body as par;
        -- where in following lines
        [                            docLines
          $  [ docCols
               (ColBindingLine alignmentToken)
-              [ docSeq (patPartInline ++ [appSep guardPart])
+              [ docSeq (patPartInline ++ [guardPart])
               , docSeq
                 [ appSep $ return binderDoc
                 , docForceParSpacing $ docAddBaseY BrIndentRegular $ return body
@@ -300,13 +279,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
           --   ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let
-         guardPart = case guards of
-           []  -> docEmpty
-           [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g]
-           gs  -> docSeq $ [appSep $ docLit $ Text.pack "|"] ++ List.intersperse
-             docCommaSep
-             (return <$> gs)
+       , let guardPart = singleLineGuardsDoc guards
        ]
     ++ -- pattern and exactly one clause in single line, body in new line.
        [ docLines
@@ -317,19 +290,13 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
             ]
          ++ wherePartMultiLine
        | [(guards, body, _)] <- [clauseDocs]
-       , let
-         guardPart = case guards of
-           []  -> docEmpty
-           [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g]
-           gs  -> docSeq $ [appSep $ docLit $ Text.pack "|"] ++ List.intersperse
-             docCommaSep
-             (return <$> gs)
+       , let guardPart = singleLineGuardsDoc guards
        ]
     ++ -- conservative approach: everything starts on the left.
        [ docLines
          $  [ patPartParWrap
+              $   docEnsureIndent BrIndentRegular
               $   docLines
-              $   fmap (docEnsureIndent BrIndentRegular)
               $   clauseDocs
               >>= \(guardDocs, bodyDoc, _) ->
                     ( case guardDocs of
