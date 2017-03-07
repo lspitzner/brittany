@@ -325,6 +325,30 @@ func (x:+:xr) = x
 #test simple guard
 func | True = x
 
+#test multiple-clauses-1
+func x | x         = simple expression
+       | otherwise = 0
+
+#test multiple-clauses-2
+func x
+  | a somewhat longer guard x = "and a somewhat longer expession that does not"
+  | otherwise                 = "fit without putting the guards in new lines"
+
+#test multiple-clauses-3
+func x
+  | very long guard, another rather long guard that refers to x
+  = nontrivial expression foo bar alsdkjlasdjlasj
+  | otherwise
+  = 0
+
+#test multiple-clauses-4
+func x
+  | very loooooooooooooooooooooooooooooong guard
+  , another rather long guard that refers to x
+  = nontrivial expression foo bar alsdkjlasdjlasj
+  | otherwise
+  = 0
+
 
 ###############################################################################
 ###############################################################################
@@ -441,31 +465,6 @@ func = do
 func = do
   let x = 13
   stmt x
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-#group equations
-###############################################################################
-###############################################################################
-###############################################################################
-
-#test multiple-clauses-1
-func x | x         = simple expression
-       | otherwise = 0
-
-#test multiple-clauses-2
-func x
-  | a somewhat longer guard x = "and a somewhat longer expession that does not"
-  | otherwise                 = "fit without putting the guards in new lines"
-
-#test multiple-clauses-3
-func x
-  | very long guard, another rather long guard that refers to x
-  = nontrivial expression foo bar alsdkjlasdjlasj
-  | otherwise
-  = 0
 
 
 ###############################################################################

@@ -356,9 +356,12 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
                     ( case guardDocs of
                         [] -> []
                         [g] ->
-                          [docSeq [appSep $ docLit $ Text.pack "|", return g]]
+                          [ docForceSingleline
+                          $ docSeq [appSep $ docLit $ Text.pack "|", return g]
+                          ]
                         gs ->
-                          [  docSeq
+                          [  docForceSingleline
+                          $  docSeq
                           $  [appSep $ docLit $ Text.pack "|"]
                           ++ List.intersperse docCommaSep (return <$> gs)
                           ]
