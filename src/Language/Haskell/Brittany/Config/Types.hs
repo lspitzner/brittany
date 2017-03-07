@@ -163,9 +163,11 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
     parseJSON = fmap (cMap Option) . parseJSON
 #define makeToJSONMaybe(type)\
   instance ToJSON (type Maybe) where\
+    toJSON     = Aeson.genericToJSON aesonDecodeOptionsBrittany;\
     toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 #define makeToJSONOption(type)\
   instance ToJSON (type Option) where\
+    toJSON     = toJSON     . cMap getOption;\
     toEncoding = toEncoding . cMap getOption
 
 makeFromJSON(ErrorHandlingConfigFMaybe)

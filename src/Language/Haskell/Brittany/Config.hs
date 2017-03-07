@@ -154,4 +154,4 @@ readMergePersConfig path shouldCreate conf = do
 showConfigYaml :: Config -> String
 showConfigYaml = Data.ByteString.Char8.unpack
                . Data.Yaml.encode
-               . cMap (\(Identity x) -> Option (Just x))
+               . cMap (\(Identity x) -> Just x)
