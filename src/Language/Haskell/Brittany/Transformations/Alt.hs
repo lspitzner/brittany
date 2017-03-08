@@ -452,7 +452,7 @@ getSpacing !bridoc = rec bridoc
       BDFForwardLineMode bd -> rec bd
       BDFExternal _ _ _ txt -> return $ LineModeValid $ case Text.lines txt of
         [t] -> VerticalSpacing (Text.length t) VerticalSpacingParNone False
-        x   -> traceShow x $ VerticalSpacing 999 VerticalSpacingParNone False
+        _   -> VerticalSpacing 999 VerticalSpacingParNone False
       BDFAnnotationPrior _annKey bd -> rec bd
       BDFAnnotationKW _annKey _kw bd -> rec bd
       BDFAnnotationRest  _annKey bd -> rec bd
