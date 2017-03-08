@@ -66,18 +66,102 @@ types mean. This leaves us to explain the different `BriDoc`
   Specify multiple alternative layouts. Take care to appropriately maintain
   sharing for the documents representing the children of the current node.
 
+  See the "Controlling layouting" section below.
+
 - docAltFilter
 
   simple utility wrapper around `docAlt`: Each alternative is accompanied by
   a boolean; if False the alternative is discarded.
 
-- docPar/BDPar
+- docPar `:: m BriDocNumbered -> m BriDocNumbered -> m BriDocMumbered`
 
-  TODO
+  (does not completely match `BDPar`, which has an extra argument.)
+  
+  Describes a "paragraph" - a layout consisting of some headline (which must
+  be free of newlines) and content (that may contain newlines). Simple example
+  is a `do`-block:
+
+  ~~~~.hs
+  do -- headline
+    stmt -- content
+    stmt -- content
+    stmt -- content
+  ~~~~
+
+  But let us first consider the simplest case: `docPar fooDoc barDoc`
+  placed at the start of the line; it will be layouted like this:
+
+  ~~~~.hs
+  foo
+  bar
+  ~~~~
+
+  As you can see, the content is not indented by default. In this form,
+  `docPar a b` behaves like `docLines [a,b]`, and `docPar a (docLines bs)` like
+  `docLines (a:bs)`. What makes `docPar` special is that it allows differing
+  indentation of headline and content, where the lines of `docLines` are
+  supposed to have the same indentation.
+
+  This allows two common uses of `docPar`:
+
+  1. The pattern `docAddBaseY BrIndentRegular $ docPar _ _`. `docAddBaseY`
+     does not affect
+     the current line (i.e. the headline of `docPar`) but it _does_ indent the
+     content.
+
+  2. At the end of a sequence; the following is valid and common:
+     `docSeq [elem1, elem2, docPar elem3 content]` which looks like
+     ~~~~.hs
+     elem1 elem2 elem3
+     content
+     ~~~~
+
+     So the headline does not need occur at the start of the line.
+
+   This interaction between `docSeq`, `docAddBaseY`, and `docPar` allows us to
+   add indentation to the content of a childnode without even knowing if that
+   childnode will actually make use of `docPar`. We can simply use
+   `docAddBaseY BrIndentRegular $ docSeq [foo, bar, childNodeDoc]` and get
+   sensible layout including indentation of the _potential_ content-part of the
+   child node. Such a behaviour would not be possible without this interaction
+   unless we resorted to analysing the doc created for the childnode - which
+   would lead to complex special-casing.
+
+    ~~~~.hs
+    foo bar child-oneline
+    -- or
+    foo bar child-headline
+      child-content
+    ~~~~
+
+   This pattern does however require that we keep this interaction in mind
+   when writing the layouting of such parent/childnode relationships. For
+   example using `docLines` in the child node instead of `docPar` would
+   probably lead to bad results if the parent used `docAddBaseY`.
 
 - docLines/BDLines
 
-  TODO
+  Where `docSeq` is horizontal sequence, `docLines` is the vertical sequence
+  operator. `docLines` has one important requirement: All lines must have the
+  same indentation. Violating this will lead to undefined layouting behaviour.
+
+  As a consequence, there are two valid usage patterns:
+
+  1. `docLines` is used at the start of a line, e.g. as the content of a
+     `docPar`.
+
+  2. The `docSetBaseY $ docLines _` or
+     `docSetBaseAndIndent $ docNonBottomSpacing $ docLines _` patterns allow
+     using `docLines` as a final element of a sequence; the `docSetBase~`
+     constructs ensure that the rest-lines are indented as much as the
+     headline. An example is:
+  
+     ~~~~.hs
+     foo | bar = 1
+         | baz = 2
+     ~~~~
+
+     where "| bar = 1" and "| bar = 2" are two lines of a docLines.
 
 - docSeparator/BDSeparator
 
@@ -85,6 +169,14 @@ types mean. This leaves us to explain the different `BriDoc`
   other separators and has no effect if inserted right after inserting space
   (e.g. in the start of a line when indented) or if already indented due to
   horizontal alignment.
+
+  Note also this helper:
+
+  ~~~~.hs
+  appSep :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+  appSep x = docSeq [x, docSeparator]
+  ~~~~
+
 
 ### Creating horizontal alignment
 
@@ -138,9 +230,9 @@ types mean. This leaves us to explain the different `BriDoc`
 
   ~~~~
   docLines
-    docCols equation
+    docCols equationSigToken
       "func"
-      docCols
+      docCols patternSigToken
         "("
         "MyLongFoo"
         "abc"
@@ -151,7 +243,7 @@ types mean. This leaves us to explain the different `BriDoc`
         "1"
     docCols equation
       "func"
-      docCols
+      docCols patternSigToken
         "("
         "Bar"
         "a"
@@ -180,13 +272,65 @@ TODO
 
 ### Controlling layouting
 
-TODO
+The purpose of these nodes/modifiers is affecting the choices of alternatives
+(see `docAlt`) made. For example in a bridoc tree like
+
+~~~~
+docAlt
+  docForceSingleLine
+    [stuff]
+  [otherOption]
+~~~~
+
+if stuff only returns layouts that use multiple lines, then this alternative
+will not be considered, and this will be effectively simplified to just
+`[otherOption]`.
 
 - docNonBottomSpacing
-- docSetParSpacing
-- docForceParSpacing
+
+  Enforces that this node is _not_ discarded even when all considered layouts
+  use more space than available. This counteracts the fact that we consider
+  a limited amount of layouts in order to retain linear runtime. Bad usage
+  of this modifier will lead to unnecessary overflow over the max-columns (80
+  by default) even when other layoutings were available.
+
+  [TODO: consideration of valid usecases]
+
+- docSetParSpacing and docForceParSpacing
+
+  We say a node has "ParSpacing" if it looks like a `docPar` result.. it has
+  a headline and (indented) content in new lines. This property can propagate
+  somewhat non-trivially upwards and is used by certain parents. It mainly
+  provides nice layouting choices in cases such as:
+
+  ~~~~.hs
+  foo = abc $ def $ do
+    stmt
+    stmt
+  ~~~~
+
+  Consider what we know when translating the equation: We have two
+  possibilites:
+
+  ~~~~.hs
+  foo = child-node-doc -- note that child may contain a docPar.
+  -- or
+  foo =
+    child-node-doc
+  ~~~~
+
+  As usual, we do not to inspect child-node-doc; this makes deciding between
+  the two choices hard. Looking at is-single/multi-line is not sufficient.
+
+  [TODO]
+
 - docForceSingleline
+
+  Discards child layouts that contain newlines.
+
 - docForceMultiline
+
+  Discards child layouts lacking newlines.
 
 ### Inserting comments / Controlling comment placement
 
