@@ -109,24 +109,36 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     headDoc <- docSharedWrapper layoutExpr headE
     paramDocs <- docSharedWrapper layoutExpr `mapM` paramEs
     docAlt
-      [ docCols ColApp
+      [ -- foo x y
+        docCols ColApp
       $ appSep (docForceSingleline headDoc)
       : spacifyDocs (docForceSingleline <$> paramDocs)
-      , docSeq
+      , -- foo x
+        --     y
+        docSeq
         [ appSep (docForceSingleline headDoc)
         , docSetBaseY
         $ docAddBaseY BrIndentRegular
         $ docLines
-        $ paramDocs
+        $ (docForceSingleline <$> paramDocs)
         ]
-      , docSetParSpacing
+      , -- foo
+        --   x
+        --   y
+        docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
         (docForceSingleline headDoc)
         ( docNonBottomSpacing
         $ docLines paramDocs
         )
-      , docAddBaseY BrIndentRegular
+      , -- ( multi
+        --   line
+        --   function
+        -- )
+        --   x
+        --   y
+        docAddBaseY BrIndentRegular
       $ docPar
         headDoc
         ( docNonBottomSpacing
@@ -317,7 +329,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     elseExprDoc <- docSharedWrapper layoutExpr elseExpr
     hasComments <- hasAnyCommentsBelow lexpr
     docAltFilter
-      [ (,) (not hasComments)
+      [ -- if _ then _ else _
+        (,) (not hasComments)
       $ docSeq
         [ appSep $ docLit $ Text.pack "if"
         , appSep $ docForceSingleline ifExprDoc
@@ -326,7 +339,20 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , appSep $ docLit $ Text.pack "else"
         , docForceSingleline elseExprDoc
         ]
-      , (,) True
+      , -- either
+        --   if expr
+        --   then foo
+        --     bar
+        --   else foo
+        --     bar
+        -- or
+        --   if expr
+        --   then
+        --     stuff
+        --   else
+        --     stuff
+        -- note that this has par-spacing
+        (,) True
       $ docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
@@ -350,7 +376,24 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               $ docPar (docLit $ Text.pack "else") elseExprDoc
               ]
             ])
-      , (,) True
+      , -- either
+        --   if multi
+        --      line
+        --      condition
+        --   then foo
+        --     bar
+        --   else foo
+        --     bar
+        -- or
+        --   if multi
+        --      line
+        --      condition
+        --   then
+        --     stuff
+        --   else
+        --     stuff
+        -- note that this does _not_ have par-spacing
+        (,) True
       $ docAddBaseY BrIndentRegular
       $ docPar
           ( docAddBaseY (BrIndentSpecial 3)
@@ -374,6 +417,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               ]
             ])
       , (,) True
+      $ docSetBaseY
       $ docLines
         [ docAddBaseY (BrIndentSpecial 3)
         $ docSeq

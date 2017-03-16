@@ -412,7 +412,7 @@ data VerticalSpacing
     , _vs_paragraph :: !VerticalSpacingPar
     , _vs_parFlag   :: !Bool
     }
-  deriving Show
+  deriving (Eq, Show)
 
 newtype LineModeValidity a = LineModeValidity (Strict.Maybe a)
   deriving (Functor, Applicative, Monad, Show, Alternative)

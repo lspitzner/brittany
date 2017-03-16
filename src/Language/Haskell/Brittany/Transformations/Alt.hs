@@ -552,6 +552,11 @@ getSpacings
   -> Memo.MemoT Int [VerticalSpacing] m [VerticalSpacing]
 getSpacings limit bridoc = preFilterLimit <$> rec bridoc
   where
+    -- when we do `take K . filter someCondition` on a list of spacings, we
+    -- need to first (also) limit the size of the input list, otherwise a
+    -- _large_ input with a similarly _large_ prefix not passing our filtering
+    -- process could lead to exponential runtime behaviour.
+    -- TODO: 3 is arbitrary.
     preFilterLimit :: [VerticalSpacing] -> [VerticalSpacing]
     preFilterLimit = take (3*limit)
     memoWithKey :: Memo.MonadMemo k v m1 => k -> m1 v -> m1 v
@@ -565,15 +570,41 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
               VerticalSpacingParNone -> True
               VerticalSpacingParSome i -> i <= colMax
               VerticalSpacingParAlways{} -> True
-      let filterAndLimit :: [VerticalSpacing] -> [VerticalSpacing]
+      let -- the standard function used to enforce a constant upper bound
+          -- on the number of elements returned for each node. Should be
+          -- applied whenever in a parent the combination of spacings from
+          -- its children might cause excess of the upper bound.
+          filterAndLimit :: [VerticalSpacing] -> [VerticalSpacing]
           filterAndLimit = take limit
+                           -- prune so we always consider a constant
+                           -- amount of spacings per node of the BriDoc.
                          . filter hasOkColCount
-                         . preFilterLimit   -- we need to limit here in case
-                                            -- that the input list is
-                                            -- _large_ with a similarly _large_
-                                            -- prefix not passing hasOkColCount
-                                            -- predicate.
-                                            -- TODO: 3 is arbitrary.
+                           -- throw out any spacings (i.e. children) that
+                           -- already use more columns than available in
+                           -- total.
+                         . List.nub
+                           -- In the end we want to know if there is at least
+                           -- one valid spacing for any alternative.
+                           -- If there are duplicates in the list, then these
+                           -- will either all be valid (so having more than the
+                           -- first is pointless) or all invalid (in which
+                           -- case having any of them is pointless).
+                           -- Nonetheless I think the order of spacings should
+                           -- be preserved as it provides a deterministic
+                           -- choice for which spacings to prune (which is
+                           -- an argument against simly using a Set).
+                           -- I have also considered `fmap head . group` which
+                           -- seems to work similarly well for common cases
+                           -- and which might behave even better when it comes
+                           -- to determinism of the algorithm. But determinism
+                           -- should not be overrated here either - in the end
+                           -- this is about deterministic behaviour of the
+                           -- pruning we do that potentially results in
+                           -- non-optimal layouts, and we'd rather take optimal
+                           -- layouts when we can than take non-optimal layouts
+                           -- just to be consistent with other cases where
+                           -- we'd choose non-optimal layouts.
+                         . preFilterLimit
       result <- case brdc of
         -- BDWrapAnnKey _annKey bd -> rec bd
         BDFEmpty ->

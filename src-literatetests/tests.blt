@@ -690,10 +690,8 @@ showPackageDetailedInfo pkginfo =
           , entry "Documentation" haddockHtml  showIfInstalled text
           , entry "Cached"        haveTarball  alwaysShow      dispYesNo
           , if not (hasLib pkginfo)
-          then
-            empty
-          else
-            text "Modules:"
+            then empty
+            else text "Modules:"
               $+$ nest 4 (vcat (map disp . sort . modules $ pkginfo))
           ]
 
@@ -709,6 +707,10 @@ foo = Reflex.runSpiderHost $ ReflexHost.hostApp $ do
     ReflexHost.newExternalEvent
   liftIO . forkIO . forever $ getLine >>= inputFire
   ReflexHost.performEvent_ $ fmap (liftIO . putStrLn) inputEvent
+
+#test issue 16
+foldrDesc f z = unSwitchQueue $ \q ->
+  switch (Min.foldrDesc (f unTaggedF) z q) (Min.foldrAsc (f unTaggedF) z q)
 
 
 ###############################################################################
