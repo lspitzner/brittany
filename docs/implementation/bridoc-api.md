@@ -77,9 +77,9 @@ types mean. This leaves us to explain the different `BriDoc`
 
   (does not completely match `BDPar`, which has an extra argument.)
   
-  Describes a "paragraph" - a layout consisting of some headline (which must
-  be free of newlines) and content (that may contain newlines). Simple example
-  is a `do`-block:
+  Describes a "paragraph" - a layout consisting of some headline (which may
+  contain newlines, although it rarely does) and content
+  (that may contain newlines). Simple example is a `do`-block:
 
   ~~~~.hs
   do -- headline
@@ -88,7 +88,8 @@ types mean. This leaves us to explain the different `BriDoc`
     stmt -- content
   ~~~~
 
-  But let us first consider the simplest case: `docPar fooDoc barDoc`
+  But let us first consider the simplest case:
+  `docPar (docLit "foo") (docLit "bar")`
   placed at the start of the line; it will be layouted like this:
 
   ~~~~.hs
@@ -104,7 +105,7 @@ types mean. This leaves us to explain the different `BriDoc`
 
   This allows two common uses of `docPar`:
 
-  1. The pattern `docAddBaseY BrIndentRegular $ docPar _ _`. `docAddBaseY`
+  1. The pattern `docAddBaseY BrIndentRegular $ docPar _ _`. Here `docAddBaseY`
      does not affect
      the current line (i.e. the headline of `docPar`) but it _does_ indent the
      content.
@@ -134,7 +135,7 @@ types mean. This leaves us to explain the different `BriDoc`
       child-content
     ~~~~
 
-   This pattern does however require that we keep this interaction in mind
+   This pattern does however requires that we keep this interaction in mind
    when writing the layouting of such parent/childnode relationships. For
    example using `docLines` in the child node instead of `docPar` would
    probably lead to bad results if the parent used `docAddBaseY`.
@@ -156,10 +157,10 @@ types mean. This leaves us to explain the different `BriDoc`
      constructs ensure that the rest-lines are indented as much as the
      headline. An example is:
   
-     ~~~~.hs
-     foo | bar = 1
-         | baz = 2
-     ~~~~
+      ~~~~.hs
+      foo | bar = 1
+          | baz = 2
+      ~~~~
 
      where "| bar = 1" and "| bar = 2" are two lines of a docLines.
 
@@ -262,13 +263,48 @@ types mean. This leaves us to explain the different `BriDoc`
 
 ### Controlling indentation level
 
-TODO
+Firstly, we keep track of two slightly different notions of indentation,
+indicated by the terms "Base" and "Indent".
+
+The latter is used for indentation
+levels that affect parsing (i.e. for those instances where haskell is
+layout-sensitive). Consequently "Indent" is changed exactly in those cases
+where the "off-side rule" applies (see the "Layout" chapter in the haskell
+2010 report). This indentation level is important for comments, as comments
+in ghc-exactprint have positions relative to the this "Indent".
+
+"Base" on the other hand refers to all other indentation happening.
 
 - docAddBaseY/BDAddBaseY
+
+  Does not affect the current line, but anything after a newline (e.g. when
+  the child is a docPar).
+
+  Stacking more than one of these will combine the two indentation-amounts
+  using maximum, not addition.
+
 - docSetBaseY
+
+  Sets the "Base" to the current "cursor position", i.e. with the
+  `docSetBaseY (docLines ..)` pattern the lines will line up to the left.
+
 - docSetIndentLevel
+
+  Similar to docSetBaseY, but for "Indent".
+
 - docSetBaseAndIndent
-- docEnsureIndent
+
+  Literally `docSetBaseY . docSetIndentLevel`.
+
+- docEnsureIndent (this really should be named docAddEnsureBaseAndIndent unless
+  I forgot some detail.)
+
+  This _adds_ to both Base and Indent, and immediately applies this as well.
+  This is in contrast to the other operations that only have an effect after
+  the first newline occuring in the child node.
+  If the cursor is currently left of the new indentation level, spaces will be
+  inserted, and new lines will be indented (at least) as far, too.
+
 
 ### Controlling layouting
 
@@ -322,7 +358,19 @@ will not be considered, and this will be effectively simplified to just
   As usual, we do not to inspect child-node-doc; this makes deciding between
   the two choices hard. Looking at is-single/multi-line is not sufficient.
 
-  [TODO]
+  Instead we define a new property (I'll call it "has_par_spacing" here) that
+  propagates appropriately upwards:
+
+  ~~~~.prolog
+  has_par_spacing(setParSpacing(_)).
+  has_par_spacing(docSeq[_, .., x]) :- has_par_spacing(x).
+  has_par_spacing(docCols[_, .., x]) :- has_par_spacing(x).
+  has_par_spacing(docNonBottomSpacing(x)) :- has_par_spacing(x).
+  has_par_spacing(docAddBaseY(x)) :- has_par_spacing(x).
+  ~~~~
+
+  and so on for other simple unary wrappers. (i hope my sloppy prolog is not
+  too confusing.)
 
 - docForceSingleline
 
@@ -334,11 +382,39 @@ will not be considered, and this will be effectively simplified to just
 
 ### Inserting comments / Controlling comment placement
 
-TODO
+For many cases it is sufficient to use the following construct to insert
+comments into the output:
+
+- docWrapNode
+
+  Inserts all comments associated above this node above the node, and all
+  other comments below. Works on simple nodes, but also on lists and Seqs of
+  nodes.
+
+ghc-exactprint does not associate all comments to the exactly preceding node
+and instead tries to associate to the "logically connected" node. This
+behaviour is desirable when considering automatic refactoring, think of moving
+a function and the comment above the function along with it. But not even this
+is sufficient - there exist comments that need to be inserted in the middle of
+a syntactical construct, for example consider the pattern
+`Foo{{- we don't care about fields! -}}`. Here, the comment is placed between
+keywords (or "keysymbols" or whatever) that do not have separate nodes in
+the syntax tree. ghc-exactprint captures such comment in some way that allows
+inserting them back properly.
+
+The logic used here is determined by the ghc-exactprint design. The core type
+is [the Annotation type](https://hackage.haskell.org/package/ghc-exactprint-0.5.3.0/docs/Language-Haskell-GHC-ExactPrint-Types.html#t:Annotation)
 
 - docAnnotationPrior
 - docAnnotationKW
 - docAnnotationRest
+
+To match this, there are special comment-insertion nodes in the BriDoc type
+that allow for fine-grained control of where specific comments are inserted.
+"Prior" refers to the same `annPriorComments` annotation field. "KW" refers to
+the `annsDP` field. "Rest" refers to all remaining (i.e. not-yet-inserted;
+brittany keeps track of which have already been processed) comments, including
+the `annFollowingComments` field.
 
 ### Deprecated
 
