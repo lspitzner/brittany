@@ -1,16 +1,16 @@
-name:                brittany
-version:             0.8.0.0
+name:                 brittany
+version:              0.8.0.0
 -- synopsis:            
 -- description:         
-license:             AllRightsReserved
--- license-file:        LICENSE
-author:              Lennart Spitzner
-maintainer:          lsp@informatik.uni-kiel.de
+license:              AllRightsReserved
+-- license-file:         LICENSE
+author:               Lennart Spitzner
+maintainer:           lsp@informatik.uni-kiel.de
 -- copyright:           
-category:            Language
-build-type:          Simple
-extra-source-files:  ChangeLog.md
-cabal-version:       >=1.10
+category:             Language
+build-type:           Simple
+extra-source-files:   ChangeLog.md
+cabal-version:        >=1.10
 
 flag brittany-dev
   description: dev options
@@ -27,6 +27,9 @@ library {
     Haskell2010
   hs-source-dirs:
     src
+  install-includes: {
+    srcinc/prelude.inc
+  }
   exposed-modules: {
     Language.Haskell.Brittany
     Language.Haskell.Brittany.Prelude
@@ -54,7 +57,6 @@ library {
   }
   ghc-options: {
     -Wall
-    -fprof-auto -fprof-cafs -fno-spec-constr
     -j
     -fno-warn-unused-imports
     -fno-warn-orphans

@@ -171,49 +171,49 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
     toEncoding = toEncoding . cMap getOption
 
 makeFromJSON(ErrorHandlingConfigFMaybe)
-makeToJSON  (ErrorHandlingConfigFMaybe)
+makeToJSON(ErrorHandlingConfigFMaybe)
 deriving instance Show (ErrorHandlingConfigFMaybe)
 
 
-makeFromJSONOption (DebugConfigF)
-makeFromJSONMaybe  (DebugConfigF)
-makeToJSONOption   (DebugConfigF)
-makeToJSONMaybe    (DebugConfigF)
+makeFromJSONOption(DebugConfigF)
+makeFromJSONMaybe(DebugConfigF)
+makeToJSONOption(DebugConfigF)
+makeToJSONMaybe(DebugConfigF)
 -- instance FromJSON (DebugConfigF Option) where
 --   parseJSON = genericParseJSON aesonDecodeOptionsBrittany
 -- instance ToJSON   (DebugConfigF Option) where
 --   toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
-makeFromJSON (IndentPolicy)
-makeToJSON   (IndentPolicy)
-makeFromJSON (AltChooser)
-makeToJSON   (AltChooser)
-makeFromJSON (ColumnAlignMode)
-makeToJSON   (ColumnAlignMode)
-makeFromJSON (CPPMode)
-makeToJSON   (CPPMode)
-makeFromJSON (ExactPrintFallbackMode)
-makeToJSON   (ExactPrintFallbackMode)
+makeFromJSON(IndentPolicy)
+makeToJSON(IndentPolicy)
+makeFromJSON(AltChooser)
+makeToJSON(AltChooser)
+makeFromJSON(ColumnAlignMode)
+makeToJSON(ColumnAlignMode)
+makeFromJSON(CPPMode)
+makeToJSON(CPPMode)
+makeFromJSON(ExactPrintFallbackMode)
+makeToJSON(ExactPrintFallbackMode)
 
-makeFromJSONOption (LayoutConfigF)
-makeFromJSONMaybe  (LayoutConfigF)
-makeToJSONOption   (LayoutConfigF)
-makeToJSONMaybe    (LayoutConfigF)
+makeFromJSONOption(LayoutConfigF)
+makeFromJSONMaybe(LayoutConfigF)
+makeToJSONOption(LayoutConfigF)
+makeToJSONMaybe(LayoutConfigF)
 
-makeFromJSONOption (ErrorHandlingConfigF)
-makeFromJSONMaybe  (ErrorHandlingConfigF)
-makeToJSONOption   (ErrorHandlingConfigF)
-makeToJSONMaybe    (ErrorHandlingConfigF)
+makeFromJSONOption(ErrorHandlingConfigF)
+makeFromJSONMaybe(ErrorHandlingConfigF)
+makeToJSONOption(ErrorHandlingConfigF)
+makeToJSONMaybe(ErrorHandlingConfigF)
 
-makeFromJSONOption (ForwardOptionsF)
-makeFromJSONMaybe  (ForwardOptionsF)
-makeToJSONOption   (ForwardOptionsF)
-makeToJSONMaybe    (ForwardOptionsF)
+makeFromJSONOption(ForwardOptionsF)
+makeFromJSONMaybe(ForwardOptionsF)
+makeToJSONOption(ForwardOptionsF)
+makeToJSONMaybe(ForwardOptionsF)
 
-makeFromJSONOption (ConfigF)
-makeFromJSONMaybe  (ConfigF)
-makeToJSONOption   (ConfigF)
-makeToJSONMaybe    (ConfigF)
+makeFromJSONOption(ConfigF)
+makeFromJSONMaybe(ConfigF)
+makeToJSONOption(ConfigF)
+makeToJSONMaybe(ConfigF)
 
 -- instance Monoid DebugConfig where
 --   mempty = DebugConfig Nothing Nothing
