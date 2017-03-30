@@ -67,6 +67,7 @@ library {
     Language.Haskell.Brittany.Internal.Layouters.Expr
     Language.Haskell.Brittany.Internal.Layouters.Stmt
     Language.Haskell.Brittany.Internal.Layouters.Pattern
+    Language.Haskell.Brittany.Internal.Layouters.DataDecl
     Language.Haskell.Brittany.Internal.Transformations.Alt
     Language.Haskell.Brittany.Internal.Transformations.Floating
     Language.Haskell.Brittany.Internal.Transformations.Par
