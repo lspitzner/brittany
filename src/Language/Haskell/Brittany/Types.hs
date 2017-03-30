@@ -17,8 +17,7 @@ import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId )
-import           SrcLoc ( SrcSpan )
+import           GHC ( Located, runGhc, GenLocated(L), moduleNameString, AnnKeywordId )
 
 import           Language.Haskell.GHC.ExactPrint ( AnnKey, Comment )
 import           Language.Haskell.GHC.ExactPrint.Types ( KeywordId, Anns, DeltaPos, mkAnnKey )
@@ -181,9 +180,9 @@ data BrIndent = BrIndentNone
 
 type ToBriDocM = MultiRWSS.MultiRWS '[Config, Anns] '[[LayoutError], Seq String] '[NodeAllocIndex]
 
-type ToBriDoc (sym :: * -> *) = GenLocated SrcSpan (sym RdrName) -> ToBriDocM BriDocNumbered
-type ToBriDoc' sym            = GenLocated SrcSpan sym           -> ToBriDocM BriDocNumbered
-type ToBriDocC sym c          = GenLocated SrcSpan sym           -> ToBriDocM c
+type ToBriDoc (sym :: * -> *) = Located (sym RdrName) -> ToBriDocM BriDocNumbered
+type ToBriDoc' sym            = Located sym           -> ToBriDocM BriDocNumbered
+type ToBriDocC sym c          = Located sym           -> ToBriDocM c
 
 data DocMultiLine
   = MultiLineNo
@@ -324,6 +323,7 @@ instance Uniplate.Uniplate BriDoc where
 
 newtype NodeAllocIndex = NodeAllocIndex Int
 
+-- TODO: rename to "dropLabels" ?
 unwrapBriDocNumbered :: BriDocNumbered -> BriDoc
 unwrapBriDocNumbered tpl = case snd tpl of
   BDFEmpty                     -> BDEmpty

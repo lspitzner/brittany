@@ -75,6 +75,7 @@ data ErrorHandlingConfigF f = ErrorHandlingConfig
     -- the syntactic validity of the brittany output, at least in theory there
     -- may be cases where the output is syntactically/semantically valid but
     -- has different semantics that the code pre-transformation.
+  , _econf_omit_output_valid_check :: f (Semigroup.Last Bool)
   }
   deriving (Generic)
 
@@ -329,6 +330,7 @@ staticDefaultConfig = Config
     , _econf_Werror                  = coerce False
     , _econf_CPPMode                 = coerce CPPModeAbort
     , _econf_ExactPrintFallback      = coerce ExactPrintFallbackModeInline
+    , _econf_omit_output_valid_check = coerce False
     }
   , _conf_forward       = ForwardOptions
     { _options_ghc = Identity []
@@ -369,12 +371,13 @@ instance CZip LayoutConfigF where
     (f x8 y8)
 
 instance CZip ErrorHandlingConfigF where
-  cZip f (ErrorHandlingConfig x1 x2 x3 x4)
-         (ErrorHandlingConfig y1 y2 y3 y4) = ErrorHandlingConfig
+  cZip f (ErrorHandlingConfig x1 x2 x3 x4 x5)
+         (ErrorHandlingConfig y1 y2 y3 y4 y5) = ErrorHandlingConfig
     (f x1 y1)
     (f x2 y2)
     (f x3 y3)
     (f x4 y4)
+    (f x5 y5)
 
 instance CZip ForwardOptionsF where
   cZip f (ForwardOptions x1)

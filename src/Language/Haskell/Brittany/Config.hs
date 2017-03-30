@@ -55,6 +55,7 @@ configParser = do
 
   outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
   wError             <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
+  omitValidCheck <- addSimpleBoolFlag "" ["omit-output-check"] (flagHelp $ parDoc "omit checking if the output is syntactically valid; for dev on brittany")
 
   optionsGhc         <- addFlagStringParams
     ""
@@ -94,6 +95,7 @@ configParser = do
       , _econf_Werror                = wrapLast $ falseToNothing wError
       , _econf_CPPMode               = mempty
       , _econf_ExactPrintFallback    = mempty
+      , _econf_omit_output_valid_check = wrapLast $ falseToNothing omitValidCheck
       }
     , _conf_forward       = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]

@@ -49,8 +49,7 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import           Language.Haskell.Brittany.Utils
 
-import           GHC ( GenLocated(L), moduleNameString )
-import           SrcLoc ( SrcSpan )
+import           GHC ( Located, GenLocated(L), moduleNameString )
 
 
 
@@ -505,7 +504,7 @@ layoutWritePriorComments
      , MonadMultiState LayoutState m
      , MonadMultiWriter (Seq String) m
      )
-  => GenLocated SrcSpan ast
+  => Located ast
   -> m ()
 layoutWritePriorComments ast = do
   mAnn <- do
@@ -539,7 +538,7 @@ layoutWritePostComments :: (Data.Data.Data ast,
                                                MonadMultiWriter Text.Builder.Builder m,
                                                MonadMultiState LayoutState m
                                                , MonadMultiWriter (Seq String) m)
-                         => GenLocated SrcSpan ast -> m ()
+                         => Located ast -> m ()
 layoutWritePostComments ast = do
   mAnn <- do
     state <- mGet
@@ -591,7 +590,7 @@ layoutIndentRestorePostComment = do
 --                                                MonadMultiWriter Text.Builder.Builder m,
 --                                                MonadMultiState LayoutState m
 --                                   , MonadMultiWriter (Seq String) m)
---                                 => GenLocated SrcSpan ast -> m ()
+--                                 => Located ast -> m ()
 -- layoutWritePriorCommentsRestore x = do
 --   layoutWritePriorComments x
 --   layoutIndentRestorePostComment
@@ -600,7 +599,7 @@ layoutIndentRestorePostComment = do
 --                                                MonadMultiWriter Text.Builder.Builder m,
 --                                                MonadMultiState LayoutState m
 --                                                , MonadMultiWriter (Seq String) m)
---                                 => GenLocated SrcSpan ast -> m ()
+--                                 => Located ast -> m ()
 -- layoutWritePostCommentsRestore x = do
 --   layoutWritePostComments x
 --   layoutIndentRestorePostComment

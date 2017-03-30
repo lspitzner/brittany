@@ -147,7 +147,8 @@ mainCmdParser helpDesc = do
           -- let out = do
           --       decl <- someDecls
           --       ExactPrint.exactPrint decl anns
-          (errsWarns, outLText) <- if hasCPP
+          let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
+          (errsWarns, outLText) <- if hasCPP || omitCheck
             then return $ pPrintModule config anns parsedSource
             else pPrintModuleAndCheck config anns parsedSource
           let customErrOrder LayoutWarning{}            = 0 :: Int

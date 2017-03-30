@@ -16,11 +16,20 @@ of different syntactical constructs into a raw `BriDoc` value.
 (technically a `BriDocF` value, we'll explain soon.)
 
 The input of this translation is the syntax tree produced by
-GHC/ExactPrint. The ghc api exposes the syntax tree nodes, and
+GHC/ExactPrint. The GHC API exposes the syntax tree nodes, and
 ExactPrint adds certain annotations (e.g. information about
 in-source comments). The main thing that you will be looking
-at here is the ghc api documentation, for example
+at here is the GHC API documentation, for example
 https://downloads.haskell.org/~ghc/8.0.2/docs/html/libraries/ghc-8.0.2/HsDecls.html
+
+Brittany has several flags for dumping intermediate values of the
+transformation process; relevant for the "input" syntax tree are the flags
+`--dump-ast-unknown` and `--dump-ast-full`, where the latter will print the
+whole ast of the input to stderr, the former will only do so for nodes where
+brittany falls back on the ghc-exactprint output (i.e. in those cases where
+we don't transform, but do a mere copy).
+See [this example ast output](output-example-01.md)
+(yeah, raw ASTs are ~~annoying large~~ fun!)
 
 ## Two examples of the process producing raw BriDoc
 
@@ -67,6 +76,12 @@ https://downloads.haskell.org/~ghc/8.0.2/docs/html/libraries/ghc-8.0.2/HsDecls.h
   What are the exact semantics of the different `doc..` functions?
   Why do we need to wrap the `BriDoc` constructors behind those smart-constructor thingies?)
   are not explained yet.
+
+  In [this example output](output-example-02.md) the BriDoc tree produced in
+  this fashion is shown for the trivial input `x :: Maybe Int`. Can you spot
+  the `BDAlt` node that matches the above `docAlt` invocation? (hint: the
+  node is used twice, so we can see two identical `BDAlt` nodes.)
+  This leads directly to:
   
 ## Size of BriDoc trees, Sharing and Complexity
 
@@ -78,7 +93,7 @@ the same node.
 This means the number of nodes in the `BriDoc` value we produces in general is
 exponential in the number for syntax nodes of the input.
 
-But we are targeting for linear run-time, right? So what can save us here?
+But we are aiming for linear run-time, right? So what can save us here?
 You might think: We have sharing! For `let x = 3+3; (x, x)` we only have one
 `x` in memory ever. And indeed, we do the same above: `typeDoc1` and `2` are
 used in exactly that manner: Both are referenced once in each of the two
@@ -114,9 +129,31 @@ So.. we already mentioned "memoization" there, right?
    If the `BriDocF` tree is exponential, the transformations will still
    do only linear-amount of "selection work" in order to convert into a
    linear-sized `BriDoc` tree.
-   
+
    This property is the defining one that motivates the BriDoc
    intermediate representation.
+
+Lets have a look at this selection work! We saw at
+[the above example](output-example-02.md) how `x :: Maybe Int` had a
+non-trivial raw `BriDoc` representation, already with two nested `BDAlt`
+nodes and resulting four alternatives. Removing those nodes is the first
+step of the `BriDoc` transformation, and we can
+[observe the output after removing those nodes](output-example-03.md).
+Quite a bit shorter, the tree-printing-algorithm even thinks that it fits
+in a single line now.
+
+We will not go into detail about how this "alt-transformation" (the one doing
+the "selection work" works and what other transformations follow here.
+For this example not much happens; you can see so in the output which you
+probably already noticed in the last example.
+
+But for the "alt-transformation" itself, lets at least consider what it does:
+We traverse the input BriDoc and whenever a `BDAlt` is encountered, one of the
+alternatives is chosen; the other alternatives and the `BDAlt` node itself are
+discarded.
+The choice is made in such a fashion that, well, the final output does not
+contain lines with more than 80 columns but otherwise relatively few newlines.
+Magic! (for now at least.)
 
 ## BriDocF
 
@@ -132,7 +169,8 @@ Lets have a glance at related code/types we have so far:
 -- The pure BriDoc: What we really want, but cannot use everywhere due
 -- to sharing issues.
 -- Isomorphic to `BriDocF Identity`. We still use this type, because
--- then we have to unwrap the `Identities` only in once place.
+-- then we have to unwrap the `Identities` only in once place after reducing
+-- the tree to a non-exponentially-sized one.
 data BriDoc
   = BDEmpty
   | BDLit !Text
@@ -229,4 +267,4 @@ the scenes. For this reason, we will focus on the smart
 constructors in the following, because they define the
 real interface to be used.
 
-You now might have a glance at "bridoc-api.md"
+You now might have a glance at [bridoc-api.md](bridoc-api.md).

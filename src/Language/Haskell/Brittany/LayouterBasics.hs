@@ -69,9 +69,8 @@ import Language.Haskell.Brittany.Types
 import Language.Haskell.Brittany.Utils
 
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import qualified SrcLoc        as GHC
-import           SrcLoc ( SrcSpan )
 import           OccName ( occNameString )
 import           Name ( getOccString )
 import           Module ( moduleName )
@@ -89,7 +88,7 @@ processDefault
      , MonadMultiWriter Text.Builder.Builder m
      , MonadMultiReader ExactPrint.Types.Anns m
      )
-  => GenLocated SrcSpan ast
+  => Located ast
   -> m ()
 processDefault x = do
   anns <- mAsk
@@ -109,7 +108,7 @@ processDefault x = do
 -- syntactic constructs when children are not handled yet.
 briDocByExact
   :: (ExactPrint.Annotate.Annotate ast)
-  => GenLocated SrcSpan ast
+  => Located ast
   -> ToBriDocM BriDocNumbered
 briDocByExact ast = do
   anns <- mAsk
@@ -125,7 +124,7 @@ briDocByExact ast = do
 -- this, e.g. for any top-level declarations.
 briDocByExactNoComment
   :: (ExactPrint.Annotate.Annotate ast)
-  => GenLocated SrcSpan ast
+  => Located ast
   -> ToBriDocM BriDocNumbered
 briDocByExactNoComment ast = do
   anns <- mAsk
@@ -140,7 +139,7 @@ briDocByExactNoComment ast = do
 briDocByExactInlineOnly
   :: (ExactPrint.Annotate.Annotate ast, Data ast)
   => String
-  -> GenLocated SrcSpan ast
+  -> Located ast
   -> ToBriDocM BriDocNumbered
 briDocByExactInlineOnly infoStr ast = do
   anns <- mAsk
@@ -179,7 +178,7 @@ lrdrNameToText (L _ n) = rdrNameToText n
 
 lrdrNameToTextAnn
   :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
-  => GenLocated SrcSpan RdrName
+  => Located RdrName
   -> m Text
 lrdrNameToTextAnn ast@(L _ n) = do
   anns <- mAsk
@@ -201,7 +200,7 @@ lrdrNameToTextAnn ast@(L _ n) = do
 
 lrdrNameToTextAnnTypeEqualityIsSpecial
   :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
-  => GenLocated SrcSpan RdrName
+  => Located RdrName
   -> m Text
 lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
   x <- lrdrNameToTextAnn ast
@@ -271,7 +270,7 @@ allocNodeIndex = do
 -- docLit t = allocateNode $ BDFLit t
 -- 
 -- docExt :: (ExactPrint.Annotate.Annotate ast, MonadMultiState NodeAllocIndex m)
---        => GenLocated SrcSpan ast -> ExactPrint.Types.Anns -> Bool -> m BriDocNumbered
+--        => Located ast -> ExactPrint.Types.Anns -> Bool -> m BriDocNumbered
 -- docExt x anns shouldAddComment = allocateNode $ BDFExternal
 --                   (ExactPrint.Types.mkAnnKey x)
 --                   (foldedAnnKeys x)
@@ -323,7 +322,7 @@ allocNodeIndex = do
 -- 
 -- 
 -- docPostComment :: (Data.Data.Data ast, MonadMultiState NodeAllocIndex m)
---                => GenLocated SrcSpan ast
+--                => Located ast
 --                -> m BriDocNumbered
 --                -> m BriDocNumbered
 -- docPostComment ast bdm = do
@@ -331,7 +330,7 @@ allocNodeIndex = do
 --   allocateNode $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast) bd
 -- 
 -- docWrapNode :: ( Data.Data.Data ast, MonadMultiState NodeAllocIndex m)
---             => GenLocated SrcSpan ast
+--             => Located ast
 --             -> m BriDocNumbered
 --             -> m BriDocNumbered
 -- docWrapNode ast bdm = do
@@ -371,7 +370,7 @@ docLit t = allocateNode $ BDFLit t
 
 docExt
   :: (ExactPrint.Annotate.Annotate ast)
-  => GenLocated SrcSpan ast
+  => Located ast
   -> ExactPrint.Types.Anns
   -> Bool
   -> ToBriDocM BriDocNumbered
@@ -389,6 +388,7 @@ docAltFilter = docAlt . map snd . filter fst
 
 
 docSeq :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
+docSeq [] = docEmpty
 docSeq l = allocateNode . BDFSeq =<< sequence l
 
 docLines :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
@@ -460,7 +460,7 @@ docParenLSep = appSep $ docLit $ Text.pack "("
 
 docNodeAnnKW
   :: Data.Data.Data ast
-  => GenLocated SrcSpan ast
+  => Located ast
   -> Maybe AnnKeywordId
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM BriDocNumbered
@@ -469,15 +469,15 @@ docNodeAnnKW ast kw bdm =
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)
-              => GenLocated SrcSpan ast
+              => Located ast
               -> ToBriDocM a
               -> ToBriDocM a
   docWrapNodePrior :: ( Data.Data.Data ast)
-                   => GenLocated SrcSpan ast
+                   => Located ast
                    -> ToBriDocM a
                    -> ToBriDocM a
   docWrapNodeRest  :: ( Data.Data.Data ast)
-                   => GenLocated SrcSpan ast
+                   => Located ast
                    -> ToBriDocM a
                    -> ToBriDocM a
 

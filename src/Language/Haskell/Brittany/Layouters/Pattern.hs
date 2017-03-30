@@ -14,8 +14,7 @@ import           Language.Haskell.Brittany.Types
 import           Language.Haskell.Brittany.LayouterBasics
 
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
-import           SrcLoc ( SrcSpan )
+import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import           HsSyn
 import           Name
 import           BasicTypes
@@ -142,7 +141,7 @@ colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
 colsWrapPat = docCols ColPatterns . fmap return . Foldable.toList
 
 wrapPatPrepend
-  :: GenLocated SrcSpan (Pat RdrName)
+  :: Located (Pat RdrName)
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM (Seq BriDocNumbered)
 wrapPatPrepend pat prepElem = do
@@ -154,7 +153,7 @@ wrapPatPrepend pat prepElem = do
       return $ x1' Seq.<| xR
 
 wrapPatListy
-  :: [GenLocated SrcSpan (Pat RdrName)]
+  :: [Located (Pat RdrName)]
   -> String
   -> String
   -> ToBriDocM (Seq BriDocNumbered)

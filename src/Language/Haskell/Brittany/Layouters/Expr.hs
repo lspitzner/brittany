@@ -16,7 +16,6 @@ import           Language.Haskell.Brittany.LayouterBasics
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..) )
-import           SrcLoc ( SrcSpan )
 import           HsSyn
 import           Name
 import qualified FastString
