@@ -40,6 +40,7 @@ import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Layouters.Type
 import           Language.Haskell.Brittany.Internal.Layouters.Decl
 import           Language.Haskell.Brittany.Internal.Layouters.Module
+import           Language.Haskell.Brittany.Internal.Layouters.DataDecl
 import           Language.Haskell.Brittany.Internal.Utils
 import           Language.Haskell.Brittany.Internal.Backend
 import           Language.Haskell.Brittany.Internal.BackendUtils
@@ -51,13 +52,15 @@ import           Language.Haskell.Brittany.Internal.Transformations.Par
 import           Language.Haskell.Brittany.Internal.Transformations.Columns
 import           Language.Haskell.Brittany.Internal.Transformations.Indent
 
-import qualified GHC                                     as GHC
+import qualified GHC                           as GHC
                                                    hiding ( parseModule )
 import           ApiAnnotation                            ( AnnKeywordId(..) )
-import           GHC                                      ( runGhc
+import           GHC                                      ( Located
+                                                          , runGhc
                                                           , GenLocated(L)
                                                           , moduleNameString
                                                           )
+import           RdrName                                  ( RdrName(..) )
 import           SrcLoc                                   ( SrcSpan )
 import           HsSyn
 import qualified DynFlags                                as GHC
@@ -484,7 +487,6 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
           (cmY, cmX) = foldl' folder (0, 0) finalComments
       in  ppmMoveToExactLoc $ ExactPrint.DP (eofZ - cmY, eofX - cmX)
     _ -> return ()
-
 
 getDeclBindingNames :: LHsDecl GhcPs -> [String]
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
