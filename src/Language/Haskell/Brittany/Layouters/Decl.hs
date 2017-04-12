@@ -25,6 +25,11 @@ import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
 import           HsSyn
 import           Name
+import           BasicTypes ( InlinePragma(..)
+                            , Activation(..)
+                            , InlineSpec(..)
+                            , RuleMatchInfo(..)
+                            )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 
 import           Language.Haskell.Brittany.Layouters.Type
@@ -60,7 +65,27 @@ layoutSig lsig@(L _loc sig) = case sig of
              ]
            )
          ]
-  _                                     -> briDocByExactNoComment lsig -- TODO
+  InlineSig name (InlinePragma _ spec _arity phaseAct conlike) ->
+    docWrapNode lsig $ do
+      nameStr <- lrdrNameToTextAnn name
+      let specStr = case spec of
+            Inline          -> "INLINE "
+            Inlinable       -> "INLINABLE "
+            NoInline        -> "NOINLINE "
+            EmptyInlineSpec -> "" -- i have no idea if this is correct.
+      let phaseStr = case phaseAct of
+            NeverActive      -> "[] "
+            AlwaysActive     -> ""
+            ActiveBefore _ i -> "[~" ++ show i ++ "] "
+            ActiveAfter  _ i -> "[" ++ show i ++ "] "
+      let conlikeStr = case conlike of
+            FunLike -> ""
+            ConLike -> "CONLIKE "
+      docLit
+        $  Text.pack ("{-# " ++ specStr ++ conlikeStr ++ phaseStr)
+        <> nameStr
+        <> Text.pack " #-}"
+  _ -> briDocByExactNoComment lsig -- TODO
 
 layoutGuardLStmt :: ToBriDoc' (Stmt RdrName (LHsExpr RdrName))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
