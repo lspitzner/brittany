@@ -35,47 +35,47 @@ See [this example ast output](output-example-01.md)
 
 1. For example, `Brittany.hs` contains the following code (shortened a bit):
 
-  ~~~~.hs
-  ppDecl d@(L loc decl) = case decl of
-    SigD sig  -> [..] $ do
-      briDoc <- briDocMToPPM $ layoutSig (L loc sig)
-      layoutBriDoc d briDoc
-    ValD bind -> [..] $ do
-      briDoc <- [..] layoutBind (L loc bind)
-      layoutBriDoc d briDoc
-    _         -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc d
-  ~~~~
+    ~~~~.hs
+    ppDecl d@(L loc decl) = case decl of
+      SigD sig  -> [..] $ do
+        briDoc <- briDocMToPPM $ layoutSig (L loc sig)
+        layoutBriDoc d briDoc
+      ValD bind -> [..] $ do
+        briDoc <- [..] layoutBind (L loc bind)
+        layoutBriDoc d briDoc
+      _         -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc d
+    ~~~~
 
-  which matches on the type of module top-level syntax node and
-  dispatches to `layoutSig`/`layoutBind` to layout type signatures
-  and equations. For all other constructs, it currently falls back to using
-  ExactPrint to reproduce the exact original.
+    which matches on the type of module top-level syntax node and
+    dispatches to `layoutSig`/`layoutBind` to layout type signatures
+    and equations. For all other constructs, it currently falls back to using
+    ExactPrint to reproduce the exact original.
 
 2. Lets look at a "lower" level fragment that actually produces BriDoc (from Type.hs):
 
-  ~~~~.hs
-    -- if our type is an application; think "HsAppTy Maybe Int"
-    HsAppTy typ1 typ2 -> do
-      typeDoc1 <- docSharedWrapper layoutType typ1 -- layout `Maybe`
-      typeDoc2 <- docSharedWrapper layoutType typ2 -- layout `Int`
-      docAlt                                       -- produce two possible layouts
-        [ docSeq                                       -- a singular-line sequence, with a space in between
-          [ docForceSingleline typeDoc1                -- "Maybe Int"
-          , docLit $ Text.pack " "
-          , docForceSingleline typeDoc2
+    ~~~~.hs
+      -- if our type is an application; think "HsAppTy Maybe Int"
+      HsAppTy typ1 typ2 -> do
+        typeDoc1 <- docSharedWrapper layoutType typ1 -- layout `Maybe`
+        typeDoc2 <- docSharedWrapper layoutType typ2 -- layout `Int`
+        docAlt                                       -- produce two possible layouts
+          [ docSeq                                       -- a singular-line sequence, with a space in between
+            [ docForceSingleline typeDoc1                -- "Maybe Int"
+            , docLit $ Text.pack " "
+            , docForceSingleline typeDoc2
+            ]
+          , docPar                                       -- a multi-line result, with the "child" indented.
+              typeDoc1                                   -- "Maybe\
+              (docEnsureIndent BrIndentRegular typeDoc2) --    Int"
           ]
-        , docPar                                       -- an multi-line result, with the "child" indented.
-            typeDoc1                                   -- "Maybe\
-            (docEnsureIndent BrIndentRegular typeDoc2) --    Int"
-        ]
-  ~~~~
+    ~~~~
 
-  here, all functions prefixed with "doc" produces new BriDoc(F) nodes.
-  I think this example can be understood already, even when many details
-  (what is `docSharedWrapper`?
-  What are the exact semantics of the different `doc..` functions?
-  Why do we need to wrap the `BriDoc` constructors behind those smart-constructor thingies?)
-  are not explained yet.
+    here, all functions prefixed with "doc" produce new BriDoc(F) nodes.
+    I think this example can be understood already, even when many details
+    (what is `docSharedWrapper`?
+    What are the exact semantics of the different `doc..` functions?
+    Why do we need to wrap the `BriDoc` constructors behind those smart-constructor thingies?)
+    are not explained yet.
 
   In [this example output](output-example-02.md) the BriDoc tree produced in
   this fashion is shown for the trivial input `x :: Maybe Int`. Can you spot
@@ -144,8 +144,8 @@ in a single line now.
 
 We will not go into detail about how this "alt-transformation" (the one doing
 the "selection work" works and what other transformations follow here.
-For this example not much happens; you can see so in the output which you
-probably already noticed in the last example.
+For this example not much happens; you can see so in the final `BriDoc` which
+you probably already noticed in the last example.
 
 But for the "alt-transformation" itself, lets at least consider what it does:
 We traverse the input BriDoc and whenever a `BDAlt` is encountered, one of the
@@ -215,7 +215,7 @@ We don't use this directly, but the code below uses this,
 and if the type `ToBriDocM` scared you, see how mundane it
 is used here (`m` will be `ToBriDocM` mostly):
 
-~~~~
+~~~~.hs
 allocNodeIndex :: MonadMultiState NodeAllocIndex m => m Int
 allocNodeIndex = do
   NodeAllocIndex i <- mGet

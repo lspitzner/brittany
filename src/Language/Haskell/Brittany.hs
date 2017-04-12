@@ -188,11 +188,12 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
         in  (anns', post)
   MultiRWSS.withMultiReader anns' $ processDefault emptyModule
   decls `forM_` ppDecl
-  let finalComments = filter ( fst .> \case
-                               ExactPrint.Types.AnnComment{} -> True
-                               _                             -> False
-                             )
-                             post
+  let finalComments = filter
+        ( fst .> \case
+          ExactPrint.Types.AnnComment{} -> True
+          _                             -> False
+        )
+        post
   post `forM_` \case
     (ExactPrint.Types.AnnComment (ExactPrint.Types.Comment cmStr _ _), l) -> do
       ppmMoveToExactLoc l
@@ -257,39 +258,34 @@ layoutBriDoc :: Data.Data.Data ast => ast -> BriDocNumbered -> PPM ()
 layoutBriDoc ast briDoc = do
   -- first step: transform the briDoc.
   briDoc'                       <- MultiRWSS.withMultiStateS BDEmpty $ do
+    -- Note that briDoc is BriDocNumbered, but state type is BriDoc.
+    -- That's why the alt-transform looks a bit special here.
     traceIfDumpConf "bridoc raw" _dconf_dump_bridoc_raw
       $ briDocToDoc
       $ unwrapBriDocNumbered
       $ briDoc
     -- bridoc transformation: remove alts
     transformAlts briDoc >>= mSet
-    mGet
-      >>= traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt
-      .   briDocToDoc
+    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-alt"
+                                            _dconf_dump_bridoc_simpl_alt
     -- bridoc transformation: float stuff in
-    mGet <&> transformSimplifyFloating >>= mSet
-    mGet
-      >>= traceIfDumpConf "bridoc post-floating"
-                          _dconf_dump_bridoc_simpl_floating
-      .   briDocToDoc
+    mGet >>= transformSimplifyFloating .> mSet
+    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-floating"
+                                            _dconf_dump_bridoc_simpl_floating
     -- bridoc transformation: par removal
-    mGet <&> transformSimplifyPar >>= mSet
-    mGet
-      >>= traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par
-      .   briDocToDoc
+    mGet >>= transformSimplifyPar .> mSet
+    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-par"
+                                            _dconf_dump_bridoc_simpl_par
     -- bridoc transformation: float stuff in
-    mGet <&> transformSimplifyColumns >>= mSet
-    mGet
-      >>= traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns
-      .   briDocToDoc
-    -- -- bridoc transformation: indent
-    mGet <&> transformSimplifyIndent >>= mSet
-    mGet
-      >>= traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent
-      .   briDocToDoc
-    mGet
-      >>= traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final
-      .   briDocToDoc
+    mGet >>= transformSimplifyColumns .> mSet
+    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-columns"
+                                            _dconf_dump_bridoc_simpl_columns
+    -- bridoc transformation: indent
+    mGet >>= transformSimplifyIndent .> mSet
+    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-indent"
+                                            _dconf_dump_bridoc_simpl_indent
+    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc final"
+                                            _dconf_dump_bridoc_final
     -- -- convert to Simple type
     -- simpl <- mGet <&> transformToSimple
     -- return simpl
@@ -317,10 +313,9 @@ layoutBriDoc ast briDoc = do
 
   state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'
 
-  let
-    remainingComments =
-      extractAllComments =<< Map.elems (_lstate_comments state')
+  let remainingComments =
+        extractAllComments =<< Map.elems (_lstate_comments state')
   remainingComments
-    `forM_` (mTell . (:[]) . LayoutErrorUnusedComment . show . fst)
+    `forM_` (fst .> show .> LayoutErrorUnusedComment .> (:[]) .> mTell)
 
   return $ ()
