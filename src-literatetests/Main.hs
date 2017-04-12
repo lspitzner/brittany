@@ -154,7 +154,9 @@ defaultTestConfig = Config
     , _lconfig_altChooser         = coerce $ AltChooserBoundedSearch 3
     , _lconfig_columnAlignMode    = coerce (ColumnAlignModeMajority 0.7)
     }
-  , _conf_errorHandling = _conf_errorHandling staticDefaultConfig
+  , _conf_errorHandling = (_conf_errorHandling staticDefaultConfig)
+    { _econf_omit_output_valid_check = coerce True
+    }
   , _conf_forward       = ForwardOptions
     { _options_ghc = Identity []
     }

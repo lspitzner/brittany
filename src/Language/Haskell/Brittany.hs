@@ -115,7 +115,10 @@ parsePrintModule conf filename input = do
   case parseResult of
     Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
     Right (anns, parsedModule) -> do
-      (errs, ltext) <- pPrintModuleAndCheck conf anns parsedModule
+      let omitCheck = conf & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
+      (errs, ltext) <- if omitCheck
+        then return $ pPrintModule conf anns parsedModule
+        else pPrintModuleAndCheck conf anns parsedModule
       return $ if null errs
         then Right $ TextL.toStrict $ ltext
         else
