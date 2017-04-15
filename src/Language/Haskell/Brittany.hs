@@ -202,13 +202,17 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
     (ExactPrint.Types.G AnnEofPos, (ExactPrint.Types.DP (eofX, eofY))) ->
-      let folder acc (kw, ExactPrint.Types.DP (x, _)) = case kw of
-            ExactPrint.Types.AnnComment cm
-              | GHC.RealSrcSpan span <- ExactPrint.Types.commentIdentifier cm
-              -> acc + x + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
-            _ -> acc + x
-          cmX = foldl' folder 0 finalComments
-      in  ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY)
+      let
+        folder (acc, _) (kw, ExactPrint.Types.DP (x, y)) = case kw of
+          ExactPrint.Types.AnnComment cm
+            | GHC.RealSrcSpan span <- ExactPrint.Types.commentIdentifier cm
+            -> ( acc + x + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
+               , y + GHC.srcSpanEndCol span - GHC.srcSpanStartCol span
+               )
+          _ -> (acc + x, y)
+        (cmX, cmY) = foldl' folder (0, 0) finalComments
+      in
+        ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY - cmY)
     _ -> return ()
 
 withTransformedAnns :: SYB.Data ast => ast -> PPM () -> PPM ()
@@ -224,7 +228,7 @@ withTransformedAnns ast m = do
           ExactPrint.runTransform anns (commentAnnFixTransformGlob ast)
     in  annsBalanced
 
-    
+
 ppDecl :: LHsDecl RdrName -> PPM ()
 ppDecl d@(L loc decl) = case decl of
   SigD sig  -> -- trace (_sigHead sig) $
