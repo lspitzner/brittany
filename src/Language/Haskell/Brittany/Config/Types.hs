@@ -154,6 +154,7 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
     parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
 #define makeToJSON(type)\
   instance ToJSON (type) where\
+    toJSON     = Aeson.genericToJSON aesonDecodeOptionsBrittany;\
     toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
 #define makeFromJSONMaybe(type)\
