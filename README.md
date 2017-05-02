@@ -13,7 +13,8 @@ This project's goals roughly are to:
 - Retain newlines and comments unmodified;
 - Be clever about using the available horizontal space while not overflowing
   it if it cannot be avoided;
-- Be clever about aligning things horizontally.
+- Be clever about aligning things horizontally (this can be turned off
+  completely however);
 - Have linear complexity in the size of the input.
 
 At this point, these goals are completed to different degrees.
