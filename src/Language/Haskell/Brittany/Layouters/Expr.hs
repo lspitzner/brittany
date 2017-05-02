@@ -283,21 +283,47 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   ExplicitTuple args boxity
     | Just argExprs <- args `forM` (\case (L _ (Present e)) -> Just e; _ -> Nothing) -> do
     argDocs <- docSharedWrapper layoutExpr `mapM` argExprs
-    case boxity of
-      Boxed -> docAlt
-        [ docSeq
-        $  [ docLit $ Text.pack "(" ]
-        ++ List.intersperse (appSep $ docLit $ Text.pack ",") argDocs
-        ++ [ docLit $ Text.pack ")"]
-        -- TODO
+    hasComments <- hasAnyCommentsBelow lexpr
+    let (openLit, closeLit) = case boxity of
+          Boxed -> (docLit $ Text.pack "(", docLit $ Text.pack ")")
+          Unboxed -> (docLit $ Text.pack "(#", docLit $ Text.pack "#)")
+    case splitFirstLast argDocs of
+      FirstLastEmpty -> docSeq
+        [ openLit
+        , docNodeAnnKW lexpr (Just AnnOpenP) $ closeLit
         ]
-      Unboxed -> docAlt
-        [ docSeq
-        $  [ docLit $ Text.pack "(#" ]
-        ++ List.intersperse (appSep $ docLit $ Text.pack ",") argDocs
-        ++ [ docLit $ Text.pack "#)"]
-        -- TODO
+      FirstLastSingleton e -> docAlt
+        [ docCols ColTuple
+          [ openLit
+          , docNodeAnnKW lexpr (Just AnnOpenP) $ docForceSingleline e
+          , closeLit
+          ]
+        , docSetBaseY $ docLines
+          [ docSeq
+            [ openLit
+            , docNodeAnnKW lexpr (Just AnnOpenP) $ docForceSingleline e
+            ]
+          , closeLit
+          ]
         ]
+      FirstLast e1 ems eN ->
+        docAltFilter
+          [ (,) (not hasComments)
+          $ docCols ColTuple
+            (  [docSeq [openLit, docForceSingleline e1]]
+            ++ (ems <&> \e -> docSeq [docCommaSep, docForceSingleline e])
+            ++ [docSeq [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) (docForceSingleline eN), closeLit]]
+            )
+          , (,) True
+          $ let
+              start = docCols ColTuples
+                        [appSep $ openLit, e1]
+              linesM = ems <&> \d ->
+                      docCols ColTuples [docCommaSep, d]
+              lineN = docCols ColTuples [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) eN]
+              end   = closeLit
+            in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
+          ]
   ExplicitTuple{} ->
     unknownNodeError "ExplicitTuple|.." lexpr 
   HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do

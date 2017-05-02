@@ -747,10 +747,20 @@ foldrDesc f z = unSwitchQueue $ \q ->
 
 #test issue 18
 autocheckCases =
-  [ ("Never Deadlocks", representative deadlocksNever)
-  , ("No Exceptions", representative exceptionsNever)
+  [ ("Never Deadlocks"  , representative deadlocksNever)
+  , ("No Exceptions"    , representative exceptionsNever)
   , ("Consistent Result", alwaysSame) -- already representative
   ]
+
+#test issue 18b
+autocheckCases =
+  [ ("Never Deadlocks", representative deadlocksNever)
+  , ("No Exceptions"  , representative exceptionsNever)
+  , ( "Consistent Result"
+    , alwaysSame -- already representative
+    )
+  ]
+
 
 ###############################################################################
 ###############################################################################

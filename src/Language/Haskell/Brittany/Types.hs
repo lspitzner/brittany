@@ -168,6 +168,8 @@ data ColSig
   | ColListComp
   | ColList
   | ColApp
+  | ColTuple
+  | ColTuples
   | ColOpPrefix -- merge with ColList ? other stuff?
 
   -- TODO
