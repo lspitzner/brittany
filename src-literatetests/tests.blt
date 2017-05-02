@@ -745,6 +745,12 @@ foo = Reflex.runSpiderHost $ ReflexHost.hostApp $ do
 foldrDesc f z = unSwitchQueue $ \q ->
   switch (Min.foldrDesc (f unTaggedF) z q) (Min.foldrAsc (f unTaggedF) z q)
 
+#test issue 18
+autocheckCases =
+  [ ("Never Deadlocks", representative deadlocksNever)
+  , ("No Exceptions", representative exceptionsNever)
+  , ("Consistent Result", alwaysSame) -- already representative
+  ]
 
 ###############################################################################
 ###############################################################################

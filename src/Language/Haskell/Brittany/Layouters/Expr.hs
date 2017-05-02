@@ -21,6 +21,7 @@ import           Name
 import qualified FastString
 import           BasicTypes
 
+import           Language.Haskell.Brittany.Utils
 import           Language.Haskell.Brittany.Layouters.Pattern
 import           Language.Haskell.Brittany.Layouters.Decl
 import           Language.Haskell.Brittany.Layouters.Stmt
@@ -547,19 +548,40 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     unknownNodeError "HsDo{} no comp" lexpr
   ExplicitList _ _ elems@(_:_) -> do
     elemDocs <- elems `forM` docSharedWrapper layoutExpr
-    docAlt
-      [ docSeq
-      $  [docLit $ Text.pack "["]
-      ++ List.intersperse docCommaSep (docForceSingleline <$> elemDocs)
-      ++ [docLit $ Text.pack "]"]
-      , let
-          start = docCols ColList
-                    [appSep $ docLit $ Text.pack "[", List.head elemDocs]
-          lines = List.tail elemDocs <&> \d ->
-                  docCols ColList [docCommaSep, d]
-          end   = docLit $ Text.pack "]"
-        in docSetBaseY $ docLines $ [start] ++ lines ++ [end]
-      ]
+    case splitFirstLast elemDocs of
+      FirstLastEmpty -> docSeq
+        [ docLit $ Text.pack "["
+        , docNodeAnnKW lexpr (Just AnnOpenS) $ docLit $ Text.pack "]"
+        ]
+      FirstLastSingleton e -> docAlt
+        [ docSeq
+          [ docLit $ Text.pack "["
+          , docNodeAnnKW lexpr (Just AnnOpenS) $ docForceSingleline e
+          , docLit $ Text.pack "]"
+          ]
+        , docSetBaseY $ docLines
+          [ docSeq
+            [ docLit $ Text.pack "["
+            , docNodeAnnKW lexpr (Just AnnOpenS) $ docForceSingleline e
+            ]
+          , docLit $ Text.pack "]"
+          ]
+        ]
+      FirstLast e1 ems eN ->
+        docAlt
+          [ docSeq
+          $  [docLit $ Text.pack "["]
+          ++ List.intersperse docCommaSep (docForceSingleline <$> (e1:ems ++ [docNodeAnnKW lexpr (Just AnnOpenS) eN]))
+          ++ [docLit $ Text.pack "]"]
+          , let
+              start = docCols ColList
+                        [appSep $ docLit $ Text.pack "[", e1]
+              linesM = ems <&> \d ->
+                      docCols ColList [docCommaSep, d]
+              lineN = docCols ColList [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenS) eN]
+              end   = docLit $ Text.pack "]"
+            in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
+          ]
   ExplicitList _ _ [] ->
     docLit $ Text.pack "[]"
   ExplicitPArr{} -> do

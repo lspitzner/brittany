@@ -22,6 +22,8 @@ module Language.Haskell.Brittany.Utils
   , spanMaybe
   , transformUp
   , transformDownMay
+  , FirstLastView(..)
+  , splitFirstLast
   )
 where
 
@@ -265,6 +267,16 @@ spanMaybe f (x1:xR) | Just y <- f x1 = (y : ys, xs)
  where
   (ys, xs) = spanMaybe f xR
 spanMaybe _ xs                       = ([], xs)
+
+data FirstLastView a
+  = FirstLastEmpty
+  | FirstLastSingleton a
+  | FirstLast a [a] a
+
+splitFirstLast :: [a] -> FirstLastView a
+splitFirstLast [] = FirstLastEmpty
+splitFirstLast [x] = FirstLastSingleton x
+splitFirstLast (x1:xr) = FirstLast x1 (List.init xr) (List.last xr)
 
 -- TODO: move to uniplate upstream?
 -- aka `transform`
