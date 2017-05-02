@@ -574,6 +574,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     unknownNodeError "HsDo{} no comp" lexpr
   ExplicitList _ _ elems@(_:_) -> do
     elemDocs <- elems `forM` docSharedWrapper layoutExpr
+    hasComments <- hasAnyCommentsBelow lexpr
     case splitFirstLast elemDocs of
       FirstLastEmpty -> docSeq
         [ docLit $ Text.pack "["
@@ -594,12 +595,14 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           ]
         ]
       FirstLast e1 ems eN ->
-        docAlt
-          [ docSeq
+        docAltFilter
+          [  (,) (not hasComments)
+          $  docSeq
           $  [docLit $ Text.pack "["]
           ++ List.intersperse docCommaSep (docForceSingleline <$> (e1:ems ++ [docNodeAnnKW lexpr (Just AnnOpenS) eN]))
           ++ [docLit $ Text.pack "]"]
-          , let
+          , (,) True
+          $ let
               start = docCols ColList
                         [appSep $ docLit $ Text.pack "[", e1]
               linesM = ems <&> \d ->
