@@ -118,11 +118,13 @@ layoutBind lbind@(L _ bind) = case bind of
     clauseDocs <- layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
     binderDoc  <- docLit $ Text.pack "="
+    hasComments <- hasAnyCommentsBelow lbind
     fmap Right $ docWrapNode lbind $ layoutPatternBindFinal Nothing
                                                             binderDoc
                                                             (Just patDocs)
                                                             clauseDocs
                                                             mWhereDocs
+                                                            hasComments
   _ -> Right <$> unknownNodeError "" lbind
 
 data BagBindOrSig = BagBind (LHsBindLR RdrName RdrName)
@@ -190,11 +192,13 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match _ pats _ (GRHSs grhs
   clauseDocs <- docWrapNodeRest lmatch $ layoutGrhs `mapM` grhss
   mWhereDocs <- layoutLocalBinds whereBinds
   let alignmentToken = if null pats then Nothing else mIdStr
+  hasComments <- hasAnyCommentsBelow lmatch
   layoutPatternBindFinal alignmentToken
                          binderDoc
                          (Just patDoc)
                          clauseDocs
                          mWhereDocs
+                         hasComments
 
 layoutPatternBindFinal
   :: Maybe Text
@@ -202,8 +206,9 @@ layoutPatternBindFinal
   -> Maybe BriDocNumbered
   -> [([BriDocNumbered], BriDocNumbered, LHsExpr RdrName)]
   -> Maybe [BriDocNumbered]
+  -> Bool
   -> ToBriDocM BriDocNumbered
-layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = do
+layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs hasComments = do
   let patPartInline  = case mPatDoc of
         Nothing     -> []
         Just patDoc -> [appSep $ docForceSingleline $ return patDoc]
@@ -219,21 +224,31 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
   -- TODO: apart from this, there probably are more nodes below which could
   --       be shared between alternatives.
   wherePartMultiLine :: [ToBriDocM BriDocNumbered] <- case mWhereDocs of
-    Nothing -> return $ []
-    Just ws ->
-      fmap (fmap return)
-        $ sequence
-        $ return @[]
-        $ docEnsureIndent whereIndent
-        $ docLines
+    Nothing  -> return $ []
+    Just [w] -> fmap (pure . pure) $ docAlt
+      [ docEnsureIndent BrIndentRegular
+        $ docSeq
             [ docLit $ Text.pack "where"
-            , docEnsureIndent whereIndent
-              $   docSetIndentLevel
-              $   docNonBottomSpacing
-              $   docLines
-              $   return
-              <$> ws
+            , docSeparator
+            , docForceSingleline $ return w
             ]
+      , docEnsureIndent whereIndent $ docLines
+        [ docLit $ Text.pack "where"
+        , docEnsureIndent whereIndent
+          $ docSetIndentLevel
+          $ docNonBottomSpacing
+          $ return w
+        ]
+      ]
+    Just ws  -> fmap (pure . pure) $ docEnsureIndent whereIndent $ docLines
+      [ docLit $ Text.pack "where"
+      , docEnsureIndent whereIndent
+        $   docSetIndentLevel
+        $   docNonBottomSpacing
+        $   docLines
+        $   return
+        <$> ws
+      ]
   let singleLineGuardsDoc guards = appSep $ case guards of
         []  -> docEmpty
         [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g]
@@ -251,7 +266,8 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs = 
            , wherePart
            ]
          ]
-       | [(guards, body, _bodyRaw)] <- [clauseDocs]
+       | not hasComments
+       , [(guards, body, _bodyRaw)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
        , wherePart <- case mWhereDocs of
          Nothing  -> return @[] $ docEmpty

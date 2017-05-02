@@ -590,8 +590,7 @@ func =
 
 #test parenthesized operator
 buildG bounds0 edges0 = accumArray (flip (:)) [] bounds0 (map reassoc edges0)
- where
-  reassoc (v, e, w) = (v, (e, w))
+  where reassoc (v, e, w) = (v, (e, w))
 
 #test record pattern matching stuff
 downloadRepoPackage = case repo of
@@ -768,6 +767,13 @@ func =
   , foo -- comment
   ]
 
+#test issue 26
+foo a b = g a b -- fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+  where g a b = b + b * a
+
+#test issue 26b
+foo a b = g a b where g a b = b + b * a -- fooooooooooooooooooooooooooooooooooo
+
 
 ###############################################################################
 ###############################################################################
@@ -776,6 +782,8 @@ func =
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+
 
 ## this testcase is not about idempotency, but about _how_ the output differs
 ## from the input; i cannot really express this yet with the current
