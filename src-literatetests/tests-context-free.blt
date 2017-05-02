@@ -878,6 +878,12 @@ foo = Reflex.runSpiderHost $ ReflexHost.hostApp $ do
   liftIO . forkIO . forever $ getLine >>= inputFire
   ReflexHost.performEvent_ $ fmap (liftIO . putStrLn) inputEvent
 
+#test issue 15
+-- Test.hs
+module Test where
+
+data X = X
+
 #test issue 16
 foldrDesc f z = unSwitchQueue $ \q ->
   switch (Min.foldrDesc (f unTaggedF) z q) (Min.foldrAsc (f unTaggedF) z q)
