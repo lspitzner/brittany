@@ -9,8 +9,9 @@ project, including the following two:
 
 These two goals stand in conflict, and this project chooses a solution
 to this that distinguishes it from (all) other existing formatters. This
-idea was the motivation to write Brittany in the first place, and it might
-even be applicable to more general-purposes structured-document formatters
+approach was an important motivation for writing Brittany, when other
+formatters already existed. The approach might
+also be applicable to more general-purposes structured-document formatters
 (although we will not expand on that here). Before explaining the idea, we
 will first consider
 
@@ -55,8 +56,8 @@ same expression:
 
 ~~~~.hs
 --        10        20        30        40
--- 1)                                   -- | lets assume the user wants
-nestedCaseExpr = case e1 of             -- | 40 columns max.
+-- 1)                                   -- lets assume the user wants
+nestedCaseExpr = case e1 of             -- 40 columns max.
   Left x -> if func x then "good" else "bad" -- too long
 -- 2)                                   -- 
 nestedCaseExpr = case e1 of             -- 
@@ -193,9 +194,10 @@ required per node of the input.
   this to the `nestedCaseExpr` example above: The options are to either
   put the right-hand-side of the case-alternative into a new line, or
   split up the if-then-else. The "case" is the outer one, so Brittany will
-  prefer 3) over 2), which proves to be the right choice (here).
+  prefer 3) over 2), which proves to be the right choice (at least in this
+  case).
 
-  As a consequence, we are most interested in the maximum spacings; yet, we do
+  As a consequence, we are most interested in the maximum spacings. Still we do
   not have a total order because we cannot generally prefer one of two spacings
   where the first uses more columns, the second more lines.
 

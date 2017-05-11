@@ -103,7 +103,6 @@ stack build
     - -XBangPatterns
   ~~~~
 
-# Implementation
+# Implementation/High-level Documentation
 
-I have started adding documentation about the main data type `BriDoc`; see the
-"docs/implementation" folder. Start with "bridoc-design.md".
+[See the documentation index](docs/implementation/index.md)
