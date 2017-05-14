@@ -23,12 +23,14 @@ import Data.Semigroup.Generic
 
 import Data.Semigroup ( Last, Option )
 
+import Data.CZipWith
+
 
 
 confUnpack :: Coercible a b => Identity a -> b
 confUnpack (Identity x) = coerce x
 
-data DebugConfigF f = DebugConfig
+data CDebugConfig f = DebugConfig
   { _dconf_dump_config                :: f (Semigroup.Last Bool)
   , _dconf_dump_annotations           :: f (Semigroup.Last Bool)
   , _dconf_dump_ast_unknown           :: f (Semigroup.Last Bool)
@@ -43,7 +45,7 @@ data DebugConfigF f = DebugConfig
   }
   deriving (Generic)
 
-data LayoutConfigF f = LayoutConfig
+data CLayoutConfig f = LayoutConfig
   { _lconfig_cols         :: f (Last Int) -- the thing that has default 80.
   , _lconfig_indentPolicy :: f (Last IndentPolicy)
   , _lconfig_indentAmount :: f (Last Int)
@@ -57,12 +59,12 @@ data LayoutConfigF f = LayoutConfig
   }
   deriving (Generic)
 
-data ForwardOptionsF f = ForwardOptions
+data CForwardOptions f = ForwardOptions
   { _options_ghc :: f [String]
   }
   deriving (Generic)
 
-data ErrorHandlingConfigF f = ErrorHandlingConfig
+data CErrorHandlingConfig f = ErrorHandlingConfig
   { _econf_produceOutputOnErrors   :: f (Semigroup.Last Bool)
   , _econf_Werror                  :: f (Semigroup.Last Bool)
   , _econf_CPPMode                 :: f (Semigroup.Last CPPMode)
@@ -73,60 +75,54 @@ data ErrorHandlingConfigF f = ErrorHandlingConfig
     -- Note that the "risky" setting is risky because even with the check of
     -- the syntactic validity of the brittany output, at least in theory there
     -- may be cases where the output is syntactically/semantically valid but
-    -- has different semantics that the code pre-transformation.
+    -- has different semantics than the code pre-transformation.
   , _econf_omit_output_valid_check :: f (Semigroup.Last Bool)
   }
   deriving (Generic)
 
-data ConfigF f = Config
-  { _conf_debug :: DebugConfigF f
-  , _conf_layout :: LayoutConfigF f
-  , _conf_errorHandling :: ErrorHandlingConfigF f
-  , _conf_forward :: ForwardOptionsF f
+data CConfig f = Config
+  { _conf_debug :: CDebugConfig f
+  , _conf_layout :: CLayoutConfig f
+  , _conf_errorHandling :: CErrorHandlingConfig f
+  , _conf_forward :: CForwardOptions f
   }
   deriving (Generic)
 
-data ErrorHandlingConfigFMaybe = ErrorHandlingConfigMaybe
-  { _econfm_produceOutputOnErrors :: Maybe (Semigroup.Last Bool)
-  , _econfm_Werror                :: Maybe (Semigroup.Last Bool)
-  , _econfm_CPPMode               :: Maybe (Semigroup.Last CPPMode)
-  }
-  deriving (Generic)
+type DebugConfig = CDebugConfig Identity
+type LayoutConfig = CLayoutConfig Identity
+type ForwardOptions = CForwardOptions Identity
+type ErrorHandlingConfig = CErrorHandlingConfig Identity
+type Config = CConfig Identity
 
 -- i wonder if any Show1 stuff could be leveraged.
-deriving instance Show (DebugConfigF Identity)
-deriving instance Show (LayoutConfigF Identity)
-deriving instance Show (ErrorHandlingConfigF Identity)
-deriving instance Show (ForwardOptionsF Identity)
-deriving instance Show (ConfigF Identity)
+deriving instance Show (CDebugConfig Identity)
+deriving instance Show (CLayoutConfig Identity)
+deriving instance Show (CErrorHandlingConfig Identity)
+deriving instance Show (CForwardOptions Identity)
+deriving instance Show (CConfig Identity)
 
-deriving instance Show (DebugConfigF Option)
-deriving instance Show (LayoutConfigF Option)
-deriving instance Show (ErrorHandlingConfigF Option)
-deriving instance Show (ForwardOptionsF Option)
-deriving instance Show (ConfigF Option)
+deriving instance Show (CDebugConfig Option)
+deriving instance Show (CLayoutConfig Option)
+deriving instance Show (CErrorHandlingConfig Option)
+deriving instance Show (CForwardOptions Option)
+deriving instance Show (CConfig Option)
 
-deriving instance Data (DebugConfigF Identity)
-deriving instance Data (LayoutConfigF Identity)
-deriving instance Data (ErrorHandlingConfigF Identity)
-deriving instance Data (ForwardOptionsF Identity)
-deriving instance Data (ConfigF Identity)
+deriving instance Data (CDebugConfig Identity)
+deriving instance Data (CLayoutConfig Identity)
+deriving instance Data (CErrorHandlingConfig Identity)
+deriving instance Data (CForwardOptions Identity)
+deriving instance Data (CConfig Identity)
 
-instance Semigroup.Semigroup (DebugConfigF Option) where
+instance Semigroup.Semigroup (CDebugConfig Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (LayoutConfigF Option) where
+instance Semigroup.Semigroup (CLayoutConfig Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (ErrorHandlingConfigF Option) where
+instance Semigroup.Semigroup (CErrorHandlingConfig Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (ForwardOptionsF Option) where
+instance Semigroup.Semigroup (CForwardOptions Option) where
   (<>) = gmappend
-instance Semigroup.Semigroup (ConfigF Option) where
+instance Semigroup.Semigroup (CConfig Option) where
   (<>) = gmappend
-
-type Config = ConfigF Identity
-type DebugConfig = DebugConfigF Identity
-type LayoutConfig = LayoutConfigF Identity
-type ErrorHandlingConfig = ErrorHandlingConfigF Identity
 
 aesonDecodeOptionsBrittany :: Aeson.Options
 aesonDecodeOptionsBrittany = Aeson.defaultOptions
@@ -171,18 +167,14 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
     toJSON     = toJSON     . cMap getOption;\
     toEncoding = toEncoding . cMap getOption
 
-makeFromJSON(ErrorHandlingConfigFMaybe)
-makeToJSON(ErrorHandlingConfigFMaybe)
-deriving instance Show (ErrorHandlingConfigFMaybe)
 
-
-makeFromJSONOption(DebugConfigF)
-makeFromJSONMaybe(DebugConfigF)
-makeToJSONOption(DebugConfigF)
-makeToJSONMaybe(DebugConfigF)
--- instance FromJSON (DebugConfigF Option) where
+makeFromJSONOption(CDebugConfig)
+makeFromJSONMaybe(CDebugConfig)
+makeToJSONOption(CDebugConfig)
+makeToJSONMaybe(CDebugConfig)
+-- instance FromJSON (CDebugConfig Option) where
 --   parseJSON = genericParseJSON aesonDecodeOptionsBrittany
--- instance ToJSON   (DebugConfigF Option) where
+-- instance ToJSON   (CDebugConfig Option) where
 --   toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
 makeFromJSON(IndentPolicy)
@@ -196,36 +188,36 @@ makeToJSON(CPPMode)
 makeFromJSON(ExactPrintFallbackMode)
 makeToJSON(ExactPrintFallbackMode)
 
-makeFromJSONOption(LayoutConfigF)
-makeFromJSONMaybe(LayoutConfigF)
-makeToJSONOption(LayoutConfigF)
-makeToJSONMaybe(LayoutConfigF)
+makeFromJSONOption(CLayoutConfig)
+makeFromJSONMaybe(CLayoutConfig)
+makeToJSONOption(CLayoutConfig)
+makeToJSONMaybe(CLayoutConfig)
 
-makeFromJSONOption(ErrorHandlingConfigF)
-makeFromJSONMaybe(ErrorHandlingConfigF)
-makeToJSONOption(ErrorHandlingConfigF)
-makeToJSONMaybe(ErrorHandlingConfigF)
+makeFromJSONOption(CErrorHandlingConfig)
+makeFromJSONMaybe(CErrorHandlingConfig)
+makeToJSONOption(CErrorHandlingConfig)
+makeToJSONMaybe(CErrorHandlingConfig)
 
-makeFromJSONOption(ForwardOptionsF)
-makeFromJSONMaybe(ForwardOptionsF)
-makeToJSONOption(ForwardOptionsF)
-makeToJSONMaybe(ForwardOptionsF)
+makeFromJSONOption(CForwardOptions)
+makeFromJSONMaybe(CForwardOptions)
+makeToJSONOption(CForwardOptions)
+makeToJSONMaybe(CForwardOptions)
 
-makeFromJSONOption(ConfigF)
-makeFromJSONMaybe(ConfigF)
-makeToJSONOption(ConfigF)
-makeToJSONMaybe(ConfigF)
+makeFromJSONOption(CConfig)
+makeFromJSONMaybe(CConfig)
+makeToJSONOption(CConfig)
+makeToJSONMaybe(CConfig)
 
--- instance Monoid DebugConfig where
---   mempty = DebugConfig Nothing Nothing
---   DebugConfig x1 x2 `mappend` DebugConfig y1 y2
---     = DebugConfig (y1 <|> x1)
+-- instance Monoid CDebugConfig where
+--   mempty = CDebugConfig Nothing Nothing
+--   CDebugConfig x1 x2 `mappend` CDebugConfig y1 y2
+--     = CDebugConfig (y1 <|> x1)
 --                   (y2 <|> x2)
 -- 
--- instance Monoid LayoutConfig where
---   mempty = LayoutConfig Nothing Nothing Nothing Nothing Nothing Nothing
---   LayoutConfig x1 x2 x3 x4 x5 x6 `mappend` LayoutConfig y1 y2 y3 y4 y5 y6
---     = LayoutConfig (y1 <|> x1)
+-- instance Monoid CLayoutConfig where
+--   mempty = CLayoutConfig Nothing Nothing Nothing Nothing Nothing Nothing
+--   CLayoutConfig x1 x2 x3 x4 x5 x6 `mappend` CLayoutConfig y1 y2 y3 y4 y5 y6
+--     = CLayoutConfig (y1 <|> x1)
 --                    (y2 <|> x2)
 --                    (y3 <|> x3)
 --                    (y4 <|> x4)
@@ -337,60 +329,12 @@ staticDefaultConfig = Config
     }
   }
 
--- TODO: automate writing instances for this to get
---       the above Monoid instance for free.
--- potentially look at http://hackage.haskell.org/package/fieldwise-0.1.0.0/docs/src/Data-Fieldwise.html#deriveFieldwise
-class CZip k where
-  cZip :: (forall a . f a -> g a -> h a) -> k f -> k g -> k h
+cMap :: CZipWith k => (forall a . f a -> g a) -> k f -> k g
+cMap f c = cZipWith (\_ -> f) c c
 
-instance CZip DebugConfigF where
-  cZip f (DebugConfig x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11)
-         (DebugConfig y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11) = DebugConfig
-    (f x1 y1)
-    (f x2 y2)
-    (f x3 y3)
-    (f x4 y4)
-    (f x5 y5)
-    (f x6 y6)
-    (f x7 y7)
-    (f x8 y8)
-    (f x9 y9)
-    (f x10 y10)
-    (f x11 y11)
-
-instance CZip LayoutConfigF where
-  cZip f (LayoutConfig x1 x2 x3 x4 x5 x6 x7 x8)
-         (LayoutConfig y1 y2 y3 y4 y5 y6 y7 y8) = LayoutConfig
-    (f x1 y1)
-    (f x2 y2)
-    (f x3 y3)
-    (f x4 y4)
-    (f x5 y5)
-    (f x6 y6)
-    (f x7 y7)
-    (f x8 y8)
-
-instance CZip ErrorHandlingConfigF where
-  cZip f (ErrorHandlingConfig x1 x2 x3 x4 x5)
-         (ErrorHandlingConfig y1 y2 y3 y4 y5) = ErrorHandlingConfig
-    (f x1 y1)
-    (f x2 y2)
-    (f x3 y3)
-    (f x4 y4)
-    (f x5 y5)
-
-instance CZip ForwardOptionsF where
-  cZip f (ForwardOptions x1)
-         (ForwardOptions y1) = ForwardOptions
-    (f x1 y1)
-
-instance CZip ConfigF where
-  cZip f (Config x1 x2 x3 x4) (Config y1 y2 y3 y4) = Config
-    (cZip f x1 y1)
-    (cZip f x2 y2)
-    (cZip f x3 y3)
-    (cZip f x4 y4)
-
-cMap :: CZip k => (forall a . f a -> g a) -> k f -> k g
-cMap f c = cZip (\_ -> f) c c
+deriveCZipWith ''CDebugConfig
+deriveCZipWith ''CLayoutConfig
+deriveCZipWith ''CErrorHandlingConfig
+deriveCZipWith ''CForwardOptions
+deriveCZipWith ''CConfig
 

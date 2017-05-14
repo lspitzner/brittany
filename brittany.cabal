@@ -93,6 +93,7 @@ library {
     , either >=4.4.1.1 && <4.5
     , semigroups >=0.18.2 && <0.19
     , cmdargs >=0.10.14 && <0.11
+    , czipwith >=1.0.0.0 && <1.1
     }
   default-extensions: {
     CPP

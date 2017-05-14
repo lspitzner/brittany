@@ -1,7 +1,7 @@
 module Language.Haskell.Brittany.Config
-  ( ConfigF(..)
-  , DebugConfigF(..)
-  , LayoutConfigF(..)
+  ( CConfig(..)
+  , CDebugConfig(..)
+  , CLayoutConfig(..)
   , DebugConfig
   , LayoutConfig
   , Config
@@ -32,7 +32,7 @@ import           Data.Coerce ( Coercible, coerce )
 
 
 
-configParser :: CmdParser Identity out (ConfigF Option)
+configParser :: CmdParser Identity out (CConfig Option)
 configParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
   ind                <- addFlagReadParams "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
@@ -130,7 +130,7 @@ configParser = do
 --   }
 
 readMergePersConfig
-  :: System.IO.FilePath -> Bool -> ConfigF Option -> MaybeT IO (ConfigF Option)
+  :: System.IO.FilePath -> Bool -> CConfig Option -> MaybeT IO (CConfig Option)
 readMergePersConfig path shouldCreate conf = do
   exists <- liftIO $ System.Directory.doesFileExist path
   if
