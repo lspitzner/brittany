@@ -2,9 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Language.Haskell.Brittany.Utils
-  ( (.=+)
-  , (%=+)
-  , parDoc
+  ( parDoc
   , fromMaybeIdentity
   , fromOptionIdentity
   , traceIfDumpConf
@@ -55,19 +53,9 @@ import           DataTreePrint
 import           Language.Haskell.Brittany.Config.Types
 import           Language.Haskell.Brittany.Types
 
-import qualified Control.Lens as Lens
-
 import qualified Data.Generics.Uniplate.Direct as Uniplate
 
 
-
-(.=+) :: MonadMultiState s m
-      => Lens.ASetter s s a b -> b -> m ()
-l .=+ b = mModify $ l Lens..~ b
-
-(%=+) :: MonadMultiState s m
-      => Lens.ASetter s s a b -> (a -> b) -> m ()
-l %=+ f = mModify (l Lens.%~ f)
 
 parDoc :: String -> PP.Doc
 parDoc = PP.fsep . fmap PP.text . List.words

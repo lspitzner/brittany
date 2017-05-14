@@ -14,7 +14,6 @@ where
 import Data.Yaml
 import qualified Data.Aeson.Types as Aeson
 import GHC.Generics
-import Control.Lens
 
 import Data.Data ( Data )
 
@@ -395,6 +394,3 @@ instance CZip ConfigF where
 cMap :: CZip k => (forall a . f a -> g a) -> k f -> k g
 cMap f c = cZip (\_ -> f) c c
 
-makeLenses ''DebugConfigF
-makeLenses ''ConfigF
-makeLenses ''LayoutConfigF

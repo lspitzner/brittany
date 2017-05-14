@@ -9,7 +9,7 @@ Brittany makes heavy usage of mtl-on-steroids-style transformers, mostly
 limited to Reader, Writer and State. For this kind of task it makes a lot of
 sense; we do a pure transformation involving multiple steps
 that each requires certain local state during traversals of recursive data
-structures. By using MultiRWS we can avoid using lens for the most part without
+structures. By using MultiRWS we can even entirely avoid using lens without
 inducing too much boilerplate.
 
 Firstly, the topmost layer, the IO bits:

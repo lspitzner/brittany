@@ -42,7 +42,7 @@ import qualified System.Process.Extra
 import qualified System.Time.Extra
 
 -- import qualified Control.Exception.Lens
-import qualified Control.Lens
+-- import qualified Control.Lens
 -- import qualified Control.Lens.At
 -- import qualified Control.Lens.Combinators
 -- import qualified Control.Lens.Cons
