@@ -3,6 +3,7 @@ resolver: lts-8.4
 extra-deps:
   - monad-memo-0.4.1
   - unsafe-0.0
+  - czipwith-1.0.0.0
 
 packages:
   - .

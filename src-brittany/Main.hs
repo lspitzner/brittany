@@ -14,6 +14,8 @@ import qualified Data.Map as Map
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
+import           Data.CZipWith
+
 import qualified Debug.Trace as Trace
 
 import           Language.Haskell.Brittany.Types
@@ -220,7 +222,7 @@ mainCmdParser helpDesc = do
       then trace "----"
       else id
 
-readConfigs :: ConfigF Option -> [System.IO.FilePath] -> MaybeT IO Config
+readConfigs :: CConfig Option -> [System.IO.FilePath] -> MaybeT IO Config
 readConfigs cmdlineConfig configPaths = do
   let defLocalConfigPath = "brittany.yaml"
   userBritPath <- liftIO $ Directory.getAppUserDataDirectory "brittany"
@@ -235,4 +237,4 @@ readConfigs cmdlineConfig configPaths = do
     paths -> foldl (\prev p -> prev >>= readMergePersConfig p False)
                    (return cmdlineConfig)
                    paths
-  return $ cZip fromOptionIdentity staticDefaultConfig merged
+  return $ cZipWith fromOptionIdentity staticDefaultConfig merged
