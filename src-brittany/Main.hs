@@ -206,7 +206,7 @@ mainCmdParser helpDesc = do
           when hasErrors $
             System.Exit.exitWith (System.Exit.ExitFailure 70)
   where
-    addTraceSep conf = if foldr1 (||)
+    addTraceSep conf = if or
         [ confUnpack $ _dconf_dump_annotations conf
         , confUnpack $ _dconf_dump_ast_unknown conf
         , confUnpack $ _dconf_dump_ast_full conf

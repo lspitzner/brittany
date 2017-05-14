@@ -130,20 +130,6 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
   , Aeson.fieldLabelModifier = dropWhile (=='_')
   }
 
--- instance FromJSON a => FromJSON (Semigroup.Last a) where
---   parseJSON obj = Semigroup.Last <$> parseJSON obj
---   {-# INLINE parseJSON #-}
--- instance ToJSON a => ToJSON (Semigroup.Last a) where
---   toJSON (Semigroup.Last x) = toJSON x
---   {-# INLINE toJSON #-}
---
--- instance FromJSON a => FromJSON (Option a) where
---   parseJSON obj = Option <$> parseJSON obj
---   {-# INLINE parseJSON #-}
--- instance ToJSON a => ToJSON (Option a) where
---   toJSON (Option x) = toJSON x
---   {-# INLINE toJSON #-}
-
 #define makeFromJSON(type)\
   instance FromJSON (type) where\
     parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
@@ -172,10 +158,6 @@ makeFromJSONOption(CDebugConfig)
 makeFromJSONMaybe(CDebugConfig)
 makeToJSONOption(CDebugConfig)
 makeToJSONMaybe(CDebugConfig)
--- instance FromJSON (CDebugConfig Option) where
---   parseJSON = genericParseJSON aesonDecodeOptionsBrittany
--- instance ToJSON   (CDebugConfig Option) where
---   toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
 makeFromJSON(IndentPolicy)
 makeToJSON(IndentPolicy)
@@ -207,32 +189,6 @@ makeFromJSONOption(CConfig)
 makeFromJSONMaybe(CConfig)
 makeToJSONOption(CConfig)
 makeToJSONMaybe(CConfig)
-
--- instance Monoid CDebugConfig where
---   mempty = CDebugConfig Nothing Nothing
---   CDebugConfig x1 x2 `mappend` CDebugConfig y1 y2
---     = CDebugConfig (y1 <|> x1)
---                   (y2 <|> x2)
--- 
--- instance Monoid CLayoutConfig where
---   mempty = CLayoutConfig Nothing Nothing Nothing Nothing Nothing Nothing
---   CLayoutConfig x1 x2 x3 x4 x5 x6 `mappend` CLayoutConfig y1 y2 y3 y4 y5 y6
---     = CLayoutConfig (y1 <|> x1)
---                    (y2 <|> x2)
---                    (y3 <|> x3)
---                    (y4 <|> x4)
---                    (y5 <|> x5)
---                    (y6 <|> x6)
--- 
--- instance Monoid Config where
---   mempty = Config
---     { _conf_debug = mempty
---     , _conf_layout = mempty
---     }
---   mappend c1 c2 = Config
---     { _conf_debug = _conf_debug c1 <> _conf_debug c2
---     , _conf_layout = _conf_layout c1 <> _conf_layout c2
---     }
 
 data IndentPolicy = IndentPolicyLeft -- never create a new indentation at more
                                      -- than old indentation + amount
