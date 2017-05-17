@@ -80,7 +80,7 @@ mainCmdParser helpDesc = do
     when printVersion $ do
       liftIO $ do
         putStrLn $ "brittany version " ++ showVersion version
-        putStrLn $ "Copyright (C) 2016 Lennart Spitzner"
+        putStrLn $ "Copyright (C) 2016-2017 Lennart Spitzner"
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do

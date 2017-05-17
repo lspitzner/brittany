@@ -12,13 +12,18 @@ license:              AllRightsReserved
 -- license-file:         LICENSE
 author:               Lennart Spitzner
 maintainer:           lsp@informatik.uni-kiel.de
--- copyright:           
+copyright:            Copyright (C) 2016-2017 Lennart Spitzner
 category:             Language
 build-type:           Simple
 extra-source-files:   ChangeLog.md
 cabal-version:        >=1.10
 homepage:             https://github.com/lspitzner/brittany/
 bug-reports:          https://github.com/lspitzner/brittany/issues
+
+source-repository head {
+  type: git
+  location: https://github.com/lspitzner/brittany.git
+}
 
 flag brittany-dev
   description: dev options

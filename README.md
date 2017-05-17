@@ -48,33 +48,35 @@ linear in the size of the input (although the constant factor is not small).
   comments are moved slightly; there are also cases where comments result in
   wonky newline insertion (although this should be a purely aesthetic issue.)
 
-# Building
+# Installation
 
-(This does not cover _installation_. TODO)
+- via `cabal` "old-build"
 
-via `cabal new-build`
+  ~~~~.sh
+  git clone https://github.com/lspitzner/brittany.git
+  cd brittany
+  cabal sandbox init
+  cabal install --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8
+  ~~~~
 
-~~~~.sh
-mkdir brittany-project
-cd brittany-project/
-git clone https://github.com/lspitzner/butcher.git
-git clone https://github.com/lspitzner/data-tree-print.git
-git clone https://github.com/lspitzner/ghc-exactprint.git
-git clone https://github.com/lspitzner/brittany.git
-cat > cabal.project <<EOF
-packages: data-tree-print butcher ghc-exactprint brittany
-EOF
-# cabal new-configure -w $PATH_TO_GHC_8
-cabal new-build brittany/
-~~~~
+- via `cabal new-build`
 
-or via `stack`
+  ~~~~.sh
+  git clone https://github.com/lspitzner/brittany.git
+  cd brittany
+  # cabal new-configure -w $PATH_TO_GHC_8
+  cabal new-build brittany
+  # and it should be safe to just copy the executable, e.g.
+  cp ./dist-newstyle/build/brittany-0.8.0.0/build/brittany/brittany $HOME/.cabal/bin/
+  ~~~~
 
-~~~~.sh
-git clone https://github.com/lspitzner/brittany.git
-cd brittany
-stack build
-~~~~
+- via `stack`
+
+  ~~~~.sh
+  git clone https://github.com/lspitzner/brittany.git
+  cd brittany
+  stack install
+  ~~~~
 
 
 # Usage
