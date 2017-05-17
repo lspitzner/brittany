@@ -4,14 +4,9 @@ extra-deps:
   - monad-memo-0.4.1
   - unsafe-0.0
   - czipwith-1.0.0.0
+  - butcher-1.1.0.0
+  - data-tree-print-0.1.0.0
+  - deque-0.2
 
 packages:
   - .
-  - extra-dep: true
-    location:
-      git: https://github.com/lspitzner/butcher
-      commit: b15f1ae585341ea312f712e63f29a0c57fa5f637
-  - extra-dep: true
-    location:
-      git: https://github.com/lspitzner/data-tree-print
-      commit: 605855659b15ff190d1e9c0c9b5e981e379aed15

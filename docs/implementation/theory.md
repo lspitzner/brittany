@@ -9,8 +9,7 @@ project, including the following two:
 
 These two goals stand in conflict, and this project chooses a solution
 to this that distinguishes it from (all) other existing formatters. This
-approach was an important motivation for writing Brittany, when other
-formatters already existed. The approach might
+approach was an important motivation for writing Brittany. The approach might
 also be applicable to more general-purposes structured-document formatters
 (although we will not expand on that here). Before explaining the idea, we
 will first consider
