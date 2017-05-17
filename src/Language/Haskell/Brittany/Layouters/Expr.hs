@@ -559,7 +559,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           start = docCols ColListComp
                     [ docNodeAnnKW lexpr Nothing
                     $ appSep $ docLit $ Text.pack "["
-                    , docNodeAnnKW lexpr (Just AnnOpenS)
+                    , docSetBaseY
+                    $ docNodeAnnKW lexpr (Just AnnOpenS)
                     $ List.last stmtDocs
                     ]
           (s1:sM) = List.init stmtDocs
@@ -590,7 +591,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         , docSetBaseY $ docLines
           [ docSeq
             [ docLit $ Text.pack "["
-            , docNodeAnnKW lexpr (Just AnnOpenS) $ docForceSingleline e
+            , docSeparator
+            , docSetBaseY $ docNodeAnnKW lexpr (Just AnnOpenS) $ e
             ]
           , docLit $ Text.pack "]"
           ]
