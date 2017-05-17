@@ -49,25 +49,21 @@ configParser = do
   dumpBriDocFloating <- addSimpleBoolFlag ""
                                           ["dump-bridoc-floating"]
                                           (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: floating")
-  dumpBriDocColumns  <- addSimpleBoolFlag "" ["dump-bridoc-columns"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: columns")
-  dumpBriDocIndent   <- addSimpleBoolFlag "" ["dump-bridoc-indent"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: indent")
-  dumpBriDocFinal    <- addSimpleBoolFlag "" ["dump-bridoc-final"] (flagHelp $ parDoc "dump the post-transformation bridoc")
+  dumpBriDocColumns <- addSimpleBoolFlag "" ["dump-bridoc-columns"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: columns")
+  dumpBriDocIndent  <- addSimpleBoolFlag "" ["dump-bridoc-indent"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: indent")
+  dumpBriDocFinal   <- addSimpleBoolFlag "" ["dump-bridoc-final"] (flagHelp $ parDoc "dump the post-transformation bridoc")
 
   outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
-  wError             <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
-  omitValidCheck <- addSimpleBoolFlag "" ["omit-output-check"] (flagHelp $ parDoc "omit checking if the output is syntactically valid; for dev on brittany")
+  wError            <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
+  omitValidCheck    <- addSimpleBoolFlag "" ["omit-output-check"] (flagHelp $ parDoc "omit checking if the output is syntactically valid; for dev on brittany")
 
-  optionsGhc         <- addFlagStringParams
-    ""
-    ["ghc-options"]
-    "STRING"
-    ( flagHelp
-    $ parDoc
-        "allows to define default language extensions. The parameter is forwarded to ghc."
-    )
+  optionsGhc        <- addFlagStringParams ""
+                                           ["ghc-options"]
+                                           "STRING"
+                                           (flagHelp $ parDoc "allows to define default language extensions. The parameter is forwarded to ghc.")
 
   return $ Config
-    { _conf_debug         = DebugConfig
+    { _conf_debug = DebugConfig
       { _dconf_dump_config                = wrapLast $ falseToNothing dumpConfig
       , _dconf_dump_annotations           = wrapLast $ falseToNothing dumpAnnotations
       , _dconf_dump_ast_unknown           = wrapLast $ falseToNothing dumpUnknownAST
@@ -80,24 +76,26 @@ configParser = do
       , _dconf_dump_bridoc_simpl_indent   = wrapLast $ falseToNothing dumpBriDocIndent
       , _dconf_dump_bridoc_final          = wrapLast $ falseToNothing dumpBriDocFinal
       }
-    , _conf_layout        = LayoutConfig
-      { _lconfig_cols               = optionConcat cols
-      , _lconfig_indentPolicy       = mempty
-      , _lconfig_indentAmount       = optionConcat ind
-      , _lconfig_indentWhereSpecial = mempty -- falseToNothing _
-      , _lconfig_indentListSpecial  = mempty -- falseToNothing _
-      , _lconfig_importColumn       = optionConcat importCol
-      , _lconfig_altChooser         = mempty
-      , _lconfig_columnAlignMode    = mempty
+    , _conf_layout = LayoutConfig
+      { _lconfig_cols                      = optionConcat cols
+      , _lconfig_indentPolicy              = mempty
+      , _lconfig_indentAmount              = optionConcat ind
+      , _lconfig_indentWhereSpecial        = mempty -- falseToNothing _
+      , _lconfig_indentListSpecial         = mempty -- falseToNothing _
+      , _lconfig_importColumn              = optionConcat importCol
+      , _lconfig_altChooser                = mempty
+      , _lconfig_columnAlignMode           = mempty
+      , _lconfig_alignmentLimit            = mempty
+      , _lconfig_alignmentBreakOnMultiline = mempty
       }
     , _conf_errorHandling = ErrorHandlingConfig
-      { _econf_produceOutputOnErrors = wrapLast $ falseToNothing outputOnErrors
-      , _econf_Werror                = wrapLast $ falseToNothing wError
-      , _econf_CPPMode               = mempty
-      , _econf_ExactPrintFallback    = mempty
+      { _econf_produceOutputOnErrors   = wrapLast $ falseToNothing outputOnErrors
+      , _econf_Werror                  = wrapLast $ falseToNothing wError
+      , _econf_CPPMode                 = mempty
+      , _econf_ExactPrintFallback      = mempty
       , _econf_omit_output_valid_check = wrapLast $ falseToNothing omitValidCheck
       }
-    , _conf_forward       = ForwardOptions
+    , _conf_forward = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]
       }
     }

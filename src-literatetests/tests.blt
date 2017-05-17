@@ -774,6 +774,18 @@ foo a b = g a b -- fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 #test issue 26b
 foo a b = g a b where g a b = b + b * a -- fooooooooooooooooooooooooooooooooooo
 
+#test aggressive alignment 1
+func = do
+  abc                  <- expr
+  abcccccccccccccccccc <- expr
+  abcccccccccccccccccccccccccccccccccccccccccc <- expr
+  abccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc <- expr
+
+#test example alignment 1
+func (MyLongFoo abc def) = 1
+func (Bar       a   d  ) = 2
+func _                   = 3
+
 
 ###############################################################################
 ###############################################################################

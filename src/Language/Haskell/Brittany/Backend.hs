@@ -38,7 +38,7 @@ import qualified Control.Monad.Trans.Writer.Strict as WriterS
 
 briDocLineLength :: BriDoc -> Int
 briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
-                          -- the state encodes whether a separate was already
+                          -- the state encodes whether a separator was already
                           -- appended at the current position.
  where
   rec = \case
@@ -65,6 +65,40 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
       x <- StateS.get
       return $ maximum $ ls <&> \l -> StateS.evalState (rec l) x
     BDLines []              -> error "briDocLineLength BDLines []"
+    BDEnsureIndent _ bd     -> rec bd
+    BDProhibitMTEL     bd   -> rec bd
+    BDSetParSpacing    bd   -> rec bd
+    BDForceParSpacing  bd   -> rec bd
+    BDNonBottomSpacing bd   -> rec bd
+    BDDebug _ bd            -> rec bd
+
+briDocIsMultiLine :: BriDoc -> Bool
+briDocIsMultiLine briDoc = rec briDoc
+ where
+  rec :: BriDoc -> Bool
+  rec = \case
+    BDEmpty                 -> False
+    BDLit _                 -> False
+    BDSeq bds               -> any rec bds
+    BDCols _ bds            -> any rec bds
+    BDSeparator             -> False
+    BDAddBaseY _ bd         -> rec bd
+    BDBaseYPushCur       bd -> rec bd
+    BDBaseYPop           bd -> rec bd
+    BDIndentLevelPushCur bd -> rec bd
+    BDIndentLevelPop     bd -> rec bd
+    BDPar _ _ _             -> True
+    BDAlt{}                 -> error "briDocIsMultiLine BDAlt"
+    BDForceMultiline  _     -> True
+    BDForceSingleline bd    -> rec bd
+    BDForwardLineMode bd    -> rec bd
+    BDExternal _ _ _ _      -> True
+    BDAnnotationPrior _ bd  -> rec bd
+    BDAnnotationKW _ _ bd   -> rec bd
+    BDAnnotationRest _ bd   -> rec bd
+    BDLines (_:_:_)         -> True
+    BDLines [_    ]         -> False
+    BDLines []              -> error "briDocIsMultiLine BDLines []"
     BDEnsureIndent _ bd     -> rec bd
     BDProhibitMTEL     bd   -> rec bd
     BDSetParSpacing    bd   -> rec bd
@@ -286,46 +320,93 @@ layoutBriDocM = \case
     --     processInfo (_cbs_map finalState) colInfo
     --   where
     --     (colInfos, finalState) = StateS.runState (mergeBriDocs l) (ColBuildState IntMapS.empty 0)
-    alignColsLines :: [BriDoc]
-              -> m ()
+    alignColsLines :: [BriDoc] -> m ()
     alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
       curX <- do
         state <- mGet
         return $ either id (const 0) (_lstate_curYOrAddNewline state)
                + fromMaybe 0 (_lstate_addSepSpace state)
-      colMax    <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
-      sequence_ $ List.intersperse layoutWriteEnsureNewlineBlock
-                $ colInfos <&> processInfo (processedMap curX colMax)
-      where
-        (colInfos, finalState) = StateS.runState (mergeBriDocs bridocs)
-                                                 (ColBuildState IntMapS.empty 0)
-        maxZipper :: [Int] -> [Int] -> [Int]
-        maxZipper [] ys = ys
-        maxZipper xs [] = xs
-        maxZipper (x:xr) (y:yr) = max x y : maxZipper xr yr
-        processedMap :: Int -> Int -> ColMap2
-        processedMap curX colMax = fix $ \result ->
-          _cbs_map finalState <&> \(lastFlag, colSpacingss) ->
-            let colss = colSpacingss <&> \spss -> case reverse spss of
-                  [] -> []
-                  (xN:xR) -> reverse
-                    $ (if lastFlag then fLast else fInit) xN : fmap fInit xR
-                  where
-                    fLast (ColumnSpacingLeaf len)  = len
-                    fLast (ColumnSpacingRef len _) = len
-                    fInit (ColumnSpacingLeaf len) = len
-                    fInit (ColumnSpacingRef _ i) = case IntMapL.lookup i result of
-                      Nothing           -> 0
-                      Just (_, maxs, _) -> sum maxs
-                maxCols = Foldable.foldl1 maxZipper colss
-                (_, posXs) = mapAccumL (\acc x -> (acc+x,acc)) curX maxCols
-                counter count l =
-                  if List.last posXs + List.last l <=colMax
-                    then count + 1
-                    else count
-                ratio = fromIntegral (foldl counter (0::Int) colss)
-                      / fromIntegral (length colss)
-            in  (ratio, maxCols, colss)
+      colMax     <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
+      alignMax   <- mAsk <&> _conf_layout .> _lconfig_alignmentLimit .> confUnpack
+      alignBreak <- mAsk <&> _conf_layout .> _lconfig_alignmentBreakOnMultiline .> confUnpack
+      case () of
+        _ ->
+          sequence_ $ List.intersperse layoutWriteEnsureNewlineBlock
+                    $ colInfos <&> processInfo processedMap
+         where
+          (colInfos, finalState) = StateS.runState (mergeBriDocs bridocs)
+                                                   (ColBuildState IntMapS.empty 0)
+          -- maxZipper :: [Int] -> [Int] -> [Int]
+          -- maxZipper [] ys = ys
+          -- maxZipper xs [] = xs
+          -- maxZipper (x:xr) (y:yr) = max x y : maxZipper xr yr
+          colAggregation :: [Int] -> Int
+          colAggregation xs = maximum [ x | x <- xs, x < minimum xs + alignMax ]
+
+          processedMap :: ColMap2
+          processedMap = fix $ \result ->
+            _cbs_map finalState <&> \(lastFlag, colSpacingss) ->
+              let colss = colSpacingss <&> \spss -> case reverse spss of
+                    [] -> []
+                    (xN:xR) -> reverse
+                      $ (if lastFlag then fLast else fInit) xN : fmap fInit xR
+                    where
+                      fLast (ColumnSpacingLeaf len)  = len
+                      fLast (ColumnSpacingRef len _) = len
+                      fInit (ColumnSpacingLeaf len) = len
+                      fInit (ColumnSpacingRef _ i) = case IntMapL.lookup i result of
+                        Nothing           -> 0
+                        Just (_, maxs, _) -> sum maxs
+                  maxCols = {-Foldable.foldl1 maxZipper-}
+                            fmap colAggregation $ transpose $ Foldable.toList colss
+                  (_, posXs) = mapAccumL (\acc x -> (acc+x,acc)) curX maxCols
+                  counter count l =
+                    if List.last posXs + List.last l <=colMax
+                      then count + 1
+                      else count
+                  ratio = fromIntegral (foldl counter (0::Int) colss)
+                        / fromIntegral (length colss)
+              in  (ratio, maxCols, colss)
+
+          mergeBriDocs :: [BriDoc] -> StateS.State ColBuildState [ColInfo]
+          mergeBriDocs bds = mergeBriDocsW ColInfoStart bds
+
+          mergeBriDocsW :: ColInfo -> [BriDoc] -> StateS.State ColBuildState [ColInfo]
+          mergeBriDocsW _ [] = return []
+          mergeBriDocsW lastInfo (bd:bdr) = do
+            info <- mergeInfoBriDoc True lastInfo bd
+            infor <- mergeBriDocsW (if alignBreak && briDocIsMultiLine bd then ColInfoStart else info) bdr
+            return $ info : infor
+
+          mergeInfoBriDoc :: Bool
+                          -> ColInfo
+                          -> BriDoc
+                          -> StateS.StateT ColBuildState Identity ColInfo
+          mergeInfoBriDoc lastFlag ColInfoStart = briDocToColInfo lastFlag
+          mergeInfoBriDoc lastFlag ColInfoNo{}  = briDocToColInfo lastFlag
+          mergeInfoBriDoc lastFlag (ColInfo infoInd infoSig subLengthsInfos) = \case
+            brdc@(BDCols colSig subDocs)
+              | infoSig == colSig
+              && length subLengthsInfos == length subDocs -> do
+                let isLastList =
+                      if lastFlag then (== length subDocs) <$> [1..] else repeat False
+                infos <- zip3 isLastList (snd <$> subLengthsInfos) subDocs
+                  `forM` \(lf, info, bd) -> mergeInfoBriDoc lf info bd
+                let curLengths = briDocLineLength <$> subDocs
+                let trueSpacings = getTrueSpacings (zip curLengths infos)
+                do -- update map
+                  s <- StateS.get
+                  let m = _cbs_map s
+                  let (Just (_, spaces)) = IntMapS.lookup infoInd m
+                  StateS.put s
+                    { _cbs_map = IntMapS.insert infoInd
+                                                (lastFlag, spaces Seq.|> trueSpacings)
+                                                m
+                    }
+                return $ ColInfo infoInd colSig (zip curLengths infos)
+              | otherwise -> briDocToColInfo lastFlag brdc
+            brdc          -> return $ ColInfoNo brdc
+          
     briDocToColInfo :: Bool -> BriDoc -> StateS.State ColBuildState ColInfo
     briDocToColInfo lastFlag = \case
       BDCols sig list -> withAlloc lastFlag $ \ind -> do
@@ -342,45 +423,6 @@ layoutBriDocM = \case
       (len, ColInfo i _ _) -> ColumnSpacingRef len i
       (len, _)              -> ColumnSpacingLeaf len
 
-    mergeBriDocs :: [BriDoc] -> StateS.State ColBuildState [ColInfo]
-    mergeBriDocs bds = mergeBriDocsW ColInfoStart bds
-
-    mergeBriDocsW :: ColInfo -> [BriDoc] -> StateS.State ColBuildState [ColInfo]
-    mergeBriDocsW _ [] = return []
-    mergeBriDocsW lastInfo (bd:bdr) = do
-      info <- mergeInfoBriDoc True lastInfo bd
-      infor <- mergeBriDocsW info bdr
-      return $ info : infor
-
-    mergeInfoBriDoc :: Bool
-                    -> ColInfo
-                    -> BriDoc
-                    -> StateS.StateT ColBuildState Identity ColInfo
-    mergeInfoBriDoc lastFlag ColInfoStart = briDocToColInfo lastFlag
-    mergeInfoBriDoc lastFlag ColInfoNo{}  = briDocToColInfo lastFlag
-    mergeInfoBriDoc lastFlag (ColInfo infoInd infoSig subLengthsInfos) = \case
-      brdc@(BDCols colSig subDocs)
-        | infoSig == colSig
-        && length subLengthsInfos == length subDocs -> do
-          let isLastList =
-                if lastFlag then (== length subDocs) <$> [1..] else repeat False
-          infos <- zip3 isLastList (snd <$> subLengthsInfos) subDocs
-            `forM` \(lf, info, bd) -> mergeInfoBriDoc lf info bd
-          let curLengths = briDocLineLength <$> subDocs
-          let trueSpacings = getTrueSpacings (zip curLengths infos)
-          do -- update map
-            s <- StateS.get
-            let m = _cbs_map s
-            let (Just (_, spaces)) = IntMapS.lookup infoInd m
-            StateS.put s
-              { _cbs_map = IntMapS.insert infoInd
-                                          (lastFlag, spaces Seq.|> trueSpacings)
-                                          m
-              }
-          return $ ColInfo infoInd colSig (zip curLengths infos)
-        | otherwise -> briDocToColInfo lastFlag brdc
-      brdc          -> return $ ColInfoNo brdc
-    
     withAlloc :: Bool
               -> (ColIndex -> StateS.State ColBuildState (ColumnBlocks ColumnSpacing, ColInfo))
               -> StateS.State ColBuildState ColInfo
