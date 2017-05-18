@@ -209,8 +209,31 @@ test052 ::  lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
 
 #test forall oneliner
 {-# LANGUAGE ScopedTypeVariables #-}
---this comment is necessary for whatever reason..
 func :: forall (a :: *) b . a -> b
+
+#test forall context multiline
+{-# LANGUAGE ScopedTypeVariables #-}
+func
+  :: forall m
+   . Foo
+  => ColMap2
+  -> ColInfo
+  -> ColInfo
+  -> ColInfo
+  -> ColInfo
+  -> m ()
+
+#test forall no-context multiline
+{-# LANGUAGE ScopedTypeVariables #-}
+func
+  :: forall m
+  .  ColMap2
+  -> ColInfo
+  -> ColInfo
+  -> ColInfo
+  -> ColInfo
+  -> ColInfo
+  -> m ()
 
 #test language pragma issue
 {-# LANGUAGE ScopedTypeVariables #-}

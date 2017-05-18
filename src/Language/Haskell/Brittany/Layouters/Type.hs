@@ -105,7 +105,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
               in docSeq ([open]++tyVarDocLineList++[close])
         , docForceSingleline contextDoc
         , docLit $ Text.pack " => "
-        , typeDoc
+        , docForceSingleline typeDoc
         ]
       -- :: forall a b c
       --  . (Foo a b c)
@@ -117,7 +117,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             [ docCols ColTyOpPrefix
               [ docWrapNodeRest ltype $ docLit $ Text.pack " . "
               , docAddBaseY (BrIndentSpecial 3)
-              $ docForceSingleline contextDoc
+              $ contextDoc
               ]
             , docCols ColTyOpPrefix
               [ docLit $ Text.pack "=> "
@@ -133,6 +133,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       (L _ (KindedTyVar lrdrName kind)) -> do
         d <- layoutType kind
         return $ (lrdrNameToText lrdrName, Just $ return d)
+    let maybeForceML = case typ2 of
+          (L _ HsFunTy{}) -> docForceMultiline
+          _               -> id
     let
       tyVarDocLineList = tyVarDocs >>= \case
         (tname, Nothing) -> [docLit $ Text.pack " " <> tname]
@@ -143,6 +146,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
                              , docLit $ Text.pack ")"
                              ]
     docAlt
+      -- forall x . x
       [ docSeq
         [ if null bndrs
             then docEmpty
@@ -150,15 +154,20 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
               open = docLit $ Text.pack "forall"
               close = docLit $ Text.pack " . "
               in docSeq ([open]++tyVarDocLineList++[close])
-        , return typeDoc
+        , docForceSingleline $ return $ typeDoc
         ]
+      -- :: forall x
+      -- .  x
       , docPar
           (docSeq $ docLit (Text.pack "forall") : tyVarDocLineList)
           ( docCols ColTyOpPrefix
             [ docWrapNodeRest ltype $ docLit $ Text.pack ". "
-            , return typeDoc
+            , maybeForceML $ return typeDoc
             ]
           )
+      -- :: forall
+      --      (x :: *)
+      -- .  x
       , docPar
           (docLit (Text.pack "forall"))
           (docLines
@@ -179,7 +188,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             )
           ++[ docCols ColTyOpPrefix
               [ docWrapNodeRest ltype $ docLit $ Text.pack ". "
-              , return typeDoc
+              , maybeForceML $ return typeDoc
               ]
             ]
           )
