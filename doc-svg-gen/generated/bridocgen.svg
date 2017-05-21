@@ -67,27 +67,27 @@
 <path fill="none" stroke="#666666" stroke-width="2" d="M204,-243.9551C204,-235.8828 204,-226.1764 204,-217.1817"/>
 <polygon fill="#666666" stroke="#666666" stroke-width="2" points="207.5001,-217.0903 204,-207.0904 200.5001,-217.0904 207.5001,-217.0903"/>
 </g>
-<!-- BriDoc (tree) -->
+<!-- BriDoc (tree/DAG) -->
 <g id="node4" class="node">
-<title>BriDoc (tree)</title>
-<polygon fill="#d3d3d3" stroke="#d3d3d3" points="259,-36 149,-36 149,0 259,0 259,-36"/>
-<text text-anchor="middle" x="204" y="-14.3" font-family="Times,serif" font-size="14.00" fill="#000000">BriDoc (tree)</text>
+<title>BriDoc (tree/DAG)</title>
+<polygon fill="#d3d3d3" stroke="#d3d3d3" points="278,-36 130,-36 130,0 278,0 278,-36"/>
+<text text-anchor="middle" x="204" y="-14.3" font-family="Times,serif" font-size="14.00" fill="#000000">BriDoc (tree/DAG)</text>
 </g>
-<!-- layoutSig&#45;&gt;BriDoc (tree) -->
+<!-- layoutSig&#45;&gt;BriDoc (tree/DAG) -->
 <g id="edge3" class="edge">
-<title>layoutSig&#45;&gt;BriDoc (tree)</title>
+<title>layoutSig&#45;&gt;BriDoc (tree/DAG)</title>
 <path fill="none" stroke="#666666" stroke-width="2" d="M104.6047,-72.9474C122.8312,-62.8715 144.0469,-51.1431 162.1855,-41.1157"/>
 <polygon fill="#666666" stroke="#666666" stroke-width="2" points="164.2999,-43.9462 171.3583,-36.0449 160.9132,-37.8199 164.2999,-43.9462"/>
 </g>
-<!-- layoutBind&#45;&gt;BriDoc (tree) -->
+<!-- layoutBind&#45;&gt;BriDoc (tree/DAG) -->
 <g id="edge5" class="edge">
-<title>layoutBind&#45;&gt;BriDoc (tree)</title>
+<title>layoutBind&#45;&gt;BriDoc (tree/DAG)</title>
 <path fill="none" stroke="#666666" stroke-width="2" d="M204,-72.9474C204,-64.5354 204,-54.9716 204,-46.2075"/>
 <polygon fill="#666666" stroke="#666666" stroke-width="2" points="207.5001,-46.0449 204,-36.0449 200.5001,-46.0449 207.5001,-46.0449"/>
 </g>
-<!-- layoutByExact&#45;&gt;BriDoc (tree) -->
+<!-- layoutByExact&#45;&gt;BriDoc (tree/DAG) -->
 <g id="edge7" class="edge">
-<title>layoutByExact&#45;&gt;BriDoc (tree)</title>
+<title>layoutByExact&#45;&gt;BriDoc (tree/DAG)</title>
 <path fill="none" stroke="#666666" stroke-width="2" d="M306.4871,-78.4905C287.7815,-67.45 263.6397,-53.2009 243.4861,-41.3057"/>
 <polygon fill="#666666" stroke="#666666" stroke-width="2" points="245.2224,-38.2664 234.8315,-36.1975 241.6643,-44.2947 245.2224,-38.2664"/>
 </g>

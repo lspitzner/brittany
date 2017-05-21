@@ -100,12 +100,14 @@ used in exactly that manner: Both are referenced once in each of the two
 alternatives.
 
 Unfortunately this does not mean that we can forget this issue entirely.
-The problem is that the BriDoc tree value will get transformed by multiple
-transformations. And this "breaks" sharing: If we take an exponential-sized
-tree that is linear-via-sharing and `fmap` some function `f` on it (think of
-some general-purpose tree that is Functor) then `f` will be evaluated an
-exponential number of times. And worse, the output will have lost any sharing.
-Sharing is not automatic memoization.
+The problem is that the BriDoc tree (or maybe: rooted DAG, given that we share
+nodes) value will get transformed by multiple transformations.
+And this "breaks" sharing: If we naively traverse every path in a DAG and
+`fmap` some function `f` on it (think of some general-purpose tree/graph that
+is Functor) then `f` will be evaluated an exponential number of times, because
+our linear DAG still has an exponential amount of different paths.
+And worse, the output will have lost any sharing, so becomes a tree with an
+exponential number of nodes. Sharing is not automatic memoization.
 And this holds for BriDoc, even when the transformations are not exactly
 `fmap`s.
 
@@ -123,12 +125,14 @@ So.. we already mentioned "memoization" there, right?
    we can abstract over that pretty well.
    
 2. The good news:
-   With manual memoization, creating an exponentially-sized tree is no
-   problem, presuming that it is linear-via-sharing. Not messing up this
-   property can take a bit of consideration - but otherwise we are set.
-   If the `BriDocF` tree is exponential, the transformations will still
-   do only linear-amount of "selection work" in order to convert into a
-   linear-sized `BriDoc` tree.
+   With manual memoization, we really work on rooted DAGs
+   (with linear amount of nodes and edges) instead of trees, because we share
+   nodes. Not messing up this property (that we always share nodes where
+   necessary) can take a bit of consideration - but otherwise we are set.
+   Transformations on this DAG can be expressed in such a way that they only
+   require a linear amount of work, and our first transformation will output
+   a (linear-sized) tree, so there is relatively little code that needs to
+   handle a DAG.
 
    This property is the defining one that motivates the BriDoc
    intermediate representation.
@@ -161,7 +165,7 @@ The `BriDocF f` type encapsulates the idea that each subnode is wrapped
 in the `f` container. This notion gives us the following nice properties:
 
 `BriDocF Identity ~ BriDoc` and `BriDocF ((,) Int)` is the
-manual-memoization tree with labeled nodes. Abstractions, abstractions..
+manual-memoization tree/DAG with labeled nodes. Abstractions, abstractions..
 
 Lets have a glance at related code/types we have so far:
 
@@ -169,8 +173,8 @@ Lets have a glance at related code/types we have so far:
 -- The pure BriDoc: What we really want, but cannot use everywhere due
 -- to sharing issues.
 -- Isomorphic to `BriDocF Identity`. We still use this type, because
--- then we have to unwrap the `Identities` only in once place after reducing
--- the tree to a non-exponentially-sized one.
+-- then we have to unwrap the `Identities` only in once place after turning
+-- the DAG into a tree (and getting rid of any exponentiality in the process).
 data BriDoc
   = BDEmpty
   | BDLit !Text

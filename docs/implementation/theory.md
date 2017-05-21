@@ -102,7 +102,7 @@ consider the circumstances for which a non-optimal solution is returned.
 
 ## The Reasoning
 
-A top-down approach is so bad, because when there are exponentially many
+A top-down approach is so bad because when there are exponentially many
 layouts to consider, there information passed down from the parents does
 not help at all in pruning the alternatives on a given layer. In the above
 `nestedCaseExpr` example, we might obtain a better solution by looking not
@@ -211,14 +211,16 @@ required per node of the input.
   which abstracts of different syntactical constructs and only considers the
   things relevant for layouting. This data-type is called `BriDoc`.
 
-- The `BriDoc` tree has an exponential number of nodes, but it is linear when
-  sharing is considered - the child-nodes can (and must) be re-used across
-  different alternatives. In the `nestedCaseExpr` example above, note how
-  there are four layouts, but essentially only two ways in which the "if" is
-  layouted. Either as a single line or with then/else on new lines. We can
-  handle spacings in such a way that we can share them for 1/3 and 2/4. This
-  already hints at how "columns used" will need to be redesigned slightly so
-  that 2/4 really have the same spacing label at the "if".
+- If we did not share values, we'd work on `BriDoc` trees of exponential size.
+  By sharing child-nodes across different alternatives we instead obtain a
+  rooted DAG of linear size, but still with an exponential number of different
+  paths.
+  In the `nestedCaseExpr` example above, note how there are four layouts, but
+  essentially only two ways in which the "if" is layouted.
+  Either as a single line or with then/else on new lines. We can handle
+  spacings in such a way that we can share them for 1/3 and 2/4.
+  This already hints at how "columns used" will need to be redesigned slightly
+  so that 2/4 really have the same spacing label at the "if".
 
 ### Concessions/non-Optimality
 

@@ -20,7 +20,7 @@
 <g id="node7" class="node">
 <title>bridocgen</title>
 <ellipse fill="none" stroke="#000000" cx="278.5" cy="-982.6432" rx="187.2667" ry="37.4533"/>
-<text text-anchor="middle" x="278.5" y="-993.9432" font-family="Times,serif" font-size="14.00" fill="#000000">translation into BriDoc tree</text>
+<text text-anchor="middle" x="278.5" y="-993.9432" font-family="Times,serif" font-size="14.00" fill="#000000">translation into BriDoc tree/DAG</text>
 <text text-anchor="middle" x="278.5" y="-978.9432" font-family="Times,serif" font-size="14.00" fill="#000000">in (nested) monadic context</text>
 <text text-anchor="middle" x="278.5" y="-963.9432" font-family="Times,serif" font-size="14.00" fill="#000000">(additional) State: NodeAllocIndex</text>
 </g>

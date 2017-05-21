@@ -170,7 +170,7 @@ main = do
                        ["module header", "modulechildren"]
 
     subContext "bridocgen" $ Text.Lazy.unlines
-      [ "translation into BriDoc tree"
+      [ "translation into BriDoc tree/DAG"
       , "in (nested) monadic context"
       , "(additional) State: NodeAllocIndex"
       ]
@@ -270,17 +270,17 @@ main = do
     dataTransformationLabeled "layoutSig"
                               "layoutSig\n+recursion\n(layoutType etc.)"
                               [("type of node?", Just "type sig")]
-                              ["BriDoc (tree)"]
+                              ["BriDoc (tree/DAG)"]
 
     dataTransformationLabeled "layoutBind"
                               "layoutBind\n+recursion\n(layoutExpr etc.)"
                               [("type of node?", Just "equation")]
-                              ["BriDoc (tree)"]
+                              ["BriDoc (tree/DAG)"]
 
     dataTransformationLabeled "layoutByExact"
                               "layoutByExact"
                               [("type of node?", Just "not handled (yet)")]
-                              ["BriDoc (tree)"]
+                              ["BriDoc (tree/DAG)"]
 
   -- backend :: Data.GraphViz.Types.Generalised.DotGraph String
   -- backend = digraph (Str ("ppm")) $ do
