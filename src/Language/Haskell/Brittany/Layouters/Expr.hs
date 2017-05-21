@@ -186,6 +186,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
                                             ]
     opLastDoc <- docSharedWrapper layoutExpr expOp
     expLastDoc <- docSharedWrapper layoutExpr expRight
+    let allowPar = case (expOp, expRight) of
+          (L _ (HsVar (L _ (Unqual occname))), _)
+            | occNameString occname == "$" -> True
+          (_, L _ (HsApp _ (L _ HsVar{}))) -> False
+          _ -> True
     docAlt
       [ docSeq
         [ appSep $ docForceSingleline leftOperandDoc
@@ -196,7 +201,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
             ]
           )
         , appSep $ docForceSingleline opLastDoc
-        , docForceParSpacing expLastDoc
+        , (if allowPar then docForceParSpacing else docForceSingleline)
+            expLastDoc
         ]
       -- this case rather leads to some unfortunate layouting than to anything
       -- useful; disabling for now. (it interfers with cols stuff.)
@@ -219,9 +225,15 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     expDocLeft  <- docSharedWrapper layoutExpr expLeft
     expDocOp    <- docSharedWrapper layoutExpr expOp
     expDocRight <- docSharedWrapper layoutExpr expRight
-    docAlt
+    let allowPar = case (expOp, expRight) of
+          (L _ (HsVar (L _ (Unqual occname))), _)
+            | occNameString occname == "$" -> True
+          (_, L _ (HsApp _ (L _ HsVar{}))) -> False
+          _ -> True
+    docAltFilter
       $   [ -- one-line
-            docSeq
+            (,) True
+          $ docSeq
             [ appSep $ docForceSingleline expDocLeft
             , appSep $ docForceSingleline expDocOp
             , docForceSingleline expDocRight
@@ -233,20 +245,23 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           --   , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
           --   ]
           , -- two-line
-            docAddBaseY BrIndentRegular
+            (,) True
+          $ docAddBaseY BrIndentRegular
           $ docPar
               expDocLeft
               ( docForceSingleline
               $ docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight]
               )
           , -- one-line + par
-            docSeq
+            (,) allowPar
+          $ docSeq
             [ appSep $ docForceSingleline expDocLeft
             , appSep $ docForceSingleline expDocOp
             , docForceParSpacing expDocRight
             ]
           , -- more lines
-            docAddBaseY BrIndentRegular
+            (,) True
+          $ docAddBaseY BrIndentRegular
           $ docPar
               expDocLeft
               (docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight])

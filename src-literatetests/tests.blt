@@ -843,6 +843,24 @@ parserCompactLocation =
         ]
   ]
 
+#test opapp-specialcasing-1
+func = fooooooooooooooooooooooooooooooooo $ foooooooooooooooooooooooooooooooo
+  foooooooooooooooooooooooooooooooo
+  foooooooooooooooooooooooooooooooo
+
+#test opapp-specialcasing-2
+func =
+  fooooooooooooooooooooooooooooooooo
+    + foooooooooooooooooooooooooooooooo foooooooooooooooooooooooooooooooo
+                                        foooooooooooooooooooooooooooooooo
+
+#test opapp-specialcasing-2
+func = fooooooooooooooooooooooooooooooooo + foooooooooooooooooooooooooooooooo
+  [ foooooooooooooooooooooooooooooooo
+  , foooooooooooooooooooooooooooooooo
+  , foooooooooooooooooooooooooooooooo
+  ]
+
 
 ###############################################################################
 ###############################################################################
