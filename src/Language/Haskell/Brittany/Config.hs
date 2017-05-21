@@ -63,7 +63,8 @@ configParser = do
                                            (flagHelp $ parDoc "allows to define default language extensions. The parameter is forwarded to ghc.")
 
   return $ Config
-    { _conf_debug = DebugConfig
+    { _conf_version = mempty
+    , _conf_debug   = DebugConfig
       { _dconf_dump_config                = wrapLast $ falseToNothing dumpConfig
       , _dconf_dump_annotations           = wrapLast $ falseToNothing dumpAnnotations
       , _dconf_dump_ast_unknown           = wrapLast $ falseToNothing dumpUnknownAST
@@ -91,9 +92,11 @@ configParser = do
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors   = wrapLast $ falseToNothing outputOnErrors
       , _econf_Werror                  = wrapLast $ falseToNothing wError
-      , _econf_CPPMode                 = mempty
       , _econf_ExactPrintFallback      = mempty
       , _econf_omit_output_valid_check = wrapLast $ falseToNothing omitValidCheck
+      }
+    , _conf_preprocessor = PreProcessorConfig
+      { _ppconf_CPPMode            = mempty
       }
     , _conf_forward = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]

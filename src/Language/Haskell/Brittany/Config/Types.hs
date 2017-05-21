@@ -84,7 +84,6 @@ data CForwardOptions f = ForwardOptions
 data CErrorHandlingConfig f = ErrorHandlingConfig
   { _econf_produceOutputOnErrors   :: f (Semigroup.Last Bool)
   , _econf_Werror                  :: f (Semigroup.Last Bool)
-  , _econf_CPPMode                 :: f (Semigroup.Last CPPMode)
   , _econf_ExactPrintFallback      :: f (Semigroup.Last ExactPrintFallbackMode)
     -- ^ Determines when to fall back on the exactprint'ed output when
     -- syntactical constructs are encountered which are not yet handled by
@@ -97,11 +96,18 @@ data CErrorHandlingConfig f = ErrorHandlingConfig
   }
   deriving (Generic)
 
+data CPreProcessorConfig f = PreProcessorConfig
+  { _ppconf_CPPMode :: f (Semigroup.Last CPPMode)
+  }
+  deriving (Generic)
+
 data CConfig f = Config
-  { _conf_debug :: CDebugConfig f
-  , _conf_layout :: CLayoutConfig f
+  { _conf_version       :: f (Semigroup.Last Int)
+  , _conf_debug         :: CDebugConfig f
+  , _conf_layout        :: CLayoutConfig f
   , _conf_errorHandling :: CErrorHandlingConfig f
-  , _conf_forward :: CForwardOptions f
+  , _conf_forward       :: CForwardOptions f
+  , _conf_preprocessor  :: CPreProcessorConfig f
   }
   deriving (Generic)
 
@@ -116,18 +122,21 @@ deriving instance Show (CDebugConfig Identity)
 deriving instance Show (CLayoutConfig Identity)
 deriving instance Show (CErrorHandlingConfig Identity)
 deriving instance Show (CForwardOptions Identity)
+deriving instance Show (CPreProcessorConfig Identity)
 deriving instance Show (CConfig Identity)
 
 deriving instance Show (CDebugConfig Option)
 deriving instance Show (CLayoutConfig Option)
 deriving instance Show (CErrorHandlingConfig Option)
 deriving instance Show (CForwardOptions Option)
+deriving instance Show (CPreProcessorConfig Option)
 deriving instance Show (CConfig Option)
 
 deriving instance Data (CDebugConfig Identity)
 deriving instance Data (CLayoutConfig Identity)
 deriving instance Data (CErrorHandlingConfig Identity)
 deriving instance Data (CForwardOptions Identity)
+deriving instance Data (CPreProcessorConfig Identity)
 deriving instance Data (CConfig Identity)
 
 instance Semigroup.Semigroup (CDebugConfig Option) where
@@ -137,6 +146,8 @@ instance Semigroup.Semigroup (CLayoutConfig Option) where
 instance Semigroup.Semigroup (CErrorHandlingConfig Option) where
   (<>) = gmappend
 instance Semigroup.Semigroup (CForwardOptions Option) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (CPreProcessorConfig Option) where
   (<>) = gmappend
 instance Semigroup.Semigroup (CConfig Option) where
   (<>) = gmappend
@@ -201,6 +212,11 @@ makeFromJSONOption(CForwardOptions)
 makeFromJSONMaybe(CForwardOptions)
 makeToJSONOption(CForwardOptions)
 makeToJSONMaybe(CForwardOptions)
+
+makeFromJSONOption(CPreProcessorConfig)
+makeFromJSONMaybe(CPreProcessorConfig)
+makeToJSONOption(CPreProcessorConfig)
+makeToJSONMaybe(CPreProcessorConfig)
 
 makeFromJSONOption(CConfig)
 makeFromJSONMaybe(CConfig)
@@ -267,7 +283,8 @@ data ExactPrintFallbackMode
 
 staticDefaultConfig :: Config
 staticDefaultConfig = Config
-  { _conf_debug = DebugConfig
+  { _conf_version = coerce (1 :: Int)
+  , _conf_debug   = DebugConfig
     { _dconf_dump_config                = coerce False
     , _dconf_dump_annotations           = coerce False
     , _dconf_dump_ast_unknown           = coerce False
@@ -295,9 +312,11 @@ staticDefaultConfig = Config
   , _conf_errorHandling = ErrorHandlingConfig
     { _econf_produceOutputOnErrors   = coerce False
     , _econf_Werror                  = coerce False
-    , _econf_CPPMode                 = coerce CPPModeAbort
     , _econf_ExactPrintFallback      = coerce ExactPrintFallbackModeInline
     , _econf_omit_output_valid_check = coerce False
+    }
+  , _conf_preprocessor = PreProcessorConfig
+    { _ppconf_CPPMode            = coerce CPPModeAbort
     }
   , _conf_forward = ForwardOptions
     { _options_ghc = Identity []
@@ -311,5 +330,6 @@ deriveCZipWith ''CDebugConfig
 deriveCZipWith ''CLayoutConfig
 deriveCZipWith ''CErrorHandlingConfig
 deriveCZipWith ''CForwardOptions
+deriveCZipWith ''CPreProcessorConfig
 deriveCZipWith ''CConfig
 

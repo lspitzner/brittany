@@ -143,8 +143,9 @@ instance Show PPTextWrapper where
 
 defaultTestConfig :: Config
 defaultTestConfig = Config
-  { _conf_debug  = _conf_debug staticDefaultConfig
-  , _conf_layout = LayoutConfig
+  { _conf_version = _conf_version staticDefaultConfig
+  , _conf_debug   = _conf_debug staticDefaultConfig
+  , _conf_layout  = LayoutConfig
     { _lconfig_cols                      = coerce (80 :: Int)
     , _lconfig_indentPolicy              = coerce IndentPolicyFree
     , _lconfig_indentAmount              = coerce (2 :: Int)
@@ -159,7 +160,8 @@ defaultTestConfig = Config
   , _conf_errorHandling = (_conf_errorHandling staticDefaultConfig)
     { _econf_omit_output_valid_check = coerce True
     }
-  , _conf_forward = ForwardOptions
+  , _conf_preprocessor = _conf_preprocessor staticDefaultConfig
+  , _conf_forward      = ForwardOptions
     { _options_ghc = Identity []
     }
   }

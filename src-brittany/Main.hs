@@ -111,8 +111,8 @@ mainCmdParser helpDesc = do
                    & runIdentity
     liftIO $ do
       let cppMode = config
-                  & _conf_errorHandling
-                  & _econf_CPPMode
+                  & _conf_preprocessor
+                  & _ppconf_CPPMode
                   & runIdentity
                   & Semigroup.getLast
       let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
