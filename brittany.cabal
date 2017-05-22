@@ -51,6 +51,7 @@ library {
     Language.Haskell.Brittany.Internal.Utils
     Language.Haskell.Brittany.Internal.Config
     Language.Haskell.Brittany.Internal.Config.Types
+    Paths_brittany
   }
   other-modules: {
     Language.Haskell.Brittany.Internal.LayouterBasics
@@ -67,7 +68,6 @@ library {
     Language.Haskell.Brittany.Internal.Transformations.Par
     Language.Haskell.Brittany.Internal.Transformations.Columns
     Language.Haskell.Brittany.Internal.Transformations.Indent
-    Paths_brittany
   }
   ghc-options: {
     -Wall
