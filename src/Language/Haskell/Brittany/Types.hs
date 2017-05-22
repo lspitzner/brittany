@@ -115,10 +115,17 @@ instance Show LayoutState where
 --   }
 
 data LayoutError
-  = LayoutErrorUnusedComment String
+  = LayoutErrorInput String
+    -- ^ parsing failed
+  | LayoutErrorUnusedComment String
+    -- ^ internal error: some comment went missing
   | LayoutWarning String
+    -- ^ some warning
   | forall ast . Data.Data.Data ast => LayoutErrorUnknownNode String ast
+    -- ^ internal error: pretty-printing is not implemented for type of node
+    --   in the syntax-tree
   | LayoutErrorOutputCheck
+    -- ^ checking the output for syntactic validity failed
 
 data BriSpacing = BriSpacing
   { _bs_spacePastLineIndent :: Int -- space in the current,

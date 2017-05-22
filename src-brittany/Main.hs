@@ -111,6 +111,11 @@ mainCmdParser helpDesc = do
       trace (showConfigYaml config) $ return ()
     let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
     liftIO $ do
+      -- there is a good of code duplication between the following code and the
+      -- `pureModuleTransform` function. Unfortunately, there are also a good
+      -- amount of slight differences: This module is a bit more verbose, and
+      -- it tries to use the full-blown `parseModule` function which supports
+      -- CPP (but requires the input to be a file..).
       let cppMode = config & _conf_preprocessor & _ppconf_CPPMode & runIdentity & Semigroup.getLast
       -- the flag will do the following: insert a marker string
       -- ("-- BRITTANY_INCLUDE_HACK ") right before any lines starting with
@@ -147,21 +152,15 @@ mainCmdParser helpDesc = do
           when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
             let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
             trace ("---- ast ----\n" ++ show val) $ return ()
-          -- mapM_ printErr (Map.toList anns)
-          -- let L _ (HsModule name exports imports decls _ _) = parsedSource
-          -- let someDecls = take 3 decls
-          -- -- let out = ExactPrint.exactPrint parsedSource anns
-          -- let out = do
-          --       decl <- someDecls
-          --       ExactPrint.exactPrint decl anns
-          let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
           (errsWarns, outLText) <- do
+            let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
             (ews, outRaw) <- if hasCPP || omitCheck
               then return $ pPrintModule config anns parsedSource
               else pPrintModuleAndCheck config anns parsedSource
             let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
             pure $ if hackAroundIncludes then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw) else (ews, outRaw)
-          let customErrOrder LayoutWarning{}            = 0 :: Int
+          let customErrOrder LayoutErrorInput{}         = 4
+              customErrOrder LayoutWarning{}            = 0 :: Int
               customErrOrder LayoutErrorOutputCheck{}   = 1
               customErrOrder LayoutErrorUnusedComment{} = 2
               customErrOrder LayoutErrorUnknownNode{}   = 3
@@ -170,6 +169,8 @@ mainCmdParser helpDesc = do
             groupedErrsWarns `forM_` \case
               (LayoutErrorOutputCheck{}:_) -> do
                 putStrErrLn $ "ERROR: brittany pretty printer" ++ " returned syntactically invalid result."
+              (LayoutErrorInput str:_) -> do
+                putStrErrLn $ "ERROR: parse error: " ++ str
               uns@(LayoutErrorUnknownNode{}:_) -> do
                 putStrErrLn $ "ERROR: encountered unknown syntactical constructs:"
                 uns `forM_` \case

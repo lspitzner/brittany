@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 
 module Language.Haskell.Brittany
-  ( parsePrintModule
+  ( pureModuleTransform
+  , parsePrintModule
   , pPrintModule
   , pPrintModuleAndCheck
    -- re-export from utils:
@@ -18,7 +19,10 @@ import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 
-import qualified Data.Generics as SYB
+import           Data.Data
+import           Control.Monad.Trans.Either
+import           Data.HList.HList
+import           Data.CZipWith
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
@@ -45,9 +49,72 @@ import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
 import           HsSyn
+import qualified DynFlags as GHC
+import qualified GHC.LanguageExtensions.Type as GHC
 
-import           Data.HList.HList
 
+
+-- | Exposes the transformation in an pseudo-pure fashion. The signature
+-- contains `IO` due to the GHC API not exposing a pure parsing function, but
+-- there should be no observable effects.
+--
+-- Note that this function ignores/resets all config values regarding
+-- debugging, i.e. it will never use `trace`/write to stderr.
+pureModuleTransform :: CConfig Option -> Text -> IO (Either [LayoutError] Text)
+pureModuleTransform oConfigRaw inputText = runEitherT $ do
+  let configRaw = cZipWith fromOptionIdentity staticDefaultConfig oConfigRaw
+  let config = configRaw { _conf_debug = _conf_debug staticDefaultConfig }
+  let ghcOptions         = config & _conf_forward & _options_ghc & runIdentity
+  let config_pp          = config & _conf_preprocessor
+  let cppMode            = config_pp & _ppconf_CPPMode & confUnpack
+  let hackAroundIncludes = config_pp & _ppconf_hackAroundIncludes & confUnpack
+  (anns, parsedSource, hasCPP) <- do
+    let hackF s = if "#include" `isPrefixOf` s
+          then "-- BRITTANY_INCLUDE_HACK " ++ s
+          else s
+    let hackTransform = if hackAroundIncludes
+          then List.unlines . fmap hackF . List.lines
+          else id
+    let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+          then case cppMode of
+            CPPModeAbort  -> return $ Left "Encountered -XCPP. Aborting."
+            CPPModeWarn   -> return $ Right True
+            CPPModeNowarn -> return $ Right True
+          else return $ Right False
+    parseResult <- lift $ parseModuleFromString
+      ghcOptions
+      "stdin"
+      cppCheckFunc
+      (hackTransform $ Text.unpack inputText)
+    case parseResult of
+      Left  err -> left $ [LayoutErrorInput err]
+      Right x   -> pure $ x
+  (errsWarns, outputTextL) <- do
+    let omitCheck =
+          config
+            & _conf_errorHandling
+            & _econf_omit_output_valid_check
+            & confUnpack
+    (ews, outRaw) <- if hasCPP || omitCheck
+      then return $ pPrintModule config anns parsedSource
+      else lift $ pPrintModuleAndCheck config anns parsedSource
+    let hackF s = fromMaybe s
+          $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
+    pure $ if hackAroundIncludes
+      then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw)
+      else (ews, outRaw)
+  let customErrOrder LayoutErrorInput{}         = 4
+      customErrOrder LayoutWarning{}            = 0 :: Int
+      customErrOrder LayoutErrorOutputCheck{}   = 1
+      customErrOrder LayoutErrorUnusedComment{} = 2
+      customErrOrder LayoutErrorUnknownNode{}   = 3
+  let hasErrors =
+        case config & _conf_errorHandling & _econf_Werror & confUnpack of
+          False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
+          True  -> not $ null errsWarns
+  if hasErrors
+    then left $ errsWarns
+    else pure $ TextL.toStrict outputTextL
 
 
 -- LayoutErrors can be non-fatal warnings, thus both are returned instead
@@ -115,7 +182,11 @@ parsePrintModule conf filename input = do
   case parseResult of
     Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
     Right (anns, parsedModule) -> do
-      let omitCheck = conf & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
+      let omitCheck =
+            conf
+              &  _conf_errorHandling
+              .> _econf_omit_output_valid_check
+              .> confUnpack
       (errs, ltext) <- if omitCheck
         then return $ pPrintModule conf anns parsedModule
         else pPrintModuleAndCheck conf anns parsedModule
@@ -124,12 +195,14 @@ parsePrintModule conf filename input = do
         else
           let
             errStrs = errs <&> \case
+              LayoutErrorInput         str -> str
               LayoutErrorUnusedComment str -> str
               LayoutWarning            str -> str
               LayoutErrorUnknownNode str _ -> str
               LayoutErrorOutputCheck -> "Output is not syntactically valid."
           in
             Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
+
 
 -- this approach would for with there was a pure GHC.parseDynamicFilePragma.
 -- Unfortunately that does not exist yet, so we cannot provide a nominally
@@ -215,7 +288,7 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
         ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY - cmY)
     _ -> return ()
 
-withTransformedAnns :: SYB.Data ast => ast -> PPM () -> PPM ()
+withTransformedAnns :: Data ast => ast -> PPM () -> PPM ()
 withTransformedAnns ast m = do
   -- TODO: implement `local` for MultiReader/MultiRWS
   readers@(conf :+: anns :+: HNil) <- MultiRWSS.mGetRawR
