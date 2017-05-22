@@ -99,6 +99,7 @@ data CErrorHandlingConfig f = ErrorHandlingConfig
 
 data CPreProcessorConfig f = PreProcessorConfig
   { _ppconf_CPPMode :: f (Semigroup.Last CPPMode)
+  , _ppconf_hackAroundIncludes :: f (Semigroup.Last Bool)
   }
   deriving (Generic)
 
@@ -334,6 +335,7 @@ staticDefaultConfig = Config
     }
   , _conf_preprocessor = PreProcessorConfig
     { _ppconf_CPPMode            = coerce CPPModeAbort
+    , _ppconf_hackAroundIncludes = coerce False
     }
   , _conf_forward = ForwardOptions
     { _options_ghc = Identity []

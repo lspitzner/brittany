@@ -97,6 +97,7 @@ configParser = do
       }
     , _conf_preprocessor = PreProcessorConfig
       { _ppconf_CPPMode            = mempty
+      , _ppconf_hackAroundIncludes = mempty
       }
     , _conf_forward = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]

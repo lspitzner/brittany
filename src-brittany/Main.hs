@@ -115,6 +115,12 @@ mainCmdParser helpDesc = do
                   & _ppconf_CPPMode
                   & runIdentity
                   & Semigroup.getLast
+      -- the flag will do the following: insert a marker string
+      -- ("-- BRITTANY_INCLUDE_HACK ") right before any lines starting with
+      -- "#include" before processing (parsing) input; and remove that marker
+      -- string from the transformation output.
+      let hackAroundIncludes =
+            config & _conf_preprocessor & _ppconf_hackAroundIncludes & runIdentity & Semigroup.getLast
       let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
             then case cppMode of
               CPPModeAbort -> do
@@ -130,8 +136,11 @@ mainCmdParser helpDesc = do
                 return $ Right True
             else return $ Right False
       parseResult <- case inputPathM of
-        Nothing -> parseModuleFromString ghcOptions "stdin" cppCheckFunc
-                   =<< System.IO.hGetContents System.IO.stdin
+        Nothing -> do
+          let hackF s = if "#include" `isPrefixOf` s then "-- BRITTANY_INCLUDE_HACK " ++ s else s
+          let hackTransform = if hackAroundIncludes then List.unlines . fmap hackF . List.lines else id
+          inputString <- System.IO.hGetContents System.IO.stdin
+          parseModuleFromString ghcOptions "stdin" cppCheckFunc (hackTransform inputString)
         Just p -> parseModule ghcOptions p cppCheckFunc
       case parseResult of
         Left left -> do
@@ -150,9 +159,12 @@ mainCmdParser helpDesc = do
           --       decl <- someDecls
           --       ExactPrint.exactPrint decl anns
           let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
-          (errsWarns, outLText) <- if hasCPP || omitCheck
-            then return $ pPrintModule config anns parsedSource
-            else pPrintModuleAndCheck config anns parsedSource
+          (errsWarns, outLText) <- do
+            (ews, outRaw) <- if hasCPP || omitCheck
+              then return $ pPrintModule config anns parsedSource
+              else pPrintModuleAndCheck config anns parsedSource
+            let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
+            pure $ if hackAroundIncludes then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw) else (ews, outRaw)
           let customErrOrder LayoutWarning{}            = 0 :: Int
               customErrOrder LayoutErrorOutputCheck{}   = 1
               customErrOrder LayoutErrorUnusedComment{} = 2
