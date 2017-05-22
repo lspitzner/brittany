@@ -3,7 +3,7 @@
 module Language.Haskell.Brittany
   ( pureModuleTransform
   , CConfig
-  , LayoutError(..)
+  , BrittanyError(..)
   )
 where
 

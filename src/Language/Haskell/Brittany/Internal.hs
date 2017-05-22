@@ -60,7 +60,7 @@ import qualified GHC.LanguageExtensions.Type as GHC
 --
 -- Note that this function ignores/resets all config values regarding
 -- debugging, i.e. it will never use `trace`/write to stderr.
-pureModuleTransform :: CConfig Option -> Text -> IO (Either [LayoutError] Text)
+pureModuleTransform :: CConfig Option -> Text -> IO (Either [BrittanyError] Text)
 pureModuleTransform oConfigRaw inputText = runEitherT $ do
   let configRaw = cZipWith fromOptionIdentity staticDefaultConfig oConfigRaw
   let config = configRaw { _conf_debug = _conf_debug staticDefaultConfig }
@@ -87,7 +87,7 @@ pureModuleTransform oConfigRaw inputText = runEitherT $ do
       cppCheckFunc
       (hackTransform $ Text.unpack inputText)
     case parseResult of
-      Left  err -> left $ [LayoutErrorInput err]
+      Left  err -> left $ [ErrorInput err]
       Right x   -> pure $ x
   (errsWarns, outputTextL) <- do
     let omitCheck =
@@ -103,21 +103,19 @@ pureModuleTransform oConfigRaw inputText = runEitherT $ do
     pure $ if hackAroundIncludes
       then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw)
       else (ews, outRaw)
-  let customErrOrder LayoutErrorInput{}         = 4
-      customErrOrder LayoutWarning{}            = 0 :: Int
-      customErrOrder LayoutErrorOutputCheck{}   = 1
-      customErrOrder LayoutErrorUnusedComment{} = 2
-      customErrOrder LayoutErrorUnknownNode{}   = 3
+  let customErrOrder ErrorInput{}         = 4
+      customErrOrder LayoutWarning{}      = 0 :: Int
+      customErrOrder ErrorOutputCheck{}   = 1
+      customErrOrder ErrorUnusedComment{} = 2
+      customErrOrder ErrorUnknownNode{}   = 3
   let hasErrors =
         case config & _conf_errorHandling & _econf_Werror & confUnpack of
           False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
           True  -> not $ null errsWarns
-  if hasErrors
-    then left $ errsWarns
-    else pure $ TextL.toStrict outputTextL
+  if hasErrors then left $ errsWarns else pure $ TextL.toStrict outputTextL
 
 
--- LayoutErrors can be non-fatal warnings, thus both are returned instead
+-- BrittanyErrors can be non-fatal warnings, thus both are returned instead
 -- of an Either.
 -- This should be cleaned up once it is clear what kinds of errors really
 -- can occur.
@@ -125,7 +123,7 @@ pPrintModule
   :: Config
   -> ExactPrint.Types.Anns
   -> GHC.ParsedSource
-  -> ([LayoutError], TextL.Text)
+  -> ([BrittanyError], TextL.Text)
 pPrintModule conf anns parsedModule =
   let
     ((out, errs), debugStrings) =
@@ -160,7 +158,7 @@ pPrintModuleAndCheck
   :: Config
   -> ExactPrint.Types.Anns
   -> GHC.ParsedSource
-  -> IO ([LayoutError], TextL.Text)
+  -> IO ([BrittanyError], TextL.Text)
 pPrintModuleAndCheck conf anns parsedModule = do
   let ghcOptions     = conf & _conf_forward & _options_ghc & runIdentity
   let (errs, output) = pPrintModule conf anns parsedModule
@@ -169,7 +167,7 @@ pPrintModuleAndCheck conf anns parsedModule = do
                                        (\_ -> return $ Right ())
                                        (TextL.unpack output)
   let errs' = errs ++ case parseResult of
-        Left{}  -> [LayoutErrorOutputCheck]
+        Left{}  -> [ErrorOutputCheck]
         Right{} -> []
   return (errs', output)
 
@@ -193,15 +191,13 @@ parsePrintModule conf filename input = do
       return $ if null errs
         then Right $ TextL.toStrict $ ltext
         else
-          let
-            errStrs = errs <&> \case
-              LayoutErrorInput         str -> str
-              LayoutErrorUnusedComment str -> str
-              LayoutWarning            str -> str
-              LayoutErrorUnknownNode str _ -> str
-              LayoutErrorOutputCheck -> "Output is not syntactically valid."
-          in
-            Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
+          let errStrs = errs <&> \case
+                ErrorInput         str -> str
+                ErrorUnusedComment str -> str
+                LayoutWarning      str -> str
+                ErrorUnknownNode str _ -> str
+                ErrorOutputCheck       -> "Output is not syntactically valid."
+          in  Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
 
 
 -- this approach would for with there was a pure GHC.parseDynamicFilePragma.
@@ -234,7 +230,7 @@ parsePrintModule conf filename input = do
 --       if (not $ null errs)
 --         then do
 --           let errStrs = errs <&> \case
---                 LayoutErrorUnusedComment str -> str
+--                 ErrorUnusedComment str -> str
 --           Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
 --         else return $ TextL.toStrict $ Text.Builder.toLazyText out
 
@@ -396,6 +392,6 @@ layoutBriDoc ast briDoc = do
   let remainingComments =
         extractAllComments =<< Map.elems (_lstate_comments state')
   remainingComments
-    `forM_` (fst .> show .> LayoutErrorUnusedComment .> (:[]) .> mTell)
+    `forM_` (fst .> show .> ErrorUnusedComment .> (:[]) .> mTell)
 
   return $ ()

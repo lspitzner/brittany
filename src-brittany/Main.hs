@@ -159,22 +159,22 @@ mainCmdParser helpDesc = do
               else pPrintModuleAndCheck config anns parsedSource
             let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
             pure $ if hackAroundIncludes then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw) else (ews, outRaw)
-          let customErrOrder LayoutErrorInput{}         = 4
-              customErrOrder LayoutWarning{}            = 0 :: Int
-              customErrOrder LayoutErrorOutputCheck{}   = 1
-              customErrOrder LayoutErrorUnusedComment{} = 2
-              customErrOrder LayoutErrorUnknownNode{}   = 3
+          let customErrOrder ErrorInput{}         = 4
+              customErrOrder LayoutWarning{}      = 0 :: Int
+              customErrOrder ErrorOutputCheck{}   = 1
+              customErrOrder ErrorUnusedComment{} = 2
+              customErrOrder ErrorUnknownNode{}   = 3
           when (not $ null errsWarns) $ do
             let groupedErrsWarns = Data.List.Extra.groupOn customErrOrder $ List.sortOn customErrOrder $ errsWarns
             groupedErrsWarns `forM_` \case
-              (LayoutErrorOutputCheck{}:_) -> do
+              (ErrorOutputCheck{}:_) -> do
                 putStrErrLn $ "ERROR: brittany pretty printer" ++ " returned syntactically invalid result."
-              (LayoutErrorInput str:_) -> do
+              (ErrorInput str:_) -> do
                 putStrErrLn $ "ERROR: parse error: " ++ str
-              uns@(LayoutErrorUnknownNode{}:_) -> do
+              uns@(ErrorUnknownNode{}:_) -> do
                 putStrErrLn $ "ERROR: encountered unknown syntactical constructs:"
                 uns `forM_` \case
-                  LayoutErrorUnknownNode str ast -> do
+                  ErrorUnknownNode str ast -> do
                     putStrErrLn str
                     when (config & _conf_debug & _dconf_dump_ast_unknown & confUnpack) $ do
                       putStrErrLn $ "  " ++ show (astToDoc ast)
@@ -184,7 +184,7 @@ mainCmdParser helpDesc = do
                 warns `forM_` \case
                   LayoutWarning str -> putStrErrLn str
                   _                 -> error "cannot happen (TM)"
-              unused@(LayoutErrorUnusedComment{}:_) -> do
+              unused@(ErrorUnusedComment{}:_) -> do
                 putStrErrLn
                   $  "Error: detected unprocessed comments."
                   ++ " The transformation output will most likely"
@@ -192,8 +192,8 @@ mainCmdParser helpDesc = do
                   ++ " present in the input haskell source file."
                 putStrErrLn $ "Affected are the following comments:"
                 unused `forM_` \case
-                  LayoutErrorUnusedComment str -> putStrErrLn str
-                  _                            -> error "cannot happen (TM)"
+                  ErrorUnusedComment str -> putStrErrLn str
+                  _                      -> error "cannot happen (TM)"
               [] -> error "cannot happen"
           -- TODO: don't output anything when there are errors unless user
           -- adds some override?

@@ -28,7 +28,7 @@ import           Data.Generics.Uniplate.Direct as Uniplate
 
 
 
-type PPM a = MultiRWSS.MultiRWS '[Config, ExactPrint.Anns] '[Text.Builder.Builder, [LayoutError], Seq String] '[] a
+type PPM a = MultiRWSS.MultiRWS '[Config, ExactPrint.Anns] '[Text.Builder.Builder, [BrittanyError], Seq String] '[] a
 
 data LayoutState = LayoutState
   { _lstate_baseYs         :: [Int]
@@ -114,17 +114,17 @@ instance Show LayoutState where
 --   , _lsettings_initialAnns :: ExactPrint.Anns
 --   }
 
-data LayoutError
-  = LayoutErrorInput String
+data BrittanyError
+  = ErrorInput String
     -- ^ parsing failed
-  | LayoutErrorUnusedComment String
+  | ErrorUnusedComment String
     -- ^ internal error: some comment went missing
   | LayoutWarning String
     -- ^ some warning
-  | forall ast . Data.Data.Data ast => LayoutErrorUnknownNode String ast
+  | forall ast . Data.Data.Data ast => ErrorUnknownNode String ast
     -- ^ internal error: pretty-printing is not implemented for type of node
     --   in the syntax-tree
-  | LayoutErrorOutputCheck
+  | ErrorOutputCheck
     -- ^ checking the output for syntactic validity failed
 
 data BriSpacing = BriSpacing
@@ -187,7 +187,7 @@ data BrIndent = BrIndentNone
               | BrIndentSpecial Int
   deriving (Eq, Ord, Typeable, Data.Data.Data, Show)
 
-type ToBriDocM = MultiRWSS.MultiRWS '[Config, Anns] '[[LayoutError], Seq String] '[NodeAllocIndex]
+type ToBriDocM = MultiRWSS.MultiRWS '[Config, Anns] '[[BrittanyError], Seq String] '[NodeAllocIndex]
 
 type ToBriDoc (sym :: * -> *) = Located (sym RdrName) -> ToBriDocM BriDocNumbered
 type ToBriDoc' sym            = Located sym           -> ToBriDocM BriDocNumbered

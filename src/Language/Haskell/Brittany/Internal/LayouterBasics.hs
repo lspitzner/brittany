@@ -156,7 +156,7 @@ briDocByExactInlineOnly infoStr ast = do
         exactPrinted
   let
     errorAction = do
-      mTell $ [LayoutErrorUnknownNode infoStr ast]
+      mTell $ [ErrorUnknownNode infoStr ast]
       docLit $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
   case (fallbackMode, Text.lines exactPrinted) of
     (ExactPrintFallbackModeNever, _  ) -> errorAction
@@ -607,7 +607,7 @@ docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 unknownNodeError
   :: Data.Data.Data ast => String -> ast -> ToBriDocM BriDocNumbered
 unknownNodeError infoStr ast = do
-  mTell $ [LayoutErrorUnknownNode infoStr ast]
+  mTell $ [ErrorUnknownNode infoStr ast]
   docLit $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
 
 spacifyDocs :: [ToBriDocM BriDocNumbered] -> [ToBriDocM BriDocNumbered]
