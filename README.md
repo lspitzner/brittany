@@ -107,4 +107,4 @@ linear in the size of the input (although the constant factor is not small).
 
 # Implementation/High-level Documentation
 
-[See the documentation index](docs/implementation/index.md)
+[See the documentation index](doc/implementation/index.md)

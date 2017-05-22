@@ -4,9 +4,9 @@ synopsis:             Haskell source code formatter
 description: {
   See <https://github.com/lspitzner/brittany/blob/master/README.md the README>
 
-  If you are interested in the implementation, have a look at <https://github.com/lspitzner/brittany/blob/master/docs/implementation/theory.md this document>;
+  If you are interested in the implementation, have a look at <https://github.com/lspitzner/brittany/blob/master/doc/implementation/theory.md this document>;
 
-  The implementation is documented in more detail <https://github.com/lspitzner/brittany/blob/master/docs/implementation/index.md here>.
+  The implementation is documented in more detail <https://github.com/lspitzner/brittany/blob/master/doc/implementation/index.md here>.
 }
 license:              AllRightsReserved
 -- license-file:         LICENSE
