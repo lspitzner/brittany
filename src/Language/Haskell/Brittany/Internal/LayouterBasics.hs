@@ -1,4 +1,4 @@
-module Language.Haskell.Brittany.LayouterBasics
+module Language.Haskell.Brittany.Internal.LayouterBasics
   ( processDefault
   , rdrNameToText
   , lrdrNameToText
@@ -64,9 +64,9 @@ import Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation, KeywordId )
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
-import Language.Haskell.Brittany.Config.Types
-import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany.Utils
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )

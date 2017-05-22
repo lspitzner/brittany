@@ -5,7 +5,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 
-module Language.Haskell.Brittany.Transformations.Alt
+module Language.Haskell.Brittany.Internal.Transformations.Alt
   ( transformAlts
   )
 where
@@ -16,9 +16,9 @@ where
 
 import           Data.HList.ContainsType
 
-import           Language.Haskell.Brittany.Utils
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.Internal.Utils
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Control.Monad.Memo as Memo
 

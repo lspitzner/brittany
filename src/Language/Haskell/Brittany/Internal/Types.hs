@@ -5,7 +5,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE BangPatterns #-}
 
-module Language.Haskell.Brittany.Types
+module Language.Haskell.Brittany.Internal.Types
 where
 
 
@@ -22,7 +22,7 @@ import           GHC ( Located, runGhc, GenLocated(L), moduleNameString, AnnKeyw
 import           Language.Haskell.GHC.ExactPrint ( AnnKey, Comment )
 import           Language.Haskell.GHC.ExactPrint.Types ( KeywordId, Anns, DeltaPos, mkAnnKey )
 
-import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.Internal.Config.Types
 
 import           Data.Generics.Uniplate.Direct as Uniplate
 

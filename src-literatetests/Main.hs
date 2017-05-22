@@ -16,9 +16,9 @@ import Text.Parsec.Text ( Parser )
 import Data.Char ( isSpace )
 import Data.List ( groupBy )
 
-import Language.Haskell.Brittany
+import Language.Haskell.Brittany.Internal
 
-import Language.Haskell.Brittany.Config.Types
+import Language.Haskell.Brittany.Internal.Config.Types
 
 import Data.Coerce ( coerce )
 

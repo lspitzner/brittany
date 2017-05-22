@@ -18,11 +18,11 @@ import           Data.CZipWith
 
 import qualified Debug.Trace as Trace
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany
-import           Language.Haskell.Brittany.Config
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Utils
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal
+import           Language.Haskell.Brittany.Internal.Config
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Utils
 
 import qualified Text.PrettyPrint as PP
 

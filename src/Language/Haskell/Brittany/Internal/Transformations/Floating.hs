@@ -1,4 +1,4 @@
-module Language.Haskell.Brittany.Transformations.Floating
+module Language.Haskell.Brittany.Internal.Transformations.Floating
   ( transformSimplifyFloating
   )
 where
@@ -7,9 +7,9 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Utils
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.Internal.Utils
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Data.Generics.Uniplate.Direct as Uniplate
 

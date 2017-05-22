@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Language.Haskell.Brittany.ExactPrintUtils
+module Language.Haskell.Brittany.Internal.ExactPrintUtils
   ( parseModule
   , parseModuleFromString
   , commentAnnFixTransform
@@ -12,10 +12,10 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.LayouterBasics
-import           Language.Haskell.Brittany.Utils
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Utils
 
 import           DynFlags ( getDynFlags )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )

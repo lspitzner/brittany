@@ -10,9 +10,9 @@ import Test.Hspec
 
 import NeatInterpolation
 
-import Language.Haskell.Brittany
+import Language.Haskell.Brittany.Internal
 
-import Language.Haskell.Brittany.Config.Types
+import Language.Haskell.Brittany.Internal.Config.Types
 
 import System.Timeout ( timeout )
 

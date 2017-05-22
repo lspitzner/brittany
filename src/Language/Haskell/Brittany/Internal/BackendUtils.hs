@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 #endif
 
-module Language.Haskell.Brittany.BackendUtils
+module Language.Haskell.Brittany.Internal.BackendUtils
   ( layoutWriteAppend
   , layoutWriteAppendMultiline
   , layoutWriteNewlineBlock
@@ -38,8 +38,8 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.GHC.ExactPrint.Types ( AnnKey
                                                        , Annotation
                                                        , KeywordId
@@ -47,7 +47,7 @@ import           Language.Haskell.GHC.ExactPrint.Types ( AnnKey
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
-import           Language.Haskell.Brittany.Utils
+import           Language.Haskell.Brittany.Internal.Utils
 
 import           GHC ( Located, GenLocated(L), moduleNameString )
 

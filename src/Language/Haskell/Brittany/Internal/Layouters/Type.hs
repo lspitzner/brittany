@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Language.Haskell.Brittany.Layouters.Type
+module Language.Haskell.Brittany.Internal.Layouters.Type
   ( layoutType
   )
 where
@@ -9,9 +9,9 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )

@@ -12,7 +12,7 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Language.Haskell.Brittany.LayoutBasics
+module Language.Haskell.Brittany.Internal.LayoutBasics
   ( processDefault
   , layoutByExact
   -- , layoutByExactR
@@ -84,9 +84,9 @@ import Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation )
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
-import Language.Haskell.Brittany.Config.Types
-import Language.Haskell.Brittany.Types
-import Language.Haskell.Brittany.Utils
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )

@@ -1,4 +1,4 @@
-module Language.Haskell.Brittany.Prelude
+module Language.Haskell.Brittany.Internal.Prelude
 where
 
 

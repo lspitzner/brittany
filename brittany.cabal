@@ -45,27 +45,28 @@ library {
   }
   exposed-modules: {
     Language.Haskell.Brittany
-    Language.Haskell.Brittany.Prelude
-    Language.Haskell.Brittany.Types
-    Language.Haskell.Brittany.Utils
-    Language.Haskell.Brittany.Config
-    Language.Haskell.Brittany.Config.Types
+    Language.Haskell.Brittany.Internal
+    Language.Haskell.Brittany.Internal.Prelude
+    Language.Haskell.Brittany.Internal.Types
+    Language.Haskell.Brittany.Internal.Utils
+    Language.Haskell.Brittany.Internal.Config
+    Language.Haskell.Brittany.Internal.Config.Types
   }
   other-modules: {
-    Language.Haskell.Brittany.LayouterBasics
-    Language.Haskell.Brittany.Backend
-    Language.Haskell.Brittany.BackendUtils
-    Language.Haskell.Brittany.ExactPrintUtils
-    Language.Haskell.Brittany.Layouters.Type
-    Language.Haskell.Brittany.Layouters.Decl
-    Language.Haskell.Brittany.Layouters.Expr
-    Language.Haskell.Brittany.Layouters.Stmt
-    Language.Haskell.Brittany.Layouters.Pattern
-    Language.Haskell.Brittany.Transformations.Alt
-    Language.Haskell.Brittany.Transformations.Floating
-    Language.Haskell.Brittany.Transformations.Par
-    Language.Haskell.Brittany.Transformations.Columns
-    Language.Haskell.Brittany.Transformations.Indent
+    Language.Haskell.Brittany.Internal.LayouterBasics
+    Language.Haskell.Brittany.Internal.Backend
+    Language.Haskell.Brittany.Internal.BackendUtils
+    Language.Haskell.Brittany.Internal.ExactPrintUtils
+    Language.Haskell.Brittany.Internal.Layouters.Type
+    Language.Haskell.Brittany.Internal.Layouters.Decl
+    Language.Haskell.Brittany.Internal.Layouters.Expr
+    Language.Haskell.Brittany.Internal.Layouters.Stmt
+    Language.Haskell.Brittany.Internal.Layouters.Pattern
+    Language.Haskell.Brittany.Internal.Transformations.Alt
+    Language.Haskell.Brittany.Internal.Transformations.Floating
+    Language.Haskell.Brittany.Internal.Transformations.Par
+    Language.Haskell.Brittany.Internal.Transformations.Columns
+    Language.Haskell.Brittany.Internal.Transformations.Indent
     Paths_brittany
   }
   ghc-options: {

@@ -10,7 +10,7 @@ import Test.Hspec
 
 import NeatInterpolation
 
-import Language.Haskell.Brittany
+import Language.Haskell.Brittany.Internal
 
 import AsymptoticPerfTests
 

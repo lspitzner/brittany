@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Language.Haskell.Brittany.Layouters.Pattern
+module Language.Haskell.Brittany.Internal.Layouters.Pattern
   ( layoutPat
   , colsWrapPat
   )
@@ -10,8 +10,8 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
@@ -19,8 +19,8 @@ import           HsSyn
 import           Name
 import           BasicTypes
 
-import {-# SOURCE #-} Language.Haskell.Brittany.Layouters.Expr
-import           Language.Haskell.Brittany.Layouters.Type
+import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
+import           Language.Haskell.Brittany.Internal.Layouters.Type
 
 
 

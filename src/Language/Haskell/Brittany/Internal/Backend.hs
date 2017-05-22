@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ConstraintKinds #-}
 
-module Language.Haskell.Brittany.Backend
+module Language.Haskell.Brittany.Internal.Backend
   ( layoutBriDocM
   )
 where
@@ -19,11 +19,11 @@ import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import           Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation )
 
-import           Language.Haskell.Brittany.LayouterBasics
-import           Language.Haskell.Brittany.BackendUtils
-import           Language.Haskell.Brittany.Utils
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
+import           Language.Haskell.Brittany.Internal.BackendUtils
+import           Language.Haskell.Brittany.Internal.Utils
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
 
 
 import qualified Data.Text.Lazy.Builder as Text.Builder

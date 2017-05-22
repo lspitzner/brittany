@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Language.Haskell.Brittany.Layouters.Decl
+module Language.Haskell.Brittany.Internal.Layouters.Decl
   ( layoutSig
   , layoutBind
   , layoutLocalBinds
@@ -16,9 +16,9 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayouterBasics
-import           Language.Haskell.Brittany.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Config.Types
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
@@ -32,10 +32,10 @@ import           BasicTypes ( InlinePragma(..)
                             )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 
-import           Language.Haskell.Brittany.Layouters.Type
-import {-# SOURCE #-} Language.Haskell.Brittany.Layouters.Expr
-import {-# SOURCE #-} Language.Haskell.Brittany.Layouters.Stmt
-import           Language.Haskell.Brittany.Layouters.Pattern
+import           Language.Haskell.Brittany.Internal.Layouters.Type
+import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
+import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
+import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 
 import           Bag ( mapBagM )
 

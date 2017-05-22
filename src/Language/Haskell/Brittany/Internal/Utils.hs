@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Language.Haskell.Brittany.Utils
+module Language.Haskell.Brittany.Internal.Utils
   ( parDoc
   , fromMaybeIdentity
   , fromOptionIdentity
@@ -50,8 +50,8 @@ import qualified Data.ByteString as B
 
 import           DataTreePrint
 
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Types
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Data.Generics.Uniplate.Direct as Uniplate
 

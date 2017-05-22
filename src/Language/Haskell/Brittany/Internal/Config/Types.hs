@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module Language.Haskell.Brittany.Config.Types
+module Language.Haskell.Brittany.Internal.Config.Types
 where
 
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Language.Haskell.Brittany.Layouters.Expr
+module Language.Haskell.Brittany.Internal.Layouters.Expr
   ( layoutExpr
   , litBriDoc
   , overLitValBriDoc
@@ -11,8 +11,8 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )

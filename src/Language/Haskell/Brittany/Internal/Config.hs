@@ -1,4 +1,4 @@
-module Language.Haskell.Brittany.Config
+module Language.Haskell.Brittany.Internal.Config
   ( CConfig(..)
   , CDebugConfig(..)
   , CLayoutConfig(..)
@@ -16,8 +16,8 @@ where
 
 #include "prelude.inc"
 
-import           Language.Haskell.Brittany.Types
-import           Language.Haskell.Brittany.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import qualified Data.Yaml
 
@@ -25,8 +25,8 @@ import           UI.Butcher.Monadic
 
 import qualified System.Console.CmdArgs.Explicit as CmdArgs
 
-import           Language.Haskell.Brittany.Config.Types
-import           Language.Haskell.Brittany.Utils
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Utils
 
 import           Data.Coerce ( Coercible, coerce )
 
