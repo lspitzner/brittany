@@ -21,7 +21,6 @@ import Data.Data ( Data )
 import Data.Coerce ( Coercible, coerce )
 
 import Data.Semigroup.Generic
-
 import Data.Semigroup ( Last, Option )
 
 import Data.CZipWith
@@ -153,6 +152,25 @@ instance Semigroup.Semigroup (CPreProcessorConfig Option) where
   (<>) = gmappend
 instance Semigroup.Semigroup (CConfig Option) where
   (<>) = gmappend
+
+instance Monoid (CDebugConfig Option) where
+  mempty = gmempty
+  mappend = gmappend
+instance Monoid (CLayoutConfig Option) where
+  mempty = gmempty
+  mappend = gmappend
+instance Monoid (CErrorHandlingConfig Option) where
+  mempty = gmempty
+  mappend = gmappend
+instance Monoid (CForwardOptions Option) where
+  mempty = gmempty
+  mappend = gmappend
+instance Monoid (CPreProcessorConfig Option) where
+  mempty = gmempty
+  mappend = gmappend
+instance Monoid (CConfig Option) where
+  mempty = gmempty
+  mappend = gmappend
 
 aesonDecodeOptionsBrittany :: Aeson.Options
 aesonDecodeOptionsBrittany = Aeson.defaultOptions
