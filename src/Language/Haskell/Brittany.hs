@@ -1,8 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 
 module Language.Haskell.Brittany
-  ( pureModuleTransform
-  , CConfig
+  ( parsePrintModule
+  , staticDefaultConfig
+  , Config
+  , CConfig(..)
+  , CDebugConfig(..)
+  , CLayoutConfig(..)
+  , CErrorHandlingConfig(..)
+  , CForwardOptions(..)
+  , CPreProcessorConfig(..)
   , BrittanyError(..)
   )
 where

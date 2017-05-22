@@ -25,7 +25,7 @@ main = hspec $ do
             , "  , 00000000000000000000000"
             , "  ]"
             ]
-      output <- liftIO $ pureModuleTransform mempty input
+      output <- liftIO $ parsePrintModule staticDefaultConfig input
       input `shouldSatisfy` \_ -> case output of
         Right x | x == expected -> True
         _                       -> False

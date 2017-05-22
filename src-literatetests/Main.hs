@@ -131,7 +131,7 @@ main = do
 roundTripEqual :: Text -> Expectation
 roundTripEqual t =
   fmap (fmap PPTextWrapper)
-       (parsePrintModule defaultTestConfig "TestFakeFileName.hs" t)
+       (parsePrintModuleTests defaultTestConfig "TestFakeFileName.hs" t)
     `shouldReturn` Right (PPTextWrapper t)
 
 newtype PPTextWrapper = PPTextWrapper Text

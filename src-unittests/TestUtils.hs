@@ -23,7 +23,7 @@ import Data.Coerce ( coerce )
 roundTripEqual :: Text -> Expectation
 roundTripEqual t =
   fmap (fmap PPTextWrapper)
-       (parsePrintModule defaultTestConfig "TestFakeFileName.hs" t)
+       (parsePrintModuleTests defaultTestConfig "TestFakeFileName.hs" t)
     `shouldReturn` Right (PPTextWrapper t)
 
 roundTripEqualWithTimeout :: Int -> Text -> Expectation
@@ -31,7 +31,7 @@ roundTripEqualWithTimeout time t =
   timeout time (action >>= evaluate) >>= (`shouldSatisfy`Data.Maybe.isJust)
  where
   action = fmap (fmap PPTextWrapper)
-                (parsePrintModule defaultTestConfig "TestFakeFileName.hs" t)
+                (parsePrintModuleTests defaultTestConfig "TestFakeFileName.hs" t)
 
 newtype PPTextWrapper = PPTextWrapper Text
   deriving Eq

@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 
 module Language.Haskell.Brittany.Internal
-  ( pureModuleTransform
-  , parsePrintModule
+  ( parsePrintModule
+  , parsePrintModuleTests
   , pPrintModule
   , pPrintModuleAndCheck
    -- re-export from utils:
@@ -60,9 +60,8 @@ import qualified GHC.LanguageExtensions.Type as GHC
 --
 -- Note that this function ignores/resets all config values regarding
 -- debugging, i.e. it will never use `trace`/write to stderr.
-pureModuleTransform :: CConfig Option -> Text -> IO (Either [BrittanyError] Text)
-pureModuleTransform oConfigRaw inputText = runEitherT $ do
-  let configRaw = cZipWith fromOptionIdentity staticDefaultConfig oConfigRaw
+parsePrintModule :: Config -> Text -> IO (Either [BrittanyError] Text)
+parsePrintModule configRaw inputText = runEitherT $ do
   let config = configRaw { _conf_debug = _conf_debug staticDefaultConfig }
   let ghcOptions         = config & _conf_forward & _options_ghc & runIdentity
   let config_pp          = config & _conf_preprocessor
@@ -173,8 +172,9 @@ pPrintModuleAndCheck conf anns parsedModule = do
 
 
 -- used for testing mostly, currently.
-parsePrintModule :: Config -> String -> Text -> IO (Either String Text)
-parsePrintModule conf filename input = do
+-- TODO: use parsePrintModule instead and remove this function.
+parsePrintModuleTests :: Config -> String -> Text -> IO (Either String Text)
+parsePrintModuleTests conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
   case parseResult of
@@ -204,8 +204,8 @@ parsePrintModule conf filename input = do
 -- Unfortunately that does not exist yet, so we cannot provide a nominally
 -- pure interface.
 
--- parsePrintModule :: Text -> Either String Text
--- parsePrintModule input = do
+-- parsePrintModuleTests :: Text -> Either String Text
+-- parsePrintModuleTests input = do
 --   let dflags = GHC.unsafeGlobalDynFlags
 --   let fakeFileName = "SomeTestFakeFileName.hs"
 --   let pragmaInfo = GHC.getOptions
