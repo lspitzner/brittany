@@ -43,31 +43,61 @@ import Paths_brittany
 main :: IO ()
 main = mainFromCmdParserWithHelpDesc mainCmdParser
 
+helpDoc :: PP.Doc
+helpDoc = PP.vcat $ List.intersperse
+  (PP.text "")
+  [ parDocW
+    [ "Transforms one haskell module by reformatting"
+    , "(parts of) the source code (while preserving the"
+    , "parts not transformed)."
+    ]
+  , parDocW ["Based on ghc-exactprint, thus (theoretically) supporting all", "that ghc does."]
+  , parDocW
+    [ "This is an early, experimental release."
+    , "Only type-signatures and function-bindings are transformed."
+    , "There is a check in place, but no warranties that the output"
+    , "is valid haskell."
+    ]
+  , parDoc $ "There is NO WARRANTY, to the extent permitted by law."
+  , parDocW ["This program is free software released under the AGPLv3.", "For details use the --license flag."]
+  , parDoc $ "See https://github.com/lspitzner/brittany"
+  , parDoc $ "Please report bugs at" ++ " https://github.com/lspitzner/brittany/issues"
+  ]
+
+licenseDoc :: PP.Doc
+licenseDoc = PP.vcat $ List.intersperse
+  (PP.text "")
+  [ parDoc $ "Copyright (C) 2016-2017 Lennart Spitzner"
+  , parDocW
+    [ "This program is free software: you can redistribute it and/or modify"
+    , "it under the terms of the GNU Affero General Public License,"
+    , "version 3, as published by the Free Software Foundation."
+    ]
+  , parDocW
+    [ "This program is distributed in the hope that it will be useful,"
+    , "but WITHOUT ANY WARRANTY; without even the implied warranty of"
+    , "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
+    , "GNU Affero General Public License for more details."
+    ]
+  , parDocW
+    [ "You should have received a copy of the GNU Affero General Public"
+    , "License along with this program.  If not, see"
+    , "<http://www.gnu.org/licenses/>."
+    ]
+  ]
+
 mainCmdParser :: CommandDesc () -> CmdParser Identity (IO ()) ()
 mainCmdParser helpDesc = do
   addCmdSynopsis "haskell source pretty printer"
-  addCmdHelp $ PP.vcat $ List.intersperse
-    (PP.text "")
-    [ parDoc
-      $  "Transforms one haskell module by reformatting"
-      ++ " (parts of) the source code (while preserving the"
-      ++ " parts not transformed)."
-    , parDoc $ "Based on ghc-exactprint, thus (theoretically) supporting all" ++ " that ghc does."
-    , parDoc
-      $  "This is an early, experimental release."
-      ++ " Only type-signatures and function-bindings are transformed."
-      ++ " There is a check in place, but no warranties that the output"
-      ++ " is valid haskell."
-    , parDoc $ "There is NO WARRANTY, to the extent permitted by law."
-    , parDoc $ "See https://github.com/lspitzner/brittany"
-    , parDoc $ "Please report bugs at" ++ " https://github.com/lspitzner/brittany/issues"
-    ]
+  addCmdHelp $ helpDoc
   -- addCmd "debugArgs" $ do
   addHelpCommand helpDesc
+  addCmd "license" $ addCmdImpl $ print $ licenseDoc
   -- addButcherDebugCommand
   reorderStart
   printHelp      <- addSimpleBoolFlag "" ["help"] mempty
   printVersion   <- addSimpleBoolFlag "" ["version"] mempty
+  printLicense   <- addSimpleBoolFlag "" ["license"] mempty
   inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "path to input haskell source file")
   outputPaths    <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file path")
   configPaths    <- addFlagStringParams "" ["config-file"] "PATH" (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
@@ -81,6 +111,9 @@ mainCmdParser helpDesc = do
   inputParam <- addStringParamOpt "PATH" (paramHelpStr "path to input haskell source file")
   desc       <- peekCmdDesc
   addCmdImpl $ void $ do
+    when printLicense $ do
+      liftIO $ print licenseDoc
+      System.Exit.exitSuccess
     when printVersion $ do
       liftIO $ do
         putStrLn $ "brittany version " ++ showVersion version

@@ -3,6 +3,7 @@
 
 module Language.Haskell.Brittany.Internal.Utils
   ( parDoc
+  , parDocW
   , fromMaybeIdentity
   , fromOptionIdentity
   , traceIfDumpConf
@@ -59,6 +60,9 @@ import qualified Data.Generics.Uniplate.Direct as Uniplate
 
 parDoc :: String -> PP.Doc
 parDoc = PP.fsep . fmap PP.text . List.words
+
+parDocW :: [String] -> PP.Doc
+parDocW = PP.fsep . fmap PP.text . List.words . List.unwords
 
 
 showSDoc_ :: GHC.SDoc -> String

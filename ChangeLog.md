@@ -24,6 +24,7 @@
 * Improve testsuite setup: The `tests.blt` file contains many different
   testcases that allow quick addition - feel free to report bugs directly
   by making PRs with additions to that file.
+* Release under the terms of the AGPLv3
 
 ## 0.7.1.0  -- 2016-09-06
 

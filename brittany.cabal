@@ -8,8 +8,8 @@ description: {
 
   The implementation is documented in more detail <https://github.com/lspitzner/brittany/blob/master/doc/implementation/index.md here>.
 }
-license:              AllRightsReserved
--- license-file:         LICENSE
+license:              AGPL-3
+license-file:         LICENSE
 author:               Lennart Spitzner
 maintainer:           lsp@informatik.uni-kiel.de
 copyright:            Copyright (C) 2016-2017 Lennart Spitzner
