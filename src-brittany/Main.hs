@@ -50,13 +50,17 @@ helpDoc = PP.vcat $ List.intersperse
     [ "Transforms one haskell module by reformatting"
     , "(parts of) the source code (while preserving the"
     , "parts not transformed)."
+    , "Based on ghc-exactprint, thus (theoretically) supporting all"
+    , "that ghc does."
+    , "Currently, only type-signatures and function-bindings are transformed."
     ]
-  , parDocW ["Based on ghc-exactprint, thus (theoretically) supporting all", "that ghc does."]
   , parDocW
-    [ "This is an early, experimental release."
-    , "Only type-signatures and function-bindings are transformed."
-    , "There is a check in place, but no warranties that the output"
-    , "is valid haskell."
+    [ "This program is written carefully and contains safeguards to ensure"
+    , "the transformation does not change semantics (or the syntax tree at all)"
+    , "and that no comments are removed."
+    , "Nonetheless, this is a young project, and there will always be bugs."
+    , "Please do check the output and do not let brittany override your large"
+    , "codebase without having backups."
     ]
   , parDoc $ "There is NO WARRANTY, to the extent permitted by law."
   , parDocW ["This program is free software released under the AGPLv3.", "For details use the --license flag."]
