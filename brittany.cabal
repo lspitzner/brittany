@@ -108,7 +108,6 @@ library {
     , semigroups >=0.18.2 && <0.19
     , cmdargs >=0.10.14 && <0.11
     , czipwith >=1.0.0.0 && <1.1
-    , unordered-containers >=0.2.7 && <0.3
     , ghc-boot-th >=8.0.1 && <8.1
     }
   default-extensions: {
@@ -170,7 +169,6 @@ executable brittany
     , semigroups
     , cmdargs
     , czipwith
-    , unordered-containers
     , ghc-boot-th
     , hspec >=2.4.1 && <2.5
     , filepath >=1.4.1.0 && <1.5
@@ -249,7 +247,6 @@ test-suite unittests
     , semigroups
     , cmdargs
     , czipwith
-    , unordered-containers
     , ghc-boot-th
     , hspec >=2.4.1 && <2.5
     }
@@ -324,7 +321,6 @@ test-suite littests
     , semigroups
     , cmdargs
     , czipwith
-    , unordered-containers
     , ghc-boot-th
     , hspec >=2.4.1 && <2.5
     , parsec >=3.1.11 && <3.2

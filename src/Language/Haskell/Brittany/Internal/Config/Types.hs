@@ -13,7 +13,6 @@ where
 
 import Data.Yaml
 import qualified Data.Aeson.Types as Aeson
-import qualified Data.HashMap.Lazy as HML
 import GHC.Generics
 
 import Data.Data ( Data )
@@ -257,7 +256,7 @@ instance FromJSON (CConfig Maybe) where
 
 -- Pretends that the value is {} when the key is not present.
 (.:?=) :: FromJSON a => Object -> Text -> Parser a
-o .:?= k = o .:? k >>= maybe (parseJSON (Object HML.empty)) pure
+o .:?= k = o .:? k >>= maybe (parseJSON (Aeson.object [])) pure
 
 data IndentPolicy = IndentPolicyLeft -- never create a new indentation at more
                                      -- than old indentation + amount
