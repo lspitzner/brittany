@@ -57,6 +57,8 @@ configParser = do
   wError            <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
   omitValidCheck    <- addSimpleBoolFlag "" ["omit-output-check"] (flagHelp $ parDoc "omit checking if the output is syntactically valid; for dev on brittany")
 
+  roundtripOnly    <- addSimpleBoolFlag "" ["exactprint-only"] (flagHelp $ parDoc "do not reformat, but exclusively use exactprint to roundtrip (debugging)")
+
   optionsGhc        <- addFlagStringParams ""
                                            ["ghc-options"]
                                            "STRING"
@@ -76,6 +78,7 @@ configParser = do
       , _dconf_dump_bridoc_simpl_columns  = wrapLast $ falseToNothing dumpBriDocColumns
       , _dconf_dump_bridoc_simpl_indent   = wrapLast $ falseToNothing dumpBriDocIndent
       , _dconf_dump_bridoc_final          = wrapLast $ falseToNothing dumpBriDocFinal
+      , _dconf_roundtrip_exactprint_only  = wrapLast $ falseToNothing roundtripOnly
       }
     , _conf_layout = LayoutConfig
       { _lconfig_cols                      = optionConcat cols

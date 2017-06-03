@@ -153,13 +153,13 @@ mainCmdParser helpDesc = do
       -- amount of slight differences: This module is a bit more verbose, and
       -- it tries to use the full-blown `parseModule` function which supports
       -- CPP (but requires the input to be a file..).
-      let cppMode = config & _conf_preprocessor & _ppconf_CPPMode & runIdentity & Semigroup.getLast
+      let cppMode            = config & _conf_preprocessor & _ppconf_CPPMode & confUnpack
       -- the flag will do the following: insert a marker string
       -- ("-- BRITTANY_INCLUDE_HACK ") right before any lines starting with
       -- "#include" before processing (parsing) input; and remove that marker
       -- string from the transformation output.
-      let hackAroundIncludes =
-            config & _conf_preprocessor & _ppconf_hackAroundIncludes & runIdentity & Semigroup.getLast
+      let hackAroundIncludes = config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
+      let exactprintOnly     = config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
       let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
             then case cppMode of
               CPPModeAbort -> do
@@ -175,8 +175,10 @@ mainCmdParser helpDesc = do
             else return $ Right False
       parseResult <- case inputPathM of
         Nothing -> do
+          -- TODO: refactor this hack to not be mixed into parsing logic
           let hackF s = if "#include" `isPrefixOf` s then "-- BRITTANY_INCLUDE_HACK " ++ s else s
-          let hackTransform = if hackAroundIncludes then List.unlines . fmap hackF . List.lines else id
+          let hackTransform =
+                if hackAroundIncludes && not exactprintOnly then List.unlines . fmap hackF . List.lines else id
           inputString <- System.IO.hGetContents System.IO.stdin
           parseModuleFromString ghcOptions "stdin" cppCheckFunc (hackTransform inputString)
         Just p -> parseModule ghcOptions p cppCheckFunc
@@ -190,12 +192,18 @@ mainCmdParser helpDesc = do
             let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
             trace ("---- ast ----\n" ++ show val) $ return ()
           (errsWarns, outLText) <- do
-            let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
-            (ews, outRaw) <- if hasCPP || omitCheck
-              then return $ pPrintModule config anns parsedSource
-              else pPrintModuleAndCheck config anns parsedSource
-            let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
-            pure $ if hackAroundIncludes then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw) else (ews, outRaw)
+            if exactprintOnly
+              then do
+                pure ([], TextL.pack $ ExactPrint.exactPrint parsedSource anns)
+              else do
+                let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
+                (ews, outRaw) <- if hasCPP || omitCheck
+                  then return $ pPrintModule config anns parsedSource
+                  else pPrintModuleAndCheck config anns parsedSource
+                let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
+                pure $ if hackAroundIncludes
+                  then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw)
+                  else (ews, outRaw)
           let customErrOrder ErrorInput{}         = 4
               customErrOrder LayoutWarning{}      = 0 :: Int
               customErrOrder ErrorOutputCheck{}   = 1

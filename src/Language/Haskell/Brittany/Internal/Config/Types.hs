@@ -41,6 +41,7 @@ data CDebugConfig f = DebugConfig
   , _dconf_dump_bridoc_simpl_columns  :: f (Semigroup.Last Bool)
   , _dconf_dump_bridoc_simpl_indent   :: f (Semigroup.Last Bool)
   , _dconf_dump_bridoc_final          :: f (Semigroup.Last Bool)
+  , _dconf_roundtrip_exactprint_only  :: f (Semigroup.Last Bool)
   }
   deriving (Generic)
 
@@ -331,6 +332,7 @@ staticDefaultConfig = Config
     , _dconf_dump_bridoc_simpl_columns  = coerce False
     , _dconf_dump_bridoc_simpl_indent   = coerce False
     , _dconf_dump_bridoc_final          = coerce False
+    , _dconf_roundtrip_exactprint_only  = coerce False
     }
   , _conf_layout = LayoutConfig
     { _lconfig_cols                      = coerce (80 :: Int)
