@@ -881,6 +881,11 @@ parserPrim =
         ]
   ]
 
+#test another-parspacing-testcase
+
+samples = (SV.unpackaaaaadat) <&> \f ->
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
 
 ###############################################################################
 ###############################################################################

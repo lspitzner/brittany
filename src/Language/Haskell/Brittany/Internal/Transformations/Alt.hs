@@ -1,4 +1,5 @@
 #define INSERTTRACESALT 0
+#define INSERTTRACESALTVISIT 0
 #define INSERTTRACESGETSPACING 0
 
 {-# LANGUAGE TypeOperators #-}
@@ -117,7 +118,7 @@ transformAlts briDoc =
 
     rec :: BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] (MultiRWSS.MultiRWS r w (AltCurPos ': s)) BriDocNumbered
     rec bdX@(brDcId, brDc) = do
-#if INSERTTRACESALT
+#if INSERTTRACESALTVISIT
       do
         acp :: AltCurPos <- mGet
         tellDebugMess $ "transformAlts: visiting: " ++ case brDc of
@@ -219,7 +220,7 @@ transformAlts briDoc =
 #if INSERTTRACESALT
               zip spacings options `forM_` \(vs, (_, bd)) ->
                 tellDebugMess $ "  " ++ "spacing=" ++ show vs
-                             ++ ",hasSpace=" ++ show (hasSpace1 lconf acp vs)
+                             ++ ",hasSpace1=" ++ show (hasSpace1 lconf acp vs)
                              ++ ",lineCheck=" ++ show (lineCheck vs)
                              ++ " " ++ show (toConstr bd)
 #endif
@@ -256,7 +257,7 @@ transformAlts briDoc =
 #if INSERTTRACESALT
               zip spacings options `forM_` \(vs, (_, bd)) ->
                 tellDebugMess $ "  " ++ "spacing=" ++ show vs
-                             ++ ",hasSpace=" ++ show (hasSpace2 lconf acp <$> vs)
+                             ++ ",hasSpace2=" ++ show (hasSpace2 lconf acp <$> vs)
                              ++ ",lineCheck=" ++ show (lineCheck <$> vs)
                              ++ " " ++ show (toConstr bd)
               tellDebugMess $ "  " ++ show (Data.Maybe.mapMaybe (fmap fst) checkedOptions)
@@ -419,7 +420,7 @@ getSpacing !bridoc = rec bridoc
                                   VerticalSpacingParNone -> 0
                                   VerticalSpacingParSome i -> i
                                   VerticalSpacingParAlways i -> min colMax i)
-          , _vs_paragraph = VerticalSpacingParAlways 0
+          , _vs_paragraph = VerticalSpacingParSome 0
           }
       BDFBaseYPop bd -> rec bd
       BDFIndentLevelPushCur bd -> rec bd
@@ -654,7 +655,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                                   VerticalSpacingParAlways i -> min colMax i)
             , _vs_paragraph = case _vs_paragraph vs of
                 VerticalSpacingParNone -> VerticalSpacingParNone
-                VerticalSpacingParSome i -> VerticalSpacingParAlways i -- TODO: is this correct?
+                VerticalSpacingParSome i -> VerticalSpacingParSome i
                 VerticalSpacingParAlways i -> VerticalSpacingParAlways i
             }
         BDFBaseYPop bd -> rec bd
@@ -766,8 +767,8 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
       case brdc of
         BDFAnnotationPrior{} -> return ()
         BDFAnnotationRest{} -> return ()
-        _ -> mTell $ Seq.fromList ["getSpacing: visiting: "
-                            ++ show {-(toConstr $ brdc)-} (briDocToDoc $ unwrapBriDocNumbered (0, brdc))
+        _ -> mTell $ Seq.fromList ["getSpacings: visiting: "
+                            ++ show (toConstr $ brdc) -- (briDocToDoc $ unwrapBriDocNumbered (0, brdc))
                            , " -> "
                             ++ show (take 9 result)
                            ]
