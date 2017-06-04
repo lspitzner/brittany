@@ -213,8 +213,7 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       --     $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
       --       ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
       --     )
-      , docAddBaseY BrIndentRegular
-      $ docPar
+      , docPar
           leftOperandDoc
           ( docLines
           $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
