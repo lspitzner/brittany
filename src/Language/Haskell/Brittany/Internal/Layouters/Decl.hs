@@ -324,7 +324,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
        ]
     ++ -- pattern and exactly one clause in single line, body in new line.
        [ docLines
-         $  [ docSeq (patPartInline ++ [appSep $ guardPart, return binderDoc])
+         $  [ docSeq (patPartInline ++ [guardPart, return binderDoc])
             , docEnsureIndent BrIndentRegular
             $ docNonBottomSpacing
             $ (docAddBaseY BrIndentRegular $ return body)
@@ -364,9 +364,10 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
        ]
     ++ -- multiple clauses, each in a separate, single line
        [ docLines
-         $  [ patPartParWrap
-              $   docEnsureIndent BrIndentRegular
+         $  [ docAddBaseY BrIndentRegular
+              $   patPartParWrap
               $   docLines
+              $   map docSetBaseY
               $   clauseDocs
               <&> \(guardDocs, bodyDoc, _) -> do
                     let guardPart = singleLineGuardsDoc guardDocs
@@ -389,12 +390,14 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
     ++ -- multiple clauses, each with the guard(s) in a single line, body
        -- as a paragraph
        [ docLines
-         $  [ patPartParWrap
-              $   docEnsureIndent BrIndentRegular
+         $  [ docAddBaseY BrIndentRegular
+              $   patPartParWrap
               $   docLines
+              $   map docSetBaseY
               $   clauseDocs
-              >>= \(guardDocs, bodyDoc, _) ->
-                    ( case guardDocs of
+              <&> \(guardDocs, bodyDoc, _) ->
+                    docSeq
+                    $ ( case guardDocs of
                         [] -> []
                         [g] ->
                           [ docForceSingleline
@@ -407,22 +410,57 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                           ++ List.intersperse docCommaSep (return <$> gs)
                           ]
                       )
-                      ++ [ docCols
+                      ++ [ docSeparator
+                         , docCols
                            ColOpPrefix
                            [ appSep $ return binderDoc
-                           , docForceParSpacing
-                           $ docAddBaseY BrIndentRegular
+                           , docAddBaseY BrIndentRegular
+                           $ docForceParSpacing
                            $ return bodyDoc
                            ]
                          ]
             ]
          ++ wherePartMultiLine
        ]
+    ++ -- multiple clauses, each with the guard(s) in a single line, body
+       -- in a new line as a paragraph
+       [ docLines
+         $  [ docAddBaseY BrIndentRegular
+              $   patPartParWrap
+              $   docLines
+              $   map docSetBaseY
+              $   clauseDocs
+              >>= \(guardDocs, bodyDoc, _) ->
+                    ( case guardDocs of
+                      [] -> []
+                      [g] ->
+                        [ docForceSingleline
+                        $ docSeq [appSep $ docLit $ Text.pack "|", return g]
+                        ]
+                      gs ->
+                        [  docForceSingleline
+                        $  docSeq
+                        $  [appSep $ docLit $ Text.pack "|"]
+                        ++ List.intersperse docCommaSep (return <$> gs)
+                        ]
+                    )
+                    ++ [ docCols
+                         ColOpPrefix
+                         [ appSep $ return binderDoc
+                         , docAddBaseY BrIndentRegular
+                         $ docForceParSpacing
+                         $ return bodyDoc
+                         ]
+                       ]
+            ]
+         ++ wherePartMultiLine
+       ]
     ++ -- conservative approach: everything starts on the left.
        [ docLines
-         $  [ patPartParWrap
-              $   docEnsureIndent BrIndentRegular
+         $  [ docAddBaseY BrIndentRegular
+              $   patPartParWrap
               $   docLines
+              $   map docSetBaseY
               $   clauseDocs
               >>= \(guardDocs, bodyDoc, _) ->
                     ( case guardDocs of

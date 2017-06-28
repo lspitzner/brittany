@@ -473,9 +473,9 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       ]
   HsMultiIf _ cases -> do
     clauseDocs <- cases `forM` layoutGrhs
-    binderDoc <- docLit $ Text.pack " ->"
+    binderDoc <- docLit $ Text.pack "->"
     hasComments <- hasAnyCommentsBelow lexpr
-    docAddBaseY BrIndentRegular $ docPar
+    docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
       (docLit $ Text.pack "if")
       (layoutPatternBindFinal Nothing binderDoc Nothing clauseDocs Nothing hasComments)
   HsLet binds exp1 -> do

@@ -392,12 +392,21 @@ func x
 
 #test multiple-clauses-3
 func x
+  | very long guard, another rather long guard that refers to x = nontrivial
+    expression
+    foo
+    bar
+    alsdkjlasdjlasj
+  | otherwise = 0
+
+#test multiple-clauses-4
+func x
   | very long guard, another rather long guard that refers to x
-  = nontrivial expression foo bar alsdkjlasdjlasj
+  = nontrivialexpression foo bar alsdkjlasdjlasj
   | otherwise
   = 0
 
-#test multiple-clauses-4
+#test multiple-clauses-5
 func x
   | very loooooooooooooooooooooooooooooong guard
   , another rather long guard that refers to x
@@ -544,6 +553,29 @@ func =
 ###############################################################################
 ###############################################################################
 ###############################################################################
+#group expression.multiwayif
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test simple
+{-# LANGUAGE MultiWayIf #-}
+func = if
+  | cond1 -> loooooooooooooooooooooooooooooong expr1
+  | cond2 -> loooooooooooooooooooooooooooooong expr2
+
+#test simplenested
+{-# LANGUAGE MultiWayIf #-}
+func = do
+  foo
+  bar $ if
+    | cond1 -> loooooooooooooooooooooooooooooong expr1
+    | cond2 -> loooooooooooooooooooooooooooooong expr2
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 #group regression
 ###############################################################################
 ###############################################################################
@@ -680,28 +712,30 @@ layoutWriteNewlineBlock
   => m ()
 
 #test multiwayif proper indentation
-#pending "TODO"
+{-# LANGUAGE MultiWayIf #-}
 readMergePersConfig path shouldCreate conf = do
   exists <- liftIO $ System.Directory.doesFileExist path
   if
     | exists -> do
-        contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
-        fileConf <- case Data.Yaml.decodeEither contents of
-          Left e -> do
-            liftIO
-              $ putStrErrLn
-              $ "error reading in brittany config from " ++ path ++ ":"
-            liftIO $ putStrErrLn e
-            mzero
-          Right x -> return x
-        return $ fileConf Semigroup.<> conf
+      contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
+      fileConf <- case Data.Yaml.decodeEither contents of
+        Left e -> do
+          liftIO
+            $  putStrErrLn
+            $  "error reading in brittany config from "
+            ++ path
+            ++ ":"
+          liftIO $ putStrErrLn e
+          mzero
+        Right x -> return x
+      return $ fileConf Semigroup.<> conf
     | shouldCreate -> do
-        liftIO $ ByteString.writeFile path
-               $ Data.Yaml.encode
-               $ cMap (Option . Just . runIdentity) staticDefaultConfig
-        return $ conf
+      liftIO $ ByteString.writeFile path $ Data.Yaml.encode $ cMap
+        (Option . Just . runIdentity)
+        staticDefaultConfig
+      return $ conf
     | otherwise -> do
-        return conf
+      return conf
 
 #test nested pattern alignment issue"
 func = BuildReport
@@ -854,7 +888,7 @@ func =
     + foooooooooooooooooooooooooooooooo foooooooooooooooooooooooooooooooo
                                         foooooooooooooooooooooooooooooooo
 
-#test opapp-specialcasing-2
+#test opapp-specialcasing-3
 func = fooooooooooooooooooooooooooooooooo + foooooooooooooooooooooooooooooooo
   [ foooooooooooooooooooooooooooooooo
   , foooooooooooooooooooooooooooooooo
