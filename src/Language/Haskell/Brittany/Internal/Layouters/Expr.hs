@@ -547,6 +547,13 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       $ docPar
           (docLit $ Text.pack "do")
           (docSetBaseAndIndent $ docNonBottomSpacing $ docLines stmtDocs)
+  HsDo MDoExpr (L _ stmts) _ -> do
+    stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
+    docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+          (docLit $ Text.pack "mdo")
+          (docSetBaseAndIndent $ docNonBottomSpacing $ docLines stmtDocs)
   HsDo x  (L _ stmts) _ | case x of { ListComp -> True
                                     ; MonadComp -> True
                                     ; _ -> False } -> do
