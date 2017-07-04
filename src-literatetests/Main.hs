@@ -19,6 +19,7 @@ import Data.List ( groupBy )
 import Language.Haskell.Brittany.Internal
 
 import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Config
 
 import Data.Coerce ( coerce )
 

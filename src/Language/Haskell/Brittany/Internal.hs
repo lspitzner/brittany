@@ -28,6 +28,7 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Config
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import           Language.Haskell.Brittany.Internal.Layouters.Type

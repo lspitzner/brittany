@@ -3,6 +3,7 @@
 module Language.Haskell.Brittany
   ( parsePrintModule
   , staticDefaultConfig
+  , forwardOptionsSyntaxExtsEnabled
   , Config
   , CConfig(..)
   , CDebugConfig(..)
@@ -21,4 +22,5 @@ where
 import           Language.Haskell.Brittany.Internal
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Config
 

@@ -13,6 +13,7 @@ import NeatInterpolation
 import Language.Haskell.Brittany.Internal
 
 import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Config
 
 import System.Timeout ( timeout )
 
