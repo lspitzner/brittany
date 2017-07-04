@@ -706,9 +706,8 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
           Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
     docAlt
       -- singleline
-      [ docSetParSpacing
-      $ docSeq
-        [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
+      [ docSeq
+        [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
         , appSep $ docLit $ Text.pack "{"
         , appSep $ docSeq $ List.intersperse docCommaSep
                 $ rFs <&> \case
