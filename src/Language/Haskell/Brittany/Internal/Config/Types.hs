@@ -153,6 +153,19 @@ instance Semigroup.Semigroup (CPreProcessorConfig Option) where
 instance Semigroup.Semigroup (CConfig Option) where
   (<>) = gmappend
 
+instance Semigroup.Semigroup (CDebugConfig Identity) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (CLayoutConfig Identity) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (CErrorHandlingConfig Identity) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (CForwardOptions Identity) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (CPreProcessorConfig Identity) where
+  (<>) = gmappend
+instance Semigroup.Semigroup (CConfig Identity) where
+  (<>) = gmappend
+
 instance Monoid (CDebugConfig Option) where
   mempty = gmempty
   mappend = gmappend
