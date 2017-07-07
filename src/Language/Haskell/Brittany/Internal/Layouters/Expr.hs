@@ -207,10 +207,10 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       -- this case rather leads to some unfortunate layouting than to anything
       -- useful; disabling for now. (it interfers with cols stuff.)
       -- , docSetBaseY
-      -- $ docPar
+      -- - $ docPar
       --     leftOperandDoc
       --     ( docLines
-      --     $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
+      -- -    $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
       --       ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
       --     )
       , docPar

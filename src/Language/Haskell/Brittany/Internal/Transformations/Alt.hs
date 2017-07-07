@@ -224,7 +224,7 @@ transformAlts briDoc =
                              ++ ",lineCheck=" ++ show (lineCheck vs)
                              ++ " " ++ show (toConstr bd)
 #endif
-              id -- $ (fmap $ \x -> traceShow (briDocToDoc x) x)
+              id -- - $ (fmap $ \x -> traceShow (briDocToDoc x) x)
                  $ rec
                  $ fromMaybe (-- trace ("choosing last") $
                               List.last alts)
@@ -262,7 +262,7 @@ transformAlts briDoc =
                              ++ " " ++ show (toConstr bd)
               tellDebugMess $ "  " ++ show (Data.Maybe.mapMaybe (fmap fst) checkedOptions)
 #endif
-              id -- $ (fmap $ \x -> traceShow (briDocToDoc x) x)
+              id -- - $ (fmap $ \x -> traceShow (briDocToDoc x) x)
                  $ rec
                  $ fromMaybe (-- trace ("choosing last") $
                               List.last alts)

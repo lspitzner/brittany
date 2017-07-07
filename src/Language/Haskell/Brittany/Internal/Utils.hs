@@ -119,7 +119,7 @@ customLayouterF anns layoutF =
   occName = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
   srcSpan :: GHC.SrcSpan -> NodeLayouter
   srcSpan ss = simpleLayouter
-             -- $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
+             -- - $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
                               $ "{" ++ showGhc ss ++ "}"
   located :: (Data b, Data loc) => GHC.GenLocated loc b -> NodeLayouter
   located (GHC.L ss a) = runDataToLayouter layoutF $ A annStr a
