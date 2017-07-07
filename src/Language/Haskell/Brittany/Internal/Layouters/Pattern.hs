@@ -130,11 +130,11 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   NPat llit@(L _ (OverLit olit _ _ _)) _ _ _ -> do
     fmap Seq.singleton $ docWrapNode llit $ allocateNode $ overLitValBriDoc olit
 
--- #if MIN_VERSION_ghc(8,0,0)
+-- if MIN_VERSION_ghc(8,0,0)
 --   VarPat n -> return $ stringLayouter lpat $ lrdrNameToText n
--- #else
+-- else
 --   VarPat n -> return $ stringLayouter lpat $ rdrNameToText n
--- #endif
+-- endif
   _ -> fmap return $ briDocByExactInlineOnly "some unknown pattern" lpat
 
 colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
