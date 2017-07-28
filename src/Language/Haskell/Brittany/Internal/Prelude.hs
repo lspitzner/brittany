@@ -62,6 +62,7 @@ infixl 4 <&>
 
 (.>) :: (a -> b) -> (b -> c) -> (a -> c)
 f .> g = g . f
+infixl 9 .>
 
 evaluateDeep :: NFData a => a -> IO a
 evaluateDeep = evaluate . force

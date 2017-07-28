@@ -167,9 +167,20 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         expDoc1
         expDoc2
       ]
-  HsAppType{} -> do
-    -- TODO
-    briDocByExactInlineOnly "HsAppType{}" lexpr
+  HsAppType exp1 (HsWC _ _ ty1) -> do
+    t <- docSharedWrapper layoutType ty1
+    e <- docSharedWrapper layoutExpr exp1
+    docAlt
+      [ docSeq
+          [ docForceSingleline e
+          , docSeparator
+          , docLit $ Text.pack "@"
+          , docForceSingleline t
+          ]
+      , docPar
+          e
+          (docSeq [docLit $ Text.pack "@", t ])
+      ]
   HsAppTypeOut{} -> do
     -- TODO
     briDocByExactInlineOnly "HsAppTypeOut{}" lexpr

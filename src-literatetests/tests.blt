@@ -933,6 +933,11 @@ runBrittany tabSize text = do
       }
   parsePrintModule config text
 
+#test issue 38
+
+{-# LANGUAGE TypeApplications #-}
+foo = bar @Baz
+
 
 ###############################################################################
 ###############################################################################
