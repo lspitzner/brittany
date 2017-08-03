@@ -74,6 +74,7 @@ library {
     -j
     -fno-warn-unused-imports
     -fno-warn-orphans
+    -fno-warn-redundant-constraints
   }
   if flag(brittany-dev) {
     ghc-options: -O0 -Werror -fobject-code
@@ -136,7 +137,9 @@ executable brittany
     buildable: True
   }
   main-is:             Main.hs
-  -- other-modules:       
+  other-modules: {
+    Paths_brittany
+  }
   -- other-extensions:    
   build-depends:
     { brittany
@@ -196,6 +199,7 @@ executable brittany
     -fno-spec-constr
     -fno-warn-unused-imports
     -fno-warn-orphans
+    -fno-warn-redundant-constraints
     -rtsopts
     -with-rtsopts "-M2G"
   }
