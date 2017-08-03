@@ -3,10 +3,11 @@ haskell source code formatter
 
 ![Output sample](https://github.com/lspitzner/brittany/raw/master/brittany-sample.gif)
 
-(see another demonstration in [Showcase.md](Showcase.md))
+(see [more examples and comparisons](/doc/showcases))
 
 This project's goals roughly are to:
 
+- Always retain the semantics of the source being transformed;
 - Be idempotent (this also directly ensures that only valid haskell is
   produced);
 - Support the full ghc-haskell syntax including syntactic extensions;
