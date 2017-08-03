@@ -1,5 +1,10 @@
 # Revision history for brittany
 
+## 0.8.0.2  -- August 2017
+
+* Add library interface, to be used by `haskell-ide-engine`.
+* Publish to hackage.
+
 ## 0.8.0.1  -- May 2017
 
 * Document the high-level design of the program
