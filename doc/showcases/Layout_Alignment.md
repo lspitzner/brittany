@@ -8,12 +8,21 @@ these without any alignment) and pass it through brittany, you would (again)
 get the below versions.
 
 
-#### basic nested alignment example
+#### nested alignment for patterns
 
 ~~~~.hs
 func (MyLongFoo abc def) = 1
 func (Bar       a   d  ) = 2
 func _                   = 3
+~~~~
+
+~~~~.hs
+go []                 ""     = True
+go [WildCard        ] ""     = True
+go (WildCard   :rest) (c:cs) = go rest (c : cs) || go (WildCard : rest) cs
+go (Union globs:rest) cs     = any (\glob -> go (glob ++ rest) cs) globs
+go []                 (_:_)  = False
+go (_:_)              ""     = False
 ~~~~
 
 #### alignment of function args and monadcomp bindings
