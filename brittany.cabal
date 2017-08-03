@@ -11,7 +11,7 @@ description: {
 license:              AGPL-3
 license-file:         LICENSE
 author:               Lennart Spitzner
-maintainer:           lsp@informatik.uni-kiel.de
+maintainer:           Lennart Spitzner <hexagoxel@hexagoxel.de>
 copyright:            Copyright (C) 2016-2017 Lennart Spitzner
 category:             Language
 build-type:           Simple
