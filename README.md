@@ -34,16 +34,14 @@ linear in the size of the input (although the constant factor is not small).
 
 # Important notes
 
-- Requires `ghc`>=8
-- `-XCPP` is not officially supported (yet).
-- ~~Some commandline flags mentioned in the help don't work yet (and won't even
-  be parsed correctly.)~~ (fixed in 0.4.0.0)
+- Requires `ghc-8.0.*`; support for 8.2 is on the list, but I haven't even
+  looked at how much the ghc api changes.
+- `-XCPP` is not officially supported (and won't be).
 - some config values can not be configured via commandline yet.
-- ~~Creates a `brittany.yaml` config file _in the current directory_.~~
-  (fixed in 0.5.0.0; now creates user config file in `~/.brittany`;
-  still reads `brittany.yaml` in current dir if present.)
-- ~~Currently some unhandled syntactical constructs don't raise errors~~
-  (fixed in 0.6.0.0)
+- uses/creates user config file in `~/.brittany/config.yaml`;
+  also reads `brittany.yaml` in current dir if present.
+- There is an open performance issue on large inputs (due to an accidentally
+  quadratic sub-algorithm); noticable for inputs with >1k loc.
 - There are cases where comments are not copied to the output (this will
   be detected and the user will get an error); there are other cases where
   comments are moved slightly; there are also cases where comments result in
