@@ -56,10 +56,11 @@ require fixing:
 - via `cabal` "old-build"
 
   ~~~~.sh
-  git clone https://github.com/lspitzner/brittany.git
-  cd brittany
-  cabal sandbox init
-  cabal install --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8
+  # optionally:
+  # mkdir brittany
+  # cd brittany
+  # cabal sandbox init
+  cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8
   ~~~~
 
 - via `cabal new-build`
