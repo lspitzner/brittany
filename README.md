@@ -10,7 +10,8 @@ This project's goals roughly are to:
 - Always retain the semantics of the source being transformed;
 - Be idempotent (this also directly ensures that only valid haskell is
   produced);
-- Support the full ghc-haskell syntax including syntactic extensions;
+- Support the full GHC-haskell syntax including syntactic extensions
+  (but excluding `-XCPP` which is too hard);
 - Retain newlines and comments unmodified;
 - Be clever about using the available horizontal space while not overflowing
   it if it cannot be avoided;
@@ -18,34 +19,36 @@ This project's goals roughly are to:
   completely however);
 - Have linear complexity in the size of the input.
 
-At this point, these goals are completed to different degrees.
-Currently, only type-signatures and function/value bindings are processed;
-other module elements (data-decls, classes, instances, imports/exports etc.) are not
-transformed in any way; this extends to e.g. bindings inside class instance
-definitions - they won't be touched (yet).
-By using ghc-exactprint as the parser, brittany supports full ghc syntax including
-extensions, but many of the less common syntactic elements (even of 2010 haskell) are
-not handled.
-There are cases where comments are not re-inserted properly (leading to an error or
-to affected comments being placed at a different location than in the input).
+In theory, the core algorithm inside brittany reaches these goals. It is rather
+clever about making use of horizontal space while still being linear in the
+size of the input (although the constant factor is not small).
 
-The current algorithm is rather clever about horizontal space while still being
-linear in the size of the input (although the constant factor is not small).
+But brittany is not finished yet, and there are some open issues that yet
+require fixing:
 
-# Important notes
-
-- Requires `ghc-8.0.*`; support for 8.2 is on the list, but I haven't even
-  looked at how much the ghc api changes.
-- `-XCPP` is not officially supported (and won't be).
-- some config values can not be configured via commandline yet.
-- uses/creates user config file in `~/.brittany/config.yaml`;
-  also reads `brittany.yaml` in current dir if present.
-- There is an open performance issue on large inputs (due to an accidentally
-  quadratic sub-algorithm); noticable for inputs with >1k loc.
-- There are cases where comments are not copied to the output (this will
+- **only type-signatures and function/value bindings** are processed;
+  other module elements (data-decls, classes, instances, imports/exports etc.)
+  are not transformed in any way; this extends to e.g. **bindings inside class
+  instance definitions** - they **won't be touched** (yet).
+- By using `ghc-exactprint` as the parser, brittany supports full GHC 
+  including extensions, but **some of the less common syntactic elements
+  (even of 2010 haskell) are not handled**.
+- **There are some known issues regarding handling of in-source comments.**
+  There are cases where comments are not copied to the output (this will
   be detected and the user will get an error); there are other cases where
   comments are moved slightly; there are also cases where comments result in
   wonky newline insertion (although this should be a purely aesthetic issue.)
+- There is an **open performance issue on large inputs** (due to an
+  accidentally quadratic sub-algorithm); noticable for inputs with >1k loc.
+
+# Other usage notes
+
+- Requires `GHC-8.0.*`; support for 8.2 is on the list, but I haven't even
+  looked at how much the `GHC` API changes.
+- config (file) documentation is lacking.
+- some config values can not be configured via commandline yet.
+- uses/creates user config file in `~/.brittany/config.yaml`;
+  also reads `brittany.yaml` in current dir if present.
 
 # Installation
 
