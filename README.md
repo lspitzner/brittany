@@ -21,7 +21,8 @@ This project's goals roughly are to:
 
 In theory, the core algorithm inside brittany reaches these goals. It is rather
 clever about making use of horizontal space while still being linear in the
-size of the input (although the constant factor is not small).
+size of the input (although the constant factor is not small). See
+[these examples of clever layouting](/doc/showcases/Layout_Interactions.md).
 
 But brittany is not finished yet, and there are some open issues that yet
 require fixing:
