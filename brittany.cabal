@@ -15,10 +15,14 @@ maintainer:           Lennart Spitzner <hexagoxel@hexagoxel.de>
 copyright:            Copyright (C) 2016-2017 Lennart Spitzner
 category:             Language
 build-type:           Simple
-extra-source-files:   ChangeLog.md
-cabal-version:        >=1.10
+cabal-version:        >=1.18
 homepage:             https://github.com/lspitzner/brittany/
 bug-reports:          https://github.com/lspitzner/brittany/issues
+extra-doc-files: {
+  ChangeLog.md
+  README.md
+  doc/implementation/*.md
+}
 
 source-repository head {
   type: git
