@@ -60,18 +60,18 @@ require fixing:
   # mkdir brittany
   # cd brittany
   # cabal sandbox init
-  cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8
+  cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8_0
   ~~~~
 
 - via `cabal new-build`
 
   ~~~~.sh
-  git clone https://github.com/lspitzner/brittany.git
-  cd brittany
-  # cabal new-configure -w $PATH_TO_GHC_8
-  cabal new-build brittany
+  cabal unpack brittany
+  cd brittany-0.8.0.2
+  # cabal new-configure -w $PATH_TO_GHC_8_0
+  cabal new-build exe:brittany
   # and it should be safe to just copy the executable, e.g.
-  cp ./dist-newstyle/build/brittany-0.8.0.0/build/brittany/brittany $HOME/.cabal/bin/
+  cp `./find dist-newstyle/build/ -type f -name brittany` $HOME/.cabal/bin/
   ~~~~
 
 - via `stack`
