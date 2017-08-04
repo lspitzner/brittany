@@ -1,8 +1,7 @@
-resolver: lts-8.4
+resolver: lts-9.0
 
 extra-deps:
   - monad-memo-0.4.1
-  - unsafe-0.0
   - czipwith-1.0.0.0
   - butcher-1.1.0.0
   - data-tree-print-0.1.0.0
