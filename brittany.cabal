@@ -1,11 +1,11 @@
 name:                 brittany
-version:              0.8.0.2
+version:              0.8.0.3
 synopsis:             Haskell source code formatter
 description: {
-  See <https://github.com/lspitzner/brittany/blob/master/README.md the README>
-
+  See <https://github.com/lspitzner/brittany/blob/master/README.md the README>.
+  .
   If you are interested in the implementation, have a look at <https://github.com/lspitzner/brittany/blob/master/doc/implementation/theory.md this document>;
-
+  .
   The implementation is documented in more detail <https://github.com/lspitzner/brittany/blob/master/doc/implementation/index.md here>.
 }
 license:              AGPL-3
