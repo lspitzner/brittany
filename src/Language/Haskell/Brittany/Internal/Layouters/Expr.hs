@@ -94,7 +94,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
       ]
   HsLam{} ->
     unknownNodeError "HsLam too complex" lexpr
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsLamCase (MG lmatches@(L _ matches) _ _ _) -> do
+#else /* ghc-8.0 */
   HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
+#endif
     binderDoc <- docLit $ Text.pack "->"
     funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
     docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
@@ -167,7 +171,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
         expDoc1
         expDoc2
       ]
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsAppType exp1 (HsWC _ ty1) -> do
+#else /* ghc-8.0 */
   HsAppType exp1 (HsWC _ _ ty1) -> do
+#endif
     t <- docSharedWrapper layoutType ty1
     e <- docSharedWrapper layoutExpr exp1
     docAlt
@@ -791,7 +799,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
               ]
             in [line1] ++ lineR ++ [lineN])
       ]
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  ExprWithTySig exp1 (HsWC _ (HsIB _ typ1 _)) -> do
+#else /* ghc-8.0 */
   ExprWithTySig exp1 (HsIB _ (HsWC _ _ typ1)) -> do
+#endif
     expDoc <- docSharedWrapper layoutExpr exp1
     typDoc <- docSharedWrapper layoutType typ1
     docSeq
@@ -902,7 +914,41 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   HsWrap{} -> do
     -- TODO
     briDocByExactInlineOnly "HsWrap{}" lexpr
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsConLikeOut{} -> do
+    -- TODO
+    briDocByExactInlineOnly "HsWrap{}" lexpr
+  ExplicitSum{} -> do
+    -- TODO
+    briDocByExactInlineOnly "ExplicitSum{}" lexpr
+#endif
 
+
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+litBriDoc :: HsLit -> BriDocFInt
+litBriDoc = \case
+  HsChar       (SourceText t) _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
+  HsCharPrim   (SourceText t) _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
+  HsString     (SourceText t) _fastString -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ FastString.unpackFS fastString
+  HsStringPrim (SourceText t) _byteString -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ Data.ByteString.Char8.unpack byteString
+  HsInt        (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsIntPrim    (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsWordPrim   (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsInt64Prim  (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsWord64Prim (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsInteger (SourceText t) _i _type       -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsRat (FL t _) _type       -> BDFLit $ Text.pack t
+  HsFloatPrim  (FL t _)      -> BDFLit $ Text.pack t
+  HsDoublePrim (FL t _)      -> BDFLit $ Text.pack t
+  _ -> error "litBriDoc: literal with no SourceText"
+
+overLitValBriDoc :: OverLitVal -> BriDocFInt
+overLitValBriDoc = \case
+  HsIntegral (SourceText t) _        -> BDFLit $ Text.pack t
+  HsFractional (FL t _) -> BDFLit $ Text.pack t
+  HsIsString (SourceText t) _        -> BDFLit $ Text.pack t
+  _ -> error "overLitValBriDoc: literal with no SourceText"
+#else
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case
   HsChar       t _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
@@ -924,3 +970,4 @@ overLitValBriDoc = \case
   HsIntegral t _        -> BDFLit $ Text.pack t
   HsFractional (FL t _) -> BDFLit $ Text.pack t
   HsIsString t _        -> BDFLit $ Text.pack t
+#endif

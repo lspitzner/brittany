@@ -102,7 +102,11 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       Unboxed -> wrapPatListy args "(#" "#)"
   AsPat asName asPat -> do
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  SigPatIn pat1 (HsWC _ (HsIB _ ty1 _)) -> do
+#else /* ghc-8.0 */
   SigPatIn pat1 (HsIB _ (HsWC _ _ ty1)) -> do
+#endif
     patDocs <- layoutPat pat1
     tyDoc <- docSharedWrapper layoutType ty1
     case Seq.viewr patDocs of

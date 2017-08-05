@@ -43,7 +43,11 @@ import           Bag ( mapBagM )
 
 layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  TypeSig names (HsWC _ (HsIB _ typ _)) -> docWrapNode lsig $ do
+#else /* ghc-8.0 */
   TypeSig names (HsIB _ (HsWC _ _ typ)) -> docWrapNode lsig $ do
+#endif
     nameStrs <- names `forM` lrdrNameToTextAnn
     let nameStr = Text.intercalate (Text.pack ", ") $ nameStrs
     typeDoc     <- docSharedWrapper layoutType typ

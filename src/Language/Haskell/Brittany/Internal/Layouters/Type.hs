@@ -27,7 +27,11 @@ import           DataTreePrint
 layoutType :: ToBriDoc HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsTyVar _ name -> do
+#else /* ghc-8.0 */
   HsTyVar name -> do
+#endif
     t <- lrdrNameToTextAnn name
     docWrapNode name $ docLit t
   HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts@(_:_)) typ2)) -> do
@@ -463,7 +467,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --               }
   --     , _layouter_ast = ltype
   --     }
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsIParamTy (L _ (HsIPName ipName)) typ1 -> do
+#else /* ghc-8.0 */
   HsIParamTy (HsIPName ipName) typ1 -> do
+#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
@@ -571,12 +579,16 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --     , _layouter_ast = ltype
   --     }
   HsSpliceTy{} -> -- TODO
-    briDocByExactInlineOnly "" ltype
+    briDocByExactInlineOnly "HsSpliceTy{}" ltype
   HsDocTy{} -> -- TODO
-    briDocByExactInlineOnly "" ltype
+    briDocByExactInlineOnly "HsDocTy{}" ltype
   HsRecTy{} -> -- TODO
-    briDocByExactInlineOnly "" ltype
+    briDocByExactInlineOnly "HsRecTy{}" ltype
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsExplicitListTy _ _ typs -> do
+#else /* ghc-8.0 */
   HsExplicitListTy _ typs -> do
+#endif
     typDocs <- docSharedWrapper layoutType `mapM` typs
     docAlt
       [ docSeq
@@ -586,10 +598,14 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       -- TODO
       ]
   HsExplicitTupleTy{} -> -- TODO
-    briDocByExactInlineOnly "" ltype
+    briDocByExactInlineOnly "HsExplicitTupleTy{}" ltype
   HsTyLit{} -> -- TODO
-    briDocByExactInlineOnly "" ltype
+    briDocByExactInlineOnly "HsTyLit{}" ltype
   HsCoreTy{} -> -- TODO
-    briDocByExactInlineOnly "" ltype
+    briDocByExactInlineOnly "HsCoreTy{}" ltype
   HsWildCardTy _ ->
     docLit $ Text.pack "_"
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  HsSumTy{} -> -- TODO
+    briDocByExactInlineOnly "HsSumTy{}" ltype
+#endif
