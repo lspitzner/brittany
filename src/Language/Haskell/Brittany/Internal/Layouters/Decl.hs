@@ -215,12 +215,18 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
       patPartParWrap = case mPatDoc of
         Nothing     -> id
         Just patDoc -> docPar (return patDoc)
-  whereIndent                                      <-
-    mAsk
+  whereIndent <- do
+    shouldSpecial <- mAsk
       <&> _conf_layout
       .>  _lconfig_indentWhereSpecial
       .>  confUnpack
-      .>  Bool.bool BrIndentRegular (BrIndentSpecial 1)
+    regularIndentAmount <- mAsk
+      <&> _conf_layout
+      .>  _lconfig_indentAmount
+      .>  confUnpack
+    pure $ if shouldSpecial
+      then BrIndentSpecial (max 1 (regularIndentAmount `div` 2))
+      else BrIndentRegular
   -- TODO: apart from this, there probably are more nodes below which could
   --       be shared between alternatives.
   wherePartMultiLine :: [ToBriDocM BriDocNumbered] <- case mWhereDocs of
