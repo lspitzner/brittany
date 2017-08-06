@@ -163,7 +163,7 @@ data ColSig
     -- expected to have exactly two columns
   | ColBindStmt
   | ColDoLet -- the non-indented variant
-  | ColRecUpdate
+  | ColRecUpdate -- used for both RecCon and RecUpd. TODO: refactor to reflect?
   | ColListComp
   | ColList
   | ColApp

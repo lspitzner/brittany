@@ -495,6 +495,7 @@ ppmMoveToExactLoc (ExactPrint.DP (x, y)) = do
   replicateM_ x $ mTell $ Text.Builder.fromString "\n"
   replicateM_ y $ mTell $ Text.Builder.fromString " "
 
+-- TODO: update and use, or clean up. Currently dead code.
 layoutWritePriorComments
   :: ( Data.Data.Data ast
      , MonadMultiWriter Text.Builder.Builder m
@@ -528,6 +529,7 @@ layoutWritePriorComments ast = do
         layoutWriteAppendSpaces y
         layoutWriteAppendMultiline $ Text.pack $ comment
 
+-- TODO: update and use, or clean up. Currently dead code.
 -- this currently only extracs from the `annsDP` field of Annotations.
 -- per documentation, this seems sufficient, as the
 -- "..`annFollowingComments` are only added by AST transformations ..".

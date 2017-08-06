@@ -566,6 +566,10 @@ import Data.List                          ( partition
                                           , uncons
                                           )
 
+import Data.List.NonEmpty                 ( NonEmpty(..)
+                                          , nonEmpty
+                                          )
+
 import Data.Tuple                         ( swap
                                           )
 

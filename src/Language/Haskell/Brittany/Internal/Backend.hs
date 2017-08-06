@@ -167,6 +167,7 @@ layoutBriDocM = \case
       Just []     -> when allowMTEL $ moveToExactAnn annKey
       Just priors -> do
         -- layoutResetSepSpace
+        when (not $ null priors) $ layoutSetCommentCol
         priors
           `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
                     do
@@ -183,7 +184,7 @@ layoutBriDocM = \case
     layoutBriDocM bd
   BDAnnotationKW annKey keyword bd -> do
     layoutBriDocM bd
-    mAnn <- do
+    mComments <- do
       state <- mGet
       let m    = _lstate_comments state
       let mAnn = ExactPrint.annsDP <$> Map.lookup annKey m
@@ -203,11 +204,13 @@ layoutBriDocM = \case
               annKey
               m
             }
-          return $ [ comments | not $ null comments ]
+          return $ nonEmpty comments
         _ -> return Nothing
-    forM_ mAnn
-      $ mapM_
-      $ \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
+    case mComments of
+      Nothing -> pure ()
+      Just comments -> do
+        layoutSetCommentCol
+        comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           do
             -- evil hack for CPP:
             case comment of
@@ -220,10 +223,10 @@ layoutBriDocM = \case
       -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDAnnotationRest annKey bd -> do
     layoutBriDocM bd
-    mAnn <- do
+    mComments <- do
       state <- mGet
       let m    = _lstate_comments state
-      let mAnn = extractAllComments <$> Map.lookup annKey m
+      let mComments = nonEmpty =<< extractAllComments <$> Map.lookup annKey m
       mSet $ state
         { _lstate_comments = Map.adjust
           ( \ann -> ann { ExactPrint.annFollowingComments = []
@@ -234,10 +237,12 @@ layoutBriDocM = \case
           annKey
           m
         }
-      return mAnn
-    forM_ mAnn
-      $ mapM_
-      $ \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
+      return mComments
+    case mComments of
+      Nothing -> pure ()
+      Just comments -> do
+        layoutSetCommentCol
+        comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           do
       -- evil hack for CPP:
             case comment of
@@ -325,6 +330,7 @@ briDocIsMultiLine briDoc = rec briDoc
 
 alignColsLines :: LayoutConstraints m => [BriDoc] -> m ()
 alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
+  -- tellDebugMess ("alignColsLines: at " ++ take 100 (show $ briDocToDoc $ head bridocs))
   curX <- do
     state <- mGet
     return $ either id (const 0) (_lstate_curYOrAddNewline state) + fromMaybe
@@ -366,7 +372,9 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
                 Nothing           -> 0
                 Just (_, maxs, _) -> sum maxs
             maxCols = {-Foldable.foldl1 maxZipper-}
-              fmap colAggregation $ transpose $ Foldable.toList colss
+              fmap colAggregation $ transpose $ Foldable.toList
+              -- $ trace ("colss=" ++ show colss ++ " for" ++ take 100 (show $ briDocToDoc $ head bridocs))
+              colss
             (_, posXs) = mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
             counter count l = if List.last posXs + List.last l <= colMax
               then count + 1
@@ -385,9 +393,53 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
       mergeBriDocsW lastInfo (bd:bdr) = do
         info  <- mergeInfoBriDoc True lastInfo bd
         infor <- mergeBriDocsW
-          (if alignBreak && briDocIsMultiLine bd then ColInfoStart else info)
+          -- (if alignBreak && briDocIsMultiLine bd then ColInfoStart else info)
+          (if shouldBreakAfter bd then ColInfoStart else info)
           bdr
         return $ info : infor
+
+      -- even with alignBreak config flag, we don't stop aligning for certain
+      -- ColSigs - the ones with "False" below. The main reason is that
+      -- there are uses of BDCols where they provide the alignment of several
+      -- consecutive full larger code segments, for example ColOpPrefix.
+      -- Motivating example is
+      -- > foo
+      -- >   $  [ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      -- >      , bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      -- >      ]
+      -- >   ++ [ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc ]
+      -- If we break the alignment here, then all three lines for the first
+      -- list move left by one, which is horrible. We really don't want to
+      -- break whole-block alignments.
+      -- For list, listcomp, tuple and tuples the reasoning is much simpler:
+      -- alignment should not have much effect anyways, so i simply make the
+      -- choice here that enabling alignment is the safer route for preventing
+      -- potential glitches, and it should never have a negative effect.
+      -- For RecUpdate the argument is much less clear - it is mostly a
+      -- personal preference to not break alignment for those, even if
+      -- multiline. Really, this should be configurable.. (TODO)
+      shouldBreakAfter :: BriDoc -> Bool
+      shouldBreakAfter bd = if alignBreak
+        then briDocIsMultiLine bd && case bd of
+          (BDCols ColTyOpPrefix         _) -> False
+          (BDCols ColPatternsFuncPrefix _) -> True
+          (BDCols ColPatternsFuncInfix  _) -> True
+          (BDCols ColPatterns           _) -> True
+          (BDCols ColCasePattern        _) -> True
+          (BDCols ColBindingLine{}      _) -> True
+          (BDCols ColGuard              _) -> True
+          (BDCols ColGuardedBody        _) -> True
+          (BDCols ColBindStmt           _) -> True
+          (BDCols ColDoLet              _) -> True
+          (BDCols ColRecUpdate          _) -> False
+          (BDCols ColListComp           _) -> False
+          (BDCols ColList               _) -> False
+          (BDCols ColApp                _) -> True
+          (BDCols ColTuple              _) -> False
+          (BDCols ColTuples             _) -> False
+          (BDCols ColOpPrefix           _) -> False
+          _                                -> True
+        else False
 
       mergeInfoBriDoc
         :: Bool
@@ -464,9 +516,15 @@ processInfo m = \case
     alignMode <- mAsk <&> _conf_layout .> _lconfig_columnAlignMode .> confUnpack
     curX      <- do
       state <- mGet
-      return $ either id (const 0) (_lstate_curYOrAddNewline state) + fromMaybe
-        0
-        (_lstate_addSepSpace state)
+      -- tellDebugMess ("processInfo: " ++ show (_lstate_curYOrAddNewline state) ++ " - " ++ show ((_lstate_addSepSpace state)))
+      let spaceAdd = case _lstate_addSepSpace state of
+            Nothing -> 0
+            Just i -> i
+      return $ case _lstate_curYOrAddNewline state of
+        Left i -> case _lstate_commentCol state of
+          Nothing -> spaceAdd + i
+          Just c -> c
+        Right{} -> spaceAdd
     -- tellDebugMess $ show curX
     let Just (ratio, maxCols, _colss) = IntMapS.lookup ind m
     let (maxX, posXs) = mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
@@ -489,6 +547,8 @@ processInfo m = \case
             offsets = (subtract curX) <$> posXs
             fixed   = offsets <&> fromIntegral .> (*factor) .> truncate
           _ -> posXs
+    -- tellDebugMess $ "maxCols = " ++ show maxCols
+    -- tellDebugMess $ "fixedPosXs = " ++ show fixedPosXs
     let alignAct = zip fixedPosXs list `forM_` \(destX, x) -> do
           layoutWriteEnsureAbsoluteN destX
           processInfo m (snd x)

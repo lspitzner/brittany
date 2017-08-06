@@ -576,6 +576,23 @@ func = do
 ###############################################################################
 ###############################################################################
 ###############################################################################
+#group stylisticspecialcases
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test operatorprefixalignment-even-with-multiline-alignbreak
+func =
+  foo
+    $  [ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+       , bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+       ]
+    ++ [ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 #group regression
 ###############################################################################
 ###############################################################################
@@ -926,9 +943,9 @@ runBrittany tabSize text = do
   let
     config' = staticDefaultConfig
     config  = config'
-      { _conf_layout = (_conf_layout config') { _lconfig_indentAmount = coerce
-                                                tabSize
-                                              }
+      { _conf_layout  = (_conf_layout config') { _lconfig_indentAmount = coerce
+                                                 tabSize
+                                               }
       , _conf_forward = forwardOptionsSyntaxExtsEnabled
       }
   parsePrintModule config text
@@ -937,6 +954,57 @@ runBrittany tabSize text = do
 
 {-# LANGUAGE TypeApplications #-}
 foo = bar @Baz
+
+#test comment-before-BDCols
+layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
+  docAlt
+    $  -- one-line solution
+       [ docCols
+           (ColBindingLine alignmentToken)
+           [ docSeq (patPartInline ++ [guardPart])
+           , docSeq
+             [ appSep $ return binderDoc
+             , docForceSingleline $ return body
+             , wherePart
+             ]
+           ]
+       | not hasComments
+       , [(guards, body, _bodyRaw)] <- [clauseDocs]
+       , let guardPart = singleLineGuardsDoc guards
+       , wherePart <- case mWhereDocs of
+         Nothing -> return @[] $ docEmpty
+         Just [w] -> return @[] $ docSeq
+           [ docSeparator
+           , appSep $ docLit $ Text.pack "where"
+           , docSetIndentLevel $ docForceSingleline $ return w
+           ]
+         _ -> []
+       ]
+    ++ -- one-line solution + where in next line(s)
+       [ docLines
+         $  [ docCols
+                (ColBindingLine alignmentToken)
+                [ docSeq (patPartInline ++ [guardPart])
+                , docSeq
+                  [appSep $ return binderDoc, docForceParSpacing $ return body]
+                ]
+            ]
+         ++ wherePartMultiLine
+       | [(guards, body, _bodyRaw)] <- [clauseDocs]
+       , let guardPart = singleLineGuardsDoc guards
+       , Data.Maybe.isJust mWhereDocs
+       ]
+    ++ -- two-line solution + where in next line(s)
+       [ docLines
+         $  [ docForceSingleline
+              $ docSeq (patPartInline ++ [guardPart, return binderDoc])
+            , docEnsureIndent BrIndentRegular $ docForceSingleline $ return
+              body
+            ]
+         ++ wherePartMultiLine
+       | [(guards, body, _bodyRaw)] <- [clauseDocs]
+       , let guardPart = singleLineGuardsDoc guards
+       ]
 
 
 ###############################################################################
