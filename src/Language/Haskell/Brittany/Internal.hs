@@ -385,7 +385,6 @@ layoutBriDoc ast briDoc = do
         , _lstate_comments         = filteredAnns
         , _lstate_commentCol       = Nothing
         , _lstate_addSepSpace      = Nothing
-        , _lstate_inhibitMTEL      = False
         }
 
   state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'

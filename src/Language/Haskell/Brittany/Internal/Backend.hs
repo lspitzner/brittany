@@ -152,8 +152,7 @@ layoutBriDocM = \case
   BDAnnotationPrior annKey bd -> do
     state <- mGet
     let m = _lstate_comments state
-    let allowMTEL = not (_lstate_inhibitMTEL state)
-          && Data.Either.isRight (_lstate_curYOrAddNewline state)
+    let allowMTEL = Data.Either.isRight (_lstate_curYOrAddNewline state)
     mAnn <- do
       let mAnn = ExactPrint.annPriorComments <$> Map.lookup annKey m
       mSet $ state
@@ -252,22 +251,6 @@ layoutBriDocM = \case
   BDNonBottomSpacing bd -> layoutBriDocM bd
   BDSetParSpacing    bd -> layoutBriDocM bd
   BDForceParSpacing  bd -> layoutBriDocM bd
-  BDProhibitMTEL     bd -> do
-    -- set flag to True for this child, but disable afterwards.
-    -- two hard aspects
-    -- 1) nesting should be allowed. this means that resetting at the end must
-    --    not indiscriminantely set to False, but take into account the
-    --    previous value
-    -- 2) nonetheless, newlines cancel inhibition. this means that if we ever
-    --    find the flag set to False afterwards, we must not return it to
-    --    the previous value, which might be True in the case of testing; it
-    --    must remain False.
-    state <- mGet
-    mSet $ state { _lstate_inhibitMTEL = True }
-    layoutBriDocM bd
-    state' <- mGet
-    when (_lstate_inhibitMTEL state') $ do
-      mSet $ state' { _lstate_inhibitMTEL = _lstate_inhibitMTEL state }
   BDDebug s bd -> do
     mTell $ Text.Builder.fromText $ Text.pack $ "{-" ++ s ++ "-}"
     layoutBriDocM bd
@@ -302,7 +285,6 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
       return $ maximum $ ls <&> \l -> StateS.evalState (rec l) x
     BDLines []            -> error "briDocLineLength BDLines []"
     BDEnsureIndent _ bd   -> rec bd
-    BDProhibitMTEL     bd -> rec bd
     BDSetParSpacing    bd -> rec bd
     BDForceParSpacing  bd -> rec bd
     BDNonBottomSpacing bd -> rec bd
@@ -336,7 +318,6 @@ briDocIsMultiLine briDoc = rec briDoc
     BDLines [_    ]         -> False
     BDLines []              -> error "briDocIsMultiLine BDLines []"
     BDEnsureIndent _ bd     -> rec bd
-    BDProhibitMTEL     bd   -> rec bd
     BDSetParSpacing    bd   -> rec bd
     BDForceParSpacing  bd   -> rec bd
     BDNonBottomSpacing bd   -> rec bd

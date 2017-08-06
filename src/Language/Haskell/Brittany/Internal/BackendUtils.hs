@@ -146,7 +146,6 @@ layoutWriteNewlineBlock = do
   state <- mGet
   mSet $ state { _lstate_curYOrAddNewline = Right 1
                , _lstate_addSepSpace      = Just $ lstate_baseY state
-               , _lstate_inhibitMTEL      = False
                }
 
 -- layoutMoveToIndentCol :: ( MonadMultiState LayoutState m
@@ -222,7 +221,6 @@ layoutWriteNewline = do
       Left{}  -> Right 1
       Right i -> Right (i + 1)
     , _lstate_addSepSpace      = Nothing
-    , _lstate_inhibitMTEL      = False
     }
 
 layoutWriteEnsureNewlineBlock
@@ -239,7 +237,6 @@ layoutWriteEnsureNewlineBlock = do
       Left{}  -> Right 1
       Right i -> Right $ max 1 i
     , _lstate_addSepSpace      = Just $ lstate_baseY state
-    , _lstate_inhibitMTEL      = False
     , _lstate_commentCol       = Nothing
     }
 

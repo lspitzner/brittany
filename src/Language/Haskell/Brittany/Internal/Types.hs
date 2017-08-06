@@ -62,17 +62,10 @@ data LayoutState = LayoutState
   , _lstate_addSepSpace   :: Maybe Int -- number of spaces to insert if anyone
                                        -- writes (any non-spaces) in the
                                        -- current line.
-  , _lstate_inhibitMTEL   :: Bool
-      -- ^ inhibit move-to-exact-location.
-      -- normally, processing a node's annotation involves moving to the exact
-      -- (vertical) location of the node. this ensures that newlines in the
-      -- input are retained in the output.
-      -- While this flag is on, this behaviour will be disabled.
-      -- The flag is automatically turned off when inserting any kind of
-      -- newline.
   -- , _lstate_isNewline     :: NewLineState
   --     -- captures if the layouter currently is in a new line, i.e. if the
   --     -- current line only contains (indentation) spaces.
+  -- this is mostly superseeded by curYOrAddNewline, iirc.
   }
 
 lstate_baseY :: LayoutState -> Int
@@ -91,7 +84,6 @@ instance Show LayoutState where
     ++ ",indLevelLinger=" ++ show (_lstate_indLevelLinger state)
     ++ ",commentCol=" ++ show (_lstate_commentCol state)
     ++ ",addSepSpace=" ++ show (_lstate_addSepSpace state)
-    ++ ",inhibitMTEL=" ++ show (_lstate_inhibitMTEL state)
     ++ "}"
 
 -- data NewLineState = NewLineStateInit -- initial state. we do not know if in a
@@ -243,11 +235,6 @@ data BriDoc
   | BDSetParSpacing BriDoc
   | BDForceParSpacing BriDoc
   -- pseudo-deprecated
-  | BDProhibitMTEL BriDoc -- move to exact location
-                          -- TODO: this constructor is deprecated. should
-                          --       still work, but i should probably completely
-                          --       remove it, as i have no proper usecase for
-                          --       it anymore.
   | BDDebug String BriDoc
   deriving (Data.Data.Data, Eq, Ord)
 
@@ -289,11 +276,6 @@ data BriDocF f
   | BDFNonBottomSpacing (f (BriDocF f))
   | BDFSetParSpacing (f (BriDocF f))
   | BDFForceParSpacing (f (BriDocF f))
-  | BDFProhibitMTEL (f (BriDocF f)) -- move to exact location
-                          -- TODO: this constructor is deprecated. should
-                          --       still work, but i should probably completely
-                          --       remove it, as i have no proper usecase for
-                          --       it anymore.
   | BDFDebug String (f (BriDocF f))
 
 -- deriving instance Data.Data.Data (BriDocF Identity)
@@ -327,7 +309,6 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDNonBottomSpacing bd)       = plate BDNonBottomSpacing |* bd
   uniplate (BDSetParSpacing    bd)       = plate BDSetParSpacing |* bd
   uniplate (BDForceParSpacing  bd)       = plate BDForceParSpacing |* bd
-  uniplate (BDProhibitMTEL     bd)       = plate BDProhibitMTEL |* bd
   uniplate (BDDebug s bd)                = plate BDDebug |- s |* bd
 
 newtype NodeAllocIndex = NodeAllocIndex Int
@@ -359,7 +340,6 @@ unwrapBriDocNumbered tpl = case snd tpl of
   BDFNonBottomSpacing bd       -> BDNonBottomSpacing $ rec bd
   BDFSetParSpacing    bd       -> BDSetParSpacing $ rec bd
   BDFForceParSpacing  bd       -> BDForceParSpacing $ rec bd
-  BDFProhibitMTEL     bd       -> BDProhibitMTEL $ rec bd
   BDFDebug s bd                -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
  where
   rec = unwrapBriDocNumbered
@@ -395,7 +375,6 @@ briDocSeqSpine = \case
   BDNonBottomSpacing bd         -> briDocSeqSpine bd
   BDSetParSpacing    bd         -> briDocSeqSpine bd
   BDForceParSpacing  bd         -> briDocSeqSpine bd
-  BDProhibitMTEL     bd         -> briDocSeqSpine bd
   BDDebug _s bd                 -> briDocSeqSpine bd
 
 briDocForceSpine :: BriDoc -> BriDoc

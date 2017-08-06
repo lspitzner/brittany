@@ -334,8 +334,6 @@ transformAlts briDoc =
         BDFNonBottomSpacing bd -> rec bd
         BDFSetParSpacing bd -> rec bd
         BDFForceParSpacing bd -> rec bd
-        BDFProhibitMTEL bd ->
-          reWrap . BDFProhibitMTEL <$> rec bd
         BDFDebug s bd -> do
           acp :: AltCurPos <- mGet
           tellDebugMess $ "transformAlts: BDFDEBUG " ++ s ++ " (node-id=" ++ show brDcId ++ "): acp=" ++ show acp
@@ -490,7 +488,6 @@ getSpacing !bridoc = rec bridoc
       BDFForceParSpacing bd -> do
         mVs <- rec bd
         return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
-      BDFProhibitMTEL bd -> rec bd
       BDFDebug s bd -> do
         r <- rec bd
         tellDebugMess $ "getSpacing: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): mVs=" ++ show r
@@ -758,7 +755,6 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFForceParSpacing bd -> do
           mVs <- preFilterLimit <$> rec bd
           return $ [ vs | vs <- mVs, _vs_parFlag vs || _vs_paragraph vs == VerticalSpacingParNone ]
-        BDFProhibitMTEL bd -> rec bd
         BDFDebug s bd -> do
           r <- rec bd
           tellDebugMess $ "getSpacings: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): vs=" ++ show (take 9 r)

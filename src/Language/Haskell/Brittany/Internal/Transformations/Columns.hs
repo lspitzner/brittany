@@ -129,7 +129,6 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDAnnotationKW{}    -> Nothing
   BDAnnotationRest{}  -> Nothing
   BDEnsureIndent{}    -> Nothing
-  BDProhibitMTEL{}    -> Nothing
   BDSetParSpacing{}   -> Nothing
   BDForceParSpacing{} -> Nothing
   BDDebug{}           -> Nothing
