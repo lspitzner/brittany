@@ -134,16 +134,16 @@ mainCmdParser helpDesc = do
       [x] -> return $ Just x
       _   -> do
         putStrErrLn $ "more than one input, aborting"
-        System.Exit.exitWith (System.Exit.ExitFailure 50)
+        System.Exit.exitWith (System.Exit.ExitFailure 51)
     outputPathM <- case outputPaths of
       [] -> do
         return Nothing
       [x] -> return $ Just x
       _   -> do
         putStrErrLn $ "more than one output, aborting"
-        System.Exit.exitWith (System.Exit.ExitFailure 50)
+        System.Exit.exitWith (System.Exit.ExitFailure 52)
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
-      Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 50)
+      Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
       Just x  -> return x
     when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showConfigYaml config) $ return ()
