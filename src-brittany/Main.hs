@@ -90,6 +90,7 @@ licenseDoc = PP.vcat $ List.intersperse
     ]
   ]
 
+
 mainCmdParser :: CommandDesc () -> CmdParser Identity (IO ()) ()
 mainCmdParser helpDesc = do
   addCmdSynopsis "haskell source pretty printer"
@@ -116,10 +117,10 @@ mainCmdParser helpDesc = do
   desc       <- peekCmdDesc
   addCmdImpl $ void $ do
     when printLicense $ do
-      liftIO $ print licenseDoc
+      print licenseDoc
       System.Exit.exitSuccess
     when printVersion $ do
-      liftIO $ do
+      do
         putStrLn $ "brittany version " ++ showVersion version
         putStrLn $ "Copyright (C) 2016-2017 Lennart Spitzner"
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
@@ -132,127 +133,144 @@ mainCmdParser helpDesc = do
         return Nothing
       [x] -> return $ Just x
       _   -> do
-        liftIO $ putStrErrLn $ "more than one input, aborting"
+        putStrErrLn $ "more than one input, aborting"
         System.Exit.exitWith (System.Exit.ExitFailure 50)
-    outputPath <- case outputPaths of
+    outputPathM <- case outputPaths of
       [] -> do
         return Nothing
       [x] -> return $ Just x
       _   -> do
-        liftIO $ putStrErrLn $ "more than one output, aborting"
+        putStrErrLn $ "more than one output, aborting"
         System.Exit.exitWith (System.Exit.ExitFailure 50)
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 50)
       Just x  -> return x
     when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showConfigYaml config) $ return ()
-    let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
-    liftIO $ do
-      -- there is a good of code duplication between the following code and the
-      -- `pureModuleTransform` function. Unfortunately, there are also a good
-      -- amount of slight differences: This module is a bit more verbose, and
-      -- it tries to use the full-blown `parseModule` function which supports
-      -- CPP (but requires the input to be a file..).
-      let cppMode            = config & _conf_preprocessor & _ppconf_CPPMode & confUnpack
-      -- the flag will do the following: insert a marker string
-      -- ("-- BRITTANY_INCLUDE_HACK ") right before any lines starting with
-      -- "#include" before processing (parsing) input; and remove that marker
-      -- string from the transformation output.
-      let hackAroundIncludes = config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
-      let exactprintOnly     = config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
-      let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
-            then case cppMode of
-              CPPModeAbort -> do
-                return $ Left "Encountered -XCPP. Aborting."
-              CPPModeWarn -> do
-                putStrErrLn
-                  $  "Warning: Encountered -XCPP."
-                  ++ " Be warned that -XCPP is not supported and that"
-                  ++ " brittany cannot check that its output is syntactically"
-                  ++ " valid in its presence."
-                return $ Right True
-              CPPModeNowarn -> return $ Right True
-            else return $ Right False
-      parseResult <- case inputPathM of
-        Nothing -> do
-          -- TODO: refactor this hack to not be mixed into parsing logic
-          let hackF s = if "#include" `isPrefixOf` s then "-- BRITTANY_INCLUDE_HACK " ++ s else s
-          let hackTransform =
-                if hackAroundIncludes && not exactprintOnly then List.unlines . fmap hackF . List.lines else id
-          inputString <- System.IO.hGetContents System.IO.stdin
-          parseModuleFromString ghcOptions "stdin" cppCheckFunc (hackTransform inputString)
-        Just p -> parseModule ghcOptions p cppCheckFunc
-      case parseResult of
-        Left left -> do
-          putStrErrLn "parse error:"
-          printErr left
-          System.Exit.exitWith (System.Exit.ExitFailure 60)
-        Right (anns, parsedSource, hasCPP) -> do
-          when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
-            let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
-            trace ("---- ast ----\n" ++ show val) $ return ()
-          (errsWarns, outLText) <- do
-            if exactprintOnly
-              then do
-                pure ([], TextL.pack $ ExactPrint.exactPrint parsedSource anns)
-              else do
-                let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
-                (ews, outRaw) <- if hasCPP || omitCheck
-                  then return $ pPrintModule config anns parsedSource
-                  else pPrintModuleAndCheck config anns parsedSource
-                let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
-                pure $ if hackAroundIncludes
-                  then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw)
-                  else (ews, outRaw)
-          let customErrOrder ErrorInput{}         = 4
-              customErrOrder LayoutWarning{}      = 0 :: Int
-              customErrOrder ErrorOutputCheck{}   = 1
-              customErrOrder ErrorUnusedComment{} = 2
-              customErrOrder ErrorUnknownNode{}   = 3
-          when (not $ null errsWarns) $ do
-            let groupedErrsWarns = Data.List.Extra.groupOn customErrOrder $ List.sortOn customErrOrder $ errsWarns
-            groupedErrsWarns `forM_` \case
-              (ErrorOutputCheck{}:_) -> do
-                putStrErrLn $ "ERROR: brittany pretty printer" ++ " returned syntactically invalid result."
-              (ErrorInput str:_) -> do
-                putStrErrLn $ "ERROR: parse error: " ++ str
-              uns@(ErrorUnknownNode{}:_) -> do
-                putStrErrLn $ "ERROR: encountered unknown syntactical constructs:"
-                uns `forM_` \case
-                  ErrorUnknownNode str ast -> do
-                    putStrErrLn str
-                    when (config & _conf_debug & _dconf_dump_ast_unknown & confUnpack) $ do
-                      putStrErrLn $ "  " ++ show (astToDoc ast)
-                  _ -> error "cannot happen (TM)"
-              warns@(LayoutWarning{}:_) -> do
-                putStrErrLn $ "WARNINGS:"
-                warns `forM_` \case
-                  LayoutWarning str -> putStrErrLn str
-                  _                 -> error "cannot happen (TM)"
-              unused@(ErrorUnusedComment{}:_) -> do
-                putStrErrLn
-                  $  "Error: detected unprocessed comments."
-                  ++ " The transformation output will most likely"
-                  ++ " not contain certain of the comments"
-                  ++ " present in the input haskell source file."
-                putStrErrLn $ "Affected are the following comments:"
-                unused `forM_` \case
-                  ErrorUnusedComment str -> putStrErrLn str
-                  _                      -> error "cannot happen (TM)"
-              [] -> error "cannot happen"
-          -- TODO: don't output anything when there are errors unless user
-          -- adds some override?
-          let hasErrors = case config & _conf_errorHandling & _econf_Werror & confUnpack of
-                False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
-                True  -> not $ null errsWarns
-              outputOnErrs = config & _conf_errorHandling & _econf_produceOutputOnErrors & confUnpack
-              shouldOutput = not suppressOutput && (not hasErrors || outputOnErrs)
+    eitherErrSucc <- coreIO putStrErrLn config suppressOutput inputPathM outputPathM
+    case eitherErrSucc of
+      Left errNo -> System.Exit.exitWith (System.Exit.ExitFailure errNo)
+      Right ()   -> pure ()
 
-          when shouldOutput $ addTraceSep (_conf_debug config) $ case outputPath of
-            Nothing -> TextL.IO.putStr $ outLText
-            Just p  -> TextL.IO.writeFile p $ outLText
 
-          when hasErrors $ System.Exit.exitWith (System.Exit.ExitFailure 70)
+-- | The main IO parts for the default mode of operation, and after commandline
+-- and config stuff is processed.
+coreIO
+  :: (String -> IO ()) -- ^ error output function. In parallel operation, you
+                       -- may want serialize the different outputs and
+                       -- consequently not directly print to stderr.
+  -> Config -- ^ global program config.
+  -> Bool   -- ^ whether to supress output (to stdout). Purely IO flag, so
+            -- currently not part of program config.
+  -> Maybe FilePath.FilePath -- ^ input filepath; stdin if Nothing.
+  -> Maybe FilePath.FilePath -- ^ output filepath; stdout if Nothing.
+  -> IO (Either Int ())      -- ^ Either an errorNo, or success.
+coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEitherT $ do
+  let putErrorLn = liftIO . putErrorLnIO :: String -> EitherT.EitherT e IO ()
+  let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
+  -- there is a good of code duplication between the following code and the
+  -- `pureModuleTransform` function. Unfortunately, there are also a good
+  -- amount of slight differences: This module is a bit more verbose, and
+  -- it tries to use the full-blown `parseModule` function which supports
+  -- CPP (but requires the input to be a file..).
+  let cppMode            = config & _conf_preprocessor & _ppconf_CPPMode & confUnpack
+  -- the flag will do the following: insert a marker string
+  -- ("-- BRITTANY_INCLUDE_HACK ") right before any lines starting with
+  -- "#include" before processing (parsing) input; and remove that marker
+  -- string from the transformation output.
+  let hackAroundIncludes = config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
+  let exactprintOnly     = config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
+  let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+        then case cppMode of
+          CPPModeAbort -> do
+            return $ Left "Encountered -XCPP. Aborting."
+          CPPModeWarn -> do
+            putErrorLnIO
+              $  "Warning: Encountered -XCPP."
+              ++ " Be warned that -XCPP is not supported and that"
+              ++ " brittany cannot check that its output is syntactically"
+              ++ " valid in its presence."
+            return $ Right True
+          CPPModeNowarn -> return $ Right True
+        else return $ Right False
+  parseResult <- case inputPathM of
+    Nothing -> do
+      -- TODO: refactor this hack to not be mixed into parsing logic
+      let hackF s = if "#include" `isPrefixOf` s then "-- BRITTANY_INCLUDE_HACK " ++ s else s
+      let hackTransform =
+            if hackAroundIncludes && not exactprintOnly then List.unlines . fmap hackF . List.lines else id
+      inputString <- liftIO $ System.IO.hGetContents System.IO.stdin
+      liftIO $ parseModuleFromString ghcOptions "stdin" cppCheckFunc (hackTransform inputString)
+    Just p -> liftIO $ parseModule ghcOptions p cppCheckFunc
+  case parseResult of
+    Left left -> do
+      putErrorLn "parse error:"
+      putErrorLn $ show left
+      EitherT.left 60
+    Right (anns, parsedSource, hasCPP) -> do
+      when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
+        let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
+        trace ("---- ast ----\n" ++ show val) $ return ()
+      (errsWarns, outLText) <- do
+        if exactprintOnly
+          then do
+            pure ([], TextL.pack $ ExactPrint.exactPrint parsedSource anns)
+          else do
+            let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
+            (ews, outRaw) <- if hasCPP || omitCheck
+              then return $ pPrintModule config anns parsedSource
+              else liftIO $ pPrintModuleAndCheck config anns parsedSource
+            let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
+            pure $ if hackAroundIncludes then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw) else (ews, outRaw)
+      let customErrOrder ErrorInput{}         = 4
+          customErrOrder LayoutWarning{}      = 0 :: Int
+          customErrOrder ErrorOutputCheck{}   = 1
+          customErrOrder ErrorUnusedComment{} = 2
+          customErrOrder ErrorUnknownNode{}   = 3
+      when (not $ null errsWarns) $ do
+        let groupedErrsWarns = Data.List.Extra.groupOn customErrOrder $ List.sortOn customErrOrder $ errsWarns
+        groupedErrsWarns `forM_` \case
+          (ErrorOutputCheck{}:_) -> do
+            putErrorLn $ "ERROR: brittany pretty printer" ++ " returned syntactically invalid result."
+          (ErrorInput str:_) -> do
+            putErrorLn $ "ERROR: parse error: " ++ str
+          uns@(ErrorUnknownNode{}:_) -> do
+            putErrorLn $ "ERROR: encountered unknown syntactical constructs:"
+            uns `forM_` \case
+              ErrorUnknownNode str ast -> do
+                putErrorLn str
+                when (config & _conf_debug & _dconf_dump_ast_unknown & confUnpack) $ do
+                  putErrorLn $ "  " ++ show (astToDoc ast)
+              _ -> error "cannot happen (TM)"
+          warns@(LayoutWarning{}:_) -> do
+            putErrorLn $ "WARNINGS:"
+            warns `forM_` \case
+              LayoutWarning str -> putErrorLn str
+              _                 -> error "cannot happen (TM)"
+          unused@(ErrorUnusedComment{}:_) -> do
+            putErrorLn
+              $  "Error: detected unprocessed comments."
+              ++ " The transformation output will most likely"
+              ++ " not contain certain of the comments"
+              ++ " present in the input haskell source file."
+            putErrorLn $ "Affected are the following comments:"
+            unused `forM_` \case
+              ErrorUnusedComment str -> putErrorLn str
+              _                      -> error "cannot happen (TM)"
+          [] -> error "cannot happen"
+      -- TODO: don't output anything when there are errors unless user
+      -- adds some override?
+      let hasErrors = case config & _conf_errorHandling & _econf_Werror & confUnpack of
+            False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
+            True  -> not $ null errsWarns
+          outputOnErrs = config & _conf_errorHandling & _econf_produceOutputOnErrors & confUnpack
+          shouldOutput = not suppressOutput && (not hasErrors || outputOnErrs)
+
+      when shouldOutput $ addTraceSep (_conf_debug config) $ case outputPathM of
+        Nothing -> liftIO $ TextL.IO.putStr $ outLText
+        Just p  -> liftIO $ TextL.IO.writeFile p $ outLText
+
+      when hasErrors $ EitherT.left 70
  where
   addTraceSep conf =
     if or
@@ -268,6 +286,7 @@ mainCmdParser helpDesc = do
          ]
       then trace "----"
       else id
+
 
 readConfigs :: CConfig Option -> [System.IO.FilePath] -> MaybeT IO Config
 readConfigs cmdlineConfig configPaths = do
