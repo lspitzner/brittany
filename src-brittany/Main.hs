@@ -100,7 +100,7 @@ mainCmdParser helpDesc = do
   addCmd "license" $ addCmdImpl $ print $ licenseDoc
   -- addButcherDebugCommand
   reorderStart
-  printHelp      <- addSimpleBoolFlag "" ["help"] mempty
+  printHelp      <- addSimpleBoolFlag "h" ["help"] mempty
   printVersion   <- addSimpleBoolFlag "" ["version"] mempty
   printLicense   <- addSimpleBoolFlag "" ["license"] mempty
   inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "path to input haskell source file")
