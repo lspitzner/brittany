@@ -167,7 +167,6 @@ layoutBriDocM = \case
       Just []     -> when allowMTEL $ moveToExactAnn annKey
       Just priors -> do
         -- layoutResetSepSpace
-        when (not $ null priors) $ layoutSetCommentCol
         priors
           `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
                     do
@@ -209,7 +208,6 @@ layoutBriDocM = \case
     case mComments of
       Nothing -> pure ()
       Just comments -> do
-        layoutSetCommentCol
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           do
             -- evil hack for CPP:
@@ -241,7 +239,6 @@ layoutBriDocM = \case
     case mComments of
       Nothing -> pure ()
       Just comments -> do
-        layoutSetCommentCol
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           do
       -- evil hack for CPP:
