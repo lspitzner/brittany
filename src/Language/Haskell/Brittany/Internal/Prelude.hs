@@ -1,68 +1,378 @@
-module Language.Haskell.Brittany.Internal.Prelude
+module Language.Haskell.Brittany.Internal.Prelude (module E)
 where
 
 
 
-import Prelude
-import qualified Data.Strict.Maybe as Strict
-import Debug.Trace
-import Control.Monad
-import System.IO
+import Data.Functor.Identity         as E ( Identity(..) )
+import Control.Concurrent.Chan       as E ( Chan )
+import Control.Concurrent.MVar       as E ( MVar )
+import Data.Int                      as E ( Int )
+import Data.Word                     as E ( Word )
+import Prelude                       as E ( Integer
+                                          , Float
+                                          , Double
+                                          )
+import Control.Monad.ST              as E ( ST )
+import Data.Bool                     as E ( Bool(..) )
+import Data.Char                     as E ( Char )
+import Data.Either                   as E ( Either(..) )
+import Data.IORef                    as E ( IORef )
+import Data.Maybe                    as E ( Maybe(..) )
+import Data.Semigroup                as E ( Option(..) )
+import Data.Monoid                   as E ( Endo(..)
+                                          , All(..)
+                                          , Any(..)
+                                          , Sum(..)
+                                          , Product(..)
+                                          , Alt(..)
+                                          )
+import Data.Ord                      as E ( Ordering(..)
+                                          , Down(..)
+                                          )
+import Data.Ratio                    as E ( Ratio
+                                          , Rational
+                                          )
+import Data.String                   as E ( String )
+import Data.Void                     as E ( Void )
+import System.IO                     as E ( IO )
+import Data.Proxy                    as E ( Proxy(..) )
+import Data.Sequence                 as E ( Seq )
 
-import Control.DeepSeq ( NFData, force )
-import Control.Exception.Base ( evaluate )
+import Data.Map                      as E ( Map )
+import Data.Set                      as E ( Set )
 
-import Control.Applicative
+import Data.Text                     as E ( Text )
 
+import Prelude                       as E ( Char
+                                          , String
+                                          , Int
+                                          , Integer
+                                          , Float
+                                          , Double
+                                          , Bool (..)
+                                          , undefined
+                                          , Eq (..)
+                                          , Ord (..)
+                                          , Enum (..)
+                                          , Bounded (..)
+                                          , Maybe (..)
+                                          , Either (..)
+                                          , IO
+                                          , (<$>)
+                                          , (.)
+                                          , ($)
+                                          , ($!)
+                                          , Num (..)
+                                          , Integral (..)
+                                          , Fractional (..)
+                                          , Floating (..)
+                                          , RealFrac (..)
+                                          , RealFloat (..)
+                                          , fromIntegral
+                                          , error
+                                          , foldr
+                                          , foldl
+                                          , foldr1
+                                          , id
+                                          , map
+                                          , subtract
+                                          , putStrLn
+                                          , putStr
+                                          , Show (..)
+                                          , print
+                                          , fst
+                                          , snd
+                                          , (++)
+                                          , not
+                                          , (&&)
+                                          , (||)
+                                          , curry
+                                          , uncurry
+                                          , Ordering (..)
+                                          , flip
+                                          , const
+                                          , seq
+                                          , reverse
+                                          , otherwise
+                                          , traverse
+                                          , realToFrac
+                                          , or
+                                          , and
+                                          , head
+                                          , any
+                                          , (^)
+                                          , Foldable
+                                          , Traversable
+                                          )
 
+import Data.Function                 as E ( fix
+                                          )
 
-instance Applicative Strict.Maybe where
-  pure = Strict.Just
-  Strict.Just f <*> Strict.Just x = Strict.Just (f x)
-  _ <*> _ = Strict.Nothing
+import Data.Foldable                 as E ( foldl'
+                                          , foldr'
+                                          , fold
+                                          , asum
+                                          )
 
-instance Monad Strict.Maybe where
-  return = Strict.Just
-  Strict.Nothing >>= _ = Strict.Nothing
-  Strict.Just x >>= f = f x
+import Data.List                     as E ( partition
+                                          , null
+                                          , elem
+                                          , notElem
+                                          , minimum
+                                          , maximum
+                                          , length
+                                          , all
+                                          , take
+                                          , drop
+                                          , find
+                                          , sum
+                                          , zip
+                                          , zip3
+                                          , zipWith
+                                          , repeat
+                                          , replicate
+                                          , iterate
+                                          , nub
+                                          , filter
+                                          , intersperse
+                                          , intercalate
+                                          , isSuffixOf
+                                          , isPrefixOf
+                                          , dropWhile
+                                          , takeWhile
+                                          , unzip
+                                          , break
+                                          , transpose
+                                          , sortBy
+                                          , mapAccumL
+                                          , mapAccumR
+                                          , uncons
+                                          )
 
-instance Alternative Strict.Maybe where
-  empty = Strict.Nothing
-  x <|> Strict.Nothing = x
-  _ <|> x = x
+import Data.List.NonEmpty            as E ( NonEmpty(..)
+                                          , nonEmpty
+                                          )
 
-traceFunctionWith
-  :: String -> (a -> String) -> (b -> String) -> (a -> b) -> (a -> b)
-traceFunctionWith name s1 s2 f x =
-  trace traceStr y
-  where
-    y = f x
-    traceStr = name ++ "\nBEFORE:\n" ++ s1 x ++ "\nAFTER:\n" ++ s2 y
+import Data.Tuple                    as E ( swap
+                                          )
 
-(<&!>) :: Monad m => m a -> (a -> b) -> m b
-(<&!>) = flip (<$!>)
+import Data.Char                     as E ( ord
+                                          , chr
+                                          )
 
-putStrErrLn :: String -> IO ()
-putStrErrLn s = hPutStrLn stderr s
+import Data.Maybe                    as E ( fromMaybe
+                                          , maybe
+                                          , listToMaybe
+                                          , maybeToList
+                                          , catMaybes
+                                          )
 
-printErr :: Show a => a -> IO ()
-printErr = putStrErrLn . show
+import Data.Word                     as E ( Word32
+                                          )
 
-errorIf :: Bool -> a -> a
-errorIf False = id
-errorIf True  = error "errorIf"
+import Data.Ord                      as E ( comparing
+                                          , Down (..)
+                                          )
 
-errorIfNote :: Maybe String -> a -> a
-errorIfNote Nothing  = id
-errorIfNote (Just x) = error x
+import Data.Either                   as E ( either
+                                          )
 
-(<&>) :: Functor f => f a -> (a -> b) -> f b
-(<&>) = flip fmap
-infixl 4 <&>
+import Data.Ratio                    as E ( Ratio
+                                          , (%)
+                                          , numerator
+                                          , denominator
+                                          )
 
-(.>) :: (a -> b) -> (b -> c) -> (a -> c)
-f .> g = g . f
-infixl 9 .>
+import Text.Read                     as E ( readMaybe
+                                          )
 
-evaluateDeep :: NFData a => a -> IO a
-evaluateDeep = evaluate . force
+import Control.Monad                 as E ( Functor (..)
+                                          , Monad (..)
+                                          , MonadPlus (..)
+                                          , mapM
+                                          , mapM_
+                                          , forM
+                                          , forM_
+                                          , sequence
+                                          , sequence_
+                                          , (=<<)
+                                          , (>=>)
+                                          , (<=<)
+                                          , forever
+                                          , void
+                                          , join
+                                          , replicateM
+                                          , replicateM_
+                                          , guard
+                                          , when
+                                          , unless
+                                          , liftM
+                                          , liftM2
+                                          , liftM3
+                                          , liftM4
+                                          , liftM5
+                                          , filterM
+                                          , (<$!>)
+                                          )
+
+import Control.Applicative           as E ( Applicative (..)
+                                          , Alternative (..)
+                                          )
+
+import Foreign.Storable              as E ( Storable )
+import GHC.Exts                      as E ( Constraint )
+
+import Control.Concurrent            as E ( threadDelay
+                                          , forkIO
+                                          , forkOS
+                                          )
+
+import Control.Concurrent.MVar       as E ( MVar
+                                          , newEmptyMVar
+                                          , newMVar
+                                          , putMVar
+                                          , readMVar
+                                          , takeMVar
+                                          , swapMVar
+                                          )
+
+import Control.Exception             as E ( evaluate
+                                          , bracket
+                                          , assert
+                                          )
+
+import Debug.Trace                   as E ( trace
+                                          , traceId
+                                          , traceShowId
+                                          , traceShow
+                                          , traceStack
+                                          , traceShowId
+                                          , traceIO
+                                          , traceM
+                                          , traceShowM
+                                          )
+
+import Foreign.ForeignPtr            as E ( ForeignPtr
+                                          )
+
+import Data.Monoid                   as E ( (<>)
+                                          , mconcat
+                                          , Monoid (..)
+                                          )
+
+import Data.Bifunctor                as E ( bimap )
+import Data.Functor                  as E ( (<$), ($>) )
+import Data.Function                 as E ( (&) )
+import System.IO                     as E ( hFlush
+                                          , stdout
+                                          )
+
+import Data.Typeable                 as E ( Typeable
+                                          )
+
+import Control.Arrow                 as E ( first
+                                          , second
+                                          , (***)
+                                          , (&&&)
+                                          , (>>>)
+                                          , (<<<)
+                                          )
+
+import Data.Functor.Identity         as E ( Identity (..)
+                                          )
+
+import Data.Proxy                    as E ( Proxy (..)
+                                          )
+
+import Data.Version                  as E ( showVersion
+                                          )
+
+import Data.List.Extra               as E ( nubOrd
+                                          , stripSuffix
+                                          )
+import Control.Monad.Extra           as E ( whenM
+                                          , unlessM
+                                          , ifM
+                                          , notM
+                                          , orM
+                                          , andM
+                                          , anyM
+                                          , allM
+                                          )
+
+import Data.Tree                     as E ( Tree(..)
+                                          )
+
+import Control.Monad.Trans.MultiRWS  as E ( -- MultiRWST (..)
+                                          -- , MultiRWSTNull
+                                          -- , MultiRWS
+                                          -- , 
+                                            MonadMultiReader(..)
+                                          , MonadMultiWriter(..)
+                                          , MonadMultiState(..)
+                                          -- , runMultiRWST
+                                          -- , runMultiRWSTASW
+                                          -- , runMultiRWSTW
+                                          -- , runMultiRWSTAW
+                                          -- , runMultiRWSTSW
+                                          -- , runMultiRWSTNil
+                                          -- , runMultiRWSTNil_
+                                          -- , withMultiReader
+                                          -- , withMultiReader_
+                                          -- , withMultiReaders
+                                          -- , withMultiReaders_
+                                          -- , withMultiWriter
+                                          -- , withMultiWriterAW
+                                          -- , withMultiWriterWA
+                                          -- , withMultiWriterW
+                                          -- , withMultiWriters
+                                          -- , withMultiWritersAW
+                                          -- , withMultiWritersWA
+                                          -- , withMultiWritersW
+                                          -- , withMultiState
+                                          -- , withMultiStateAS
+                                          -- , withMultiStateSA
+                                          -- , withMultiStateA
+                                          -- , withMultiStateS
+                                          -- , withMultiState_
+                                          -- , withMultiStates
+                                          -- , withMultiStatesAS
+                                          -- , withMultiStatesSA
+                                          -- , withMultiStatesA
+                                          -- , withMultiStatesS
+                                          -- , withMultiStates_
+                                          -- , inflateReader
+                                          -- , inflateMultiReader
+                                          -- , inflateWriter
+                                          -- , inflateMultiWriter
+                                          -- , inflateState
+                                          -- , inflateMultiState
+                                          -- , mapMultiRWST
+                                          -- , mGetRawR
+                                          -- , mGetRawW
+                                          -- , mGetRawS
+                                          -- , mPutRawR
+                                          -- , mPutRawW
+                                          -- , mPutRawS
+                                          )
+
+import Control.Monad.Trans.MultiReader    ( runMultiReaderTNil
+                                          , runMultiReaderTNil_
+                                          , MultiReaderT (..)
+                                          , MultiReader
+                                          , MultiReaderTNull
+                                          )
+
+import Data.Text                     as E ( Text )
+
+import Control.Monad.IO.Class        as E ( MonadIO (..)
+                                          )
+
+import Control.Monad.Trans.Class     as E ( lift
+                                          )
+import Control.Monad.Trans.Maybe     as E ( MaybeT (..)
+                                          )
+
+import Data.Data                     as E ( toConstr
+                                          )
+

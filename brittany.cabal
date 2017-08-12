@@ -54,6 +54,7 @@ library {
     Language.Haskell.Brittany
     Language.Haskell.Brittany.Internal
     Language.Haskell.Brittany.Internal.Prelude
+    Language.Haskell.Brittany.Internal.PreludeUtils
     Language.Haskell.Brittany.Internal.Types
     Language.Haskell.Brittany.Internal.Utils
     Language.Haskell.Brittany.Internal.Config
