@@ -1,4 +1,17 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+-- These optimizations are disabled to improve compile times (and compilation
+-- memory usage). When we do not disable them, the CI servers take more than
+-- 10 minutes to compile this module alone.
+-- Having looked into aeson and how the instances are written, I still do
+-- not understand what makes GHC choke so much here. The size of the raw
+-- expressions below looks fairly negligible, so there must be some expansion
+-- due to inlining going on. But even disabling INLINE pragmas in aeson did
+-- not seem to change anything.
+-- Nonetheless, this solution works and has no downsides because the
+-- instances defined here are not in any way performance-critical.
+{-# OPTIONS_GHC -fno-pre-inlining #-}
+{-# OPTIONS_GHC -fno-specialise #-}
+{-# OPTIONS_GHC -fignore-interface-pragmas #-}
 
 module Language.Haskell.Brittany.Internal.Config.Types.Instances
 where
