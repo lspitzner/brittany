@@ -79,8 +79,8 @@ transformAlts briDoc =
     $ rec
     $ briDoc
   where
-    -- this funtion is exponential by nature and cannot be improved in any
-    -- way i can think of, and if tried. (stupid StableNames.)
+    -- this function is exponential by nature and cannot be improved in any
+    -- way i can think of, and i've tried. (stupid StableNames.)
     -- transWrap :: BriDoc -> BriDocNumbered
     -- transWrap brDc = flip StateS.evalState (1::Int)
     --                $ Memo.startEvalMemoT
@@ -590,7 +590,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                            -- Nonetheless I think the order of spacings should
                            -- be preserved as it provides a deterministic
                            -- choice for which spacings to prune (which is
-                           -- an argument against simly using a Set).
+                           -- an argument against simply using a Set).
                            -- I have also considered `fmap head . group` which
                            -- seems to work similarly well for common cases
                            -- and which might behave even better when it comes
