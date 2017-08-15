@@ -370,7 +370,7 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
                 Just (_, maxs, _) -> sum maxs
             maxCols = {-Foldable.foldl1 maxZipper-}
               fmap colAggregation $ transpose $ Foldable.toList
-              -- $ trace ("colss=" ++ show colss ++ " for" ++ take 100 (show $ briDocToDoc $ head bridocs))
+              --  $ trace ("colss=" ++ show colss ++ " for" ++ take 100 (show $ briDocToDoc $ head bridocs))
               colss
             (_, posXs) = mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
             counter count l = if List.last posXs + List.last l <= colMax
