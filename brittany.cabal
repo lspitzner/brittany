@@ -59,6 +59,7 @@ library {
     Language.Haskell.Brittany.Internal.Utils
     Language.Haskell.Brittany.Internal.Config
     Language.Haskell.Brittany.Internal.Config.Types
+    Language.Haskell.Brittany.Internal.Config.Types.Instances
     Paths_brittany
   }
   other-modules: {
@@ -81,7 +82,6 @@ library {
     -Wall
     -j
     -fno-warn-unused-imports
-    -fno-warn-orphans
     -fno-warn-redundant-constraints
   }
   if flag(brittany-dev) {
@@ -206,7 +206,6 @@ executable brittany
     -j
     -fno-spec-constr
     -fno-warn-unused-imports
-    -fno-warn-orphans
     -fno-warn-redundant-constraints
     -rtsopts
     -with-rtsopts "-M2G"
@@ -286,7 +285,6 @@ test-suite unittests
     -Wall
     -j
     -fno-warn-unused-imports
-    -fno-warn-orphans
     -rtsopts
     -with-rtsopts "-M2G"
   }
@@ -360,7 +358,6 @@ test-suite littests
     -Wall
     -j
     -fno-warn-unused-imports
-    -fno-warn-orphans
     -rtsopts
     -with-rtsopts "-M2G"
   }
@@ -400,7 +397,6 @@ test-suite libinterfacetests
     -Wall
     -j
     -fno-warn-unused-imports
-    -fno-warn-orphans
     -rtsopts
     -with-rtsopts "-M2G"
   }

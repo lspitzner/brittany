@@ -27,6 +27,7 @@ import           UI.Butcher.Monadic
 import qualified System.Console.CmdArgs.Explicit as CmdArgs
 
 import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Config.Types.Instances
 import           Language.Haskell.Brittany.Internal.Utils
 
 import           Data.Coerce ( Coercible, coerce )
