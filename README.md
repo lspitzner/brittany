@@ -55,32 +55,32 @@ require fixing:
 
 - via `cabal` "old-build"
 
-  ~~~~.sh
-  # optionally:
-  # mkdir brittany
-  # cd brittany
-  # cabal sandbox init
-  cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8_0
-  ~~~~
+    ~~~~.sh
+    # optionally:
+    # mkdir brittany
+    # cd brittany
+    # cabal sandbox init
+    cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8_0
+    ~~~~
 
 - via `cabal new-build`
 
-  ~~~~.sh
-  cabal unpack brittany
-  cd brittany-0.8.0.2
-  # cabal new-configure -w $PATH_TO_GHC_8_0
-  cabal new-build exe:brittany
-  # and it should be safe to just copy the executable, e.g.
-  cp `./find dist-newstyle/build/ -type f -name brittany` $HOME/.cabal/bin/
-  ~~~~
+    ~~~~.sh
+    cabal unpack brittany
+    cd brittany-0.8.0.2
+    # cabal new-configure -w $PATH_TO_GHC_8_0
+    cabal new-build exe:brittany
+    # and it should be safe to just copy the executable, e.g.
+    cp `./find dist-newstyle/build/ -type f -name brittany` $HOME/.cabal/bin/
+    ~~~~
 
 - via `stack`
 
-  ~~~~.sh
-  git clone https://github.com/lspitzner/brittany.git
-  cd brittany
-  stack install
-  ~~~~
+    ~~~~.sh
+    git clone https://github.com/lspitzner/brittany.git
+    cd brittany
+    stack install
+    ~~~~
 
 
 # Usage
@@ -92,22 +92,22 @@ require fixing:
   by default, i.e. to add something like this to your
   `~/.brittany/config.yaml` (execute `brittany` once to create default):
 
-  ~~~~
-  conf_forward:
-    options_ghc:
-    - -XLambdaCase
-    - -XMultiWayIf
-    - -XGADTs
-    - -XPatternGuards
-    - -XViewPatterns
-    - -XRecursiveDo
-    - -XTupleSections
-    - -XExplicitForAll
-    - -XImplicitParams
-    - -XQuasiQuotes
-    - -XTemplateHaskell
-    - -XBangPatterns
-  ~~~~
+    ~~~~
+    conf_forward:
+      options_ghc:
+      - -XLambdaCase
+      - -XMultiWayIf
+      - -XGADTs
+      - -XPatternGuards
+      - -XViewPatterns
+      - -XRecursiveDo
+      - -XTupleSections
+      - -XExplicitForAll
+      - -XImplicitParams
+      - -XQuasiQuotes
+      - -XTemplateHaskell
+      - -XBangPatterns
+    ~~~~
 
 # Implementation/High-level Documentation
 
