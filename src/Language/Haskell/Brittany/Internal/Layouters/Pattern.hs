@@ -131,8 +131,12 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     wrapPatPrepend pat1 (docLit $ Text.pack "!")
   LazyPat pat1 -> do
     wrapPatPrepend pat1 (docLit $ Text.pack "~")
-  NPat llit@(L _ (OverLit olit _ _ _)) _ _ _ -> do
-    fmap Seq.singleton $ docWrapNode llit $ allocateNode $ overLitValBriDoc olit
+  NPat llit@(L _ (OverLit olit _ _ _)) mNegative _ _ -> do
+    litDoc <- docWrapNode llit $ allocateNode $ overLitValBriDoc olit
+    negDoc <- docLit $ Text.pack "-"
+    pure $ case mNegative of
+      Just{}  -> Seq.fromList [negDoc, litDoc]
+      Nothing -> Seq.singleton litDoc
 
 -- if MIN_VERSION_ghc(8,0,0)
 --   VarPat n -> return $ stringLayouter lpat $ lrdrNameToText n
