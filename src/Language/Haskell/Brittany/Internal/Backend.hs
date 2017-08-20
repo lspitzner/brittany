@@ -312,6 +312,7 @@ briDocIsMultiLine briDoc = rec briDoc
     BDForceMultiline  _     -> True
     BDForceSingleline bd    -> rec bd
     BDForwardLineMode bd    -> rec bd
+    BDExternal _ _ _ t | [_] <- Text.lines t -> False
     BDExternal _ _ _ _      -> True
     BDAnnotationPrior _ bd  -> rec bd
     BDAnnotationKW _ _ bd   -> rec bd

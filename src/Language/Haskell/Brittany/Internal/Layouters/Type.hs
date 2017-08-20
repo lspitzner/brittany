@@ -19,6 +19,7 @@ import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 import           HsSyn
 import           Name
 import           Outputable ( ftext, showSDocUnsafe )
+import           BasicTypes
 
 import           DataTreePrint
 
@@ -599,8 +600,18 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
   HsExplicitTupleTy{} -> -- TODO
     briDocByExactInlineOnly "HsExplicitTupleTy{}" ltype
-  HsTyLit{} -> -- TODO
-    briDocByExactInlineOnly "HsTyLit{}" ltype
+  HsTyLit lit -> case lit of
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+    HsNumTy (SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsNumTy NoSourceText _ ->
+      error "overLitValBriDoc: literal with no SourceText"
+    HsStrTy (SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsStrTy NoSourceText _ ->
+      error "overLitValBriDoc: literal with no SourceText"
+#else /* ghc-8.0 */
+    HsNumTy srctext _ -> docLit $ Text.pack srctext
+    HsStrTy srctext _ -> docLit $ Text.pack srctext
+#endif
   HsCoreTy{} -> -- TODO
     briDocByExactInlineOnly "HsCoreTy{}" ltype
   HsWildCardTy _ ->

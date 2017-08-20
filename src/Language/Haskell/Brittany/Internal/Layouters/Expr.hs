@@ -902,9 +902,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     briDocByExactInlineOnly "HsTickPragma{}" lexpr
   EWildPat{} -> do
     docLit $ Text.pack "_"
-  EAsPat{} -> do
-    -- TODO
-    briDocByExactInlineOnly "EAsPat{}" lexpr
+  EAsPat asName asExpr -> do
+    docSeq
+      [ docLit $ (lrdrNameToText asName) <> Text.pack "@"
+      , layoutExpr asExpr
+      ]
   EViewPat{} -> do
     -- TODO
     briDocByExactInlineOnly "EViewPat{}" lexpr

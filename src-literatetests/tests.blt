@@ -956,6 +956,7 @@ runBrittany tabSize text = do
 foo = bar @Baz
 
 #test comment-before-BDCols
+{-# LANGUAGE TypeApplications #-}
 layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
   docAlt
     $  -- one-line solution
@@ -972,7 +973,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
        , [(guards, body, _bodyRaw)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
        , wherePart <- case mWhereDocs of
-         Nothing -> return @[] $ docEmpty
+         Nothing  -> return @[] $ docEmpty
          Just [w] -> return @[] $ docSeq
            [ docSeparator
            , appSep $ docLit $ Text.pack "where"
@@ -1025,6 +1026,21 @@ foo n = case n of
 
 bar n = case n of
   (-2, -2) -> (-2, -2)
+
+#test issue 48 a
+
+foo =
+  let a    = b@1
+      cccc = ()
+  in  foo
+
+#test issue 48 b
+
+{-# LANGUAGE TypeApplications #-}
+foo =
+  let a    = b @1
+      cccc = ()
+  in  foo
 
 
 ###############################################################################
