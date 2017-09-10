@@ -73,7 +73,7 @@ parsePrintModule configRaw inputText = runEitherT $ do
           then "-- BRITTANY_INCLUDE_HACK " ++ s
           else s
     let hackTransform = if hackAroundIncludes
-          then List.unlines . fmap hackF . List.lines
+          then List.intercalate "\n" . fmap hackF . lines'
           else id
     let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
           then case cppMode of
@@ -101,7 +101,12 @@ parsePrintModule configRaw inputText = runEitherT $ do
     let hackF s = fromMaybe s
           $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
     pure $ if hackAroundIncludes
-      then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw)
+      then
+        ( ews
+        , TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn
+          (TextL.pack "\n")
+          outRaw
+        )
       else (ews, outRaw)
   let customErrOrder ErrorInput{}         = 4
       customErrOrder LayoutWarning{}      = 0 :: Int
@@ -113,6 +118,7 @@ parsePrintModule configRaw inputText = runEitherT $ do
           False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
           True  -> not $ null errsWarns
   if hasErrors then left $ errsWarns else pure $ TextL.toStrict outputTextL
+
 
 
 -- BrittanyErrors can be non-fatal warnings, thus both are returned instead

@@ -166,8 +166,8 @@ coreIO
   -> Maybe FilePath.FilePath -- ^ output filepath; stdout if Nothing.
   -> IO (Either Int ())      -- ^ Either an errorNo, or success.
 coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEitherT $ do
-  let putErrorLn = liftIO . putErrorLnIO :: String -> EitherT.EitherT e IO ()
-  let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
+  let putErrorLn         = liftIO . putErrorLnIO :: String -> EitherT.EitherT e IO ()
+  let ghcOptions         = config & _conf_forward & _options_ghc & runIdentity
   -- there is a good of code duplication between the following code and the
   -- `pureModuleTransform` function. Unfortunately, there are also a good
   -- amount of slight differences: This module is a bit more verbose, and
@@ -198,7 +198,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEi
       -- TODO: refactor this hack to not be mixed into parsing logic
       let hackF s = if "#include" `isPrefixOf` s then "-- BRITTANY_INCLUDE_HACK " ++ s else s
       let hackTransform =
-            if hackAroundIncludes && not exactprintOnly then List.unlines . fmap hackF . List.lines else id
+            if hackAroundIncludes && not exactprintOnly then List.intercalate "\n" . fmap hackF . lines' else id
       inputString <- liftIO $ System.IO.hGetContents System.IO.stdin
       liftIO $ parseModuleFromString ghcOptions "stdin" cppCheckFunc (hackTransform inputString)
     Just p -> liftIO $ parseModule ghcOptions p cppCheckFunc
@@ -221,7 +221,9 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEi
               then return $ pPrintModule config anns parsedSource
               else liftIO $ pPrintModuleAndCheck config anns parsedSource
             let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
-            pure $ if hackAroundIncludes then (ews, TextL.unlines $ fmap hackF $ TextL.lines outRaw) else (ews, outRaw)
+            pure $ if hackAroundIncludes
+              then (ews, TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn (TextL.pack "\n") outRaw)
+              else (ews, outRaw)
       let customErrOrder ErrorInput{}         = 4
           customErrOrder LayoutWarning{}      = 0 :: Int
           customErrOrder ErrorOutputCheck{}   = 1

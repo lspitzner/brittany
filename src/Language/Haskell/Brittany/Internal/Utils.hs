@@ -23,6 +23,7 @@ module Language.Haskell.Brittany.Internal.Utils
   , transformDownMay
   , FirstLastView(..)
   , splitFirstLast
+  , lines'
   )
 where
 
@@ -280,3 +281,11 @@ transformDownMay :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
 transformDownMay f = g where g x = maybe x (Uniplate.descend g) $ f x
 _transformDownRec :: Uniplate.Uniplate on => (on -> Maybe on) -> (on -> on)
 _transformDownRec f = g where g x = maybe (Uniplate.descend g x) g $ f x
+
+-- | similar to List.lines, but treating the case of final newline character
+-- in such a manner that this function is the inverse of @intercalate "\n"@.
+lines' :: String -> [String]
+lines' s = case break (== '\n') s of
+  (s1, []) -> [s1]
+  (s1, [_]) -> [s1, ""]
+  (s1, (_:r)) -> s1 : lines' r
