@@ -111,11 +111,9 @@ commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()
 commentAnnFixTransformGlob ast = do
   let extract :: forall a . SYB.Data a => a -> Seq (SrcSpan, ExactPrint.AnnKey)
       extract = -- traceFunctionWith "extract" (show . SYB.typeOf) show $
-                const Seq.empty `SYB.ext2Q` (\(L a b) -> f1 a b)
-       where
-        f1 b c = (const Seq.empty `SYB.extQ` f2 c) b
-        f2 c l = Seq.singleton (l, ExactPrint.mkAnnKey (L l c))
-        -- i wonder if there is a way to avoid re-constructing the L above..
+        const Seq.empty
+          `SYB.ext1Q`
+            (\l@(L span _) -> Seq.singleton (span, ExactPrint.mkAnnKey l))
   let nodes = SYB.everything (<>) extract ast
   let annsMap :: Map GHC.RealSrcLoc ExactPrint.AnnKey
       annsMap = Map.fromListWith
