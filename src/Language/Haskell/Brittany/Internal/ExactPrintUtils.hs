@@ -5,6 +5,8 @@ module Language.Haskell.Brittany.Internal.ExactPrintUtils
   , parseModuleFromString
   , commentAnnFixTransform
   , commentAnnFixTransformGlob
+  , extractToplevelAnns
+  , foldedAnnKeys
   )
 where
 
@@ -14,7 +16,6 @@ where
 
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Utils
 
 import           DynFlags ( getDynFlags )
@@ -36,6 +37,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Delta      as ExactPrint
 
 import qualified Data.Generics as SYB
+-- import           Data.Generics.Schemes
 
 
 
@@ -209,3 +211,40 @@ moveTrailingComments astFrom astTo = do
         ans' = Map.insert k1 an1' $ Map.insert k2 an2' ans
 
   ExactPrint.modifyAnnsT moveComments
+
+-- | split a set of annotations in a module into a map from top-level module
+-- elements to the relevant annotations. Avoids quadratic behaviour a trivial
+-- implementation would have.
+extractToplevelAnns
+  :: Located (HsModule RdrName)
+  -> ExactPrint.Anns
+  -> Map ExactPrint.AnnKey ExactPrint.Anns
+extractToplevelAnns lmod anns = output
+ where
+  (L _ (HsModule _ _ _ ldecls _ _)) = lmod
+  declMap :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+  declMap = Map.unions $ ldecls <&> \ldecl ->
+    Map.fromSet (const (ExactPrint.mkAnnKey ldecl)) (foldedAnnKeys ldecl)
+  modKey = ExactPrint.mkAnnKey lmod
+  output = groupMap (\k _ -> Map.findWithDefault modKey k declMap) anns
+
+groupMap :: (Ord k, Ord l) => (k -> a -> l) -> Map k a -> Map l (Map k a)
+groupMap f = Map.foldlWithKey' (\m k a -> Map.alter (insert k a) (f k a) m)
+                               Map.empty
+ where
+  insert k a Nothing  = Just (Map.singleton k a)
+  insert k a (Just m) = Just (Map.insert k a m)
+
+foldedAnnKeys :: Data.Data.Data ast => ast -> Set ExactPrint.AnnKey
+foldedAnnKeys ast = SYB.everything
+  Set.union
+  ( \x -> maybe
+    Set.empty
+    Set.singleton
+    [ SYB.gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
+    | locTyCon == SYB.typeRepTyCon (SYB.typeOf x)
+    , l <- SYB.gmapQi 0 SYB.cast x
+    ]
+  )
+  ast
+  where locTyCon = SYB.typeRepTyCon (SYB.typeOf (L () ()))

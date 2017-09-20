@@ -67,6 +67,7 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.Types
 import Language.Haskell.Brittany.Internal.Utils
+import Language.Haskell.Brittany.Internal.ExactPrintUtils
 
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
@@ -80,6 +81,8 @@ import           Data.Data
 import           Data.Generics.Schemes
 
 import           DataTreePrint
+
+import           Data.HList.HList
 
 
 
@@ -221,20 +224,6 @@ extractAllComments ann =
          (ExactPrint.AnnComment com, dp) -> [(com, dp)]
          _                               -> []
        )
-
-foldedAnnKeys :: Data.Data.Data ast => ast -> Set ExactPrint.AnnKey
-foldedAnnKeys ast = everything
-  Set.union
-  ( \x -> maybe Set.empty
-                Set.singleton
-                [ gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
-                | locTyCon == typeRepTyCon (typeOf x)
-                , l <- gmapQi 0 cast x
-                ]
-  )
-  ast
- where
-  locTyCon = typeRepTyCon (typeOf (L () ()))
 
 filterAnns :: Data.Data.Data ast => ast -> ExactPrint.Anns -> ExactPrint.Anns
 filterAnns ast anns =
@@ -614,7 +603,7 @@ spacifyDocs :: [ToBriDocM BriDocNumbered] -> [ToBriDocM BriDocNumbered]
 spacifyDocs [] = []
 spacifyDocs ds = fmap appSep (List.init ds) ++ [List.last ds]
 
-briDocMToPPM :: ToBriDocM a -> PPM a
+briDocMToPPM :: ToBriDocM a -> PPMLocal a
 briDocMToPPM m = do
   readers <- MultiRWSS.mGetRawR
   let ((x, errs), debugs) =

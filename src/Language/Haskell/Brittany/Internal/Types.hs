@@ -28,7 +28,15 @@ import           Data.Generics.Uniplate.Direct as Uniplate
 
 
 
-type PPM a = MultiRWSS.MultiRWS '[Config, ExactPrint.Anns] '[Text.Builder.Builder, [BrittanyError], Seq String] '[] a
+type PPM = MultiRWSS.MultiRWS
+  '[Map ExactPrint.AnnKey ExactPrint.Anns, Config, ExactPrint.Anns]
+  '[Text.Builder.Builder, [BrittanyError], Seq String]
+  '[]
+
+type PPMLocal = MultiRWSS.MultiRWS
+  '[Config, ExactPrint.Anns]
+  '[Text.Builder.Builder, [BrittanyError], Seq String]
+  '[]
 
 data LayoutState = LayoutState
   { _lstate_baseYs         :: [Int]

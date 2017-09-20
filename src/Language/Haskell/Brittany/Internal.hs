@@ -140,6 +140,7 @@ pPrintModule conf anns parsedModule =
         $ MultiRWSS.withMultiWriterW
         $ MultiRWSS.withMultiReader anns
         $ MultiRWSS.withMultiReader conf
+        $ MultiRWSS.withMultiReader (extractToplevelAnns parsedModule anns)
         $ do
             traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
               $ annsDoc anns
@@ -266,7 +267,19 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
             anns'       = Map.insert (ExactPrint.Types.mkAnnKey lmod) mAnn' anns
         in  (anns', post)
   MultiRWSS.withMultiReader anns' $ processDefault emptyModule
-  decls `forM_` ppDecl
+  decls `forM_` \decl -> do
+    filteredAnns <- mAsk <&> \annMap ->
+      Map.findWithDefault Map.empty (ExactPrint.Types.mkAnnKey decl) annMap
+
+    traceIfDumpConf "bridoc annotations filtered/transformed"
+                    _dconf_dump_annotations
+      $ annsDoc filteredAnns
+
+    config <- mAsk
+
+    MultiRWSS.withoutMultiReader $ do
+      MultiRWSS.mPutRawR $ config :+: filteredAnns :+: HNil
+      ppDecl decl
   let finalComments = filter
         ( fst .> \case
           ExactPrint.Types.AnnComment{} -> True
@@ -291,7 +304,7 @@ ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
         ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY - cmY)
     _ -> return ()
 
-withTransformedAnns :: Data ast => ast -> PPM () -> PPM ()
+withTransformedAnns :: Data ast => ast -> PPMLocal () -> PPMLocal ()
 withTransformedAnns ast m = do
   -- TODO: implement `local` for MultiReader/MultiRWS
   readers@(conf :+: anns :+: HNil) <- MultiRWSS.mGetRawR
@@ -305,13 +318,13 @@ withTransformedAnns ast m = do
     in  annsBalanced
 
 
-ppDecl :: LHsDecl RdrName -> PPM ()
+ppDecl :: LHsDecl RdrName -> PPMLocal ()
 ppDecl d@(L loc decl) = case decl of
   SigD sig  -> -- trace (_sigHead sig) $
                withTransformedAnns d $ do
     -- runLayouter $ Old.layoutSig (L loc sig)
     briDoc <- briDocMToPPM $ layoutSig (L loc sig)
-    layoutBriDoc d briDoc
+    layoutBriDoc briDoc
   ValD bind -> -- trace (_bindHead bind) $
                withTransformedAnns d $ do
     -- Old.layoutBind (L loc bind)
@@ -320,8 +333,8 @@ ppDecl d@(L loc decl) = case decl of
       case eitherNode of
         Left  ns -> docLines $ return <$> ns
         Right n -> return n
-    layoutBriDoc d briDoc
-  _         -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc d
+    layoutBriDoc briDoc
+  _         -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc
 
 _sigHead :: Sig RdrName -> String
 _sigHead = \case
@@ -337,8 +350,8 @@ _bindHead = \case
 
 
 
-layoutBriDoc :: Data.Data.Data ast => ast -> BriDocNumbered -> PPM ()
-layoutBriDoc ast briDoc = do
+layoutBriDoc :: BriDocNumbered -> PPMLocal ()
+layoutBriDoc briDoc = do
   -- first step: transform the briDoc.
   briDoc'                       <- MultiRWSS.withMultiStateS BDEmpty $ do
     -- Note that briDoc is BriDocNumbered, but state type is BriDoc.
@@ -374,11 +387,6 @@ layoutBriDoc ast briDoc = do
     -- return simpl
 
   anns :: ExactPrint.Types.Anns <- mAsk
-  let filteredAnns = filterAnns ast anns
-
-  traceIfDumpConf "bridoc annotations filtered/transformed"
-                  _dconf_dump_annotations
-    $ annsDoc filteredAnns
 
   let state = LayoutState
         { _lstate_baseYs           = [0]
@@ -388,7 +396,7 @@ layoutBriDoc ast briDoc = do
                                              -- thing properly.
         , _lstate_indLevels        = [0]
         , _lstate_indLevelLinger   = 0
-        , _lstate_comments         = filteredAnns
+        , _lstate_comments         = anns
         , _lstate_commentCol       = Nothing
         , _lstate_addSepSpace      = Nothing
         }
