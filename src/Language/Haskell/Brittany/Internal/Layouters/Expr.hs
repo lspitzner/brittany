@@ -32,6 +32,11 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 
 layoutExpr :: ToBriDoc HsExpr
 layoutExpr lexpr@(L _ expr) = do
+  indentPolicy <- mAsk
+    <&> _conf_layout
+    .>  _lconfig_indentPolicy
+    .>  confUnpack
+  let allowFreeIndent = indentPolicy == IndentPolicyFree
   docWrapNode lexpr $ case expr of
     HsVar vname -> do
       docLit =<< lrdrNameToTextAnn vname
@@ -114,29 +119,35 @@ layoutExpr lexpr@(L _ expr) = do
       let (headE, paramEs) = gather [exp2] exp1
       headDoc <- docSharedWrapper layoutExpr headE
       paramDocs <- docSharedWrapper layoutExpr `mapM` paramEs
-      docAlt
+      docAltFilter
         [ -- foo x y
-          docCols ColApp
-        $ appSep (docForceSingleline headDoc)
-        : spacifyDocs (docForceSingleline <$> paramDocs)
+          ( True
+          , docCols ColApp
+          $ appSep (docForceSingleline headDoc)
+          : spacifyDocs (docForceSingleline <$> paramDocs)
+          )
         , -- foo x
           --     y
-          docSeq
-          [ appSep (docForceSingleline headDoc)
-          , docSetBaseY
-          $ docAddBaseY BrIndentRegular
-          $ docLines
-          $ (docForceSingleline <$> paramDocs)
-          ]
+          ( allowFreeIndent
+          , docSeq
+            [ appSep (docForceSingleline headDoc)
+            , docSetBaseY
+            $ docAddBaseY BrIndentRegular
+            $ docLines
+            $ (docForceSingleline <$> paramDocs)
+            ]
+          )
         , -- foo
           --   x
           --   y
-          docSetParSpacing
-        $ docAddBaseY BrIndentRegular
-        $ docPar
-          (docForceSingleline headDoc)
-          ( docNonBottomSpacing
-          $ docLines paramDocs
+          ( True
+          , docSetParSpacing
+          $ docAddBaseY BrIndentRegular
+          $ docPar
+            (docForceSingleline headDoc)
+            ( docNonBottomSpacing
+            $ docLines paramDocs
+            )
           )
         , -- ( multi
           --   line
@@ -144,11 +155,13 @@ layoutExpr lexpr@(L _ expr) = do
           -- )
           --   x
           --   y
-          docAddBaseY BrIndentRegular
-        $ docPar
-          headDoc
-          ( docNonBottomSpacing
-          $ docLines paramDocs
+          ( True
+          , docAddBaseY BrIndentRegular
+          $ docPar
+            headDoc
+            ( docNonBottomSpacing
+            $ docLines paramDocs
+            )
           )
         ]
     HsApp exp1 exp2 -> do
