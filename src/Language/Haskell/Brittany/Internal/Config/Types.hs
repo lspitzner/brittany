@@ -191,7 +191,7 @@ data IndentPolicy = IndentPolicyLeft -- never create a new indentation at more
                   | IndentPolicyFree -- can create new indentations whereever
                   | IndentPolicyMultiple -- can create indentations only
                                          -- at any n * amount.
-  deriving (Show, Generic, Data)
+  deriving (Eq, Show, Generic, Data)
 
 data AltChooser = AltChooserSimpleQuick -- always choose last alternative.
                                         -- leads to tons of sparsely filled
