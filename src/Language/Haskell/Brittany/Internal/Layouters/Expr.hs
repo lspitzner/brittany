@@ -415,6 +415,10 @@ layoutExpr lexpr@(L _ expr) = do
       thenExprDoc <- docSharedWrapper layoutExpr thenExpr
       elseExprDoc <- docSharedWrapper layoutExpr elseExpr
       hasComments <- hasAnyCommentsBelow lexpr
+      let maySpecialIndent =
+            case indentPolicy of
+              IndentPolicyLeft -> BrIndentRegular
+              _ -> BrIndentSpecial 3
       docAltFilter
         [ -- if _ then _ else _
           (,) (not hasComments)
@@ -443,7 +447,7 @@ layoutExpr lexpr@(L _ expr) = do
         $ docSetParSpacing
         $ docAddBaseY BrIndentRegular
         $ docPar
-            ( docAddBaseY (BrIndentSpecial 3)
+            ( docAddBaseY maySpecialIndent
             $ docSeq
               [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
               , docNodeAnnKW lexpr (Just AnnIf) $ docForceSingleline ifExprDoc
@@ -483,7 +487,7 @@ layoutExpr lexpr@(L _ expr) = do
           (,) True
         $ docAddBaseY BrIndentRegular
         $ docPar
-            ( docAddBaseY (BrIndentSpecial 3)
+            ( docAddBaseY maySpecialIndent
             $ docSeq
               [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
               , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
@@ -506,7 +510,7 @@ layoutExpr lexpr@(L _ expr) = do
         , (,) True
         $ docSetBaseY
         $ docLines
-          [ docAddBaseY (BrIndentSpecial 3)
+          [ docAddBaseY maySpecialIndent
           $ docSeq
             [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
             , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
