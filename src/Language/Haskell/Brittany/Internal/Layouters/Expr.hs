@@ -567,28 +567,65 @@ layoutExpr lexpr@(L _ expr) = do
               (docSetBaseY $ expDoc1)
             ]
           ]
-        Just bindDocs@(_:_) -> docAlt
-          [ docLines
-            [ docSeq
-              [ appSep $ docLit $ Text.pack "let"
-              , docSetBaseAndIndent $ docLines $ return <$> bindDocs
+        Just bindDocs@(_:_) -> docAlt $
+          case indentPolicy of
+            IndentPolicyLeft ->
+              --either
+              --  let
+              --    a = b
+              --    c = d
+              --  in foo
+              --    bar
+              --    baz
+              --or
+              --  let
+              --    a = b
+              --    c = d
+              --  in
+              --    fooooooooooooooooooo
+              [ docLines
+                [ docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "let")
+                  (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+                , docSeq
+                  [ docLit $ Text.pack "in "
+                  , docAddBaseY BrIndentRegular $ expDoc1
+                  ]
+                ]
+              , docLines
+                [ docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "let")
+                  (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+                , docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "in")
+                  (docSetBaseY $ expDoc1)
+                ]
               ]
-            , docSeq
-              [ appSep $ docLit $ Text.pack "in "
-              , docSetBaseY $ expDoc1
+            _ ->
+              [ docLines
+                [ docSeq
+                  [ appSep $ docLit $ Text.pack "let"
+                  , docSetBaseAndIndent $ docLines $ return <$> bindDocs
+                  ]
+                , docSeq
+                  [ appSep $ docLit $ Text.pack "in "
+                  , docSetBaseY $ expDoc1
+                  ]
+                ]
+              , docLines
+                [ docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "let")
+                  (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+                , docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "in")
+                  (docSetBaseY $ expDoc1)
+                ]
               ]
-            ]
-          , docLines
-            [ docAddBaseY BrIndentRegular
-            $ docPar
-              (docLit $ Text.pack "let")
-              (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
-            , docAddBaseY BrIndentRegular
-            $ docPar
-              (docLit $ Text.pack "in")
-              (docSetBaseY $ expDoc1)
-            ]
-          ]
         _ -> docSeq [appSep $ docLit $ Text.pack "let in", expDoc1]
       -- docSeq [appSep $ docLit "let in", expDoc1]
     HsDo DoExpr (L _ stmts) _ -> do
