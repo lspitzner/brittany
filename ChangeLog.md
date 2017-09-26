@@ -1,5 +1,18 @@
 # Revision history for brittany
 
+## 0.8.0.3  -- September 2017
+
+* Support for ghc-8.2.1
+* Bugfixes:
+    - Fix quadratic performance issue
+    - Fix special "where" indentation with indentAmount /= 2
+    - Fix negative literals in patterns
+    - Support type applications
+* Accept `-h` for `--help` and improve help layouting (via butcher-1.1.0.2)
+* Add continuous integration via travis (cabal, cabal-new, stack)
+  (brittle due compilation time limit)
+* Reduce compilation memory usage a bit
+
 ## 0.8.0.2  -- August 2017
 
 * Add library interface, to be used by `haskell-ide-engine`.
