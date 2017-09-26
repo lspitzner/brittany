@@ -39,13 +39,13 @@ require fixing:
   be detected and the user will get an error); there are other cases where
   comments are moved slightly; there are also cases where comments result in
   wonky newline insertion (although this should be a purely aesthetic issue.)
-- There is an **open performance issue on large inputs** (due to an
-  accidentally quadratic sub-algorithm); noticable for inputs with >1k loc.
+- ~~There is an **open performance issue on large inputs** (due to an
+  accidentally quadratic sub-algorithm); noticable for inputs with >1k loc.~~
+  (fixed in `0.8.0.3`)
 
 # Other usage notes
 
-- Requires `GHC-8.0.*`; support for 8.2 is on the list, but I haven't even
-  looked at how much the `GHC` API changes.
+- Supports GHC versions `8.0.*` and `8.2.*`.
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
 - uses/creates user config file in `~/.brittany/config.yaml`;
