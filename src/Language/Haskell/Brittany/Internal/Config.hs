@@ -8,7 +8,8 @@ module Language.Haskell.Brittany.Internal.Config
   , configParser
   , staticDefaultConfig
   , forwardOptionsSyntaxExtsEnabled
-  , readMergePersConfig
+  , readConfig
+  , writeDefaultConfig
   , showConfigYaml
   )
 where
@@ -198,29 +199,37 @@ configParser = do
 --   , infoIntersperse = True
 --   }
 
-readMergePersConfig
-  :: System.IO.FilePath -> Bool -> CConfig Option -> MaybeT IO (CConfig Option)
-readMergePersConfig path shouldCreate conf = do
+
+-- | Reads a config from a file. If the file does not exist, returns
+-- Nothing. If the file exists and parsing fails, prints to stderr and
+-- aborts the MaybeT. Otherwise succeed via Just.
+-- If the second parameter is True and the file does not exist, writes the
+-- staticDefaultConfig to the file.
+readConfig
+  :: MonadIO m => System.IO.FilePath -> MaybeT m (Maybe (CConfig Option))
+readConfig path = do
   exists <- liftIO $ System.Directory.doesFileExist path
-  if
-    | exists -> do
-        contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
-        fileConf <- case Data.Yaml.decodeEither contents of
-          Left e -> do
-            liftIO
-              $ putStrErrLn
-              $ "error reading in brittany config from " ++ path ++ ":"
-            liftIO $ putStrErrLn e
-            mzero
-          Right x -> return x
-        return $ fileConf Semigroup.<> conf
-    | shouldCreate -> do
-        liftIO $ ByteString.writeFile path
-               $ Data.Yaml.encode
-               $ cMap (Option . Just . runIdentity) staticDefaultConfig
-        return $ conf
-    | otherwise -> do
-        return conf
+  if exists
+    then do
+      contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
+      fileConf <- case Data.Yaml.decodeEither contents of
+        Left e -> do
+          liftIO
+            $  putStrErrLn
+            $  "error reading in brittany config from "
+            ++ path
+            ++ ":"
+          liftIO $ putStrErrLn e
+          mzero
+        Right x -> return x
+      return $ Just fileConf
+    else return $ Nothing
+
+writeDefaultConfig :: MonadIO m => System.IO.FilePath -> m ()
+writeDefaultConfig path =
+  liftIO $ ByteString.writeFile path $ Data.Yaml.encode $ cMap
+    (Option . Just . runIdentity)
+    staticDefaultConfig
 
 showConfigYaml :: Config -> String
 showConfigYaml = Data.ByteString.Char8.unpack

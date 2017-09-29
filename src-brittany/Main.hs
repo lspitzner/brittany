@@ -292,15 +292,38 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEi
 
 readConfigs :: CConfig Option -> [System.IO.FilePath] -> MaybeT IO Config
 readConfigs cmdlineConfig configPaths = do
-  let defLocalConfigPath = "brittany.yaml"
-  userBritPath <- liftIO $ Directory.getAppUserDataDirectory "brittany"
-  let defUserConfigPath = userBritPath FilePath.</> "config.yaml"
-  merged <- case configPaths of
+  userBritPathSimple <- liftIO $ Directory.getAppUserDataDirectory "brittany"
+  userBritPathXdg    <- liftIO
+    $ Directory.getXdgDirectory Directory.XdgConfig "brittany"
+  let userConfigPathSimple = userBritPathSimple FilePath.</> "config.yaml"
+  let userConfigPathXdg    = userBritPathXdg FilePath.</> "config.yaml"
+  let
+    findLocalConfig :: MaybeT IO (Maybe (CConfig Option))
+    findLocalConfig = do
+      cwd <- liftIO $ Directory.getCurrentDirectory
+      let dirParts = FilePath.splitDirectories cwd
+      let searchDirs =
+            [ FilePath.joinPath x | x <- reverse $ List.inits dirParts ]
+      -- when cwd is "a/b/c", searchDirs is ["a/b/c", "a/b", "a", "/"]
+      mFilePath <- liftIO $ Directory.findFileWith Directory.doesFileExist
+                                                   searchDirs
+                                                   "brittany.yaml"
+      case mFilePath of
+        Nothing -> pure Nothing
+        Just fp -> readConfig fp
+  configsRead <- case configPaths of
     [] -> do
-      liftIO $ Directory.createDirectoryIfMissing False userBritPath
-      return cmdlineConfig
-        >>= readMergePersConfig defLocalConfigPath False
-        >>= readMergePersConfig defUserConfigPath  True
-    -- TODO: ensure that paths exist ?
-    paths -> foldl (\prev p -> prev >>= readMergePersConfig p False) (return cmdlineConfig) paths
+      localConfig      <- findLocalConfig
+      userConfigSimple <- readConfig userConfigPathSimple
+      userConfigXdg    <- readConfig userConfigPathXdg
+      let userConfig = userConfigSimple <|> userConfigXdg
+      when (Data.Maybe.isNothing userConfig) $ do
+        liftIO $ Directory.createDirectoryIfMissing False userBritPathXdg
+        writeDefaultConfig userConfigPathXdg
+      -- rightmost has highest priority
+      pure $ [userConfig, localConfig]
+    paths -> readConfig `mapM` reverse paths
+                   -- reverse to give highest priority to the first
+  merged <-
+    pure $ Semigroup.mconcat $ catMaybes $ configsRead ++ [Just cmdlineConfig]
   return $ cZipWith fromOptionIdentity staticDefaultConfig merged
