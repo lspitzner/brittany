@@ -80,7 +80,6 @@ library {
   }
   ghc-options: {
     -Wall
-    -j
     -fno-warn-unused-imports
     -fno-warn-redundant-constraints
   }
@@ -203,7 +202,6 @@ executable brittany
   }
   ghc-options: {
     -Wall
-    -j
     -fno-spec-constr
     -fno-warn-unused-imports
     -fno-warn-redundant-constraints
@@ -283,7 +281,6 @@ test-suite unittests
   }
   ghc-options: {
     -Wall
-    -j
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"
@@ -356,7 +353,6 @@ test-suite littests
   }
   ghc-options: {
     -Wall
-    -j
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"
@@ -395,7 +391,6 @@ test-suite libinterfacetests
   }
   ghc-options: {
     -Wall
-    -j
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"

@@ -180,7 +180,7 @@ before_install:
 - |
   function better_wait() {
     date
-    time $* & # send the long living command to background!
+    time "$*" & # send the long living command to background!
 
     set +x
     MINUTES=0
@@ -231,7 +231,7 @@ install:
         echo "cabal build-cache MISS";
         rm -rf $HOME/.cabsnap;
         mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
-        cabal install -j$JOBS --only-dependencies --enable-tests --enable-benchmarks;
+        cabal install -j$JOBS --only-dependencies --enable-tests --enable-benchmarks --ghc-options="-j1 +RTS -M500M";
       fi
       
       # snapshot package-db on cache miss
@@ -259,12 +259,12 @@ script:
   set -ex
   case "$BUILD" in
     stack)
-      better_wait stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+      better_wait stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M"
       ;;
     cabal)
       if [ -f configure.ac ]; then autoreconf -i; fi
       cabal configure --enable-tests --enable-benchmarks -v  # -v2 provides useful information for debugging
-      better_wait cabal build -j$JOBS  # this builds all libraries and executables (including tests/benchmarks)
+      better_wait cabal build -j$JOBS --ghc-options="-j1 +RTS -M500M" # this builds all libraries and executables (including tests/benchmarks)
       cabal test
       ;;
     cabaldist)
@@ -275,12 +275,12 @@ script:
       # If there are no other `.tar.gz` files in `dist`, this can be even simpler:
       # `cabal install --force-reinstalls dist/*-*.tar.gz`
       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
-      (cd dist && better_wait cabal install -j$JOBS --force-reinstalls "$SRC_TGZ")
+      (cd dist && better_wait cabal install -j$JOBS --force-reinstalls "$SRC_TGZ" --ghc-options="-j1 +RTS -M500M")
       ;;
     canew)
       better_wait cabal new-build -j$JOBS --disable-tests --disable-benchmarks
       better_wait cabal new-build -j$JOBS --enable-tests --enable-benchmarks
-      cabal new-test
+      cabal new-test --ghc-options="-j1 +RTS -M500M"
       ;;
   esac
   set +ex
