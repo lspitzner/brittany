@@ -5,7 +5,7 @@ module Language.Haskell.Brittany.Internal.Config
   , DebugConfig
   , LayoutConfig
   , Config
-  , configParser
+  , cmdlineConfigParser
   , staticDefaultConfig
   , forwardOptionsSyntaxExtsEnabled
   , readConfig
@@ -108,8 +108,8 @@ forwardOptionsSyntaxExtsEnabled = ForwardOptions
     ]
   }
 
-configParser :: CmdParser Identity out (CConfig Option)
-configParser = do
+cmdlineConfigParser :: CmdParser Identity out (CConfig Option)
+cmdlineConfigParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
   ind                <- addFlagReadParams "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
   cols               <- addFlagReadParams "" ["columns"] "AMOUNT" (flagHelpStr "target max columns (80 is an old default for this)")

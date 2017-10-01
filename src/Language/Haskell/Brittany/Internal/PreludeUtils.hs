@@ -32,13 +32,12 @@ instance Alternative Strict.Maybe where
   x <|> Strict.Nothing = x
   _ <|> x = x
 
-traceFunctionWith
-  :: String -> (a -> String) -> (b -> String) -> (a -> b) -> (a -> b)
-traceFunctionWith name s1 s2 f x =
-  trace traceStr y
-  where
-    y = f x
-    traceStr = name ++ "\nBEFORE:\n" ++ s1 x ++ "\nAFTER:\n" ++ s2 y
+traceFunctionWith :: String -> (a -> String) -> (b -> String) -> (a -> b) -> (a -> b)
+traceFunctionWith name s1 s2 f x = trace traceStr y
+ where
+  y = f x
+  traceStr =
+    name ++ "\nBEFORE:\n" ++ s1 x ++ "\nAFTER:\n" ++ s2 y
 
 (<&!>) :: Monad m => m a -> (a -> b) -> m b
 (<&!>) = flip (<$!>)
