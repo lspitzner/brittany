@@ -14,6 +14,7 @@ import qualified Data.Map as Map
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
+import           Control.Monad (foldM)
 import           Data.CZipWith
 
 import qualified Debug.Trace as Trace
@@ -103,8 +104,8 @@ mainCmdParser helpDesc = do
   printHelp      <- addSimpleBoolFlag "h" ["help"] mempty
   printVersion   <- addSimpleBoolFlag "" ["version"] mempty
   printLicense   <- addSimpleBoolFlag "" ["license"] mempty
-  inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "path to input haskell source file")
-  outputPaths    <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file path")
+  inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "paths to input haskell source files")
+  outputPaths    <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file paths")
   configPaths    <- addFlagStringParams "" ["config-file"] "PATH" (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
   cmdlineConfig  <- configParser
   suppressOutput <- addSimpleBoolFlag
@@ -128,29 +129,32 @@ mainCmdParser helpDesc = do
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
-    inputPathM <- case maybeToList inputParam ++ inputPaths of
-      [] -> do
-        return Nothing
-      [x] -> return $ Just x
-      _   -> do
-        putStrErrLn $ "more than one input, aborting"
-        System.Exit.exitWith (System.Exit.ExitFailure 51)
-    outputPathM <- case outputPaths of
-      [] -> do
-        return Nothing
-      [x] -> return $ Just x
-      _   -> do
-        putStrErrLn $ "more than one output, aborting"
-        System.Exit.exitWith (System.Exit.ExitFailure 52)
+    let inputPaths' = nonEmptyList Nothing . map Just $ maybeToList inputParam ++ inputPaths
+    let outputPaths' = nonEmptyList Nothing . map Just $ outputPaths
+    when (length inputPaths' /= length outputPaths') $ do
+      putStrErrLn "the number of inputs must match ther number of outputs"
+      System.Exit.exitWith (System.Exit.ExitFailure 51)
+
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
       Just x  -> return x
     when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showConfigYaml config) $ return ()
-    eitherErrSucc <- coreIO putStrErrLn config suppressOutput inputPathM outputPathM
-    case eitherErrSucc of
-      Left errNo -> System.Exit.exitWith (System.Exit.ExitFailure errNo)
-      Right ()   -> pure ()
+
+    let ios = zipWith (coreIO putStrErrLn config suppressOutput) inputPaths' outputPaths'
+    errNoM <- foldM run Nothing ios
+    case errNoM of
+      Just errNo -> System.Exit.exitWith (System.Exit.ExitFailure errNo)
+      Nothing    -> pure ()
+ where
+  run acc io = do
+    res <- io
+    case res of
+      Left _   -> return (Just 1)
+      Right () -> return acc
+
+  nonEmptyList def [] = [def]
+  nonEmptyList _   x  = x
 
 
 -- | The main IO parts for the default mode of operation, and after commandline
