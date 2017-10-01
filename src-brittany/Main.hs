@@ -113,6 +113,7 @@ mainCmdParser helpDesc = do
     ["suppress-output"]
     (flagHelp $ parDoc "suppress the regular output, i.e. the transformed haskell source")
   _verbosity <- addSimpleCountFlag "v" ["verbose"] (flagHelp $ parDoc "[currently without effect; TODO]")
+  inplace    <- addSimpleBoolFlag "" ["inplace"] (flagHelp $ parDoc "overwrite the input files")
   reorderStop
   inputParam <- addStringParamOpt "PATH" (paramHelpStr "path to input haskell source file")
   desc       <- peekCmdDesc
@@ -129,8 +130,12 @@ mainCmdParser helpDesc = do
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
+    when (length outputPaths > 0 && inplace) $ do
+      putStrErrLn "cannot specify output files and inplace at the same time"
+      System.Exit.exitWith (System.Exit.ExitFailure 52)
+
     let inputPaths' = nonEmptyList Nothing . map Just $ maybeToList inputParam ++ inputPaths
-    let outputPaths' = nonEmptyList Nothing . map Just $ outputPaths
+    let outputPaths' = if inplace then inputPaths' else nonEmptyList Nothing . map Just $ outputPaths
     when (length inputPaths' /= length outputPaths') $ do
       putStrErrLn "the number of inputs must match ther number of outputs"
       System.Exit.exitWith (System.Exit.ExitFailure 51)
