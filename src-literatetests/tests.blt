@@ -1042,6 +1042,21 @@ foo =
       cccc = ()
   in  foo
 
+#test issue 52 a
+
+{-# LANGUAGE RecordWildCards #-}
+v = A {a = 1, ..} where b = 2
+
+#test issue 52 b
+
+{-# LANGUAGE RecordWildCards #-}
+v = A {..} where b = 2
+
+#test issue 52 c
+
+{-# LANGUAGE RecordWildCards #-}
+v = A {a = 1, b = 2, c = 3}
+
 
 ###############################################################################
 ###############################################################################

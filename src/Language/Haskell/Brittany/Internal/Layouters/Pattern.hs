@@ -96,6 +96,26 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       [ appSep $ docLit t
       , docLit $ Text.pack "{..}"
       ]
+  ConPatIn lname (RecCon (HsRecFields fs@(_:_) (Just dotdoti))) | dotdoti == length fs -> do
+    let t = lrdrNameToText lname
+    fds <- fs `forM` \(L _ (HsRecField (L _ (FieldOcc lnameF _)) fPat pun)) -> do
+      fExpDoc <- if pun
+        then return Nothing
+        else Just <$> docSharedWrapper layoutPat fPat
+      return $ (lrdrNameToText lnameF, fExpDoc)
+    fmap Seq.singleton $ docSeq
+      [ appSep $ docLit t
+      , appSep $ docLit $ Text.pack "{"
+      , docSeq $ fds >>= \case
+          (fieldName, Just fieldDoc) ->
+            [ appSep $ docLit $ fieldName
+            , appSep $ docLit $ Text.pack "="
+            , fieldDoc >>= colsWrapPat
+            , docCommaSep
+            ]
+          (fieldName, Nothing) -> [docLit fieldName, docCommaSep]
+      , docLit $ Text.pack "..}"
+      ]
   TuplePat args boxity _ -> do
     case boxity of
       Boxed   -> wrapPatListy args "(" ")"
