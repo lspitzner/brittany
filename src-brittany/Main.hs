@@ -103,8 +103,8 @@ mainCmdParser helpDesc = do
   printHelp      <- addSimpleBoolFlag "h" ["help"] mempty
   printVersion   <- addSimpleBoolFlag "" ["version"] mempty
   printLicense   <- addSimpleBoolFlag "" ["license"] mempty
-  inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "path to input haskell source file")
-  outputPaths    <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file path")
+  inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "paths to input haskell source files")
+  outputPaths    <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file paths")
   configPaths    <- addFlagStringParams "" ["config-file"] "PATH" (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
   cmdlineConfig  <- configParser
   suppressOutput <- addSimpleBoolFlag
@@ -112,6 +112,7 @@ mainCmdParser helpDesc = do
     ["suppress-output"]
     (flagHelp $ parDoc "suppress the regular output, i.e. the transformed haskell source")
   _verbosity <- addSimpleCountFlag "v" ["verbose"] (flagHelp $ parDoc "[currently without effect; TODO]")
+  inplace    <- addSimpleBoolFlag "" ["inplace"] (flagHelp $ parDoc "overwrite the input files")
   reorderStop
   inputParam <- addStringParamOpt "PATH" (paramHelpStr "path to input haskell source file")
   desc       <- peekCmdDesc
@@ -128,29 +129,34 @@ mainCmdParser helpDesc = do
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
-    inputPathM <- case maybeToList inputParam ++ inputPaths of
-      [] -> do
-        return Nothing
-      [x] -> return $ Just x
-      _   -> do
-        putStrErrLn $ "more than one input, aborting"
+
+    let inputPaths' = case maybeToList inputParam ++ inputPaths of
+                      [] -> [Nothing]
+                      ps -> map Just ps
+
+    outputPaths' <- case outputPaths of
+      [] | not inplace -> return [Nothing]
+      []               -> return inputPaths'
+      ps | not inplace -> return . map Just $ ps
+      _                -> do
+        putStrErrLn "cannot specify output files and inplace at the same time"
         System.Exit.exitWith (System.Exit.ExitFailure 51)
-    outputPathM <- case outputPaths of
-      [] -> do
-        return Nothing
-      [x] -> return $ Just x
-      _   -> do
-        putStrErrLn $ "more than one output, aborting"
-        System.Exit.exitWith (System.Exit.ExitFailure 52)
+
+    when (length inputPaths' /= length outputPaths') $ do
+      putStrErrLn "the number of inputs must match ther number of outputs"
+      System.Exit.exitWith (System.Exit.ExitFailure 52)
+
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
       Just x  -> return x
     when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showConfigYaml config) $ return ()
-    eitherErrSucc <- coreIO putStrErrLn config suppressOutput inputPathM outputPathM
-    case eitherErrSucc of
-      Left errNo -> System.Exit.exitWith (System.Exit.ExitFailure errNo)
-      Right ()   -> pure ()
+
+    let ios = zipWith (coreIO putStrErrLn config suppressOutput) inputPaths' outputPaths'
+    res <- fmap sequence_ $ sequence ios
+    case res of
+      Left  _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
+      Right _ -> pure ()
 
 
 -- | The main IO parts for the default mode of operation, and after commandline
