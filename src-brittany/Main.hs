@@ -14,7 +14,6 @@ import qualified Data.Map as Map
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
-import           Control.Monad (foldM)
 import           Data.CZipWith
 
 import qualified Debug.Trace as Trace
@@ -130,15 +129,22 @@ mainCmdParser helpDesc = do
     when printHelp $ do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
-    when (length outputPaths > 0 && inplace) $ do
-      putStrErrLn "cannot specify output files and inplace at the same time"
-      System.Exit.exitWith (System.Exit.ExitFailure 52)
 
-    let inputPaths' = nonEmptyList Nothing . map Just $ maybeToList inputParam ++ inputPaths
-    let outputPaths' = if inplace then inputPaths' else nonEmptyList Nothing . map Just $ outputPaths
+    let inputPaths' = case maybeToList inputParam ++ inputPaths of
+                      [] -> [Nothing]
+                      ps -> map Just ps
+
+    outputPaths' <- case outputPaths of
+      [] | not inplace -> return [Nothing]
+      []               -> return inputPaths'
+      ps | not inplace -> return . map Just $ ps
+      _                -> do
+        putStrErrLn "cannot specify output files and inplace at the same time"
+        System.Exit.exitWith (System.Exit.ExitFailure 51)
+
     when (length inputPaths' /= length outputPaths') $ do
       putStrErrLn "the number of inputs must match ther number of outputs"
-      System.Exit.exitWith (System.Exit.ExitFailure 51)
+      System.Exit.exitWith (System.Exit.ExitFailure 52)
 
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
@@ -147,19 +153,10 @@ mainCmdParser helpDesc = do
       trace (showConfigYaml config) $ return ()
 
     let ios = zipWith (coreIO putStrErrLn config suppressOutput) inputPaths' outputPaths'
-    errNoM <- foldM run Nothing ios
-    case errNoM of
-      Just errNo -> System.Exit.exitWith (System.Exit.ExitFailure errNo)
-      Nothing    -> pure ()
- where
-  run acc io = do
-    res <- io
+    res <- fmap sequence_ $ sequence ios
     case res of
-      Left _   -> return (Just 1)
-      Right () -> return acc
-
-  nonEmptyList def [] = [def]
-  nonEmptyList _   x  = x
+      Left  _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
+      Right _ -> pure ()
 
 
 -- | The main IO parts for the default mode of operation, and after commandline
