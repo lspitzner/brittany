@@ -24,6 +24,7 @@ import Language.Haskell.Brittany.Internal.Config
 import Data.Coerce ( coerce )
 
 import qualified Data.Text.IO as Text.IO
+import           System.FilePath ( (</>) )
 
 
 
@@ -38,8 +39,10 @@ data InputLine
 
 main :: IO ()
 main = do
-  input <- Text.IO.readFile "src-literatetests/tests.blt"
-  let groups = createChunks input
+  files <- System.Directory.listDirectory "src-literatetests/"
+  let blts = List.sort $ filter (".blt" `isSuffixOf`) files
+  inputs <- blts `forM` \blt -> Text.IO.readFile ("src-literatetests" </> blt)
+  let groups = createChunks =<< inputs
   hspec $ groups `forM_` \(groupname, tests) -> do
     describe (Text.unpack groupname) $ tests `forM_` \(name, pend, inp) -> do
       (if pend then before_ pending else id)

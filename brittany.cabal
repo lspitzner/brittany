@@ -24,7 +24,7 @@ extra-doc-files: {
   doc/implementation/*.md
 }
 extra-source-files: {
-  src-literatetests/tests.blt
+  src-literatetests/*.blt
 }
 
 source-repository head {
@@ -330,6 +330,7 @@ test-suite littests
     , czipwith
     , ghc-boot-th
     , hspec >=2.4.1 && <2.5
+    , filepath
     , parsec >=3.1.11 && <3.2
     }
   ghc-options:      -Wall

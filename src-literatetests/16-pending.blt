@@ -1,0 +1,35 @@
+###############################################################################
+###############################################################################
+###############################################################################
+#group pending
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+## this testcase is not about idempotency, but about _how_ the output differs
+## from the input; i cannot really express this yet with the current
+## test-suite.
+## #test ayaz
+## 
+## myManageHook =
+##   composeOne [isFullscreen -?> doFullFloat, isDialog -?> doFloat, transience]
+##     <+> composeAll
+##           [ className =? "Pidgin" --> doFloat
+##           , className =? "XCalc" --> doFloat
+##           -- plan9port's acme
+##           , className =? "acme" --> doFloat
+##           -- Acme with Vi bindings editor
+##           , title =? "ED" --> doFloat
+##           , title =? "wlc-x11" --> doFloat
+##           , className =? "Skype" --> doFloat
+##           , className =? "ffplay" --> doFloat
+##           , className =? "mpv" --> doFloat
+##           , className =? "Plugin-container" --> doFloat -- Firefox flash, etc.
+##           -- Firefox works well tiled, but it has dialog windows we want to float.
+##           , appName =? "Browser" --> doFloat
+##           ]
+##  where
+##   role = stringProperty "WM_WINDOW_ROLE"
+
