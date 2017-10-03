@@ -12,8 +12,12 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 import qualified Data.Map as Map
 
+import           Text.Read (Read(..))
+import qualified Text.ParserCombinators.ReadP as ReadP
+import qualified Text.ParserCombinators.ReadPrec as ReadPrec
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
+import           Control.Monad (zipWithM)
 import           Data.CZipWith
 
 import qualified Debug.Trace as Trace
@@ -38,6 +42,17 @@ import qualified GHC.LanguageExtensions.Type as GHC
 
 import Paths_brittany
 
+
+data WriteMode = Display | Inplace
+
+instance Read WriteMode where
+  readPrec = val "display" Display <|> val "inplace" Inplace
+   where
+    val iden v = ReadPrec.lift $ ReadP.string iden >> return v
+
+instance Show WriteMode where
+  show Display = "display"
+  show Inplace = "inplace"
 
 
 main :: IO ()
@@ -103,8 +118,6 @@ mainCmdParser helpDesc = do
   printHelp      <- addSimpleBoolFlag "h" ["help"] mempty
   printVersion   <- addSimpleBoolFlag "" ["version"] mempty
   printLicense   <- addSimpleBoolFlag "" ["license"] mempty
-  inputPaths     <- addFlagStringParams "i" ["input"] "PATH" (flagHelpStr "paths to input haskell source files")
-  outputPaths    <- addFlagStringParams "o" ["output"] "PATH" (flagHelpStr "output file paths")
   configPaths    <- addFlagStringParams "" ["config-file"] "PATH" (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
   cmdlineConfig  <- configParser
   suppressOutput <- addSimpleBoolFlag
@@ -112,10 +125,17 @@ mainCmdParser helpDesc = do
     ["suppress-output"]
     (flagHelp $ parDoc "suppress the regular output, i.e. the transformed haskell source")
   _verbosity <- addSimpleCountFlag "v" ["verbose"] (flagHelp $ parDoc "[currently without effect; TODO]")
-  inplace    <- addSimpleBoolFlag "" ["inplace"] (flagHelp $ parDoc "overwrite the input files")
+  writeMode  <- addFlagReadParam
+    ""
+    ["write-mode"]
+    ""
+    Flag
+      { _flag_help    = Just (PP.text "output mode: [display|inplace]")
+      , _flag_default = Just Display
+      }
   reorderStop
-  inputParam <- addStringParamOpt "PATH" (paramHelpStr "path to input haskell source file")
-  desc       <- peekCmdDesc
+  inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input haskell source files")
+  desc        <- peekCmdDesc
   addCmdImpl $ void $ do
     when printLicense $ do
       print licenseDoc
@@ -130,21 +150,10 @@ mainCmdParser helpDesc = do
       liftIO $ print $ ppHelpShallow desc
       System.Exit.exitSuccess
 
-    let inputPaths' = case maybeToList inputParam ++ inputPaths of
-                      [] -> [Nothing]
-                      ps -> map Just ps
-
-    outputPaths' <- case outputPaths of
-      [] | not inplace -> return [Nothing]
-      []               -> return inputPaths'
-      ps | not inplace -> return . map Just $ ps
-      _                -> do
-        putStrErrLn "cannot specify output files and inplace at the same time"
-        System.Exit.exitWith (System.Exit.ExitFailure 51)
-
-    when (length inputPaths' /= length outputPaths') $ do
-      putStrErrLn "the number of inputs must match ther number of outputs"
-      System.Exit.exitWith (System.Exit.ExitFailure 52)
+    let inputPaths  = if null inputParams then [Nothing] else map Just inputParams
+    let outputPaths = case writeMode of
+                      Display -> repeat Nothing
+                      Inplace -> inputPaths
 
     config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
@@ -152,9 +161,8 @@ mainCmdParser helpDesc = do
     when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
       trace (showConfigYaml config) $ return ()
 
-    let ios = zipWith (coreIO putStrErrLn config suppressOutput) inputPaths' outputPaths'
-    res <- fmap sequence_ $ sequence ios
-    case res of
+    results <- zipWithM (coreIO putStrErrLn config suppressOutput) inputPaths outputPaths
+    case sequence_ results of
       Left  _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
       Right _ -> pure ()
 
