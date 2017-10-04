@@ -133,8 +133,8 @@ mainCmdParser helpDesc = do
       { _flag_help    = Just (PP.text "output mode: [display|inplace]")
       , _flag_default = Just Display
       }
-  reorderStop
   inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input haskell source files")
+  reorderStop
   desc        <- peekCmdDesc
   addCmdImpl $ void $ do
     when printLicense $ do
