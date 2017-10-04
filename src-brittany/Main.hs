@@ -62,13 +62,24 @@ helpDoc :: PP.Doc
 helpDoc = PP.vcat $ List.intersperse
   (PP.text "")
   [ parDocW
-    [ "Transforms one haskell module by reformatting"
-    , "(parts of) the source code (while preserving the"
-    , "parts not transformed)."
+    [ "Reformats one or more haskell modules."
+    , "Currently affects only type signatures and function bindings;"
+    , "everything else is left unmodified."
     , "Based on ghc-exactprint, thus (theoretically) supporting all"
     , "that ghc does."
-    , "Currently, only type-signatures and function-bindings are transformed."
     ]
+  , parDoc $ "Example invocations:"
+  , PP.hang (PP.text "") 2 $ PP.vcat
+      [ PP.text "brittany"
+      , PP.hang (PP.text "  ") 2 $ PP.text "read from stdin, output to stdout"
+      ]
+  , PP.hang (PP.text "") 2 $ PP.vcat
+      [ PP.text "brittany --indent=4 --write-mode=inplace *.hs"
+      , PP.nest 2 $ PP.vcat
+        [ PP.text "run on all modules in current directory (no backup!)"
+        , PP.text "4 spaces indentation"
+        ]
+      ]
   , parDocW
     [ "This program is written carefully and contains safeguards to ensure"
     , "the transformation does not change semantics (or the syntax tree at all)"
@@ -128,9 +139,12 @@ mainCmdParser helpDesc = do
   writeMode  <- addFlagReadParam
     ""
     ["write-mode"]
-    ""
+    "(display|inplace)"
     Flag
-      { _flag_help    = Just (PP.text "output mode: [display|inplace]")
+      { _flag_help    = Just $ PP.vcat
+          [ PP.text "display: output for any input(s) goes to stdout"
+          , PP.text "inplace: override respective input file (without backup!)"
+          ]
       , _flag_default = Just Display
       }
   inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input haskell source files")
