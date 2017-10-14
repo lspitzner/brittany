@@ -48,6 +48,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , allocateNode
   , docSharedWrapper
   , hasAnyCommentsBelow
+  , hasAnnKeyword
   )
 where
 
@@ -238,6 +239,19 @@ hasAnyCommentsBelow ast@(L l _) = do
     $ (=<<) extractAllComments
     $ Map.elems
     $ anns
+
+hasAnnKeyword
+  :: (Data a, MonadMultiReader (Map AnnKey Annotation) m)
+  => Located a
+  -> AnnKeywordId
+  -> m Bool
+hasAnnKeyword ast annKeyword = do
+  anns <- mAsk
+  let hasK (ExactPrint.Types.G x, _) = x == annKeyword
+      hasK _                         = False
+  pure $ case Map.lookup (ExactPrint.Types.mkAnnKey ast) anns of
+    Nothing -> False
+    Just (ExactPrint.Types.Ann _ _ _ aks _ _) -> any hasK aks
 
 -- new BriDoc stuff
 

@@ -14,7 +14,11 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import           GHC ( runGhc
+                     , GenLocated(L)
+                     , moduleNameString
+                     , AnnKeywordId (..)
+                     )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 import           HsSyn
 import           Name
@@ -521,19 +525,47 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsKindSig typ1 kind1 -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     kindDoc1 <- docSharedWrapper layoutType kind1
+    hasParens <- hasAnnKeyword ltype AnnOpenP
     docAlt
-      [ docSeq
-        [ docForceSingleline typeDoc1
-        , docLit $ Text.pack " :: "
-        , docForceSingleline kindDoc1
-        ]
-      , docPar
+      [ if hasParens
+        then docSeq
+          [ docLit $ Text.pack "("
+          , docForceSingleline typeDoc1
+          , docSeparator
+          , docLit $ Text.pack "::"
+          , docSeparator
+          , docForceSingleline kindDoc1
+          , docLit $ Text.pack ")"
+          ]
+        else docSeq
+          [ docForceSingleline typeDoc1
+          , docSeparator
+          , docLit $ Text.pack "::"
+          , docSeparator
+          , docForceSingleline kindDoc1
+          ]
+      , if hasParens
+        then docLines
+          [ docCols
+            ColTyOpPrefix
+            [ docWrapNodeRest ltype $ docParenLSep
+            , docAddBaseY (BrIndentSpecial 3) $ typeDoc1
+            ]
+          , docCols
+            ColTyOpPrefix
+            [ docWrapNodeRest ltype $ docLit $ Text.pack ":: "
+            , docAddBaseY (BrIndentSpecial 3) kindDoc1
+            ]
+          , (docLit $ Text.pack ")")
+          ]
+        else docPar
           typeDoc1
-          ( docCols ColTyOpPrefix
-              [ docWrapNodeRest ltype
-              $ docLit $ Text.pack ":: "
-              , docAddBaseY (BrIndentSpecial 3) kindDoc1
-              ])
+          ( docCols
+            ColTyOpPrefix
+            [ docWrapNodeRest ltype $ docLit $ Text.pack ":: "
+            , docAddBaseY (BrIndentSpecial 3) kindDoc1
+            ]
+          )
       ]
   HsBangTy{} -> -- TODO
     briDocByExactInlineOnly "HsBangTy{}" ltype

@@ -477,3 +477,12 @@ test :: Proxy '[ 'True]
 #pending fix does not work on 8.0.2
 test :: Proxy '[Bool]
 
+#test issue 64
+{-# LANGUAGE RankNTypes, KindSignatures #-}
+func
+  :: forall m str
+   . (Str str, Monad m)
+  => Int
+  -> Proxy (str :: [*])
+  -> m (Tagged str String)
+
