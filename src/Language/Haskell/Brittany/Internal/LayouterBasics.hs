@@ -42,6 +42,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , appSep
   , docCommaSep
   , docParenLSep
+  , docTick
   , spacifyDocs
   , briDocMToPPM
   , allocateNode
@@ -446,6 +447,9 @@ docCommaSep = appSep $ docLit $ Text.pack ","
 
 docParenLSep :: ToBriDocM BriDocNumbered
 docParenLSep = appSep $ docLit $ Text.pack "("
+
+docTick :: ToBriDocM BriDocNumbered
+docTick = docLit $ Text.pack "'"
 
 docNodeAnnKW
   :: Data.Data.Data ast

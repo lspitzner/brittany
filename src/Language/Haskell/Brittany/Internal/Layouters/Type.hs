@@ -29,12 +29,20 @@ layoutType :: ToBriDoc HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
-  HsTyVar _ name -> do
+  HsTyVar promoted name -> do
+    t <- lrdrNameToTextAnn name
+    case promoted of
+      Promoted -> docSeq
+        [ docSeparator
+        , docTick
+        , docWrapNode name $ docLit t
+        ]
+      NotPromoted -> docWrapNode name $ docLit t
 #else /* ghc-8.0 */
   HsTyVar name -> do
-#endif
     t <- lrdrNameToTextAnn name
     docWrapNode name $ docLit t
+#endif
   HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts@(_:_)) typ2)) -> do
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- bndrs `forM` \case
@@ -294,7 +302,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     docAlt
       [ docSeq
         [ docForceSingleline typeDoc1
-        , docLit $ Text.pack " "
+        , docSeparator
         , docForceSingleline typeDoc2
         ]
       , docPar
@@ -324,7 +332,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     docAlt
       [ docSeq
       $ docForceSingleline docHead : (docRest >>= \d ->
-        [ docLit $ Text.pack " ", docForceSingleline d ])
+        [ docSeparator, docForceSingleline d ])
       , docPar docHead (docLines $ docEnsureIndent BrIndentRegular <$> docRest)
       ]
   HsAppsTy (typHead:typRest) -> do
@@ -333,7 +341,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     docAlt
       [ docSeq
       $ docForceSingleline docHead : (docRest >>= \d ->
-        [ docLit $ Text.pack " ", docForceSingleline d ])
+        [ docSeparator, docForceSingleline d ])
       , docPar docHead (docLines $ docEnsureIndent BrIndentRegular <$> docRest)
       ]
     where
