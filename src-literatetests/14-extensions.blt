@@ -48,3 +48,21 @@ func
      )
   -> ()
 
+
+###############################################################################
+## RecursiveDo
+#test recursivedo 1
+{-# LANGUAGE RecursiveDo #-}
+foo = do
+  rec a <- f b
+      b <- g a
+  return (a, b)
+
+#test recursivedo 2
+{-# LANGUAGE RecursiveDo #-}
+foo = do
+  rec -- comment
+      a <- f b
+      b <- g a
+  return (a, b)
+

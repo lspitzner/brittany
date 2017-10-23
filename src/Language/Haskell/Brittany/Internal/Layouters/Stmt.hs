@@ -70,6 +70,12 @@ layoutStmt lstmt@(L _ stmt) = docWrapNode lstmt $ case stmt of
         (docLit $ Text.pack "let")
         (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
       ]
+  RecStmt stmts _ _ _ _ _ _ _ _ _ -> do
+    docSeq
+      [ docLit (Text.pack "rec")
+      , docSeparator
+      , docSetBaseAndIndent $ docLines $ layoutStmt <$> stmts
+      ]
   BodyStmt expr _ _ _      -> do
     expDoc <- docSharedWrapper layoutExpr expr
     docAddBaseY BrIndentRegular $ expDoc
