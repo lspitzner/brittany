@@ -154,19 +154,32 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
     expDoc1 <- docSharedWrapper layoutExpr exp1
     expDoc2 <- docSharedWrapper layoutExpr exp2
     docAlt
-      [ docSeq [appSep $ docForceSingleline expDoc1, docForceSingleline expDoc2]
-      , docSetParSpacing
+      [ -- func arg
+        docSeq [appSep $ docForceSingleline expDoc1, docForceSingleline expDoc2]
+      , -- func argline1
+        --   arglines
+        -- e.g.
+        -- func if x
+        --   then 1
+        --   else 2
+        docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docSeq
         [ appSep $ docForceSingleline expDoc1
         , docForceParSpacing expDoc2
         ]
-      , docSetParSpacing
+      , -- func
+        --   arg
+        docSetParSpacing
       $ docAddBaseY BrIndentRegular
       $ docPar
         (docForceSingleline expDoc1)
-        expDoc2
-      , docAddBaseY BrIndentRegular
+        (docNonBottomSpacing expDoc2)
+      , -- fu
+        --   nc
+        --   ar
+        --     gument
+        docAddBaseY BrIndentRegular
       $ docPar
         expDoc1
         expDoc2
