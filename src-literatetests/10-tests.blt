@@ -260,21 +260,6 @@ func -- b
   ) -- j
 -- k
 
-###############################################################################
-
-#test ImplicitParams 1
-{-# LANGUAGE ImplicitParams #-}
-func :: (?asd::Int) -> ()
-
-#test ImplicitParams 2
-{-# LANGUAGE ImplicitParams #-}
-func
-  :: (  ?asd
-     :: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-     -> lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-     )
-  -> ()
-
 
 ###############################################################################
 ###############################################################################
@@ -454,12 +439,6 @@ func = 1.1e5
 func = 'x'
 func = 981409823458910394810928414192837123987123987123
 
-#test lambdacase
-{-# LANGUAGE LambdaCase #-}
-func = \case
-  FooBar -> x
-  Baz    -> y
-
 #test lambda
 func = \x -> abc
 
@@ -548,29 +527,6 @@ func =
         of
           _ -> True
       ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-#group expression.multiwayif
-###############################################################################
-###############################################################################
-###############################################################################
-
-#test simple
-{-# LANGUAGE MultiWayIf #-}
-func = if
-  | cond1 -> loooooooooooooooooooooooooooooong expr1
-  | cond2 -> loooooooooooooooooooooooooooooong expr2
-
-#test simplenested
-{-# LANGUAGE MultiWayIf #-}
-func = do
-  foo
-  bar $ if
-    | cond1 -> loooooooooooooooooooooooooooooong expr1
-    | cond2 -> loooooooooooooooooooooooooooooong expr2
 
 
 ###############################################################################
