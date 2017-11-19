@@ -198,12 +198,14 @@ func
 #test type operator stuff
 #pending
 test050 :: a :+: b
-test051 :: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-        :+: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-test052 :: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-        -> lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-        :+: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-        -> lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+test051
+  :: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  :+: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+test052
+  :: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  -> lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  :+: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  -> lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
 
 ###############################################################################
 
