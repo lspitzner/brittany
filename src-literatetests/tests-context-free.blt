@@ -434,19 +434,19 @@ func = x + x
 #test long
 #pending
 func = mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
-     + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+  + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
 
 #test long keep linemode 1
 #pending
 func = mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
-     + mweroiuxlskdfjlksj
-     + mweroiuxlskdfjlksj
+  + mweroiuxlskdfjlksj
+  + mweroiuxlskdfjlksj
 
 #test long keep linemode 2
 #pending
 func = mweroiuxlskdfjlksj
-     + mweroiuxlskdfjlksj
-     + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+  + mweroiuxlskdfjlksj
+  + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
 
 #test literals
 func = 1
