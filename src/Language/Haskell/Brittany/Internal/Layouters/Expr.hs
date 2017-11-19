@@ -853,81 +853,87 @@ layoutExpr lexpr@(L _ expr) = do
           return $ case ambName of
             Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
-      docAlt
+      docAltFilter
         -- singleline
-        [ docSeq
-          [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
-          , appSep $ docLit $ Text.pack "{"
-          , appSep $ docSeq $ List.intersperse docCommaSep
-                  $ rFs <&> \case
-                    (lfield, fieldStr, Just fieldDoc) ->
-                      docWrapNode lfield $ docSeq
-                            [ appSep $ docLit fieldStr
-                            , appSep $ docLit $ Text.pack "="
-                            , docForceSingleline fieldDoc
-                            ]
-                    (lfield, fieldStr, Nothing) ->
-                      docWrapNode lfield $ docLit fieldStr
-          , docLit $ Text.pack "}"
-          ]
+        [ ( True
+          , docSeq
+            [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
+            , appSep $ docLit $ Text.pack "{"
+            , appSep $ docSeq $ List.intersperse docCommaSep
+                    $ rFs <&> \case
+                      (lfield, fieldStr, Just fieldDoc) ->
+                        docWrapNode lfield $ docSeq
+                              [ appSep $ docLit fieldStr
+                              , appSep $ docLit $ Text.pack "="
+                              , docForceSingleline fieldDoc
+                              ]
+                      (lfield, fieldStr, Nothing) ->
+                        docWrapNode lfield $ docLit fieldStr
+            , docLit $ Text.pack "}"
+            ]
+          )
         -- wild-indentation block
-        , docSeq
-          [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
-          , docSetBaseY $ docLines $ let
-              line1 = docCols ColRecUpdate
-                [ appSep $ docLit $ Text.pack "{"
-                , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
-                , case rF1e of
-                    Just x -> docWrapNodeRest rF1f $ docSeq
-                                     [ appSep $ docLit $ Text.pack "="
-                                     , docForceSingleline $ x
-                                     ]
-                    Nothing -> docEmpty
-                ]
-              lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
-                [ docCommaSep
-                , appSep $ docLit $ fText
-                , case fDoc of
-                    Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
-                                      , docForceSingleline x
+        , ( indentPolicy /= IndentPolicyLeft
+          , docSeq
+            [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
+            , docSetBaseY $ docLines $ let
+                line1 = docCols ColRecUpdate
+                  [ appSep $ docLit $ Text.pack "{"
+                  , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
+                  , case rF1e of
+                      Just x -> docWrapNodeRest rF1f $ docSeq
+                                      [ appSep $ docLit $ Text.pack "="
+                                      , docForceSingleline $ x
                                       ]
-                    Nothing -> docEmpty
-                ]
-              lineN = docSeq
-                [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
-                , docLit $ Text.pack "}"
-                ]
-              in [line1] ++ lineR ++ [lineN]
-          ]
+                      Nothing -> docEmpty
+                  ]
+                lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
+                  [ docCommaSep
+                  , appSep $ docLit $ fText
+                  , case fDoc of
+                      Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
+                                        , docForceSingleline x
+                                        ]
+                      Nothing -> docEmpty
+                  ]
+                lineN = docSeq
+                  [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+                  , docLit $ Text.pack "}"
+                  ]
+                in [line1] ++ lineR ++ [lineN]
+            ]
+          )
         -- strict indentation block
-        , docSetParSpacing
-        $ docAddBaseY BrIndentRegular
-        $ docPar
-            (docNodeAnnKW lexpr Nothing $ rExprDoc)
-            (docNonBottomSpacing $ docLines $ let
-              line1 = docCols ColRecUpdate
-                [ appSep $ docLit $ Text.pack "{"
-                , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
-                , docWrapNodeRest rF1f $ case rF1e of
-                    Just x -> docSeq [ appSep $ docLit $ Text.pack "="
-                                     , docAddBaseY BrIndentRegular $ x
-                                     ]
-                    Nothing -> docEmpty
-                ]
-              lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
-                [ docCommaSep
-                , appSep $ docLit $ fText
-                , case fDoc of
-                    Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
-                                      , docAddBaseY BrIndentRegular x
+        , ( True
+          , docSetParSpacing
+          $ docAddBaseY BrIndentRegular
+          $ docPar
+              (docNodeAnnKW lexpr Nothing $ rExprDoc)
+              (docNonBottomSpacing $ docLines $ let
+                line1 = docCols ColRecUpdate
+                  [ appSep $ docLit $ Text.pack "{"
+                  , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
+                  , docWrapNodeRest rF1f $ case rF1e of
+                      Just x -> docSeq [ appSep $ docLit $ Text.pack "="
+                                      , docAddBaseY BrIndentRegular $ x
                                       ]
-                    Nothing -> docEmpty
-                ]
-              lineN = docSeq
-                [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
-                , docLit $ Text.pack "}"
-                ]
-              in [line1] ++ lineR ++ [lineN])
+                      Nothing -> docEmpty
+                  ]
+                lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
+                  [ docCommaSep
+                  , appSep $ docLit $ fText
+                  , case fDoc of
+                      Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
+                                        , docAddBaseY BrIndentRegular x
+                                        ]
+                      Nothing -> docEmpty
+                  ]
+                lineN = docSeq
+                  [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+                  , docLit $ Text.pack "}"
+                  ]
+                in [line1] ++ lineR ++ [lineN])
+          )
         ]
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
     ExprWithTySig exp1 (HsWC _ (HsIB _ typ1 _)) -> do
@@ -959,7 +965,7 @@ layoutExpr lexpr@(L _ expr) = do
           docSeq
             [ docLit $ Text.pack "["
             , docForceSingleline e1Doc
-            , docCommaSep
+            , appSep $ docLit $ Text.pack ","
             , appSep $ docForceSingleline e2Doc
             , docLit $ Text.pack "..]"
             ]
@@ -980,7 +986,7 @@ layoutExpr lexpr@(L _ expr) = do
           docSeq
             [ docLit $ Text.pack "["
             , docForceSingleline e1Doc
-            , docCommaSep
+            , appSep $ docLit $ Text.pack ","
             , appSep $ docForceSingleline e2Doc
             , appSep $ docLit $ Text.pack ".."
             , docForceSingleline eNDoc

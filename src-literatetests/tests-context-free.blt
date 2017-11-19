@@ -646,9 +646,10 @@ func = do
 #test record update indentation 2
 func = do
   s <- mGet
-  mSet $ s { _lstate_indent = _lstate_indent state
-           , _lstate_indent = _lstate_indent state
-           }
+  mSet $ s
+    { _lstate_indent = _lstate_indent state
+    , _lstate_indent = _lstate_indent state
+    }
 
 #test record update indentation 3
 func = do
@@ -972,9 +973,9 @@ runBrittany tabSize text = do
   let
     config' = staticDefaultConfig
     config = config'
-      { _conf_layout = (_conf_layout config') { _lconfig_indentAmount = coerce
-                                                tabSize
-                                              }
+      { _conf_layout = (_conf_layout config')
+        { _lconfig_indentAmount = coerce tabSize
+        }
       , _conf_forward = forwardOptionsSyntaxExtsEnabled
       }
   parsePrintModule config text
