@@ -350,14 +350,14 @@ func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
 #test simple multiline pattern
 #pending
 func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
-     reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
+  reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
   = x
 
 #test another multiline pattern
 #pending
 func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
-     a
-     b
+  a
+  b
   = x
 
 #test simple constructor
