@@ -11,6 +11,7 @@ where
 
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Config.Types
 
 import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
@@ -27,6 +28,7 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
 
 layoutStmt :: ToBriDoc' (StmtLR RdrName RdrName (LHsExpr RdrName))
 layoutStmt lstmt@(L _ stmt) = do
+  indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
   docWrapNode lstmt $ case stmt of
     LastStmt body False _ -> do
       layoutExpr body
@@ -62,15 +64,17 @@ layoutStmt lstmt@(L _ stmt) = do
           (docLit $ Text.pack "let")
           (docSetBaseAndIndent $ return bindDoc)
         ]
-      Just bindDocs -> docAlt
-        [ docSeq
-          [ appSep $ docLit $ Text.pack "let"
-          , docSetBaseAndIndent $ docLines $ return <$> bindDocs
-          ]
-        , docAddBaseY BrIndentRegular $ docPar
-          (docLit $ Text.pack "let")
-          (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
-        ]
+      Just bindDocs ->
+        let letSeq = docSeq
+              [ appSep $ docLit $ Text.pack "let"
+              , docSetBaseAndIndent $ docLines $ return <$> bindDocs
+              ]
+            letRegular = docAddBaseY BrIndentRegular $ docPar
+              (docLit $ Text.pack "let")
+              (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+        in  case indentPolicy of
+              IndentPolicyLeft -> docAlt [letRegular]
+              _                -> docAlt [letSeq, letRegular]
     RecStmt stmts _ _ _ _ _ _ _ _ _ -> do
       docSeq
         [ docLit (Text.pack "rec")
