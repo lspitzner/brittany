@@ -650,7 +650,7 @@ func = do
   s <- mGet
   mSet $ s
     { _lstate_indent = _lstate_indent state
-    , _lstate_indent = _lstate_indent state
+    , _lstate_foo = _lstate_foo state
     }
 
 #test record update indentation 3
@@ -658,7 +658,25 @@ func = do
   s <- mGet
   mSet $ s
     { _lstate_indent = _lstate_indent lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-    , _lstate_indent = _lstate_indent lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+    , _lstate_foo = _lstate_foo kasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+    }
+
+#test record construction 1
+func = Foo
+  { _lstate_indent = _lstate_indent state
+  }
+
+#test record construction 2
+func = Foo
+  { _lstate_indent = _lstate_indent lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  , _lstate_foo = _lstate_foo lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  }
+
+#test record construction 3
+func = do
+  Foo
+    { _lstate_indent = _lstate_indent lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+    , _lstate_foo = _lstate_foo lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
     }
 
 #test post-indent comment
