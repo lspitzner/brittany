@@ -382,8 +382,9 @@ func (x:+:xr) = x
 func | True = x
 
 #test multiple-clauses-1
-func x | x = simple expression
-       | otherwise = 0
+func x
+  | x = simple expression
+  | otherwise = 0
 
 #test multiple-clauses-2
 func x
@@ -845,8 +846,9 @@ showPackageDetailedInfo pkginfo =
           ]
 
 #test issue 7a
-isValidPosition position | validX && validY = Just position
-                         | otherwise = Nothing
+isValidPosition position
+  | validX && validY = Just position
+  | otherwise = Nothing
 
 #test issue-6-pattern-linebreak-validity
 ## this is ugly, but at least syntactically valid.
