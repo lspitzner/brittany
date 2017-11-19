@@ -40,14 +40,27 @@ data InputLine
 main :: IO ()
 main = do
   files <- System.Directory.listDirectory "src-literatetests/"
-  let blts = List.sort $ filter (".blt" `isSuffixOf`) files
+  let blts =
+        List.sort
+          $ filter (\x -> not ("tests-context-free.blt" `isSuffixOf` x))
+          $ filter (".blt"`isSuffixOf`) files
   inputs <- blts `forM` \blt -> Text.IO.readFile ("src-literatetests" </> blt)
   let groups = createChunks =<< inputs
-  hspec $ groups `forM_` \(groupname, tests) -> do
-    describe (Text.unpack groupname) $ tests `forM_` \(name, pend, inp) -> do
-      (if pend then before_ pending else id)
-        $ it (Text.unpack name)
-        $ roundTripEqual inp
+  inputCtxFree <- Text.IO.readFile "src-literatetests/tests-context-free.blt"
+  let groupsCtxFree = createChunks inputCtxFree
+  hspec $ do
+    groups `forM_` \(groupname, tests) -> do
+      describe (Text.unpack groupname) $ tests `forM_` \(name, pend, inp) -> do
+        (if pend then before_ pending else id)
+          $ it (Text.unpack name)
+          $ roundTripEqual defaultTestConfig inp
+    groupsCtxFree `forM_` \(groupname, tests) -> do
+      describe ("context free: " ++ Text.unpack groupname)
+        $       tests
+        `forM_` \(name, pend, inp) -> do
+                  (if pend then before_ pending else id)
+                    $ it (Text.unpack name)
+                    $ roundTripEqual contextFreeTestConfig inp
  where
   -- this function might be implemented in a weirdly complex fashion; the
   -- reason being that it was copied from a somewhat more complex variant.
@@ -132,10 +145,10 @@ main = do
 --------------------
 -- past this line:  copy-pasta from other test (meh..)
 --------------------
-roundTripEqual :: Text -> Expectation
-roundTripEqual t =
+roundTripEqual :: Config -> Text -> Expectation
+roundTripEqual c t =
   fmap (fmap PPTextWrapper)
-       (parsePrintModuleTests defaultTestConfig "TestFakeFileName.hs" t)
+       (parsePrintModuleTests c "TestFakeFileName.hs" t)
     `shouldReturn` Right (PPTextWrapper t)
 
 newtype PPTextWrapper = PPTextWrapper Text
@@ -170,3 +183,12 @@ defaultTestConfig = Config
     }
   }
 
+contextFreeTestConfig :: Config
+contextFreeTestConfig =
+  defaultTestConfig
+  { _conf_layout = (_conf_layout defaultTestConfig)
+    {_lconfig_indentPolicy = coerce IndentPolicyLeft
+    ,_lconfig_alignmentLimit = coerce (1 :: Int)
+    ,_lconfig_columnAlignMode = coerce ColumnAlignModeDisabled
+    }
+  }
