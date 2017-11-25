@@ -46,6 +46,7 @@ require fixing:
 # Other usage notes
 
 - Supports GHC versions `8.0.*` and `8.2.*`.
+- as of November'17, `brittany` is available on stackage nightly.
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
 - uses/creates user config file in `~/.brittany/config.yaml`;
@@ -109,9 +110,21 @@ require fixing:
       - -XBangPatterns
     ~~~~
 
-# Implementation/High-level Documentation
+# Feature Requests, Contribution, Documentation
 
-[See the documentation index](doc/implementation/index.md)
+This currently is a one-person project in the sense that 90% of the code is
+written by one person. And (unfortunately) it is not my job to keep improving
+this project. Please forgive that as a consequence my time to invest on new
+features is rather limited.
+
+Nonetheless I consider it "in active development" :)
+
+One way of speeding things up is to make your own contributions. There is
+a good amount of high-level documentation at
+
+[the documentation index](doc/implementation/index.md)
+
+Note that most development happens on the `dev` branch of this repository!
 
 # License
 
