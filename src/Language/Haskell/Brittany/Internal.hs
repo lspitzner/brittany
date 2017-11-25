@@ -20,7 +20,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 
 import           Data.Data
-import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Except
 import           Data.HList.HList
 import           Data.CZipWith
 
@@ -62,7 +62,7 @@ import qualified GHC.LanguageExtensions.Type as GHC
 -- Note that this function ignores/resets all config values regarding
 -- debugging, i.e. it will never use `trace`/write to stderr.
 parsePrintModule :: Config -> Text -> IO (Either [BrittanyError] Text)
-parsePrintModule configRaw inputText = runEitherT $ do
+parsePrintModule configRaw inputText = runExceptT $ do
   let config = configRaw { _conf_debug = _conf_debug staticDefaultConfig }
   let ghcOptions         = config & _conf_forward & _options_ghc & runIdentity
   let config_pp          = config & _conf_preprocessor
@@ -87,7 +87,7 @@ parsePrintModule configRaw inputText = runEitherT $ do
       cppCheckFunc
       (hackTransform $ Text.unpack inputText)
     case parseResult of
-      Left  err -> left $ [ErrorInput err]
+      Left  err -> throwE $ [ErrorInput err]
       Right x   -> pure $ x
   (errsWarns, outputTextL) <- do
     let omitCheck =
@@ -117,7 +117,7 @@ parsePrintModule configRaw inputText = runEitherT $ do
         case config & _conf_errorHandling & _econf_Werror & confUnpack of
           False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
           True  -> not $ null errsWarns
-  if hasErrors then left $ errsWarns else pure $ TextL.toStrict outputTextL
+  if hasErrors then throwE $ errsWarns else pure $ TextL.toStrict outputTextL
 
 
 

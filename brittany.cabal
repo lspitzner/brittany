@@ -112,7 +112,6 @@ library {
     , unsafe >=0.0 && <0.1
     , safe >=0.3.9 && <0.4
     , deepseq >=1.4.2.0 && <1.5
-    , either >=4.4.1.1 && <4.5
     , semigroups >=0.18.2 && <0.19
     , cmdargs >=0.10.14 && <0.11
     , czipwith >=1.0.0.0 && <1.1
@@ -175,7 +174,6 @@ executable brittany
     , unsafe
     , safe
     , deepseq
-    , either
     , semigroups
     , cmdargs
     , czipwith
@@ -252,7 +250,6 @@ test-suite unittests
     , unsafe
     , safe
     , deepseq
-    , either
     , semigroups
     , cmdargs
     , czipwith
@@ -324,7 +321,6 @@ test-suite littests
     , unsafe
     , safe
     , deepseq
-    , either
     , semigroups
     , cmdargs
     , czipwith

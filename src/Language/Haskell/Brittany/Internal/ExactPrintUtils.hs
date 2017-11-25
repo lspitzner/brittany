@@ -58,26 +58,24 @@ parseModuleWithCpp
   -> (GHC.DynFlags -> IO (Either String a))
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
 parseModuleWithCpp cpp opts args fp dynCheck =
-  ExactPrint.ghcWrapper $ EitherT.runEitherT $ do
+  ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
     dflags0                       <- lift $ GHC.getSessionDynFlags
-    (dflags1, leftover, warnings) <- lift $ GHC.parseDynamicFlagsCmdLine
-      dflags0
-      (GHC.noLoc <$> args)
+    (dflags1, leftover, warnings) <- lift
+      $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
     void $ lift $ GHC.setSessionDynFlags dflags1
-    dflags2                       <- lift $ ExactPrint.initDynFlags fp
+    dflags2 <- lift $ ExactPrint.initDynFlags fp
     when (not $ null leftover)
-      $  EitherT.left
+      $  ExceptT.throwE
       $  "when parsing ghc flags: leftover flags: "
       ++ show (leftover <&> \(L _ s) -> s)
     when (not $ null warnings)
-      $  EitherT.left
+      $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
-    x <- EitherT.EitherT $ liftIO $ dynCheck dflags2
+    x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
-    EitherT.hoistEither
-      $ either (\(span, err) -> Left $ show span ++ ": " ++ err)
-               (\(a, m) -> Right (a, m, x))
+    either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
+           (\(a, m) -> pure (a, m, x))
       $ ExactPrint.postParseTransform res opts
 
 parseModuleFromString
@@ -87,22 +85,21 @@ parseModuleFromString
   -> String
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
 parseModuleFromString args fp dynCheck str =
-  ExactPrint.ghcWrapper $ EitherT.runEitherT $ do
+  ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
     dflags0                       <- lift $ ExactPrint.initDynFlagsPure fp str
-    (dflags1, leftover, warnings) <-
-      lift $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
+    (dflags1, leftover, warnings) <- lift
+      $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
     when (not $ null leftover)
-      $  EitherT.left
+      $  ExceptT.throwE
       $  "when parsing ghc flags: leftover flags: "
       ++ show (leftover <&> \(L _ s) -> s)
     when (not $ null warnings)
-      $  EitherT.left
+      $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
-    x <- EitherT.EitherT $ liftIO $ dynCheck dflags1
-    EitherT.hoistEither
-      $ either (\(span, err) -> Left $ show span ++ ": " ++ err)
-               (\(a, m) -> Right (a, m, x))
+    x <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
+    either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
+           (\(a, m) -> pure (a, m, x))
       $ ExactPrint.parseWith dflags1 fp GHC.parseModule str
 
 -----------

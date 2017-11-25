@@ -193,8 +193,8 @@ coreIO
   -> Maybe FilePath.FilePath -- ^ input filepath; stdin if Nothing.
   -> Maybe FilePath.FilePath -- ^ output filepath; stdout if Nothing.
   -> IO (Either Int ())      -- ^ Either an errorNo, or success.
-coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEitherT $ do
-  let putErrorLn         = liftIO . putErrorLnIO :: String -> EitherT.EitherT e IO ()
+coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runExceptT $ do
+  let putErrorLn         = liftIO . putErrorLnIO :: String -> ExceptT.ExceptT e IO ()
   let ghcOptions         = config & _conf_forward & _options_ghc & runIdentity
   -- there is a good of code duplication between the following code and the
   -- `pureModuleTransform` function. Unfortunately, there are also a good
@@ -234,7 +234,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEi
     Left left -> do
       putErrorLn "parse error:"
       putErrorLn $ show left
-      EitherT.left 60
+      ExceptT.throwE 60
     Right (anns, parsedSource, hasCPP) -> do
       when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
         let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
@@ -300,7 +300,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = EitherT.runEi
         Nothing -> liftIO $ TextL.IO.putStr $ outLText
         Just p  -> liftIO $ TextL.IO.writeFile p $ outLText
 
-      when hasErrors $ EitherT.left 70
+      when hasErrors $ ExceptT.throwE 70
  where
   addTraceSep conf =
     if or

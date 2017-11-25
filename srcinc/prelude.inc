@@ -136,7 +136,7 @@ import qualified Data.Text.Lazy.IO as TextL.IO
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.State.Lazy as StateL
 import qualified Control.Monad.Trans.State.Strict as StateS
-import qualified Control.Monad.Trans.Either as EitherT
+import qualified Control.Monad.Trans.Except as ExceptT
 
 import qualified Data.Strict.Maybe as Strict
 
