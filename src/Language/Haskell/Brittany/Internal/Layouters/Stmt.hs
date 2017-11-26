@@ -64,17 +64,19 @@ layoutStmt lstmt@(L _ stmt) = do
           (docLit $ Text.pack "let")
           (docSetBaseAndIndent $ return bindDoc)
         ]
-      Just bindDocs ->
-        let letSeq = docSeq
-              [ appSep $ docLit $ Text.pack "let"
-              , docSetBaseAndIndent $ docLines $ return <$> bindDocs
-              ]
-            letRegular = docAddBaseY BrIndentRegular $ docPar
-              (docLit $ Text.pack "let")
-              (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
-        in  case indentPolicy of
-              IndentPolicyLeft -> docAlt [letRegular]
-              _                -> docAlt [letSeq, letRegular]
+      Just bindDocs -> docAltFilter
+        [ ( indentPolicy /= IndentPolicyLeft
+          , docSeq
+            [ appSep $ docLit $ Text.pack "let"
+            , docSetBaseAndIndent $ docLines $ return <$> bindDocs
+            ]
+          )
+        , ( True
+          , docAddBaseY BrIndentRegular $ docPar
+            (docLit $ Text.pack "let")
+            (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+          )
+        ]
     RecStmt stmts _ _ _ _ _ _ _ _ _ -> do
       docSeq
         [ docLit (Text.pack "rec")
