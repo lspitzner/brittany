@@ -196,6 +196,7 @@ before_install:
 
       sleep 60
     done
+    wait $!
     set -x
   }
 
