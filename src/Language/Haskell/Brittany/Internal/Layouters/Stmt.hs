@@ -50,19 +50,23 @@ layoutStmt lstmt@(L _ stmt) = do
         ]
     LetStmt binds -> layoutLocalBinds binds >>= \case
       Nothing        -> docLit $ Text.pack "let" -- i just tested
-                                 -- it, and it is
-                                 -- indeed allowed.
-                                 -- heh.
+                                -- it, and it is
+                                -- indeed allowed.
+                                -- heh.
       Just []        -> docLit $ Text.pack "let" -- this probably never happens
-      Just [bindDoc] -> docAlt
-        [ docCols
-          ColDoLet
-          [ appSep $ docLit $ Text.pack "let"
-          , docSetBaseAndIndent $ return bindDoc
-          ]
-        , docAddBaseY BrIndentRegular $ docPar
-          (docLit $ Text.pack "let")
-          (docSetBaseAndIndent $ return bindDoc)
+      Just [bindDoc] -> docAltFilter
+        [ ( indentPolicy /= IndentPolicyLeft
+          , docCols
+            ColDoLet
+            [ appSep $ docLit $ Text.pack "let"
+            , docSetBaseAndIndent $ return bindDoc
+            ]
+          )
+        , ( True
+          , docAddBaseY BrIndentRegular $ docPar
+            (docLit $ Text.pack "let")
+            (docSetBaseAndIndent $ return bindDoc)
+          )
         ]
       Just bindDocs -> docAltFilter
         [ ( indentPolicy /= IndentPolicyLeft

@@ -532,7 +532,8 @@ func = do
 
 #test let
 func = do
-  let x = 13
+  let
+    x = 13
   stmt x
 
 
@@ -1021,7 +1022,8 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
           ]
       | not hasComments
       , [(guards, body, _bodyRaw)] <- [clauseDocs]
-      , let guardPart = singleLineGuardsDoc guards
+      , let
+        guardPart = singleLineGuardsDoc guards
       , wherePart <- case mWhereDocs of
         Nothing -> return @[] $ docEmpty
         Just [w] -> return @[] $ docSeq
@@ -1042,7 +1044,8 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
            ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
+       , let
+         guardPart = singleLineGuardsDoc guards
        , Data.Maybe.isJust mWhereDocs
        ]
     ++ -- two-line solution + where in next line(s)
@@ -1054,18 +1057,20 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
            ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
+       , let
+         guardPart = singleLineGuardsDoc guards
        ]
 
 #test comment-testcase-17
 {-# LANGUAGE MultiWayIf #-}
 func = do
-  let foo = if
-        | Constuctoooooooooooooooooooooooooooooooooooor `elem` artics -- TODO
-                                                                      -> max
-          (defLen - 0.2) -- TODO
-          (defLen * 0.8)
-        | otherwise -> max (defLen - 0.05) (defLen * 0.95) -- TODO
+  let
+    foo = if
+      | Constuctoooooooooooooooooooooooooooooooooooor `elem` artics -- TODO
+                                                                    -> max
+        (defLen - 0.2) -- TODO
+        (defLen * 0.8)
+      | otherwise -> max (defLen - 0.05) (defLen * 0.95) -- TODO
   return True
 
 #test issue 49
@@ -1109,7 +1114,7 @@ foo =
 ## from the input; i cannot really express this yet with the current
 ## test-suite.
 ## #test ayaz
-## 
+##
 ## myManageHook =
 ##   composeOne [isFullscreen -?> doFullFloat, isDialog -?> doFloat, transience]
 ##     <+> composeAll
