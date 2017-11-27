@@ -91,12 +91,27 @@ layoutStmt lstmt@(L _ stmt) = do
             (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
           )
         ]
-    RecStmt stmts _ _ _ _ _ _ _ _ _ -> do
-      docSeq
-        [ docLit (Text.pack "rec")
-        , docSeparator
-        , docSetBaseAndIndent $ docLines $ layoutStmt <$> stmts
-        ]
+    RecStmt stmts _ _ _ _ _ _ _ _ _ -> docAltFilter
+      [ -- rec stmt1
+        --     stmt2
+        --     stmt3
+        ( indentPolicy /= IndentPolicyLeft
+        , docSeq
+          [ docLit (Text.pack "rec")
+          , docSeparator
+          , docSetBaseAndIndent $ docLines $ layoutStmt <$> stmts
+          ]
+        )
+      , -- rec
+        --   stmt1
+        --   stmt2
+        --   stmt3
+        ( True
+        , docAddBaseY BrIndentRegular $ docPar
+          (docLit (Text.pack "rec"))
+          (docLines $ layoutStmt <$> stmts)
+        )
+      ]
     BodyStmt expr _ _ _ -> do
       expDoc <- docSharedWrapper layoutExpr expr
       docAddBaseY BrIndentRegular $ expDoc
