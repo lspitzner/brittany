@@ -419,6 +419,8 @@ layoutExpr lexpr@(L _ expr) = do
             case indentPolicy of
               IndentPolicyLeft -> BrIndentRegular
               _ -> BrIndentSpecial 3
+      -- TODO: some of the alternatives (especially last and last-but-one)
+      -- overlap.
       docAltFilter
         [ -- if _ then _ else _
           (,) (not hasComments)
@@ -447,8 +449,7 @@ layoutExpr lexpr@(L _ expr) = do
         $ docSetParSpacing
         $ docAddBaseY BrIndentRegular
         $ docPar
-            ( docAddBaseY maySpecialIndent
-            $ docSeq
+            ( docSeq
               [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
               , docNodeAnnKW lexpr (Just AnnIf) $ docForceSingleline ifExprDoc
               ])
