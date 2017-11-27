@@ -55,27 +55,37 @@ layoutStmt lstmt@(L _ stmt) = do
                                 -- heh.
       Just []        -> docLit $ Text.pack "let" -- this probably never happens
       Just [bindDoc] -> docAltFilter
-        [ ( indentPolicy /= IndentPolicyLeft
+        [ -- let bind = expr
+          ( indentPolicy /= IndentPolicyLeft
           , docCols
             ColDoLet
             [ appSep $ docLit $ Text.pack "let"
             , docSetBaseAndIndent $ return bindDoc
             ]
           )
-        , ( True
+        , -- let
+          --   bind = expr
+          ( True
           , docAddBaseY BrIndentRegular $ docPar
             (docLit $ Text.pack "let")
             (docSetBaseAndIndent $ return bindDoc)
           )
         ]
       Just bindDocs -> docAltFilter
-        [ ( indentPolicy /= IndentPolicyLeft
+        [ -- let aaa = expra
+          --     bbb = exprb
+          --     ccc = exprc
+          ( indentPolicy /= IndentPolicyLeft
           , docSeq
             [ appSep $ docLit $ Text.pack "let"
             , docSetBaseAndIndent $ docLines $ return <$> bindDocs
             ]
           )
-        , ( True
+        , -- let
+          --   aaa = expra
+          --   bbb = exprb
+          --   ccc = exprc
+          ( True
           , docAddBaseY BrIndentRegular $ docPar
             (docLit $ Text.pack "let")
             (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
