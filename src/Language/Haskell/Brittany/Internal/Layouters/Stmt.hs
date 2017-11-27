@@ -54,22 +54,22 @@ layoutStmt lstmt@(L _ stmt) = do
                                 -- indeed allowed.
                                 -- heh.
       Just []        -> docLit $ Text.pack "let" -- this probably never happens
-      Just [bindDoc] -> docAltFilter
+      Just [bindDoc] -> docAlt
         [ -- let bind = expr
-          ( indentPolicy /= IndentPolicyLeft
-          , docCols
-            ColDoLet
-            [ appSep $ docLit $ Text.pack "let"
-            , docSetBaseAndIndent $ return bindDoc
-            ]
-          )
+          docCols
+          ColDoLet
+          [ appSep $ docLit $ Text.pack "let"
+          , ( if indentPolicy == IndentPolicyLeft
+              then docForceSingleline
+              else docSetBaseAndIndent
+            )
+            $ return bindDoc
+          ]
         , -- let
           --   bind = expr
-          ( True
-          , docAddBaseY BrIndentRegular $ docPar
-            (docLit $ Text.pack "let")
-            (docSetBaseAndIndent $ return bindDoc)
-          )
+          docAddBaseY BrIndentRegular $ docPar
+          (docLit $ Text.pack "let")
+          (docSetBaseAndIndent $ return bindDoc)
         ]
       Just bindDocs -> docAltFilter
         [ -- let aaa = expra
@@ -107,9 +107,8 @@ layoutStmt lstmt@(L _ stmt) = do
         --   stmt2
         --   stmt3
         ( True
-        , docAddBaseY BrIndentRegular $ docPar
-          (docLit (Text.pack "rec"))
-          (docLines $ layoutStmt <$> stmts)
+        , docAddBaseY BrIndentRegular
+          $ docPar (docLit (Text.pack "rec")) (docLines $ layoutStmt <$> stmts)
         )
       ]
     BodyStmt expr _ _ _ -> do

@@ -532,8 +532,7 @@ func = do
 
 #test let
 func = do
-  let
-    x = 13
+  let x = 13
   stmt x
 
 
@@ -1020,8 +1019,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
           ]
       | not hasComments
       , [(guards, body, _bodyRaw)] <- [clauseDocs]
-      , let
-        guardPart = singleLineGuardsDoc guards
+      , let guardPart = singleLineGuardsDoc guards
       , wherePart <- case mWhereDocs of
         Nothing -> return @[] $ docEmpty
         Just [w] -> return @[] $ docSeq
@@ -1042,8 +1040,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
            ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let
-         guardPart = singleLineGuardsDoc guards
+       , let guardPart = singleLineGuardsDoc guards
        , Data.Maybe.isJust mWhereDocs
        ]
     ++ -- two-line solution + where in next line(s)
@@ -1055,8 +1052,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs = do
            ]
          ++ wherePartMultiLine
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let
-         guardPart = singleLineGuardsDoc guards
+       , let guardPart = singleLineGuardsDoc guards
        ]
 
 #test comment-testcase-17

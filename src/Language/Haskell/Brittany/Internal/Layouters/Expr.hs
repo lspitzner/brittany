@@ -541,7 +541,7 @@ layoutExpr lexpr@(L _ expr) = do
       -- comments before the first let item are moved horizontally with it.
       docSetIndentLevel $ case mBindDocs of
         Just [bindDoc] -> docAltFilter
-          [ ( indentPolicy /= IndentPolicyLeft
+          [ ( True
             , docSeq
               [ appSep $ docLit $ Text.pack "let"
               , appSep $ docForceSingleline $ return bindDoc
