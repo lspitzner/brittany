@@ -82,6 +82,8 @@ import           ApiAnnotation ( AnnKeywordId(..) )
 import           Data.Data
 import           Data.Generics.Schemes
 
+import qualified Data.Char as Char
+
 import           DataTreePrint
 
 import           Data.HList.HList
@@ -154,20 +156,21 @@ briDocByExactInlineOnly infoStr ast = do
   let exactPrinted = Text.pack $ ExactPrint.exactPrint ast anns
   fallbackMode <-
     mAsk <&> _conf_errorHandling .> _econf_ExactPrintFallback .> confUnpack
-  let exactPrintNode = allocateNode $ BDFExternal
+  let exactPrintNode t = allocateNode $ BDFExternal
         (ExactPrint.Types.mkAnnKey ast)
         (foldedAnnKeys ast)
         False
-        exactPrinted
-  let
-    errorAction = do
-      mTell $ [ErrorUnknownNode infoStr ast]
-      docLit $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
+        t
+  let errorAction = do
+        mTell $ [ErrorUnknownNode infoStr ast]
+        docLit
+          $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
   case (fallbackMode, Text.lines exactPrinted) of
     (ExactPrintFallbackModeNever, _  ) -> errorAction
-    (_                          , [_]) -> exactPrintNode
-    (ExactPrintFallbackModeRisky, _  ) -> exactPrintNode
-    _                                  -> errorAction
+    (_                          , [t]) -> exactPrintNode
+      (Text.dropWhile Char.isSpace . Text.dropWhileEnd Char.isSpace $ t)
+    (ExactPrintFallbackModeRisky, _) -> exactPrintNode exactPrinted
+    _ -> errorAction
 
 rdrNameToText :: RdrName -> Text
 -- rdrNameToText = Text.pack . show . flip runSDoc unsafeGlobalDynFlags . ppr
