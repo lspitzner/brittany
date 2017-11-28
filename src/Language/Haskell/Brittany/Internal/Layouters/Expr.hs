@@ -321,11 +321,11 @@ layoutExpr lexpr@(L _ expr) = docWrapNode lexpr $ case expr of
   SectionL left op -> do -- TODO: add to testsuite
     leftDoc <- docSharedWrapper layoutExpr left
     opDoc   <- docSharedWrapper layoutExpr op
-    docSeq [leftDoc, opDoc]
+    docSeq [leftDoc, docSeparator, opDoc]
   SectionR op right -> do -- TODO: add to testsuite
     opDoc    <- docSharedWrapper layoutExpr op
     rightDoc <- docSharedWrapper layoutExpr right
-    docSeq [opDoc, rightDoc]
+    docSeq [opDoc, docSeparator, rightDoc]
   ExplicitTuple args boxity
     | Just argExprs <- args `forM` (\case (L _ (Present e)) -> Just e; _ -> Nothing) -> do
     argDocs <- docSharedWrapper layoutExpr `mapM` argExprs

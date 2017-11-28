@@ -324,17 +324,17 @@ func = fooooooooooooooooooooooooooooooooo + foooooooooooooooooooooooooooooooo
 parserPrim =
   [ r
   | r <-
-    [ SGPPrimFloat $ bool id (0-) minus $ readGnok "parserPrim"
-                                                   (d1 ++ d2 ++ d3 ++ d4)
+    [ SGPPrimFloat $ bool id (0 -) minus $ readGnok "parserPrim"
+                                                    (d1 ++ d2 ++ d3 ++ d4)
     | d2 <- string "."
     , d3 <- many1 (oneOf "0123456789")
     , _  <- string "f"
     ]
-    <|> [ SGPPrimFloat $ bool id (0-) minus $ fromIntegral
+    <|> [ SGPPrimFloat $ bool id (0 -) minus $ fromIntegral
             (readGnok "parserPrim" d1 :: Integer)
         | _ <- string "f"
         ]
-    <|> [ SGPPrimInt $ bool id (0-) minus $ fromIntegral
+    <|> [ SGPPrimInt $ bool id (0 -) minus $ fromIntegral
             (readGnok "parserPrim" d1 :: Integer)
         | _ <- string "i"
         ]
@@ -485,4 +485,8 @@ func
   => Int
   -> Proxy (str :: [*])
   -> m (Tagged str String)
+
+#test issue 67
+fmapuv :: U.Unbox a => (a -> b) -> U.Vector a -> V.Vector b
+fmapuv f xs = G.generate (G.length xs) (f . (xs G.!))
 
