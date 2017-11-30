@@ -461,17 +461,16 @@ func = lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd lakjsdlajsdljas
 ###
 
 #test left
-func = (1+)
+func = (1 +)
 
 #test right
-func = (+1)
+func = (+ 1)
 
 #test left inf
-## TODO: this could be improved..
-func = (1`abc`)
+func = (1 `abc`)
 
 #test right inf
-func = (`abc`1)
+func = (`abc` 1)
 
 ###
 #group tuples

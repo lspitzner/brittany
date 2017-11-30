@@ -486,17 +486,17 @@ func = lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
 ###
 
 #test left
-func = (1+)
+func = (1 +)
 
 #test right
-func = (+1)
+func = (+ 1)
 
 #test left inf
 ## TODO: this could be improved..
-func = (1`abc`)
+func = (1 `abc`)
 
 #test right inf
-func = (`abc`1)
+func = (`abc` 1)
 
 ###
 #group tuples
@@ -963,18 +963,18 @@ func = fooooooooooooooooooooooooooooooooo + foooooooooooooooooooooooooooooooo
 parserPrim =
   [ r
   | r <-
-    [ SGPPrimFloat $ bool id (0-) minus $ readGnok
+    [ SGPPrimFloat $ bool id (0 -) minus $ readGnok
         "parserPrim"
         (d1 ++ d2 ++ d3 ++ d4)
     | d2 <- string "."
     , d3 <- many1 (oneOf "0123456789")
     , _ <- string "f"
     ]
-    <|> [ SGPPrimFloat $ bool id (0-) minus $ fromIntegral
+    <|> [ SGPPrimFloat $ bool id (0 -) minus $ fromIntegral
             (readGnok "parserPrim" d1 :: Integer)
         | _ <- string "f"
         ]
-    <|> [ SGPPrimInt $ bool id (0-) minus $ fromIntegral
+    <|> [ SGPPrimInt $ bool id (0 -) minus $ fromIntegral
             (readGnok "parserPrim" d1 :: Integer)
         | _ <- string "i"
         ]
