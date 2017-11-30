@@ -174,17 +174,17 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         , docForceSingleline $ return $ typeDoc
         ]
       -- :: forall x
-      -- .  x
+      --  . x
       , docPar
           (docSeq $ docLit (Text.pack "forall") : tyVarDocLineList)
           ( docCols ColTyOpPrefix
-            [ docWrapNodeRest ltype $ docLit $ Text.pack ". "
+            [ docWrapNodeRest ltype $ docLit $ Text.pack " . "
             , maybeForceML $ return typeDoc
             ]
           )
       -- :: forall
       --      (x :: *)
-      -- .  x
+      --  . x
       , docPar
           (docLit (Text.pack "forall"))
           (docLines
@@ -204,7 +204,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
                   ]
             )
           ++[ docCols ColTyOpPrefix
-              [ docWrapNodeRest ltype $ docLit $ Text.pack ". "
+              [ docWrapNodeRest ltype $ docLit $ Text.pack " . "
               , maybeForceML $ return typeDoc
               ]
             ]
@@ -499,7 +499,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           )
           (docCols ColTyOpPrefix
             [ docWrapNodeRest ltype
-            $ docLit $ Text.pack "::"
+            $ docLit $ Text.pack ":: "
             , docAddBaseY (BrIndentSpecial 2) typeDoc1
             ])
       ]

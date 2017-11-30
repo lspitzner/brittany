@@ -265,9 +265,15 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
         gs  -> docSeq
             $  [appSep $ docLit $ Text.pack "|"]
             ++ List.intersperse docCommaSep (return <$> gs)
-  docAlt
+
+  indentPolicy <- mAsk
+    <&> _conf_layout
+    .>  _lconfig_indentPolicy
+    .>  confUnpack
+  docAltFilter
     $  -- one-line solution
-       [ docCols
+       [ ( True
+         , docCols
          (ColBindingLine alignmentToken)
          [ docSeq (patPartInline ++ [guardPart])
          , docSeq
@@ -276,6 +282,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
            , wherePart
            ]
          ]
+         )
        | not hasComments
        , [(guards, body, _bodyRaw)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
@@ -289,7 +296,8 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
          _        -> []
        ]
     ++ -- one-line solution + where in next line(s)
-       [ docLines
+       [ ( True
+         , docLines
          $  [ docCols
               (ColBindingLine alignmentToken)
               [ docSeq (patPartInline ++ [guardPart])
@@ -298,23 +306,27 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
               ]
             ]
          ++ wherePartMultiLine
+         )
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
        , Data.Maybe.isJust mWhereDocs
        ]
     ++ -- two-line solution + where in next line(s)
-       [ docLines
+       [ ( True 
+         , docLines
          $  [ docForceSingleline
             $ docSeq (patPartInline ++ [guardPart, return binderDoc])
             , docEnsureIndent BrIndentRegular $ docForceSingleline $ return body
             ]
          ++ wherePartMultiLine
+         )
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
        ]
     ++ -- pattern and exactly one clause in single line, body as par;
        -- where in following lines
-       [                            docLines
+       [ ( True
+         , docLines
          $  [ docCols
               (ColBindingLine alignmentToken)
               [ docSeq (patPartInline ++ [guardPart])
@@ -329,24 +341,28 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
           --   , docAddBaseY BrIndentRegular $ return body
           --   ]
          ++ wherePartMultiLine
+         )
        | [(guards, body, _bodyRaw)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
        ]
     ++ -- pattern and exactly one clause in single line, body in new line.
-       [ docLines
+       [ ( True
+         , docLines
          $  [ docSeq (patPartInline ++ [guardPart, return binderDoc])
             , docEnsureIndent BrIndentRegular
             $ docNonBottomSpacing
             $ (docAddBaseY BrIndentRegular $ return body)
             ]
          ++ wherePartMultiLine
+         )
        | [(guards, body, _)] <- [clauseDocs]
        , let guardPart = singleLineGuardsDoc guards
        ]
     ++ -- multiple clauses added in-paragraph, each in a single line
        -- example: foo | bar = baz
        --              | lll = asd
-       [ docLines
+       [ ( indentPolicy /= IndentPolicyLeft
+         , docLines
          $  [ docSeq
               [ appSep $ docForceSingleline $ return patDoc
               , docSetBaseY
@@ -370,10 +386,12 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
               ]
             ]
          ++ wherePartMultiLine
+         )
        | Just patDoc <- [mPatDoc]
        ]
     ++ -- multiple clauses, each in a separate, single line
-       [ docLines
+       [ ( True
+         , docLines
          $  [ docAddBaseY BrIndentRegular
               $   patPartParWrap
               $   docLines
@@ -396,10 +414,12 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                       ]
             ]
          ++ wherePartMultiLine
+         )
        ]
     ++ -- multiple clauses, each with the guard(s) in a single line, body
        -- as a paragraph
-       [ docLines
+       [ ( True
+         , docLines
          $  [ docAddBaseY BrIndentRegular
               $   patPartParWrap
               $   docLines
@@ -431,10 +451,12 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                          ]
             ]
          ++ wherePartMultiLine
+         )
        ]
     ++ -- multiple clauses, each with the guard(s) in a single line, body
        -- in a new line as a paragraph
-       [ docLines
+       [ ( True
+         , docLines
          $  [ docAddBaseY BrIndentRegular
               $   patPartParWrap
               $   docLines
@@ -464,9 +486,11 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                        ]
             ]
          ++ wherePartMultiLine
+         )
        ]
     ++ -- conservative approach: everything starts on the left.
-       [ docLines
+       [ ( True
+         , docLines
          $  [ docAddBaseY BrIndentRegular
               $   patPartParWrap
               $   docLines
@@ -494,4 +518,5 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                          ]
             ]
          ++ wherePartMultiLine
+         )
        ]
