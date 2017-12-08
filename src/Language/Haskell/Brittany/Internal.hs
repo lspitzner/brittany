@@ -320,8 +320,8 @@ withTransformedAnns ast m = do
 
 ppDecl :: LHsDecl RdrName -> PPMLocal ()
 ppDecl d@(L loc decl) = case decl of
-  SigD sig  -> -- trace (_sigHead sig) $
-               withTransformedAnns d $ do
+  SigD sig -> -- trace (_sigHead sig) $
+              withTransformedAnns d $ do
     -- runLayouter $ Old.layoutSig (L loc sig)
     briDoc <- briDocMToPPM $ layoutSig (L loc sig)
     layoutBriDoc briDoc
@@ -332,9 +332,9 @@ ppDecl d@(L loc decl) = case decl of
       eitherNode <- layoutBind (L loc bind)
       case eitherNode of
         Left  ns -> docLines $ return <$> ns
-        Right n -> return n
+        Right n  -> return n
     layoutBriDoc briDoc
-  _         -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc
+  _ -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc
 
 _sigHead :: Sig RdrName -> String
 _sigHead = \case

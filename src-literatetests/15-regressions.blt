@@ -509,3 +509,7 @@ fmapuv f xs = G.generate (G.length xs) (f . (xs G.!))
 
 #test parallellistcomp-workaround
 cs0 = 0 : [ c / Interval n | c <- cs | n <- [1..] ]
+
+#test issue 70
+{-# LANGUAGE TemplateHaskell #-}
+deriveFromJSON (unPrefix "assignPost") ''AssignmentPost

@@ -217,11 +217,18 @@ extractToplevelAnns
 extractToplevelAnns lmod anns = output
  where
   (L _ (HsModule _ _ _ ldecls _ _)) = lmod
-  declMap :: Map ExactPrint.AnnKey ExactPrint.AnnKey
-  declMap = Map.unions $ ldecls <&> \ldecl ->
+  declMap1 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+  declMap1 = Map.unions $ ldecls <&> \ldecl ->
     Map.fromSet (const (ExactPrint.mkAnnKey ldecl)) (foldedAnnKeys ldecl)
-  modKey = ExactPrint.mkAnnKey lmod
-  output = groupMap (\k _ -> Map.findWithDefault modKey k declMap) anns
+  declMap2 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+  declMap2 =
+    Map.fromList
+      $ [ (captured, declMap1 Map.! k)
+        | (k, ExactPrint.Ann _ _ _ _ _ (Just captured)) <- Map.toList anns
+        ]
+  declMap = declMap1 `Map.union` declMap2
+  modKey  = ExactPrint.mkAnnKey lmod
+  output  = groupMap (\k _ -> Map.findWithDefault modKey k declMap) anns
 
 groupMap :: (Ord k, Ord l) => (k -> a -> l) -> Map k a -> Map l (Map k a)
 groupMap f = Map.foldlWithKey' (\m k a -> Map.alter (insert k a) (f k a) m)
