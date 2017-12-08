@@ -1,5 +1,31 @@
 # Revision history for brittany
 
+## 0.9.0.0  -- December 2017
+
+* Change default global config path (use XDG spec)
+    Existing config should still be respected, so this should not break
+    compatibility
+* ! Slight rework of the commandline interface:
+    - Support multiple inputs and outputs
+    - Support inplace-transformation for multiple files via
+      `--write-mode=inplace`
+* Implement `IndentPolicyLeft` - the indentation mode that never adds more
+  than the base indentation for nested parts (no hanging indentation)
+
+    (thanks to Evan Borden)
+* Fix bug that manifested in bad output for (top-level) template haskell splices
+* Extension support:
+    - RecordWildCards
+    - RecursiveDo (was only partially supported previously)
+* Layouting Bugfixes:
+    - Properly reproduce parentheses around kind signatures
+    - Fix issue around promoted lists
+      (example good: `'[ 'True]` bad: `'['True]`)
+    - Trim text from exactprint used as workaround for unknown nodes
+      (unsupported extension workaround)
+* Layouting changes
+    - Insert spaces around operator in sections
+
 ## 0.8.0.3  -- September 2017
 
 * Support for ghc-8.2.1
