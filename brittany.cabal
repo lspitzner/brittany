@@ -32,11 +32,6 @@ source-repository head {
   location: https://github.com/lspitzner/brittany.git
 }
 
-flag brittany-dev
-  description: dev options
-  default: False
-  manual: True
-
 flag brittany-dev-lib
   description: set buildable false for anything but lib
   default: False
@@ -82,9 +77,6 @@ library {
     -Wall
     -fno-warn-unused-imports
     -fno-warn-redundant-constraints
-  }
-  if flag(brittany-dev) {
-    ghc-options: -O0 -Werror -fobject-code
   }
   build-depends:
     { base >=4.9 && <4.11
@@ -206,14 +198,6 @@ executable brittany
     -rtsopts
     -with-rtsopts "-M2G"
   }
-  if flag(brittany-dev) {
-    ghc-options:
-      -O0
-      -Werror
-      -fobject-code
-      -fprof-auto
-      -fprof-cafs
-  }
 
 test-suite unittests
   if flag(brittany-dev-lib) {
@@ -281,9 +265,6 @@ test-suite unittests
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"
-  }
-  if flag(brittany-dev) {
-    ghc-options: -O0 -Werror -fobject-code
   }
 
 test-suite littests
@@ -353,9 +334,6 @@ test-suite littests
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"
-  }
-  if flag(brittany-dev) {
-    ghc-options: -O0 -Werror -fobject-code
   }
 
 test-suite libinterfacetests
