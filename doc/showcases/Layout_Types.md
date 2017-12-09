@@ -44,6 +44,7 @@ linewise
   -> RH.AppHost t ()
 ~~~~
 
+~~~~.hs
 linewise ::
      forall n t.
      (Ord n, R.ReflexHost t, MonadIO (R.PushM t), MonadIO (R.HostFrame t))
@@ -54,8 +55,9 @@ linewise ::
                                                                       , R.Behavior t String -- tab-completion value
                                                                       , R.Dynamic t (Widget n)))
   -> RH.AppHost t ()
+~~~~
 
-
+~~~~.hs
 processDefault ::
      ( ExactPrint.Annotate.Annotate ast
      , MonadMultiWriter Text.Builder.Builder m
@@ -63,3 +65,4 @@ processDefault ::
      )
   => Located ast
   -> m ()
+~~~~
