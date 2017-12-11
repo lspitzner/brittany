@@ -75,13 +75,14 @@ require fixing:
     cp `./find dist-newstyle/build/ -type f -name brittany` $HOME/.cabal/bin/
     ~~~~
 
-- via `stack`
+- via `stack` using a sufficiently recent stackage snapshot (dated to >= 2017-11-15)
 
     ~~~~.sh
-    git clone https://github.com/lspitzner/brittany.git
-    cd brittany
-    stack install
+    stack install brittany # --resolver=nightly-2017-11-15
     ~~~~
+
+    (alternatively, should nightlies be unreliable, or you want to use ghc-8.0 or something, then
+    cloning the repo and doing `stack install` will use an lts resolver.)
 
 - on ArchLinux via [the britanny AUR package](https://aur.archlinux.org/packages/brittany/)
   using `aura`:
