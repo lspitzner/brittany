@@ -83,6 +83,10 @@ require fixing:
     stack install
     ~~~~
 
+- via `aura` on ArchLinux
+    ~~~~.sh
+    aura -A brittany
+    ~~~~
 
 # Usage
 
