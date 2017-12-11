@@ -5,6 +5,7 @@
 * Change default global config path (use XDG spec)
     Existing config should still be respected, so this should not break
     compatibility
+* Support per-project config
 * ! Slight rework of the commandline interface:
     - Support multiple inputs and outputs
     - Support inplace-transformation for multiple files via
