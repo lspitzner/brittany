@@ -83,6 +83,11 @@ require fixing:
     stack install
     ~~~~
 
+- on ArchLinux via [the britanny AUR package](https://aur.archlinux.org/packages/brittany/)
+  using `aura`:
+    ~~~~.sh
+    aura -A brittany
+    ~~~~
 
 # Usage
 
