@@ -341,9 +341,9 @@ layoutExpr lexpr@(L _ expr) = do
       opDoc    <- docSharedWrapper layoutExpr op
       rightDoc <- docSharedWrapper layoutExpr right
       docSeq [opDoc, docSeparator, rightDoc]
-    ExplicitTuple args boxity
-      | Just argExprs <- args `forM` (\case (L _ (Present e)) -> Just e; _ -> Nothing) -> do
-      argDocs <- docSharedWrapper layoutExpr `mapM` argExprs
+    ExplicitTuple args boxity -> do
+      let argExprs = fmap (\case (L _ (Present e)) -> Just e; (L _ (Missing PlaceHolder)) -> Nothing) args
+      argDocs <- docSharedWrapper (maybe docEmpty layoutExpr) `mapM` argExprs
       hasComments <- hasAnyCommentsBelow lexpr
       let (openLit, closeLit) = case boxity of
             Boxed -> (docLit $ Text.pack "(", docLit $ Text.pack ")")
@@ -385,8 +385,6 @@ layoutExpr lexpr@(L _ expr) = do
                 end   = closeLit
               in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
             ]
-    ExplicitTuple{} ->
-      unknownNodeError "ExplicitTuple|.." lexpr 
     HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
       cExpDoc <- docSharedWrapper layoutExpr cExp
       binderDoc <- docLit $ Text.pack "->"
