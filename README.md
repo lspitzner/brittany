@@ -43,13 +43,19 @@ require fixing:
   accidentally quadratic sub-algorithm); noticable for inputs with >1k loc.~~
   (fixed in `0.8.0.3`)
 
+## Try without Installing
+
+You can [paste haskell code over here](https://hexagoxel.de/brittany/)
+to test how it gets formatted by brittany. (Rg. privacy: the server does
+log the size of the input, but _not_ the full requests.)
+
 # Other usage notes
 
 - Supports GHC versions `8.0.*` and `8.2.*`.
 - as of November'17, `brittany` is available on stackage nightly.
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
-- uses/creates user config file in `~/.brittany/config.yaml`;
+- uses/creates user config file in `~/.config/brittany/config.yaml`;
   also reads `brittany.yaml` in current dir if present.
 
 # Installation
@@ -92,12 +98,19 @@ require fixing:
 
 # Usage
 
-- Currently one mode of operation: Transform a single module. By default read
-  from `stdin` and written to `stdout`, but commandline arguments allow to
-  read/write from/to files.
+- Default mode of operation: Transform a single module, from `stdin` to `stdout`.
+  Can pass one or multiple files as input, and there is a flag to override them
+  in place instead of using `stdout` (since 0.9.0.0). So:
+  
+    ~~~~ .sh
+    brittany                           # stdin -> stdout
+    brittany mysource.hs               # ./mysource.hs -> stdout
+    brittany --write-mode=inplace *.hs # apply formatting to all ./*.hs inplace
+    ~~~~
+    
 - For stdin/stdout usage it makes sense to enable certain syntactic extensions
   by default, i.e. to add something like this to your
-  `~/.brittany/config.yaml` (execute `brittany` once to create default):
+  `~/.config/brittany/config.yaml` (execute `brittany` once to create default):
 
     ~~~~
     conf_forward:
