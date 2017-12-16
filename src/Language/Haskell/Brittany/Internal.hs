@@ -33,6 +33,7 @@ import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import           Language.Haskell.Brittany.Internal.Layouters.Type
 import           Language.Haskell.Brittany.Internal.Layouters.Decl
+import           Language.Haskell.Brittany.Internal.Layouters.Module
 import           Language.Haskell.Brittany.Internal.Utils
 import           Language.Haskell.Brittany.Internal.Backend
 import           Language.Haskell.Brittany.Internal.BackendUtils
@@ -155,7 +156,7 @@ pPrintModule conf anns parsedModule =
   in
     tracer $ (errs, Text.Builder.toLazyText out)
   -- unless () $ do
-  --   
+  --
   --   debugStrings `forM_` \s ->
   --     trace s $ return ()
 
@@ -243,30 +244,8 @@ parsePrintModuleTests conf filename input = do
 --         else return $ TextL.toStrict $ Text.Builder.toLazyText out
 
 ppModule :: GenLocated SrcSpan (HsModule RdrName) -> PPM ()
-ppModule lmod@(L loc m@(HsModule _name _exports _imports decls _ _)) = do
-  let emptyModule = L loc m { hsmodDecls = [] }
-  (anns', post) <- do
-    anns <- mAsk
-    -- evil partiality. but rather unlikely.
-    return $ case Map.lookup (ExactPrint.Types.mkAnnKey lmod) anns of
-      Nothing -> (anns, [])
-      Just mAnn ->
-        let modAnnsDp = ExactPrint.Types.annsDP mAnn
-            isWhere (ExactPrint.Types.G AnnWhere) = True
-            isWhere _                             = False
-            isEof (ExactPrint.Types.G AnnEofPos) = True
-            isEof _                              = False
-            whereInd    = List.findIndex (isWhere . fst) modAnnsDp
-            eofInd      = List.findIndex (isEof . fst) modAnnsDp
-            (pre, post) = case (whereInd, eofInd) of
-              (Nothing, Nothing) -> ([], modAnnsDp)
-              (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
-              (Nothing, Just _i) -> ([], modAnnsDp)
-              (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
-            mAnn'       = mAnn { ExactPrint.Types.annsDP = pre }
-            anns'       = Map.insert (ExactPrint.Types.mkAnnKey lmod) mAnn' anns
-        in  (anns', post)
-  MultiRWSS.withMultiReader anns' $ processDefault emptyModule
+ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
+  post <- ppPreamble lmod
   decls `forM_` \decl -> do
     filteredAnns <- mAsk <&> \annMap ->
       Map.findWithDefault Map.empty (ExactPrint.Types.mkAnnKey decl) annMap
@@ -335,6 +314,51 @@ ppDecl d@(L loc decl) = case decl of
         Right n  -> return n
     layoutBriDoc briDoc
   _ -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc
+
+-- Prints the information associated with the module annotation
+-- This includes the imports
+ppPreamble :: GenLocated SrcSpan (HsModule RdrName)
+           -> PPM [(ExactPrint.Types.KeywordId, ExactPrint.Types.DeltaPos)]
+ppPreamble lmod@(L _ (HsModule _ _ _ _ _ _)) = do
+  filteredAnns <- mAsk <&> \annMap ->
+    Map.findWithDefault Map.empty (ExactPrint.Types.mkAnnKey lmod) annMap
+    -- Since ghc-exactprint adds annotations following (implicit)
+    -- modules to both HsModule and the elements in the module
+    -- this can cause duplication of comments. So strip
+    -- attached annotations that come after the module's where
+    -- from the module node
+  let (filteredAnns', post) =
+        case (ExactPrint.Types.mkAnnKey lmod) `Map.lookup` filteredAnns of
+          Nothing -> (filteredAnns, [])
+          Just mAnn ->
+            let modAnnsDp = ExactPrint.Types.annsDP mAnn
+                isWhere (ExactPrint.Types.G AnnWhere) = True
+                isWhere _                             = False
+                isEof (ExactPrint.Types.G AnnEofPos) = True
+                isEof _                              = False
+                whereInd    = List.findIndex (isWhere . fst) modAnnsDp
+                eofInd      = List.findIndex (isEof . fst) modAnnsDp
+                (pre, post') = case (whereInd, eofInd) of
+                  (Nothing, Nothing) -> ([], modAnnsDp)
+                  (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
+                  (Nothing, Just _i) -> ([], modAnnsDp)
+                  (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
+                mAnn'       = mAnn { ExactPrint.Types.annsDP = pre }
+                filteredAnns'' = Map.insert (ExactPrint.Types.mkAnnKey lmod) mAnn' filteredAnns
+            in (filteredAnns'', post')
+    in do
+      traceIfDumpConf "bridoc annotations filtered/transformed"
+                      _dconf_dump_annotations
+        $ annsDoc filteredAnns'
+
+      config <- mAsk
+
+      MultiRWSS.withoutMultiReader $ do
+        MultiRWSS.mPutRawR $ config :+: filteredAnns' :+: HNil
+        withTransformedAnns lmod $ do
+          briDoc <- briDocMToPPM $ layoutModule lmod
+          layoutBriDoc briDoc
+      return post
 
 _sigHead :: Sig RdrName -> String
 _sigHead = \case
