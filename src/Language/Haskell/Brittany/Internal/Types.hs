@@ -178,6 +178,7 @@ data ColSig
   | ColTuple
   | ColTuples
   | ColOpPrefix -- merge with ColList ? other stuff?
+  | ColImport
 
   -- TODO
   deriving (Eq, Ord, Data.Data.Data, Show)

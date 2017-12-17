@@ -11,7 +11,13 @@ import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
 import           RdrName (RdrName(..))
-import GHC (unLoc, runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..))
+import           GHC     ( unLoc
+                         , runGhc
+                         , GenLocated(L)
+                         , moduleNameString
+                         , AnnKeywordId(..)
+                         , Located
+                         )
 import           HsSyn
 import           Name
 import           HsImpExp
@@ -22,53 +28,53 @@ import           BasicTypes
 import           Language.Haskell.Brittany.Internal.Utils
 
 
-layoutIE :: ToBriDoc IE
-layoutIE lie@(L _ _ie) =
-  docWrapNode lie
-    $ let
-        ien = docLit $ rdrNameToText $ ieName _ie
-      in
-        case _ie of
-          IEVar      _ -> ien
-          IEThingAbs _ -> ien
-          IEThingAll _ -> docSeq [ien, docLit $ Text.pack "(..)"]
-          IEThingWith _ (IEWildcard _) _ _ ->
-            docSeq [ien, docLit $ Text.pack "(..)"]
-          IEThingWith _ _ ns fs ->
-            let
-              prepareFL =
-                docLit . Text.pack . FastString.unpackFS . flLabel . unLoc
-            in
-              docSeq
-              $  [ien, docLit $ Text.pack "("]
+
 #if MIN_VERSION_ghc(8,2,0)
-              ++ (  intersperse docCommaSep (map (docLit . lrdrNameToText . ieLWrappedName) ns)
+prepareName :: LIEWrappedName name -> Located name
+prepareName = ieLWrappedName
 #else
-              ++ (  intersperse docCommaSep (map (docLit . lrdrNameToText) ns)
+prepareName :: Located name -> Located name
+prepareName = id
 #endif
-                 ++ intersperse docCommaSep (map (prepareFL) fs)
-                 )
-              ++ [docLit $ Text.pack ")"]
-          IEModuleContents n -> docSeq
-            [ docLit $ Text.pack "module"
-            , docSeparator
-            , docLit . Text.pack . moduleNameString $ unLoc n
-            ]
-          _ -> docEmpty
+
+layoutIE :: ToBriDoc IE
+layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
+  IEVar      _                     -> ien
+  IEThingAbs _                     -> ien
+  IEThingAll _                     -> docSeq [ien, docLit $ Text.pack "(..)"]
+  IEThingWith _ (IEWildcard _) _ _ -> docSeq [ien, docLit $ Text.pack "(..)"]
+  IEThingWith _ _ ns fs ->
+    docSeq
+      $  [ien, docLit $ Text.pack "("]
+      ++ (  intersperse docCommaSep
+                        (map (docLit . lrdrNameToText . prepareName) ns)
+         ++ intersperse docCommaSep (map prepareFL fs)
+         )
+      ++ [docLit $ Text.pack ")"]
+   where
+    prepareFL = docLit . Text.pack . FastString.unpackFS . flLabel . unLoc
+  IEModuleContents n -> docSeq
+    [ docLit $ Text.pack "module"
+    , docSeparator
+    , docLit . Text.pack . moduleNameString $ unLoc n
+    ]
+  _ -> docEmpty
+  where ien = docLit $ rdrNameToText $ ieName ie
 
 layoutIEList :: [LIE RdrName] -> ToBriDocM BriDocNumbered
 layoutIEList lies = do
   ies <- mapM (docSharedWrapper layoutIE) lies
   case ies of
-    []     -> docLit $ Text.pack "()"
-    (x:xs) -> docAlt
+    []         -> docLit $ Text.pack "()"
+    xs@(x1:xr) -> docAlt
       [ docSeq
-      $  [docLit $ Text.pack "(", x]
-      ++ map (\x' -> docSeq [docCommaSep, x']) xs
-      ++ [docLit $ Text.pack ")"]
+        [ docLit $ Text.pack "("
+        , docSeq $ List.intersperse docCommaSep xs
+        , docLit $ Text.pack ")"
+        ]
       , docLines
-        (  docSeq [docLit $ Text.pack "(", docSeparator, x]
-        :  map (\x' -> docSeq [docCommaSep, x']) xs
-        ++ [docLit $ Text.pack ")"]
+        (  [docSeq [docParenLSep, x1]]
+        ++ [ docSeq [docCommaSep, x] | x <- xr ]
+        ++ [docParenR]
         )
       ]
