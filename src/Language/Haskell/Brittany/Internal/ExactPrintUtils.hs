@@ -37,6 +37,8 @@ import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Delta      as ExactPrint
 
 import qualified Data.Generics as SYB
+
+import           Control.Exception
 -- import           Data.Generics.Schemes
 
 
@@ -85,7 +87,14 @@ parseModuleFromString
   -> String
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
 parseModuleFromString args fp dynCheck str =
-  ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
+  -- We mask here because otherwise using `throwTo` (i.e. for a timeout) will
+  -- produce nasty looking errors ("ghc panic"). The `mask_` makes it so we
+  -- cannot kill the parsing thread - not very nice. But i'll
+  -- optimistically assume that most of the time brittany uses noticable or
+  -- longer time, the majority of the time is not spend in parsing, but in
+  -- bridoc transformation stuff.
+  -- (reminder to update note on `parsePrintModule` if this changes.)
+  mask_ $ ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
     dflags0                       <- lift $ ExactPrint.initDynFlagsPure fp str
     (dflags1, leftover, warnings) <- lift
       $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)

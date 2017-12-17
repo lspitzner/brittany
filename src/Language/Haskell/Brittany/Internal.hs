@@ -61,6 +61,11 @@ import qualified GHC.LanguageExtensions.Type as GHC
 --
 -- Note that this function ignores/resets all config values regarding
 -- debugging, i.e. it will never use `trace`/write to stderr.
+--
+-- Note that the ghc parsing function used internally currently is wrapped in
+-- `mask_`, so cannot be killed easily. If you don't control the input, you
+-- may wish to put some proper upper bound on the input's size as a timeout
+-- won't do.
 parsePrintModule :: Config -> Text -> IO (Either [BrittanyError] Text)
 parsePrintModule configRaw inputText = runExceptT $ do
   let config = configRaw { _conf_debug = _conf_debug staticDefaultConfig }
