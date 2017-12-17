@@ -23,8 +23,23 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
   ImportDecl _ (L _ modName) pkg src safe q False as llies ->
     let
       modNameT         = Text.pack $ moduleNameString modName
-      pkgNameT         = Text.pack . sl_st <$> pkg
-      asT              = Text.pack . moduleNameString <$> as
+#if MIN_VERSION_ghc(8,2,0)
+      prepPkg rawN    =
+        case rawN of
+          SourceText n -> n
+          -- This would be odd to encounter and the
+          -- result will most certainly be wrong
+          NoSourceText -> ""
+#else
+      prepPkg         = id
+#endif
+      pkgNameT         = Text.pack . prepPkg . sl_st <$> pkg
+#if MIN_VERSION_ghc(8,2,0)
+      prepModName      = unLoc
+#else
+      prepModName      = id
+#endif
+      asT              = Text.pack . moduleNameString . prepModName <$> as
       sig              = ColBindingLine (Just (Text.pack "import"))
       importQualifiers = docSeq
         [ appSep $ docLit $ Text.pack "import"

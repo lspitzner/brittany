@@ -41,7 +41,11 @@ layoutIE lie@(L _ _ie) =
             in
               docSeq
               $  [ien, docLit $ Text.pack "("]
+#if MIN_VERSION_ghc(8,2,0)
+              ++ (  intersperse docCommaSep (map (docLit . lrdrNameToText . ieLWrappedName) ns)
+#else
               ++ (  intersperse docCommaSep (map (docLit . lrdrNameToText) ns)
+#endif
                  ++ intersperse docCommaSep (map (prepareFL) fs)
                  )
               ++ [docLit $ Text.pack ")"]
