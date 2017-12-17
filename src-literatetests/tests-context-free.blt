@@ -593,6 +593,168 @@ func =
       ]
     ++ [ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc]
 
+###
+#group module
+###
+
+#test simple
+module Main where
+
+#test no-exports
+module Main () where
+
+#test one-export
+module Main (main) where
+
+#test several-exports
+module Main (main, test1, test2) where
+
+#test many-exports
+module Main
+  ( main
+  , test1
+  , test2
+  , test3
+  , test4
+  , test5
+  , test6
+  , test7
+  , test8
+  , test9
+  )
+where
+
+#test exports-with-comments
+module Main
+  ( main
+  , test1
+  , test2
+  -- Test 3
+  , test3
+  , test4
+  -- Test 5
+  , test5
+  )
+where
+
+#test simple-export-with-things
+module Main (Test(..)) where
+
+#test simple-export-with-module-contents
+module Main (module Main) where
+
+#test export-with-things
+module Main (Test(Test, a, b)) where
+
+#test export-with-empty-thing
+module Main (Test()) where
+
+#test empty-with-comment
+-- Intentionally left empty
+
+###
+#group import
+###
+
+#test simple-import
+import Data.List
+
+#test simple-import-alias
+import Data.List as L
+
+#test simple-qualified-import
+import qualified Data.List
+
+#test simple-qualified-import-alias
+import qualified Data.List as L
+
+#test simple-safe
+import safe Data.List
+
+#test simple-source
+import {-# SOURCE #-} Data.List
+
+#test simple-safe-qualified
+import safe qualified Data.List
+
+#test simple-safe-qualified-source
+import {-# SOURCE #-} safe qualified Data.List
+
+#test simple-qualified-package
+import qualified "base" Data.List
+
+#test instances-only
+import qualified Data.List ()
+
+#test one-element
+import Data.List (nub)
+
+#test several-elements
+import Data.List (nub, foldl', indexElem)
+
+#test with-things
+import Test (T, T2(), T3(..), T4(T4), T5(T5, t5))
+
+#test hiding
+import Test hiding ()
+import Test as T hiding ()
+
+#test horizontal-layout
+import Data.List (nub)
+import qualified Data.List as L (foldl')
+
+import Test (test)
+import Main hiding
+  ( main
+  , test1
+  , test2
+  , test3
+  , test4
+  , test5
+  , test6
+  , test7
+  , test8
+  , test9
+  )
+
+#test import-with-comments
+-- Test
+import Data.List (nub) -- Test
+{- Test -}
+import qualified Data.List as L (foldl') {- Test -}
+
+-- Test
+import Test (test)
+
+#test preamble full-preamble
+{-# LANGUAGE BangPatterns #-}
+
+{-
+ - Test module
+ -}
+module Test
+  ( test1
+  -- ^ test
+  , test2
+  -- | test
+  , test3
+  , test4
+  , test5
+  , test6
+  , test7
+  , test8
+  , test9
+  , test10
+  )
+where
+
+-- Test
+import Data.List (nub) -- Test
+{- Test -}
+import qualified Data.List as L (foldl') {- Test -}
+
+-- Test
+import Test (test)
 
 ###############################################################################
 ###############################################################################
@@ -1128,4 +1290,3 @@ foo =
 ##           ]
 ##  where
 ##   role = stringProperty "WM_WINDOW_ROLE"
-
