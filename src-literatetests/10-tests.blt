@@ -617,22 +617,22 @@ module Main (Test()) where
 ###############################################################################
 
 #test simple-import
-import Data.List
+import           Data.List
 
 #test simple-import-alias
-import Data.List as L
+import           Data.List                               as L
 
 #test simple-qualified-import
 import qualified Data.List
 
 #test simple-qualified-import-alias
-import qualified Data.List as L
+import qualified Data.List                               as L
 
 #test simple-safe
-import safe Data.List
+import safe      Data.List                               as L
 
 #test simple-source
-import {-# SOURCE #-} Data.List
+import {-# SOURCE #-} Data.List                           ( )
 
 #test simple-safe-qualified
 import safe qualified Data.List
@@ -643,48 +643,69 @@ import {-# SOURCE #-} safe qualified Data.List
 #test simple-qualified-package
 import qualified "base" Data.List
 
+#test qualifier-effect
+import {-# SOURCE #-} safe qualified "base" Data.List    as L
+import {-# SOURCE #-} safe qualified "base" Data.List     ( )
+import {-# SOURCE #-} safe qualified Data.List     hiding ( )
+
 #test instances-only
-import qualified Data.List ()
+import qualified Data.List                                ( )
 
 #test one-element
-import Data.List (nub)
+import           Data.List                                ( nub )
 
 #test several-elements
-import Data.List (nub, foldl', indexElem)
+import           Data.List                                ( nub
+                                                          , foldl'
+                                                          , indexElem
+                                                          )
 
 #test with-things
-import Test (T, T2(), T3(..), T4(T4), T5(T5, t5))
+import           Test                                     ( T
+                                                          , T2()
+                                                          , T3(..)
+                                                          , T4(T4)
+                                                          , T5(T5, t5)
+                                                          )
 
 #test hiding
-import Test hiding ()
-import Test as T hiding ()
+import           Test                              hiding ( )
+import           Test                                    as T
+                                                   hiding ( )
 
-#test horizontal-layout
-import           Data.List (nub)
-import qualified Data.List as L (foldl')
+#test long-module-name
+import           TestJustShortEnoughModuleNameLikeThisOne ( )
+import           TestJustAbitToLongModuleNameLikeThisOneIs
+                                                          ( )
 
-import           Test (test)
-import           Main hiding
-  ( main
-  , test1
-  , test2
-  , test3
-  , test4
-  , test5
-  , test6
-  , test7
-  , test8
-  , test9
-  )
+import           TestJustShortEnoughModuleNameLikeThisOn as T
+import           TestJustAbitToLongModuleNameLikeThisOneI
+                                                         as T
+
+import           TestJustShortEnoughModuleNameLike hiding ( )
+import           TestJustAbitToLongModuleNameLikeTh
+                                                   hiding ( )
+
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff ( )
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAffe
+                                                          ( )
+
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAf as T
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff
+                                                         as T
+import {-# SOURCE #-} safe qualified "qualifier" A hiding ( )
+import {-# SOURCE #-} safe qualified "qualifiers" A
+                                                   hiding ( )
 
 #test import-with-comments
 -- Test
-import           Data.List (nub) -- Test
+import           Data.List                                ( nub ) -- Test
 {- Test -}
-import qualified Data.List as L (foldl') {- Test -}
+import qualified Data.List                               as L
+                                                          ( foldl' ) {- Test -}
 
 -- Test
-import           Test (test)
+import           Test                                     ( test )
 
 #test preamble full-preamble
 {-# LANGUAGE BangPatterns #-}
@@ -709,9 +730,10 @@ module Test
 where
 
 -- Test
-import           Data.List (nub) -- Test
+import           Data.List                                ( nub ) -- Test
 {- Test -}
-import qualified Data.List as L (foldl') {- Test -}
+import qualified Data.List                               as L
+                                                          ( foldl' ) {- Test -}
 
 -- Test
-import           Test (test)
+import           Test                                     ( test )
