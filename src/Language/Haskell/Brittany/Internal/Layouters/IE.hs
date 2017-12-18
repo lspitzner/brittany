@@ -59,7 +59,7 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     , docLit . Text.pack . moduleNameString $ unLoc n
     ]
   _ -> docEmpty
-  where ien = docLit $ rdrNameToText $ ieName ie
+  where ien = docLit =<< lrdrNameToTextAnn (ieName <$> lie)
 
 layoutIEList :: [LIE RdrName] -> ToBriDocM BriDocNumbered
 layoutIEList lies = do
