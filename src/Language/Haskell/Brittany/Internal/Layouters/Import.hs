@@ -76,25 +76,50 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         docEnsureIndent (BrIndentSpecial qLength) $ appSep $ docLit modNameT
       hidDoc =
         if hiding then appSep $ docLit $ Text.pack "hiding" else docEmpty
-      importHead = docSeq [importQualifiers, modNameD]
-      Just lies  = mlies
+      importHead      = docSeq [importQualifiers, modNameD]
+      Just lies       = mlies
       Just (_, llies) = mllies
-      (ieH:ieT)  = map layoutIE lies
+      (ieH:ieT)       = map layoutIE lies
       makeIENode ie = docSeq [docCommaSep, ie]
       bindings@(bindingsH:bindingsT) =
         docSeq [docParenLSep, ieH]
-          :  map makeIENode ieT
+          :  bindingsT'
           ++ [docSeq [docSeparator, docParenR]]
+        where
+          -- Handle the last element with docWrapNode llies
+          bindingsT' =
+            case ieT of
+              [] -> []
+              [ie] -> [makeIENode $ docWrapNode llies $ ie]
+              _ -> map makeIENode (List.init ieT) ++ [makeIENode $ docWrapNode llies $ List.last ieT]
       bindingsD = case mlies of
-        Nothing  -> docSeq [docEmpty]
+        Nothing -> docSeq [docEmpty]
         -- ..[hiding].( )
-        Just []  -> docSeq [hidDoc, docParenLSep, docParenR]
+        Just [] -> do
+          hasComments <- hasAnyCommentsBelow llies
+          if hasComments
+          then
+            docWrapNodeRest llies
+            $ docPar
+                (docSeq [hidDoc, docParenLSep, docWrapNode llies docEmpty])
+            $ docLines [docParenR]
+          else
+            docWrapNodeRest llies $ docSeq [hidDoc, docParenLSep, docParenR]
         -- ..[hiding].( b )
-        Just [_] -> docSeq $ hidDoc : bindings
+        Just [_] -> do
+          hasComments <- hasAnyCommentsBelow llies
+          if hasComments
+          then
+            docWrapNodeRest llies $ docPar (docSeq [hidDoc, docWrapNode llies $ bindingsH]) $ docLines
+              bindingsT
+          else
+            docWrapNodeRest llies $ docSeq $ hidDoc : bindings
         -- ..[hiding].( b
         --            , b'
         --            )
-        Just _ -> docWrapNode llies $ docPar (docSeq [hidDoc, docSetBaseY $ bindingsH]) $ docLines bindingsT
+        Just _ ->
+          docWrapNodeRest llies $ docPar (docSeq [hidDoc, docSetBaseY $ bindingsH])
+            $ docLines bindingsT
       bindingLine =
         docEnsureIndent (BrIndentSpecial (importCol - bindingCost)) bindingsD
     case asT of
