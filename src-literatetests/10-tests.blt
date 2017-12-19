@@ -476,8 +476,22 @@ func = (`abc` 1)
 #group tuples
 ###
 
-#test 1
+#test pair
 func = (abc, def)
+
+#test pair section left
+func = (abc, )
+
+#test pair section right
+func = (, abc)
+
+#test quintuple section long
+myTupleSection =
+  ( verylaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaargefirstelement
+  ,
+  , verylaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaargethirdelement
+  ,
+  )
 
 #test 2
 #pending
