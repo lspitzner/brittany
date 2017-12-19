@@ -1,6 +1,7 @@
 module Language.Haskell.Brittany.Internal.Layouters.IE
   ( layoutIE
-  , layoutIEList
+  , layoutLLIEs
+  , layoutAnnAndSepLLIEs
   )
 where
 
@@ -61,20 +62,42 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   _ -> docEmpty
   where ien = docLit =<< lrdrNameToTextAnn (ieName <$> lie)
 
-layoutIEList :: [LIE RdrName] -> ToBriDocM BriDocNumbered
-layoutIEList lies = do
-  ies <- mapM (docSharedWrapper layoutIE) lies
-  case ies of
-    []         -> docLit $ Text.pack "()"
-    xs@(x1:xr) -> docAlt
-      [ docSeq
-        [ docLit $ Text.pack "("
-        , docSeq $ List.intersperse docCommaSep xs
-        , docLit $ Text.pack ")"
+-- Helper function to deal with Located lists of LIEs.
+-- In particular this will also associate documentation
+-- from the LIES that actually belongs to the last IE.
+-- It also add docCommaSep to all but he last element
+-- This configuration allows both vertical and horizontal
+-- handling of the resulting list. Adding parens is
+-- left to the caller since that is context sensitive
+layoutAnnAndSepLLIEs :: (Located [LIE RdrName]) -> ToBriDocM [ToBriDocM BriDocNumbered]
+layoutAnnAndSepLLIEs llies@(L _ lies) = do
+  let makeIENode ie = docSeq [docCommaSep, ie]
+      layoutAnnAndSepLLIEs' ies = case ies of
+          [] -> []
+          [ie] -> [docWrapNode llies $ ie]
+          (ie:ies') -> ie:map makeIENode (List.init ies')
+                 ++ [makeIENode $ docWrapNode llies $ List.last ies']
+  layoutAnnAndSepLLIEs' <$> mapM (docSharedWrapper layoutIE) lies
+
+-- Builds a complete layout for the given located
+-- list of LIEs. The layout provides two alternatives:
+-- (item, item, ..., item)
+-- ( item
+-- , item
+-- ...
+-- , item
+-- )
+-- Empty lists will always be rendered as ()
+layoutLLIEs :: Located [LIE RdrName] -> ToBriDocM BriDocNumbered
+layoutLLIEs llies = docWrapNodeRest llies $ do
+  ieDs <- layoutAnnAndSepLLIEs llies
+  case ieDs of
+    [] -> docLit $ Text.pack "()"
+    ieDs@(ieDsH:ieDsT) ->
+      docAlt
+        [ docSeq $ docLit (Text.pack "("):ieDs ++ [docParenR]
+        , docLines $
+            docSeq [docParenLSep, ieDsH]
+            : ieDsT
+            ++ [docParenR]
         ]
-      , docLines
-        (  [docSeq [docParenLSep, x1]]
-        ++ [ docSeq [docCommaSep, x] | x <- xr ]
-        ++ [docParenR]
-        )
-      ]

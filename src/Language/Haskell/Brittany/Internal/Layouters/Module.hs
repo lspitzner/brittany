@@ -32,9 +32,9 @@ layoutModule lmod@(L _ mod') = do
       let tn = Text.pack $ moduleNameString $ unLoc n
       (hasComments, es) <- case les of
         Nothing               -> return (False, docEmpty)
-        Just llies@(L _ lies) -> do
+        Just llies -> do
           hasComments <- hasAnyCommentsBelow llies
-          return (hasComments, docWrapNode llies $ layoutIEList lies)
+          return (hasComments, layoutLLIEs llies)
       docLines
         $ docSeq
             [ docWrapNode lmod $ docEmpty

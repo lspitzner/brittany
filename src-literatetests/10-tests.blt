@@ -583,6 +583,7 @@ where
 #test exports-with-comments
 module Main
   ( main
+  -- main
   , test1
   , test2
   -- Test 3
@@ -590,6 +591,7 @@ module Main
   , test4
   -- Test 5
   , test5
+  -- Test 6
   )
 where
 
@@ -732,6 +734,14 @@ import           Test                                     ( abc
                                                           -- comment
                                                           )
 
+#test import-with-comments-5
+import           Test                                     ( -- comment
+                                                          )
+
+#test long-bindings
+import           Test                                     ( longbindingNameThatoverflowsColum )
+import           Test                                     ( Long(List, Of, Things) )
+
 #test preamble full-preamble
 {-# LANGUAGE BangPatterns #-}
 
@@ -751,6 +761,7 @@ module Test
   , test8
   , test9
   , test10
+  -- Test 10
   )
 where
 
