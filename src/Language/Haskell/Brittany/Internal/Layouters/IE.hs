@@ -93,7 +93,7 @@ layoutLLIEs llies = docWrapNodeRest llies $ do
   ieDs <- layoutAnnAndSepLLIEs llies
   case ieDs of
     [] -> docLit $ Text.pack "()"
-    ieDs@(ieDsH:ieDsT) ->
+    (ieDsH:ieDsT) ->
       docAlt
         [ docSeq $ docLit (Text.pack "("):ieDs ++ [docParenR]
         , docLines $
