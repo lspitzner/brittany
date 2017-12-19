@@ -178,7 +178,7 @@ before_install:
   #  echo 'jobs: $ncpus' >> $HOME/.cabal/config
   #fi
 - PKGNAME='brittany'
-- JOBS='2'
+- JOBS='1'
 - |
   function better_wait() {
     date
@@ -209,7 +209,7 @@ install:
   set -ex
   case "$BUILD" in
     stack)
-      stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      stack -j$JOBS --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       ;;
     cabal*)
       cabal --version
@@ -264,7 +264,7 @@ script:
   set -ex
   case "$BUILD" in
     stack)
-      better_wait stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror"
+      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror"
       ;;
     cabal)
       if [ -f configure.ac ]; then autoreconf -i; fi
