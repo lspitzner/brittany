@@ -47,7 +47,7 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     docSeq
       $  [ien, docLit $ Text.pack "("]
       ++ (  intersperse docCommaSep
-                        (map (docLit . lrdrNameToText . prepareName) ns)
+                        (map ((docLit =<<) . lrdrNameToTextAnn . prepareName) ns)
          ++ intersperse docCommaSep (map prepareFL fs)
          )
       ++ [docLit $ Text.pack ")"]
