@@ -44,13 +44,13 @@ prepModName = id
 
 layoutImport :: ToBriDoc ImportDecl
 layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
-  ImportDecl _ (L _ modName) pkg src safe q False as llies -> do
+  ImportDecl _ (L _ modName) pkg src safe q False as mllies -> do
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
     let
       modNameT        = Text.pack $ moduleNameString modName
       pkgNameT        = Text.pack . prepPkg . sl_st <$> pkg
       asT             = Text.pack . moduleNameString . prepModName <$> as
-      (hiding, mlies) = case llies of
+      (hiding, mlies) = case mllies of
         Just (h, L _ lies') -> (h, Just lies')
         Nothing             -> (False, Nothing)
       minQLength = length "import qualified "
@@ -78,6 +78,7 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         if hiding then appSep $ docLit $ Text.pack "hiding" else docEmpty
       importHead = docSeq [importQualifiers, modNameD]
       Just lies  = mlies
+      Just (_, llies) = mllies
       (ieH:ieT)  = map layoutIE lies
       makeIENode ie = docSeq [docCommaSep, ie]
       bindings@(bindingsH:bindingsT) =
@@ -93,8 +94,7 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         -- ..[hiding].( b
         --            , b'
         --            )
-        Just _ ->
-          docPar (docSeq [hidDoc, docSetBaseY $ bindingsH]) $ docLines bindingsT
+        Just _ -> docWrapNode llies $ docPar (docSeq [hidDoc, docSetBaseY $ bindingsH]) $ docLines bindingsT
       bindingLine =
         docEnsureIndent (BrIndentSpecial (importCol - bindingCost)) bindingsD
     case asT of
