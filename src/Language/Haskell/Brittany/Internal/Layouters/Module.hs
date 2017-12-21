@@ -30,11 +30,12 @@ layoutModule lmod@(L _ mod') = do
     HsModule Nothing  _   imports _ _ _ -> docLines $ map layoutImport imports
     HsModule (Just n) les imports _ _ _ -> do
       let tn = Text.pack $ moduleNameString $ unLoc n
-      (hasComments, es) <- case les of
-        Nothing               -> return (False, docEmpty)
+      (hasComments, exportsDoc) <- case les of
+        Nothing    -> return (False, docEmpty)
         Just llies -> do
           hasComments <- hasAnyCommentsBelow llies
-          return (hasComments, layoutLLIEs llies)
+          exportsDoc  <- docSharedWrapper layoutLLIEs llies
+          return (hasComments, exportsDoc)
       docLines
         $ docSeq
             [ docWrapNode lmod $ docEmpty
@@ -44,7 +45,7 @@ layoutModule lmod@(L _ mod') = do
               (  [ docSeq
                      [ appSep $ docLit $ Text.pack "module"
                      , appSep $ docLit tn
-                     , appSep $ docForceSingleline es
+                     , appSep $ docForceSingleline exportsDoc
                      , docLit $ Text.pack "where"
                      ]
                  | not hasComments
@@ -54,7 +55,7 @@ layoutModule lmod@(L _ mod') = do
                        ( docSeq
                          [appSep $ docLit $ Text.pack "module", docLit tn]
                        )
-                       (docForceMultiline es)
+                       (docForceMultiline exportsDoc)
                      , docLit $ Text.pack "where"
                      ]
                  ]

@@ -71,12 +71,15 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
 -- left to the caller since that is context sensitive
 layoutAnnAndSepLLIEs :: (Located [LIE RdrName]) -> ToBriDocM [ToBriDocM BriDocNumbered]
 layoutAnnAndSepLLIEs llies@(L _ lies) = do
-  let makeIENode ie = docSeq [docCommaSep, ie]
-      layoutAnnAndSepLLIEs' ies = case ies of
-          [] -> []
-          [ie] -> [docWrapNode llies $ ie]
-          (ie:ies') -> ie:map makeIENode (List.init ies')
-                 ++ [makeIENode $ docWrapNode llies $ List.last ies']
+  let
+    makeIENode ie = docSeq [docCommaSep, ie]
+    layoutAnnAndSepLLIEs' ies = case splitFirstLast ies of
+      FirstLastEmpty        -> []
+      FirstLastSingleton ie -> [docWrapNodeRest llies $ ie]
+      FirstLast ie1 ieMs ieN ->
+        [ie1]
+          ++ map makeIENode ieMs
+          ++ [makeIENode $ docWrapNodeRest llies $ ieN]
   layoutAnnAndSepLLIEs' <$> mapM (docSharedWrapper layoutIE) lies
 
 -- Builds a complete layout for the given located

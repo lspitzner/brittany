@@ -46,13 +46,16 @@ layoutImport :: ToBriDoc ImportDecl
 layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
   ImportDecl _ (L _ modName) pkg src safe q False as mllies -> do
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
+    -- NB we don't need to worry about sharing in the below code
+    -- (docSharedWrapper etc.) because we do not use any docAlt nodes; all
+    -- "decisions" are made statically.
     let
-      modNameT        = Text.pack $ moduleNameString modName
-      pkgNameT        = Text.pack . prepPkg . sl_st <$> pkg
-      asT             = Text.pack . moduleNameString . prepModName <$> as
-      hiding = case mllies of
+      modNameT = Text.pack $ moduleNameString modName
+      pkgNameT = Text.pack . prepPkg . sl_st <$> pkg
+      asT      = Text.pack . moduleNameString . prepModName <$> as
+      hiding   = case mllies of
         Just (h, _) -> h
-        Nothing             -> False
+        Nothing     -> False
       minQLength = length "import qualified "
       qLengthReal =
         let qualifiedPart = if q then length "qualified " else 0
@@ -76,37 +79,31 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         docEnsureIndent (BrIndentSpecial qLength) $ appSep $ docLit modNameT
       hidDoc =
         if hiding then appSep $ docLit $ Text.pack "hiding" else docEmpty
-      importHead      = docSeq [importQualifiers, modNameD]
-      bindingsH = docParenLSep
-      bindingsT = [docSeq [docSeparator, docParenR]]
-      bindingsD = case mllies of
-        Nothing -> docSeq [docEmpty]
+      importHead = docSeq [importQualifiers, modNameD]
+      bindingsD  = case mllies of
+        Nothing         -> docSeq [docEmpty]
         Just (_, llies) -> do
-          ieDs <- layoutAnnAndSepLLIEs llies
+          ieDs        <- layoutAnnAndSepLLIEs llies
           hasComments <- hasAnyCommentsBelow llies
-          case ieDs of
+          docWrapNodeRest llies $ case ieDs of
             -- ..[hiding].( )
-            [] -> do
-              if hasComments
-              then
-                docWrapNodeRest llies $ docPar (docSeq [hidDoc, bindingsH, docWrapNode llies docEmpty]) $ docLines
-                  bindingsT
-              else
-                docWrapNodeRest llies $ docSeq $ hidDoc : bindingsH : bindingsT
+            [] -> if hasComments
+              then docPar
+                (docSeq [hidDoc, docParenLSep, docWrapNode llies docEmpty])
+                docParenR
+              else docSeq [hidDoc, docParenLSep, docSeparator, docParenR]
             -- ..[hiding].( b )
-            [ieD] ->  do
-              if hasComments
-              then
-                docWrapNodeRest llies $ docPar (docSeq [hidDoc, bindingsH, ieD ]) $ docLines $
-                  bindingsT
-              else
-                docWrapNodeRest llies $ docSeq $ hidDoc : bindingsH : ieD : bindingsT
+            [ieD] -> if hasComments
+              then docPar (docSeq [hidDoc, docParenLSep, ieD]) docParenR
+              else docSeq [hidDoc, docParenLSep, ieD, docSeparator, docParenR]
             -- ..[hiding].( b
             --            , b'
             --            )
-            (ieD:ieDs') -> do
-                docWrapNodeRest llies $ docPar (docSeq [hidDoc, docSetBaseY $ docSeq [bindingsH, ieD]])
-                  $ docLines $ ieDs' ++ bindingsT
+            (ieD:ieDs') ->
+              docPar (docSeq [hidDoc, docSetBaseY $ docSeq [docParenLSep, ieD]])
+                $  docLines
+                $  ieDs'
+                ++ [docParenR]
       bindingLine =
         docEnsureIndent (BrIndentSpecial (importCol - bindingCost)) bindingsD
     case asT of
