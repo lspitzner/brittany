@@ -24,31 +24,25 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 layoutModule :: ToBriDoc HsModule
-layoutModule lmod@(L _ mod') = do
+layoutModule lmod@(L _ mod') =
   case mod' of
     -- Implicit module Main
     HsModule Nothing  _   imports _ _ _ -> docLines $ map layoutImport imports
     HsModule (Just n) les imports _ _ _ -> do
-      let tn = Text.pack $ moduleNameString $ unLoc n
-      (hasComments, exportsDoc) <- case les of
-        Nothing    -> return (False, docEmpty)
-        Just llies -> do
-          hasComments <- hasAnyCommentsBelow llies
-          exportsDoc  <- docSharedWrapper layoutLLIEs llies
-          return (hasComments, exportsDoc)
+      let tn         = Text.pack $ moduleNameString $ unLoc n
+          exportsDoc = maybe docEmpty layoutLLIEs les
       docLines
         $ docSeq
-            [ docWrapNode lmod $ docEmpty
+            [ docWrapNode lmod docEmpty
                -- A pseudo node that serves merely to force documentation
                -- before the node
             , docAlt
-              (  [ docSeq
+              (  [ docForceSingleline $ docSeq
                      [ appSep $ docLit $ Text.pack "module"
                      , appSep $ docLit tn
-                     , appSep $ docForceSingleline exportsDoc
+                     , appSep exportsDoc
                      , docLit $ Text.pack "where"
                      ]
-                 | not hasComments
                  ]
               ++ [ docLines
                      [ docAddBaseY BrIndentRegular $ docPar

@@ -704,6 +704,17 @@ import           TestJustShortEnoughModuleNameLike hiding ( )
 import           TestJustAbitToLongModuleNameLikeTh
                                                    hiding ( )
 
+import           MoreThanSufficientlyLongModuleNameWithSome
+                                                          ( items
+                                                          , that
+                                                          , will
+                                                          , not
+                                                          , fit
+                                                          , inA
+                                                          , compact
+                                                          , layout
+                                                          )
+
 import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff ( )
 import {-# SOURCE #-} safe qualified "qualifiers" AlsoAffe
                                                           ( )

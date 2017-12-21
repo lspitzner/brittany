@@ -47,12 +47,10 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   IEThingWith _ _ ns fs ->
     docSeq
       $  [ien, docLit $ Text.pack "("]
-      ++ (  intersperse docCommaSep
-                        (map ((docLit =<<) . lrdrNameToTextAnn . prepareName) ns)
-         ++ intersperse docCommaSep (map prepareFL fs)
-         )
+      ++ intersperse docCommaSep (map nameDoc ns ++ map prepareFL fs)
       ++ [docLit $ Text.pack ")"]
    where
+    nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
     prepareFL = docLit . Text.pack . FastString.unpackFS . flLabel . unLoc
   IEModuleContents n -> docSeq
     [ docLit $ Text.pack "module"
@@ -64,8 +62,8 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
 
 -- Helper function to deal with Located lists of LIEs.
 -- In particular this will also associate documentation
--- from the LIES that actually belongs to the last IE.
--- It also add docCommaSep to all but he last element
+-- from the located list that actually belongs to the last IE.
+-- It also adds docCommaSep to all but the first element
 -- This configuration allows both vertical and horizontal
 -- handling of the resulting list. Adding parens is
 -- left to the caller since that is context sensitive
@@ -90,17 +88,25 @@ layoutAnnAndSepLLIEs llies@(L _ lies) = do
 -- ...
 -- , item
 -- )
--- Empty lists will always be rendered as ()
+-- If the llies contains comments the list will
+-- always expand over multiple lines, even when empty:
+-- () -- no comments
+-- ( -- a comment
+-- )
 layoutLLIEs :: Located [LIE RdrName] -> ToBriDocM BriDocNumbered
 layoutLLIEs llies = do
   ieDs <- layoutAnnAndSepLLIEs llies
+  hasComments <- hasAnyCommentsBelow llies
   case ieDs of
-    [] -> docLit $ Text.pack "()"
+    [] -> docAltFilter
+            [ (not hasComments, docLit $ Text.pack "()")
+            , (otherwise, docPar (docSeq [docParenLSep, docWrapNode llies docEmpty])
+                       $ docLines [docParenR])
+            ]
     (ieDsH:ieDsT) ->
-      docAlt
-        [ docSeq $ docLit (Text.pack "("):ieDs ++ [docParenR]
-        , docLines $
-            docSeq [docParenLSep, ieDsH]
-            : ieDsT
-            ++ [docParenR]
+      docAltFilter
+        [ (not hasComments, docSeq $ docLit (Text.pack "("):ieDs ++ [docParenR])
+        , (otherwise, docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH]) $
+            docLines $ ieDsT
+            ++ [docParenR])
         ]
