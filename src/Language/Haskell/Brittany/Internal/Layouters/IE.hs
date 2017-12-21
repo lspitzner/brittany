@@ -69,18 +69,18 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
 -- This configuration allows both vertical and horizontal
 -- handling of the resulting list. Adding parens is
 -- left to the caller since that is context sensitive
-layoutAnnAndSepLLIEs :: (Located [LIE RdrName]) -> ToBriDocM [ToBriDocM BriDocNumbered]
+layoutAnnAndSepLLIEs
+  :: Located [LIE RdrName] -> ToBriDocM [ToBriDocM BriDocNumbered]
 layoutAnnAndSepLLIEs llies@(L _ lies) = do
-  let
-    makeIENode ie = docSeq [docCommaSep, ie]
-    layoutAnnAndSepLLIEs' ies = case splitFirstLast ies of
+  let makeIENode ie = docSeq [docCommaSep, ie]
+  let ieDocs = layoutIE <$> lies
+  ieCommaDocs <-
+    docWrapNodeRest llies $ sequence $ case splitFirstLast ieDocs of
       FirstLastEmpty        -> []
-      FirstLastSingleton ie -> [docWrapNodeRest llies $ ie]
+      FirstLastSingleton ie -> [ie]
       FirstLast ie1 ieMs ieN ->
-        [ie1]
-          ++ map makeIENode ieMs
-          ++ [makeIENode $ docWrapNodeRest llies $ ieN]
-  layoutAnnAndSepLLIEs' <$> mapM (docSharedWrapper layoutIE) lies
+        [ie1] ++ map makeIENode ieMs ++ [makeIENode ieN]
+  pure $ fmap pure ieCommaDocs -- returned shared nodes
 
 -- Builds a complete layout for the given located
 -- list of LIEs. The layout provides two alternatives:
@@ -92,7 +92,7 @@ layoutAnnAndSepLLIEs llies@(L _ lies) = do
 -- )
 -- Empty lists will always be rendered as ()
 layoutLLIEs :: Located [LIE RdrName] -> ToBriDocM BriDocNumbered
-layoutLLIEs llies = docWrapNodeRest llies $ do
+layoutLLIEs llies = do
   ieDs <- layoutAnnAndSepLLIEs llies
   case ieDs of
     [] -> docLit $ Text.pack "()"
