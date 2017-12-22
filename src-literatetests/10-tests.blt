@@ -765,7 +765,27 @@ import           Test                                     ( -- comment
 
 #test long-bindings
 import           Test                                     ( longbindingNameThatoverflowsColum )
-import           Test                                     ( Long(List, Of, Things) )
+import           Test                                     ( Long( List
+                                                                , Of
+                                                                , Things
+                                                                ) )
+
+#test things-with-with-comments
+import           Test                                     ( Thing( -- Comments
+                                                                 )
+                                                          )
+import           Test                                     ( Thing( Item
+                                                                 -- and Comment
+                                                                 )
+                                                          )
+import           Test                                     ( Thing( With
+                                                                 -- Comments
+                                                                 , and
+                                                                 -- also
+                                                                 , items
+                                                                 -- !
+                                                                 )
+                                                          )
 
 #test preamble full-preamble
 {-# LANGUAGE BangPatterns #-}

@@ -44,14 +44,32 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   IEThingAbs _                     -> ien
   IEThingAll _                     -> docSeq [ien, docLit $ Text.pack "(..)"]
   IEThingWith _ (IEWildcard _) _ _ -> docSeq [ien, docLit $ Text.pack "(..)"]
-  IEThingWith _ _ ns fs ->
-    docSeq
-      $  [ien, docLit $ Text.pack "("]
-      ++ intersperse docCommaSep (map nameDoc ns ++ map prepareFL fs)
-      ++ [docLit $ Text.pack ")"]
+  IEThingWith _ _ ns _ -> do
+    hasComments <- hasAnyCommentsBelow lie
+    docAltFilter
+      [(not hasComments, docSeq $  [ien, docLit $ Text.pack "("]
+        ++ intersperse docCommaSep (map nameDoc ns)
+        ++ [docParenR])
+      ,(otherwise, docSeq [ien, layoutItems (splitFirstLast ns)])
+      ]
    where
     nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
-    prepareFL = docLit . Text.pack . FastString.unpackFS . flLabel . unLoc
+    layoutItem n = docSeq [docCommaSep, docWrapNode n $ nameDoc n]
+    layoutItems FirstLastEmpty =
+      docSetBaseY $
+        docLines [docSeq [docParenLSep, docWrapNodeRest lie docEmpty]
+                 ,docParenR
+                 ]
+    layoutItems (FirstLastSingleton n) =
+      docSetBaseY $ docLines
+        [docSeq [docParenLSep, docWrapNodeRest lie $ nameDoc n], docParenR]
+    layoutItems (FirstLast n1 nMs nN)  =
+      docSetBaseY $ docLines $
+         [docSeq [docParenLSep, docWrapNode n1 $ nameDoc n1]]
+         ++ map layoutItem nMs
+         ++ [ docSeq [docCommaSep, docWrapNodeRest lie $ nameDoc nN]
+            , docParenR
+            ]
   IEModuleContents n -> docSeq
     [ docLit $ Text.pack "module"
     , docSeparator
@@ -101,7 +119,7 @@ layoutLLIEs llies = do
     [] -> docAltFilter
             [ (not hasComments, docLit $ Text.pack "()")
             , (otherwise, docPar (docSeq [docParenLSep, docWrapNode llies docEmpty])
-                       $ docLines [docParenR])
+                       docParenR)
             ]
     (ieDsH:ieDsT) ->
       docAltFilter
