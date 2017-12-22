@@ -676,6 +676,22 @@ import           Data.List                                ( nub
                                                           , indexElem
                                                           )
 
+#test a-ridiculous-amount-of-elements
+import           Test                                     ( Long
+                                                          , list
+                                                          , with
+                                                          , items
+                                                          , that
+                                                          , will
+                                                          , not
+                                                          , quite
+                                                          , fit
+                                                          , onA
+                                                          , single
+                                                          , line
+                                                          , anymore
+                                                          )
+
 #test with-things
 import           Test                                     ( T
                                                           , T2()

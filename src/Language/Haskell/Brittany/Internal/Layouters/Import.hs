@@ -47,9 +47,6 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
   ImportDecl _ (L _ modName) pkg src safe q False mas mllies -> do
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
     indentPolicy <- mAsk <&>  _conf_layout .> _lconfig_indentPolicy .> confUnpack
-    -- NB we don't need to worry about sharing in the below code
-    -- (docSharedWrapper etc.) because we do not use any docAlt nodes; all
-    -- "decisions" are made statically.
     let
       compact  = indentPolicy == IndentPolicyLeft
       modNameT = Text.pack $ moduleNameString modName
@@ -116,7 +113,12 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
     if compact
     then
       let asDoc = maybe docEmpty makeAsDoc masT
-      in docSeq [importHead, asDoc, docSetBaseY $ bindingsD]
+      in docAlt
+        [ docForceSingleline $
+            docSeq [importHead, asDoc, docSetBaseY $ bindingsD]
+        , docAddBaseY BrIndentRegular $
+            docPar (docSeq [importHead, asDoc]) bindingsD
+        ]
     else
       case masT of
         Just n | enoughRoom -> docLines [docSeq [importHead, asDoc], bindingLine]
