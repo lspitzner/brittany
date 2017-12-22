@@ -118,8 +118,11 @@ layoutLLIEs llies = do
   case ieDs of
     [] -> docAltFilter
             [ (not hasComments, docLit $ Text.pack "()")
-            , (otherwise, docPar (docSeq [docParenLSep, docWrapNode llies docEmpty])
-                       docParenR)
+            , ( hasComments
+              , docPar
+                  (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
+                  docParenR
+              )
             ]
     (ieDsH:ieDsT) ->
       docAltFilter

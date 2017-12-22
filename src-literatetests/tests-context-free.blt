@@ -793,6 +793,9 @@ import Test ( Thing( With
                    )
             )
 
+#test prefer-dense-empty-list
+import VeryLongModuleNameThatCouldEvenCauseAnEmptyBindingListToExpandIntoMultipleLine ()
+
 #test preamble full-preamble
 {-# LANGUAGE BangPatterns #-}
 
