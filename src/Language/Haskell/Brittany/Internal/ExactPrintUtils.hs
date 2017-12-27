@@ -24,10 +24,16 @@ import qualified DynFlags      as GHC
 import qualified GHC           as GHC hiding (parseModule)
 import qualified Parser        as GHC
 import qualified SrcLoc        as GHC
+import qualified FastString    as GHC
+import qualified GHC           as GHC hiding (parseModule)
+import qualified Lexer         as GHC
+import qualified StringBuffer  as GHC
+import qualified Outputable    as GHC
 import           RdrName ( RdrName(..) )
 import           HsSyn
 import           SrcLoc ( SrcSpan, Located )
 import           RdrName ( RdrName(..) )
+
 
 import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate   as ExactPrint
@@ -106,10 +112,47 @@ parseModuleFromString args fp dynCheck str =
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
-    x <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
-    either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
-           (\(a, m) -> pure (a, m, x))
-      $ ExactPrint.parseWith dflags1 fp GHC.parseModule str
+    dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
+    let res = parseModulePure dflags1 fp str
+    case res of
+      Left  (span, err) -> ExceptT.throwE $ show span ++ ": " ++ err
+      Right (a   , m  ) -> pure (a, m, dynCheckRes)
+
+-----------
+
+-- this function should move to ghc-exactprint. btw, we can deprecate/remove
+-- the `parseModuleFromString` function that I added initially to
+-- ghc-exactprint.
+parseModulePure
+  :: GHC.DynFlags
+  -> System.IO.FilePath
+  -> String
+  -> Either (SrcSpan, String) (ExactPrint.Anns, GHC.ParsedSource)
+parseModulePure dflags fileName str =
+  let (str1, lp) = ExactPrint.stripLinePragmas str
+      res        = case runParser GHC.parseModule dflags fileName str1 of
+        GHC.PFailed ss m    -> Left (ss, GHC.showSDoc dflags m)
+        GHC.POk     x  pmod -> Right $ (mkApiAnns x, lp, dflags, pmod)
+  in  ExactPrint.postParseTransform res ExactPrint.normalLayout
+
+-- copied from exactprint until exactprint exposes a proper interface.
+runParser
+  :: GHC.P a
+  -> GHC.DynFlags
+  -> System.IO.FilePath
+  -> String
+  -> GHC.ParseResult a
+runParser parser flags filename str = GHC.unP parser parseState
+ where
+  location   = GHC.mkRealSrcLoc (GHC.mkFastString filename) 1 1
+  buffer     = GHC.stringToStringBuffer str
+  parseState = GHC.mkPState flags buffer location
+mkApiAnns :: GHC.PState -> GHC.ApiAnns
+mkApiAnns pstate =
+  ( Map.fromListWith (++) . GHC.annotations $ pstate
+  , Map.fromList
+    ((GHC.noSrcSpan, GHC.comment_q pstate) : GHC.annotations_comments pstate)
+  )
 
 -----------
 
