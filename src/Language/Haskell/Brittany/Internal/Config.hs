@@ -63,6 +63,7 @@ staticDefaultConfig = Config
     , _lconfig_columnAlignMode           = coerce (ColumnAlignModeMajority 0.7)
     , _lconfig_alignmentLimit            = coerce (30 :: Int)
     , _lconfig_alignmentBreakOnMultiline = coerce True
+    , _lconfig_hangingTypeSignature      = coerce False
     }
   , _conf_errorHandling = ErrorHandlingConfig
     { _econf_produceOutputOnErrors   = coerce False
@@ -156,6 +157,7 @@ configParser = do
       , _lconfig_columnAlignMode           = mempty
       , _lconfig_alignmentLimit            = mempty
       , _lconfig_alignmentBreakOnMultiline = mempty
+      , _lconfig_hangingTypeSignature      = mempty
       }
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors   = wrapLast $ falseToNothing outputOnErrors

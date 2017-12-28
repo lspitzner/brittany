@@ -52,23 +52,39 @@ layoutSig lsig@(L _loc sig) = case sig of
     let nameStr = Text.intercalate (Text.pack ", ") $ nameStrs
     typeDoc     <- docSharedWrapper layoutType typ
     hasComments <- hasAnyCommentsBelow lsig
-    docAlt
-      $  [ docSeq
-           [ appSep $ docWrapNodeRest lsig $ docLit nameStr
-           , appSep $ docLit $ Text.pack "::"
-           , docForceSingleline typeDoc
-           ]
-         | not hasComments
-         ]
-      ++ [ docAddBaseY BrIndentRegular $ docPar
-           (docWrapNodeRest lsig $ docLit nameStr)
-           ( docCols
-             ColTyOpPrefix
-             [ docLit $ Text.pack ":: "
-             , docAddBaseY (BrIndentSpecial 3) $ typeDoc
+    shouldBeHanging <- mAsk
+      <&> _conf_layout
+      .>  _lconfig_hangingTypeSignature
+      .>  confUnpack
+    if shouldBeHanging
+      then docSeq
+        [ appSep $ docWrapNodeRest lsig $ docLit nameStr
+        , docSetBaseY $ docLines
+          [ docCols
+            ColTyOpPrefix
+            [ docLit $ Text.pack ":: "
+            , docAddBaseY (BrIndentSpecial 3) $ typeDoc
+            ]
+          ]
+        ]
+      else
+        docAlt
+          $  [ docSeq
+               [ appSep $ docWrapNodeRest lsig $ docLit nameStr
+               , appSep $ docLit $ Text.pack "::"
+               , docForceSingleline typeDoc
+               ]
+             | not hasComments
              ]
-           )
-         ]
+          ++ [ docAddBaseY BrIndentRegular $ docPar
+               (docWrapNodeRest lsig $ docLit nameStr)
+               ( docCols
+                 ColTyOpPrefix
+                 [ docLit $ Text.pack ":: "
+                 , docAddBaseY (BrIndentSpecial 3) $ typeDoc
+                 ]
+               )
+             ]
   InlineSig name (InlinePragma _ spec _arity phaseAct conlike) ->
     docWrapNode lsig $ do
       nameStr <- lrdrNameToTextAnn name
