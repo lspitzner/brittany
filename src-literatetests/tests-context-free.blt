@@ -714,7 +714,7 @@ func
 
 #test some indentation thingy
 func =
-  ( lkjadljasldjalskdjaldjalsdjkalsdjlaksdjlasjdlajsaldskj
+  (lkjadljasldjalskdjaldjalsdjkalsdjlaksdjlasjdlajsaldskj
   $ abc
   $ def
   $ ghi
@@ -840,7 +840,7 @@ showPackageDetailedInfo pkginfo =
           , entry
             "Versions installed"
             installedVersions
-            ( altText
+            (altText
               null
               (if hasLib pkginfo then "[ Not installed ]" else "[ Unknown ]")
             )

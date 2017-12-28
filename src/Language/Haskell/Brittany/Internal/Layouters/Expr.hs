@@ -327,7 +327,7 @@ layoutExpr lexpr@(L _ expr) = do
           ]
         , docSetBaseY $ docLines
           [ docCols ColOpPrefix
-            [ docParenLSep
+            [ docLit $ Text.pack "("
             , docAddBaseY (BrIndentSpecial 2) innerExpDoc
             ]
           , docLit $ Text.pack ")"
