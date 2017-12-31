@@ -532,7 +532,7 @@ layoutExpr lexpr@(L _ expr) = do
       expDoc1 <- docSharedWrapper layoutExpr exp1
       mBindDocs <- layoutLocalBinds binds
       let
-        whenIndentLeftOr x y =
+        ifIndentLeftElse x y =
           if indentPolicy == IndentPolicyLeft then x else y
       -- this `docSetIndentLevel` might seem out of place, but is here due to
       -- ghc-exactprint's DP handling of "let" in particular.
@@ -552,7 +552,7 @@ layoutExpr lexpr@(L _ expr) = do
               [ docAlt
                   [ docSeq
                       [ appSep $ docLit $ Text.pack "let"
-                      , whenIndentLeftOr docForceSingleline docSetBaseAndIndent
+                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent
                       $ return bindDoc
                       ]
                   , docAddBaseY BrIndentRegular
@@ -562,8 +562,8 @@ layoutExpr lexpr@(L _ expr) = do
                   ]
               , docAlt
                   [ docSeq
-                      [ whenIndentLeftOr id appSep $ docLit $ Text.pack "in "
-                      , whenIndentLeftOr docForceSingleline docSetBaseAndIndent expDoc1
+                      [ ifIndentLeftElse id appSep $ docLit $ Text.pack "in "
+                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent expDoc1
                       ]
                   , docAddBaseY BrIndentRegular
                   $ docPar
