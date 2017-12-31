@@ -145,20 +145,16 @@ createDerivingPar mDerivs mainDoc = do
   case mDerivs of
     Nothing                 -> docLines [mainDoc]
     Just (L _ [(HsIB _ t)]) -> do
-      docAlt
-        [ docPar mainDoc $ docEnsureIndent BrIndentRegular $ docSeq
-          [docDeriving, docSeparator, layoutType t]
-        ]
+      docPar mainDoc $ docEnsureIndent BrIndentRegular $ docSeq
+        [docDeriving, docSeparator, layoutType t]
     Just (L _ ts          ) -> do
-      docAlt
-        [ docPar mainDoc $ docEnsureIndent BrIndentRegular $ docSeq
-          [ docDeriving
-          , docSeparator
-          , docLit $ Text.pack "("
-          , docSeq $ List.intersperse docCommaSep $ ts <&> \(HsIB _ t) ->
-            layoutType t
-          , docLit $ Text.pack ")"
-          ]
+      docPar mainDoc $ docEnsureIndent BrIndentRegular $ docSeq
+        [ docDeriving
+        , docSeparator
+        , docLit $ Text.pack "("
+        , docSeq $ List.intersperse docCommaSep $ ts <&> \(HsIB _ t) ->
+          layoutType t
+        , docLit $ Text.pack ")"
         ]
 
 docDeriving :: ToBriDocM BriDocNumbered
