@@ -40,7 +40,6 @@ import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Layouters.Type
 import           Language.Haskell.Brittany.Internal.Layouters.Decl
 import           Language.Haskell.Brittany.Internal.Layouters.Module
-import           Language.Haskell.Brittany.Internal.Layouters.DataDecl
 import           Language.Haskell.Brittany.Internal.Utils
 import           Language.Haskell.Brittany.Internal.Backend
 import           Language.Haskell.Brittany.Internal.BackendUtils

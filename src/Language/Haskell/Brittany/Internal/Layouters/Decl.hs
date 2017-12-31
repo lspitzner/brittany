@@ -53,6 +53,7 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
+import           Language.Haskell.Brittany.Internal.Layouters.DataDecl
 
 import           Bag ( mapBagM, bagToList, emptyBag )
 import           Data.Char (isUpper)
@@ -84,7 +85,6 @@ layoutDecl d@(L loc decl) = case decl of
   InstD (ClsInstD inst) -> withTransformedAnns d $ layoutClsInst (L loc inst)
   _                    -> briDocByExactNoComment d
 #endif
-
 
 --------------------------------------------------------------------------------
 -- Sig
@@ -741,6 +741,9 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
     let wrapNodeRest = docWrapNodeRest ltycl
     docWrapNodePrior ltycl
       $ layoutSynDecl isInfix wrapNodeRest name (hsq_explicit vars) typ
+  DataDecl _ext name tyVars _ dataDefn ->
+    docWrapNodePrior ltycl $
+      layoutDataDecl ltycl name tyVars dataDefn
   _ -> briDocByExactNoComment ltycl
 
 layoutSynDecl

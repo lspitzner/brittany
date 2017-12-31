@@ -25,6 +25,7 @@ module Language.Haskell.Brittany.Internal.Utils
   , splitFirstLast
   , lines'
   , showOutputable
+  , absurdExt
   )
 where
 
@@ -57,6 +58,7 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Data.Generics.Uniplate.Direct as Uniplate
+import           HsExtension (NoExt)
 
 
 
@@ -293,3 +295,7 @@ lines' s = case break (== '\n') s of
   (s1, []) -> [s1]
   (s1, [_]) -> [s1, ""]
   (s1, (_:r)) -> s1 : lines' r
+
+-- | A method to dismiss NoExt patterns for total matches
+absurdExt :: NoExt -> a
+absurdExt = error "cannot construct NoExt"

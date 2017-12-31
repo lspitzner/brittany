@@ -185,6 +185,8 @@ data ColSig
   | ColBindStmt
   | ColDoLet -- the non-indented variant
   | ColRec
+  | ColRecUpdate -- used for both RecCon and RecUpd. TODO: refactor to reflect?
+  | ColRecDecl
   | ColListComp
   | ColList
   | ColApp Text

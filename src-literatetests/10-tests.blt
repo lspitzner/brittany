@@ -313,6 +313,76 @@ func = f
 ###############################################################################
 ###############################################################################
 ###############################################################################
+#group data type declarations
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test single record
+data Foo = Bar { foo :: Baz }
+
+#test record multiple names
+data Foo = Bar { foo, bar :: Baz }
+
+#test record multiple types
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+
+#test record multiple types and names
+data Foo = Bar
+  { foo, biz :: Baz
+  , bar      :: Bizzz
+  }
+
+#test record multiple types deriving
+data Foo = Bar
+  { fooz :: Baz
+  , bar  :: Bizzz
+  }
+  deriving Show
+
+#test record multiple types deriving
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  deriving (Show, Eq, Monad, Functor, Traversable, Foldable)
+
+#test record multiple deriving strategies
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  deriving Show
+  deriving (Eq, Ord)
+  deriving stock Show
+  deriving stock (Eq, Ord)
+  deriving anyclass Show
+  deriving anyclass (Show, Eq, Monad, Functor)
+  deriving newtype Show
+  deriving newtype (Traversable, Foldable)
+  deriving ToJSON via (SomeType)
+  deriving (ToJSON, FromJSON) via (SomeType)
+
+#test single record existential
+{-# LANGUAGE ExistentialQuantification #-}
+
+data Foo = forall a . Show a => Bar { foo :: a }
+
+#test record multiple types existential
+{-# LANGUAGE ExistentialQuantification #-}
+
+data Foo = forall a b . (Show a, Eq b) => Bar
+  { foo  :: a
+  , bars :: b
+  }
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 #group equation.basic
 ###############################################################################
 ###############################################################################
