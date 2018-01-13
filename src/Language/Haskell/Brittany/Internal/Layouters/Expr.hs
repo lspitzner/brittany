@@ -532,6 +532,7 @@ layoutExpr lexpr@(L _ expr) = do
       expDoc1 <- docSharedWrapper layoutExpr exp1
       mBindDocs <- layoutLocalBinds binds
       let
+        ifIndentLeftElse :: a -> a -> a
         ifIndentLeftElse x y =
           if indentPolicy == IndentPolicyLeft then x else y
       -- this `docSetIndentLevel` might seem out of place, but is here due to
@@ -557,17 +558,17 @@ layoutExpr lexpr@(L _ expr) = do
                       ]
                   , docAddBaseY BrIndentRegular
                   $ docPar
-                    (appSep $ docLit $ Text.pack "let")
+                    (docLit $ Text.pack "let")
                     (docSetBaseAndIndent $ return bindDoc)
                   ]
               , docAlt
                   [ docSeq
-                      [ ifIndentLeftElse id appSep $ docLit $ Text.pack "in "
+                      [ appSep $ docLit $ Text.pack $ ifIndentLeftElse "in" "in "
                       , ifIndentLeftElse docForceSingleline docSetBaseAndIndent expDoc1
                       ]
                   , docAddBaseY BrIndentRegular
                   $ docPar
-                    (appSep $ docLit $ Text.pack "in")
+                    (docLit $ Text.pack "in")
                     (docSetBaseY $ expDoc1)
                   ]
               ]
