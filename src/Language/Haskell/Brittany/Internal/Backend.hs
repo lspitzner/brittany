@@ -434,6 +434,7 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
           (BDCols ColBindStmt           _) -> True
           (BDCols ColDoLet              _) -> True
           (BDCols ColRecUpdate          _) -> False
+          (BDCols ColRecDecl            _) -> False
           (BDCols ColListComp           _) -> False
           (BDCols ColList               _) -> False
           (BDCols ColApp                _) -> True

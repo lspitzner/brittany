@@ -173,7 +173,7 @@ createDetailsDoc consNameStr details = case details of
     [ docLit consNameStr
     , docSeparator
     , appSep $ docLit $ Text.pack "{"
-    , createNamesAndTypeDoc names t
+    , docSeq $ createNamesAndTypeDoc names t
     , docSeparator
     , docLit $ Text.pack "}"
     ]
@@ -181,14 +181,13 @@ createDetailsDoc consNameStr details = case details of
     docAddBaseY BrIndentRegular $ docPar
       (docLit consNameStr)
       (docLines
-        [ docSeq
-          [ docLit $ Text.pack "{ "
-          , let L _ (ConDeclField names t _) = fstField
+        [ docCols ColRecDecl
+          $ docLit (Text.pack "{ ")
+          : let L _ (ConDeclField names t _) = fstField
               in createNamesAndTypeDoc names t
-          ]
         , docLines
-          $ (\(L _ (ConDeclField names t _)) -> 
-              docSeq [docCommaSep, createNamesAndTypeDoc names t])
+          $ (\(L _ (ConDeclField names t _)) ->
+              docCols ColRecDecl $ docCommaSep : createNamesAndTypeDoc names t)
           <$> fields
         , docLit $ Text.pack "}"
         ]
@@ -213,15 +212,19 @@ createForallDoc (Just (HsQTvs _ bs _)) = do
     ]
 
 createNamesAndTypeDoc
-  :: [GenLocated t (FieldOcc u)] -> Located (HsType RdrName) -> ToBriDocM BriDocNumbered
-createNamesAndTypeDoc names t = docSeq
+  :: [GenLocated t (FieldOcc u)] -> Located (HsType RdrName) -> [ToBriDocM BriDocNumbered]
+createNamesAndTypeDoc names t =
   [ docSeq
-    $   List.intersperse docCommaSep
-    $   names
-    <&> \(L _ (FieldOcc fieldName _)) ->
-          docLit =<< lrdrNameToTextAnn fieldName
-  , docSeparator
-  , docLit $ Text.pack "::"
-  , docSeparator
-  , layoutType t
+    [ docSeq
+      $   List.intersperse docCommaSep
+      $   names
+      <&> \(L _ (FieldOcc fieldName _)) ->
+            docLit =<< lrdrNameToTextAnn fieldName
+    , docSeparator
+    ]
+  , docSeq
+    [ docLit $ Text.pack "::"
+    , docSeparator
+    , layoutType t
+    ]
   ]
