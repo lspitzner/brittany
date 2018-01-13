@@ -96,6 +96,19 @@ log the size of the input, but _not_ the full requests.)
     aura -A brittany
     ~~~~
 
+# Editor Integration
+
+#### Sublime text
+  [In this gist](https://gist.github.com/lspitzner/097c33177248a65e7657f0c6d0d12075)
+  I have described a haskell setup that includes a shortcut to run brittany formatting.
+#### VSCode
+  [This extension](https://marketplace.visualstudio.com/items?itemName=MaxGabriel.brittany)
+  connects commandline `brittany` to VSCode formatting API. Thanks to Max Garbriel.
+#### Via HIE
+  [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
+  includes a `brittany` plugin that directly uses the brittany library.
+  Relevant for any editors that properly support the language-server-protocol.
+
 # Usage
 
 - Default mode of operation: Transform a single module, from `stdin` to `stdout`.
