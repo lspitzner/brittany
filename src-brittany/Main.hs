@@ -140,16 +140,16 @@ mainCmdParser helpDesc = do
     ""
     ["write-mode"]
     "(display|inplace)"
-    Flag
-      { _flag_help    = Just $ PP.vcat
+    (  flagHelp
+        ( PP.vcat
           [ PP.text "display: output for any input(s) goes to stdout"
           , PP.text "inplace: override respective input file (without backup!)"
           ]
-      , _flag_default = Just Display
-      }
+        )
+    <> flagDefault Display
+    )
   inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input haskell source files")
   reorderStop
-  desc        <- peekCmdDesc
   addCmdImpl $ void $ do
     when printLicense $ do
       print licenseDoc
@@ -161,7 +161,7 @@ mainCmdParser helpDesc = do
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do
-      liftIO $ print $ ppHelpShallow desc
+      liftIO $ print $ ppHelpShallow helpDesc
       System.Exit.exitSuccess
 
     let inputPaths  = if null inputParams then [Nothing] else map Just inputParams
