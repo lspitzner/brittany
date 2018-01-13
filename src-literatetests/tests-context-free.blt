@@ -510,6 +510,11 @@ func = (abc, def)
 func = (lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
   , lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd)
 
+#test let in on single line
+foo =
+  let longIdentifierForShortValue = 1
+  in longIdentifierForShortValue + longIdentifierForShortValue
+
 
 
 ###############################################################################
