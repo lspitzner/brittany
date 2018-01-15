@@ -13,6 +13,7 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
+import           Data.Char (isAlpha)
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import           HsSyn
@@ -80,7 +81,9 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     let nameDoc = lrdrNameToText lname
     leftDoc  <- colsWrapPat =<< layoutPat left
     rightDoc <- colsWrapPat =<< layoutPat right
-    middle <- docLit nameDoc
+    middle <- docLit $ if Text.any isAlpha nameDoc
+      then Text.pack " `" <> nameDoc <> Text.pack "` "
+      else nameDoc
     return $ Seq.empty Seq.|> leftDoc Seq.|> middle Seq.|> rightDoc
   ConPatIn lname (RecCon (HsRecFields [] Nothing)) -> do
     -- Abc{} -> expr
