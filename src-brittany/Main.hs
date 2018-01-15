@@ -281,7 +281,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
             putErrorLn
               $  "Error: detected unprocessed comments."
               ++ " The transformation output will most likely"
-              ++ " not contain certain of the comments"
+              ++ " not contain some of the comments"
               ++ " present in the input haskell source file."
             putErrorLn $ "Affected are the following comments:"
             unused `forM_` \case
