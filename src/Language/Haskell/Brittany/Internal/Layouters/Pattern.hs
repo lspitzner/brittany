@@ -13,7 +13,6 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
-import           Data.Char (isAlpha)
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import           HsSyn
