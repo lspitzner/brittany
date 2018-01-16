@@ -349,11 +349,11 @@ func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
 func (A a) = a
 
 #test list constructor
-func (x:xr) = x
+func (x : xr) = x
 
 #test some other constructor symbol
 #pending
-func (x:+:xr) = x
+func (x :+: xr) = x
 
 #test normal infix constructor
 func (x `Foo` xr) = x
