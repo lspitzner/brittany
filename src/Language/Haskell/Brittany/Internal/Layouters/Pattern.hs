@@ -77,10 +77,10 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
         return $ x1 Seq.<| xR
   ConPatIn lname (InfixCon left right) -> do
     -- a :< b -> expr
-    let nameDoc = lrdrNameToText lname
-    leftDoc  <- colsWrapPat =<< layoutPat left
+    let nameDoc = lrdrNameToTextAnn lname
+    leftDoc  <- appSep . colsWrapPat =<< layoutPat left
     rightDoc <- colsWrapPat =<< layoutPat right
-    middle <- docLit nameDoc
+    middle <- appSep . docLit =<< nameDoc
     return $ Seq.empty Seq.|> leftDoc Seq.|> middle Seq.|> rightDoc
   ConPatIn lname (RecCon (HsRecFields [] Nothing)) -> do
     -- Abc{} -> expr

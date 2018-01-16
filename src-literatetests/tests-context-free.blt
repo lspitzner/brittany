@@ -366,11 +366,11 @@ func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
 func (A a) = a
 
 #test list constructor
-func (x:xr) = x
+func (x : xr) = x
 
 #test some other constructor symbol
 #pending
-func (x:+:xr) = x
+func (x :+: xr) = x
 
 
 ###############################################################################
@@ -748,7 +748,7 @@ func = do
 #test list comprehension comment placement
 func =
   [ (thing, take 10 alts) --TODO: select best ones
-  | (thing, _got, alts@(_:_)) <- nosuchFooThing
+  | (thing, _got, alts@(_ : _)) <- nosuchFooThing
   , gast <- award
   ]
 

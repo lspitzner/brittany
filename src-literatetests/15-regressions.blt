@@ -123,8 +123,8 @@ func = do
 #test list comprehension comment placement
 func =
   [ (thing, take 10 alts) --TODO: select best ones
-  | (thing, _got, alts@(_:_)) <- nosuchFooThing
-  , gast                      <- award
+  | (thing, _got, alts@(_ : _)) <- nosuchFooThing
+  , gast                        <- award
   ]
 
 #test if-then-else comment placement

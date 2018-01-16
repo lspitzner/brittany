@@ -52,7 +52,7 @@ log the size of the input, but _not_ the full requests.)
 # Other usage notes
 
 - Supports GHC versions `8.0.*` and `8.2.*`.
-- as of November'17, `brittany` is available on stackage nightly.
+- included in stackage with lts>=10.0 (or nightlies dating to >=2017-11-15)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
 - uses/creates user config file in `~/.config/brittany/config.yaml`;
@@ -84,17 +84,30 @@ log the size of the input, but _not_ the full requests.)
 - via `stack` using a sufficiently recent stackage snapshot (dated to >= 2017-11-15)
 
     ~~~~.sh
-    stack install brittany # --resolver=nightly-2017-11-15
+    stack install brittany # --resolver lts-10.0
     ~~~~
 
-    (alternatively, should nightlies be unreliable, or you want to use ghc-8.0 or something, then
-    cloning the repo and doing `stack install` will use an lts resolver.)
+    (earlier ltss did not include `brittany` yet, but the repo should contain a
+    `stack.yaml` that works with ghc-8.0.)
 
 - on ArchLinux via [the britanny AUR package](https://aur.archlinux.org/packages/brittany/)
   using `aura`:
     ~~~~.sh
     aura -A brittany
     ~~~~
+
+# Editor Integration
+
+#### Sublime text
+  [In this gist](https://gist.github.com/lspitzner/097c33177248a65e7657f0c6d0d12075)
+  I have described a haskell setup that includes a shortcut to run brittany formatting.
+#### VSCode
+  [This extension](https://marketplace.visualstudio.com/items?itemName=MaxGabriel.brittany)
+  connects commandline `brittany` to VSCode formatting API. Thanks to @MaxGarbriel.
+#### Via HIE
+  [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
+  includes a `brittany` plugin that directly uses the brittany library.
+  Relevant for any editors that properly support the language-server-protocol.
 
 # Usage
 
