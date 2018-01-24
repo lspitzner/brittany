@@ -108,6 +108,9 @@ log the size of the input, but _not_ the full requests.)
   [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
   includes a `brittany` plugin that directly uses the brittany library.
   Relevant for any editors that properly support the language-server-protocol.
+#### Neovim / Vim 8
+  The [Neoformat](https://github.com/sbdchd/neoformat) plugin comes with support for
+  brittany built in.
 
 # Usage
 
