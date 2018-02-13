@@ -346,7 +346,7 @@ readConfigs cmdlineConfig configPaths = do
       userConfigXdg    <- readConfig userConfigPathXdg
       let userConfig = userConfigSimple <|> userConfigXdg
       when (Data.Maybe.isNothing userConfig) $ do
-        liftIO $ Directory.createDirectoryIfMissing False userBritPathXdg
+        liftIO $ Directory.createDirectoryIfMissing True userBritPathXdg
         writeDefaultConfig userConfigPathXdg
       -- rightmost has highest priority
       pure $ [userConfig, localConfig]
