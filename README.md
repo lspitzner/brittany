@@ -56,7 +56,8 @@ log the size of the input, but _not_ the full requests.)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
 - uses/creates user config file in `~/.config/brittany/config.yaml`;
-  also reads `brittany.yaml` in current dir if present.
+  also reads (the first) `brittany.yaml` found in current or parent
+  directories.
 
 # Installation
 
