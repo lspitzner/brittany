@@ -513,3 +513,9 @@ cs0 = 0 : [ c / Interval n | c <- cs | n <- [1..] ]
 #test issue 70
 {-# LANGUAGE TemplateHaskell #-}
 deriveFromJSON (unPrefix "assignPost") ''AssignmentPost
+
+#test issue 116
+{-# LANGUAGE BangPatterns #-}
+func = do
+  let !forced = some
+  pure ()

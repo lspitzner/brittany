@@ -192,16 +192,17 @@ layoutPatternBind
   -> BriDocNumbered
   -> LMatch RdrName (LHsExpr RdrName)
   -> ToBriDocM BriDocNumbered
-layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match _ pats _ (GRHSs grhss whereBinds))) = do
+layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match fixityOrCtx pats _ (GRHSs grhss whereBinds))) = do
   patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
   let isInfix = isInfixMatch match
-  patDoc     <- docWrapNodePrior lmatch $ case (mIdStr, patDocs) of
-    (Just idStr, p1:pr) | isInfix -> docCols
+  let mIdStr' = fixPatternBindIdentifier fixityOrCtx <$> mIdStr
+  patDoc <- docWrapNodePrior lmatch $ case (mIdStr', patDocs) of
+    (Just idStr, p1 : pr) | isInfix -> docCols
       ColPatternsFuncInfix
       (  [appSep $ docForceSingleline p1, appSep $ docLit idStr]
       ++ (spacifyDocs $ docForceSingleline <$> pr)
       )
-    (Just idStr, []   )           -> docLit idStr
+    (Just idStr, []) -> docLit idStr
     (Just idStr, ps) ->
       docCols ColPatternsFuncPrefix
         $ appSep (docLit $ idStr)
@@ -219,6 +220,28 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match _ pats _ (GRHSs grhs
                          clauseDocs
                          mWhereDocs
                          hasComments
+
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+fixPatternBindIdentifier
+  :: HsMatchContext (NameOrRdrName RdrName) -> Text -> Text
+fixPatternBindIdentifier ctx idStr = case ctx of
+  (FunRhs _ _ SrcLazy    ) -> Text.cons '~' idStr
+  (FunRhs _ _ SrcStrict  ) -> Text.cons '!' idStr
+  (FunRhs _ _ NoSrcStrict) -> idStr
+  (StmtCtxt ctx1         ) -> fixPatternBindIdentifier' ctx1
+  _                        -> idStr
+ where
+  -- I have really no idea if this path ever occurs, but better safe than
+  -- risking another "drop bangpatterns" bugs.
+  fixPatternBindIdentifier' = \case
+    (PatGuard      ctx1) -> fixPatternBindIdentifier ctx1 idStr
+    (ParStmtCtxt   ctx1) -> fixPatternBindIdentifier' ctx1
+    (TransStmtCtxt ctx1) -> fixPatternBindIdentifier' ctx1
+    _                    -> idStr
+#else                      /* ghc-8.0 */
+fixPatternBindIdentifier :: MatchFixity RdrName -> Text -> Text
+fixPatternBindIdentifier _ x = x
+#endif
 
 layoutPatternBindFinal
   :: Maybe Text
