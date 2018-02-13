@@ -161,7 +161,7 @@ mainCmdParser helpDesc = do
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do
-      liftIO $ print $ ppHelpShallow helpDesc
+      liftIO $ putStrLn $ PP.renderStyle PP.style { PP.ribbonsPerLine = 1.0 } $ ppHelpShallow helpDesc
       System.Exit.exitSuccess
 
     let inputPaths  = if null inputParams then [Nothing] else map Just inputParams
