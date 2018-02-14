@@ -104,7 +104,7 @@ log the size of the input, but _not_ the full requests.)
   I have described a haskell setup that includes a shortcut to run brittany formatting.
 #### VSCode
   [This extension](https://marketplace.visualstudio.com/items?itemName=MaxGabriel.brittany)
-  connects commandline `brittany` to VSCode formatting API. Thanks to @MaxGarbriel.
+  connects commandline `brittany` to VSCode formatting API. Thanks to @MaxGabriel.
 #### Via HIE
   [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
   includes a `brittany` plugin that directly uses the brittany library.
