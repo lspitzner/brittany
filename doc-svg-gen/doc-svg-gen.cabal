@@ -5,12 +5,12 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 executable doc-svg-gen
-  buildable:           True
+  buildable:           False
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
   build-depends:
-    { base >=4.9 && <4.10
+    { base >=4.9 && <4.11
     , text
     , graphviz >=2999.19.0.0
     }

@@ -327,7 +327,7 @@ layoutExpr lexpr@(L _ expr) = do
           ]
         , docSetBaseY $ docLines
           [ docCols ColOpPrefix
-            [ docParenLSep
+            [ docLit $ Text.pack "("
             , docAddBaseY (BrIndentSpecial 2) innerExpDoc
             ]
           , docLit $ Text.pack ")"
@@ -341,9 +341,9 @@ layoutExpr lexpr@(L _ expr) = do
       opDoc    <- docSharedWrapper layoutExpr op
       rightDoc <- docSharedWrapper layoutExpr right
       docSeq [opDoc, docSeparator, rightDoc]
-    ExplicitTuple args boxity
-      | Just argExprs <- args `forM` (\case (L _ (Present e)) -> Just e; _ -> Nothing) -> do
-      argDocs <- docSharedWrapper layoutExpr `mapM` argExprs
+    ExplicitTuple args boxity -> do
+      let argExprs = fmap (\case (L _ (Present e)) -> Just e; (L _ (Missing PlaceHolder)) -> Nothing) args
+      argDocs <- docSharedWrapper (maybe docEmpty layoutExpr) `mapM` argExprs
       hasComments <- hasAnyCommentsBelow lexpr
       let (openLit, closeLit) = case boxity of
             Boxed -> (docLit $ Text.pack "(", docLit $ Text.pack ")")
@@ -385,8 +385,6 @@ layoutExpr lexpr@(L _ expr) = do
                 end   = closeLit
               in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
             ]
-    ExplicitTuple{} ->
-      unknownNodeError "ExplicitTuple|.." lexpr 
     HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
       cExpDoc <- docSharedWrapper layoutExpr cExp
       binderDoc <- docLit $ Text.pack "->"
@@ -533,6 +531,10 @@ layoutExpr lexpr@(L _ expr) = do
     HsLet binds exp1 -> do
       expDoc1 <- docSharedWrapper layoutExpr exp1
       mBindDocs <- layoutLocalBinds binds
+      let
+        ifIndentLeftElse :: a -> a -> a
+        ifIndentLeftElse x y =
+          if indentPolicy == IndentPolicyLeft then x else y
       -- this `docSetIndentLevel` might seem out of place, but is here due to
       -- ghc-exactprint's DP handling of "let" in particular.
       -- Just pushing another indentation level is a straightforward approach
@@ -540,39 +542,36 @@ layoutExpr lexpr@(L _ expr) = do
       -- if "let" is moved horizontally as part of the transformation, as the
       -- comments before the first let item are moved horizontally with it.
       docSetIndentLevel $ case mBindDocs of
-        Just [bindDoc] -> docAltFilter
-          [ ( True
-            , docSeq
+        Just [bindDoc] -> docAlt
+          [ docSeq
               [ appSep $ docLit $ Text.pack "let"
               , appSep $ docForceSingleline $ return bindDoc
               , appSep $ docLit $ Text.pack "in"
               , docForceSingleline $ expDoc1
               ]
-            )
-          , ( indentPolicy /= IndentPolicyLeft
-            , docLines
-              [ docSeq
-                [ appSep $ docLit $ Text.pack "let"
-                , docSetBaseAndIndent $ return bindDoc
-                ]
-              , docSeq
-                [ appSep $ docLit $ Text.pack "in "
-                , docSetBaseY $ expDoc1
-                ]
+          , docLines
+              [ docAlt
+                  [ docSeq
+                      [ appSep $ docLit $ Text.pack "let"
+                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent
+                      $ return bindDoc
+                      ]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar
+                    (docLit $ Text.pack "let")
+                    (docSetBaseAndIndent $ return bindDoc)
+                  ]
+              , docAlt
+                  [ docSeq
+                      [ appSep $ docLit $ Text.pack $ ifIndentLeftElse "in" "in "
+                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent expDoc1
+                      ]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar
+                    (docLit $ Text.pack "in")
+                    (docSetBaseY $ expDoc1)
+                  ]
               ]
-            )
-          , ( True
-            , docLines
-              [ docAddBaseY BrIndentRegular
-              $ docPar
-                (appSep $ docLit $ Text.pack "let")
-                (docSetBaseAndIndent $ return bindDoc)
-              , docAddBaseY BrIndentRegular
-              $ docPar
-                (appSep $ docLit $ Text.pack "in")
-                (docSetBaseY $ expDoc1)
-              ]
-            )
           ]
         Just bindDocs@(_:_) -> docAltFilter
           --either

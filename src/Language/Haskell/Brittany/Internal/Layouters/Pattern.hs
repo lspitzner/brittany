@@ -24,12 +24,26 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 
 
 
+-- | layouts patterns (inside function bindings, case alternatives, let
+-- bindings or do notation). E.g. for input
+--        > case computation of
+--        >   (warnings, Success a b) -> ..
+-- This part  ^^^^^^^^^^^^^^^^^^^^^^^ of the syntax tree is layouted by
+-- 'layoutPat'. Similarly for
+-- > func abc True 0 = []
+--        ^^^^^^^^^^ this part
+-- We will use `case .. of` as the imagined prefix to the examples used in
+-- the different cases below.
 layoutPat :: ToBriDocC (Pat RdrName) (Seq BriDocNumbered)
 layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   WildPat _  -> fmap Seq.singleton $ docLit $ Text.pack "_"
+    -- _ -> expr
   VarPat n   -> fmap Seq.singleton $ docLit $ lrdrNameToText n
+    -- abc -> expr
   LitPat lit -> fmap Seq.singleton $ allocateNode $ litBriDoc lit
+    -- 0 -> expr
   ParPat inner -> do
+    -- (nestedpat) -> expr
     left  <- docLit $ Text.pack "("
     right <- docLit $ Text.pack ")"
     innerDocs <- colsWrapPat =<< layoutPat inner
@@ -49,6 +63,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     --       xN' <- docSeq [return xN, docLit $ Text.pack ")"]
     --       return $ (x1' Seq.<| middle) Seq.|> xN'
   ConPatIn lname (PrefixCon args) -> do
+    -- Abc a b c -> expr
     let nameDoc = lrdrNameToText lname
     argDocs <- layoutPat `mapM` args
     if null argDocs
@@ -61,15 +76,19 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
           $ fmap colsWrapPat argDocs
         return $ x1 Seq.<| xR
   ConPatIn lname (InfixCon left right) -> do
-    let nameDoc = lrdrNameToText lname
-    leftDoc  <- colsWrapPat =<< layoutPat left
+    -- a :< b -> expr
+    nameDoc <- lrdrNameToTextAnn lname
+    leftDoc <- appSep . colsWrapPat =<< layoutPat left
     rightDoc <- colsWrapPat =<< layoutPat right
-    middle <- docLit nameDoc
+    middle <- appSep $ docLit nameDoc
     return $ Seq.empty Seq.|> leftDoc Seq.|> middle Seq.|> rightDoc
   ConPatIn lname (RecCon (HsRecFields [] Nothing)) -> do
+    -- Abc{} -> expr
     let t = lrdrNameToText lname
     fmap Seq.singleton $ docLit $ t <> Text.pack "{}"
   ConPatIn lname (RecCon (HsRecFields fs@(_:_) Nothing)) -> do
+    -- Abc { a = locA, b = locB, c = locC } -> expr1
+    -- Abc { a, b, c } -> expr2
     let t = lrdrNameToText lname
     fds <- fs `forM` \(L _ (HsRecField (L _ (FieldOcc lnameF _)) fPat pun)) -> do
       fExpDoc <- if pun
@@ -91,12 +110,14 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       , docLit $ Text.pack "}"
       ]
   ConPatIn lname (RecCon (HsRecFields [] (Just 0))) -> do
+    -- Abc { .. } -> expr
     let t = lrdrNameToText lname
     fmap Seq.singleton $ docSeq
       [ appSep $ docLit t
       , docLit $ Text.pack "{..}"
       ]
   ConPatIn lname (RecCon (HsRecFields fs@(_:_) (Just dotdoti))) | dotdoti == length fs -> do
+    -- Abc { a = locA, .. }
     let t = lrdrNameToText lname
     fds <- fs `forM` \(L _ (HsRecField (L _ (FieldOcc lnameF _)) fPat pun)) -> do
       fExpDoc <- if pun
@@ -117,16 +138,20 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       , docLit $ Text.pack "..}"
       ]
   TuplePat args boxity _ -> do
+    -- (nestedpat1, nestedpat2, nestedpat3) -> expr
+    -- (#nestedpat1, nestedpat2, nestedpat3#) -> expr
     case boxity of
       Boxed   -> wrapPatListy args "(" ")"
       Unboxed -> wrapPatListy args "(#" "#)"
   AsPat asName asPat -> do
+    -- bind@nestedpat -> expr
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
   SigPatIn pat1 (HsWC _ (HsIB _ ty1 _)) -> do
 #else /* ghc-8.0 */
   SigPatIn pat1 (HsIB _ (HsWC _ _ ty1)) -> do
 #endif
+    -- i :: Int -> expr
     patDocs <- layoutPat pat1
     tyDoc <- docSharedWrapper layoutType ty1
     case Seq.viewr patDocs of
@@ -146,12 +171,17 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
           ]
         return $ xR Seq.|> xN'
   ListPat elems _ _ ->
+    -- [] -> expr1
+    -- [nestedpat1, nestedpat2, nestedpat3] -> expr2
     wrapPatListy elems "[" "]"
   BangPat pat1 -> do
+    -- !nestedpat -> expr
     wrapPatPrepend pat1 (docLit $ Text.pack "!")
   LazyPat pat1 -> do
+    -- ~nestedpat -> expr
     wrapPatPrepend pat1 (docLit $ Text.pack "~")
   NPat llit@(L _ (OverLit olit _ _ _)) mNegative _ _ -> do
+    -- -13 -> expr
     litDoc <- docWrapNode llit $ allocateNode $ overLitValBriDoc olit
     negDoc <- docLit $ Text.pack "-"
     pure $ case mNegative of

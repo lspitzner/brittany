@@ -349,11 +349,14 @@ func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
 func (A a) = a
 
 #test list constructor
-func (x:xr) = x
+func (x : xr) = x
 
 #test some other constructor symbol
 #pending
-func (x:+:xr) = x
+func (x :+: xr) = x
+
+#test normal infix constructor
+func (x `Foo` xr) = x
 
 
 ###############################################################################
@@ -476,8 +479,22 @@ func = (`abc` 1)
 #group tuples
 ###
 
-#test 1
+#test pair
 func = (abc, def)
+
+#test pair section left
+func = (abc, )
+
+#test pair section right
+func = (, abc)
+
+#test quintuple section long
+myTupleSection =
+  ( verylaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaargefirstelement
+  ,
+  , verylaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaargethirdelement
+  ,
+  )
 
 #test 2
 #pending

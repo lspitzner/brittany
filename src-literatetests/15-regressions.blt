@@ -123,8 +123,8 @@ func = do
 #test list comprehension comment placement
 func =
   [ (thing, take 10 alts) --TODO: select best ones
-  | (thing, _got, alts@(_:_)) <- nosuchFooThing
-  , gast                      <- award
+  | (thing, _got, alts@(_ : _)) <- nosuchFooThing
+  , gast                        <- award
   ]
 
 #test if-then-else comment placement
@@ -219,7 +219,7 @@ showPackageDetailedInfo pkginfo =
           , entry
             "Versions installed"
             installedVersions
-            ( altText
+            (altText
               null
               (if hasLib pkginfo then "[ Not installed ]" else "[ Unknown ]")
             )
@@ -513,3 +513,15 @@ cs0 = 0 : [ c / Interval n | c <- cs | n <- [1..] ]
 #test issue 70
 {-# LANGUAGE TemplateHaskell #-}
 deriveFromJSON (unPrefix "assignPost") ''AssignmentPost
+
+#test issue 116
+{-# LANGUAGE BangPatterns #-}
+func = do
+  let !forced = some
+  pure ()
+
+#test let-in-hanging
+spanKey p q = case minViewWithKey q of
+  Just ((k, _), q') | p k ->
+    let (kas, q'') = spanKey p q' in ((k, a) : kas, q'')
+  _ -> ([], q)

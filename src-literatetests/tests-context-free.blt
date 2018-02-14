@@ -366,11 +366,11 @@ func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
 func (A a) = a
 
 #test list constructor
-func (x:xr) = x
+func (x : xr) = x
 
 #test some other constructor symbol
 #pending
-func (x:+:xr) = x
+func (x :+: xr) = x
 
 
 ###############################################################################
@@ -509,6 +509,11 @@ func = (abc, def)
 #pending
 func = (lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
   , lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd)
+
+#test let in on single line
+foo =
+  let longIdentifierForShortValue = 1
+  in longIdentifierForShortValue + longIdentifierForShortValue
 
 
 
@@ -714,7 +719,7 @@ func
 
 #test some indentation thingy
 func =
-  ( lkjadljasldjalskdjaldjalsdjkalsdjlaksdjlasjdlajsaldskj
+  (lkjadljasldjalskdjaldjalsdjkalsdjlaksdjlasjdlajsaldskj
   $ abc
   $ def
   $ ghi
@@ -743,7 +748,7 @@ func = do
 #test list comprehension comment placement
 func =
   [ (thing, take 10 alts) --TODO: select best ones
-  | (thing, _got, alts@(_:_)) <- nosuchFooThing
+  | (thing, _got, alts@(_ : _)) <- nosuchFooThing
   , gast <- award
   ]
 
@@ -840,7 +845,7 @@ showPackageDetailedInfo pkginfo =
           , entry
             "Versions installed"
             installedVersions
-            ( altText
+            (altText
               null
               (if hasLib pkginfo then "[ Not installed ]" else "[ Unknown ]")
             )

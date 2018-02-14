@@ -24,10 +24,16 @@ import qualified DynFlags      as GHC
 import qualified GHC           as GHC hiding (parseModule)
 import qualified Parser        as GHC
 import qualified SrcLoc        as GHC
+import qualified FastString    as GHC
+import qualified GHC           as GHC hiding (parseModule)
+import qualified Lexer         as GHC
+import qualified StringBuffer  as GHC
+import qualified Outputable    as GHC
 import           RdrName ( RdrName(..) )
 import           HsSyn
 import           SrcLoc ( SrcSpan, Located )
 import           RdrName ( RdrName(..) )
+
 
 import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate   as ExactPrint
@@ -37,6 +43,8 @@ import qualified Language.Haskell.GHC.ExactPrint.Preprocess as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Delta      as ExactPrint
 
 import qualified Data.Generics as SYB
+
+import           Control.Exception
 -- import           Data.Generics.Schemes
 
 
@@ -85,7 +93,14 @@ parseModuleFromString
   -> String
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
 parseModuleFromString args fp dynCheck str =
-  ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
+  -- We mask here because otherwise using `throwTo` (i.e. for a timeout) will
+  -- produce nasty looking errors ("ghc panic"). The `mask_` makes it so we
+  -- cannot kill the parsing thread - not very nice. But i'll
+  -- optimistically assume that most of the time brittany uses noticable or
+  -- longer time, the majority of the time is not spend in parsing, but in
+  -- bridoc transformation stuff.
+  -- (reminder to update note on `parsePrintModule` if this changes.)
+  mask_ $ ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
     dflags0                       <- lift $ ExactPrint.initDynFlagsPure fp str
     (dflags1, leftover, warnings) <- lift
       $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
@@ -97,12 +112,12 @@ parseModuleFromString args fp dynCheck str =
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
-    x <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
-    either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
-           (\(a, m) -> pure (a, m, x))
-      $ ExactPrint.parseWith dflags1 fp GHC.parseModule str
+    dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
+    let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
+    case res of
+      Left  (span, err) -> ExceptT.throwE $ show span ++ ": " ++ err
+      Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
------------
 
 commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()
 commentAnnFixTransformGlob ast = do

@@ -352,7 +352,11 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
       -- maxZipper xs [] = xs
       -- maxZipper (x:xr) (y:yr) = max x y : maxZipper xr yr
       colAggregation :: [Int] -> Int
-      colAggregation xs = maximum [ x | x <- xs, x < minimum xs + alignMax ]
+      colAggregation [] = 0 -- this probably cannot happen the way we call
+                            -- this function, because _cbs_map only ever
+                            -- contains nonempty Seqs.
+      colAggregation xs = maximum [ x | x <- xs, x <= minimum xs + alignMax' ]
+        where alignMax' = max 0 alignMax
 
       processedMap :: ColMap2
       processedMap =

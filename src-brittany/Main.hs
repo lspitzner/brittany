@@ -82,9 +82,10 @@ helpDoc = PP.vcat $ List.intersperse
       ]
   , parDocW
     [ "This program is written carefully and contains safeguards to ensure"
-    , "the transformation does not change semantics (or the syntax tree at all)"
-    , "and that no comments are removed."
-    , "Nonetheless, this is a young project, and there will always be bugs."
+    , "the output is syntactically valid and that no comments are removed."
+    , "Nonetheless, this is a young project, and there will always be bugs,"
+    , "and ensuring that the transformation never changes semantics of the"
+    , "transformed source is currently not possible."
     , "Please do check the output and do not let brittany override your large"
     , "codebase without having backups."
     ]
@@ -140,16 +141,16 @@ mainCmdParser helpDesc = do
     ""
     ["write-mode"]
     "(display|inplace)"
-    Flag
-      { _flag_help    = Just $ PP.vcat
+    (  flagHelp
+        ( PP.vcat
           [ PP.text "display: output for any input(s) goes to stdout"
           , PP.text "inplace: override respective input file (without backup!)"
           ]
-      , _flag_default = Just Display
-      }
-  inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input haskell source files")
+        )
+    <> flagDefault Display
+    )
+  inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input/inout haskell source files")
   reorderStop
-  desc        <- peekCmdDesc
   addCmdImpl $ void $ do
     when printLicense $ do
       print licenseDoc
@@ -161,7 +162,7 @@ mainCmdParser helpDesc = do
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do
-      liftIO $ print $ ppHelpShallow desc
+      liftIO $ putStrLn $ PP.renderStyle PP.style { PP.ribbonsPerLine = 1.0 } $ ppHelpShallow helpDesc
       System.Exit.exitSuccess
 
     let inputPaths  = if null inputParams then [Nothing] else map Just inputParams
@@ -281,7 +282,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
             putErrorLn
               $  "Error: detected unprocessed comments."
               ++ " The transformation output will most likely"
-              ++ " not contain certain of the comments"
+              ++ " not contain some of the comments"
               ++ " present in the input haskell source file."
             putErrorLn $ "Affected are the following comments:"
             unused `forM_` \case
@@ -346,7 +347,7 @@ readConfigs cmdlineConfig configPaths = do
       userConfigXdg    <- readConfig userConfigPathXdg
       let userConfig = userConfigSimple <|> userConfigXdg
       when (Data.Maybe.isNothing userConfig) $ do
-        liftIO $ Directory.createDirectoryIfMissing False userBritPathXdg
+        liftIO $ Directory.createDirectoryIfMissing True userBritPathXdg
         writeDefaultConfig userConfigPathXdg
       -- rightmost has highest priority
       pure $ [userConfig, localConfig]

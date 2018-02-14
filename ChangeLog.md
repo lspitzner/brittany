@@ -1,5 +1,21 @@
 # Revision history for brittany
 
+## 0.9.0.1  -- February 2018
+
+* Support `TupleSections` (thanks to Matthew Piziak)
+* Bugfixes:
+    - Fix Shebang handling with stdin input (#92)
+    - Fix bug that effectively deleted strict/lazy matches (BangPatterns) (#116)
+    - Fix infix operator whitespace bug (#101, #114)
+    - Fix help command output and its layouting (#103)
+    - Fix crash when config dir does not exist yet (#115)
+* Layouting changes:
+    - no space after opening non-tuple parenthesis even for multi-line case
+    - use spaces around infix operators (applies to sections and in pattern
+      matches)
+    - Let-in is layouted more flexibly in fewer lines, if possible
+      (thanks to Evan Borden)
+
 ## 0.9.0.0  -- December 2017
 
 * Change default global config path (use XDG spec)
