@@ -519,3 +519,9 @@ deriveFromJSON (unPrefix "assignPost") ''AssignmentPost
 func = do
   let !forced = some
   pure ()
+
+#test let-in-hanging
+spanKey p q = case minViewWithKey q of
+  Just ((k, _), q') | p k ->
+    let (kas, q'') = spanKey p q' in ((k, a) : kas, q'')
+  _ -> ([], q)

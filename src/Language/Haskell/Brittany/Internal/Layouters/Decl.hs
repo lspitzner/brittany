@@ -300,10 +300,13 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
       ]
   let singleLineGuardsDoc guards = appSep $ case guards of
         []  -> docEmpty
-        [g] -> docSeq [appSep $ docLit $ Text.pack "|", return g]
+        [g] -> docSeq
+               [appSep $ docLit $ Text.pack "|", docForceSingleline $ return g]
         gs  -> docSeq
             $  [appSep $ docLit $ Text.pack "|"]
-            ++ List.intersperse docCommaSep (return <$> gs)
+            ++ (List.intersperse docCommaSep
+                                 (docForceSingleline . return <$> gs)
+               )
 
   indentPolicy <- mAsk
     <&> _conf_layout
