@@ -82,9 +82,10 @@ helpDoc = PP.vcat $ List.intersperse
       ]
   , parDocW
     [ "This program is written carefully and contains safeguards to ensure"
-    , "the transformation does not change semantics (or the syntax tree at all)"
-    , "and that no comments are removed."
-    , "Nonetheless, this is a young project, and there will always be bugs."
+    , "the output is syntactically valid and that no comments are removed."
+    , "Nonetheless, this is a young project, and there will always be bugs,"
+    , "and ensuring that the transformation never changes semantics of the"
+    , "transformed source is currently not possible."
     , "Please do check the output and do not let brittany override your large"
     , "codebase without having backups."
     ]
@@ -148,7 +149,7 @@ mainCmdParser helpDesc = do
         )
     <> flagDefault Display
     )
-  inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input haskell source files")
+  inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input/inout haskell source files")
   reorderStop
   addCmdImpl $ void $ do
     when printLicense $ do

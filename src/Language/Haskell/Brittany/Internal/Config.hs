@@ -105,7 +105,7 @@ configParser = do
   cols               <- addFlagReadParams "" ["columns"] "AMOUNT" (flagHelpStr "target max columns (80 is an old default for this)")
   importCol          <- addFlagReadParams "" ["import-col"] "N" (flagHelpStr "column to align import lists at")
 
-  dumpConfig         <- addSimpleBoolFlag "" ["dump-config"] (flagHelp $ parDoc "dump the programs full config (commandline + file + defaults)")
+  dumpConfig         <- addSimpleBoolFlag "" ["dump-config"] (flagHelp $ parDoc "dump the programs full config (merged commandline + file + defaults)")
   dumpAnnotations    <- addSimpleBoolFlag "" ["dump-annotations"] (flagHelp $ parDoc "dump the full annotations returned by ghc-exactprint")
   dumpUnknownAST     <- addSimpleBoolFlag "" ["dump-ast-unknown"] (flagHelp $ parDoc "dump the ast for any nodes not transformed, but copied as-is by brittany")
   dumpCompleteAST    <- addSimpleBoolFlag "" ["dump-ast-full"] (flagHelp $ parDoc "dump the full ast")
@@ -119,9 +119,9 @@ configParser = do
   dumpBriDocIndent  <- addSimpleBoolFlag "" ["dump-bridoc-indent"] (flagHelp $ parDoc "dump the partially transformed bridoc: after transformation: indent")
   dumpBriDocFinal   <- addSimpleBoolFlag "" ["dump-bridoc-final"] (flagHelp $ parDoc "dump the post-transformation bridoc")
 
-  outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible")
+  outputOnErrors <- addSimpleBoolFlag "" ["output-on-errors"] (flagHelp $ parDoc "even when there are errors, produce output (or try to to the degree possible)")
   wError            <- addSimpleBoolFlag "" ["werror"] (flagHelp $ parDoc "treat warnings as errors")
-  omitValidCheck    <- addSimpleBoolFlag "" ["omit-output-check"] (flagHelp $ parDoc "omit checking if the output is syntactically valid; for dev on brittany")
+  omitValidCheck    <- addSimpleBoolFlag "" ["omit-output-check"] (flagHelp $ parDoc "omit checking if the output is syntactically valid (debugging)")
 
   roundtripOnly    <- addSimpleBoolFlag "" ["exactprint-only"] (flagHelp $ parDoc "do not reformat, but exclusively use exactprint to roundtrip (debugging)")
 
