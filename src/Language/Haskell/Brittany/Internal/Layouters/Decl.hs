@@ -94,7 +94,8 @@ layoutSig lsig@(L _loc sig) = case sig of
             NoInline        -> "NOINLINE "
             EmptyInlineSpec -> "" -- i have no idea if this is correct.
       let phaseStr = case phaseAct of
-            NeverActive      -> "[] "
+            NeverActive      -> "" -- not [] - for NOINLINE NeverActive is
+                                   -- in fact the default
             AlwaysActive     -> ""
             ActiveBefore _ i -> "[~" ++ show i ++ "] "
             ActiveAfter  _ i -> "[" ++ show i ++ "] "
