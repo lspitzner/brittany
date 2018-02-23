@@ -158,7 +158,7 @@ mainCmdParser helpDesc = do
     when printVersion $ do
       do
         putStrLn $ "brittany version " ++ showVersion version
-        putStrLn $ "Copyright (C) 2016-2017 Lennart Spitzner"
+        putStrLn $ "Copyright (C) 2016-2018 Lennart Spitzner"
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do
@@ -170,10 +170,14 @@ mainCmdParser helpDesc = do
                       Display -> repeat Nothing
                       Inplace -> inputPaths
 
-    config <- runMaybeT (readConfigs cmdlineConfig configPaths) >>= \case
+    configsToLoad <- liftIO $ if null configPaths
+                                then maybeToList <$> (Directory.getCurrentDirectory >>= findLocalConfigPath)
+                                else pure configPaths
+
+    config <- runMaybeT (readConfigsWithUserConfig cmdlineConfig configsToLoad) >>= \case
       Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
       Just x  -> return x
-    when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $ do
+    when (confUnpack $ _dconf_dump_config $ _conf_debug $ config) $
       trace (showConfigYaml config) $ return ()
 
     results <- zipWithM (coreIO putStrErrLn config suppressOutput) inputPaths outputPaths
@@ -317,42 +321,3 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
          ]
       then trace "----"
       else id
-
-
-readConfigs :: CConfig Option -> [System.IO.FilePath] -> MaybeT IO Config
-readConfigs cmdlineConfig configPaths = do
-  userBritPathSimple <- liftIO $ Directory.getAppUserDataDirectory "brittany"
-  userBritPathXdg    <- liftIO
-    $ Directory.getXdgDirectory Directory.XdgConfig "brittany"
-  let userConfigPathSimple = userBritPathSimple FilePath.</> "config.yaml"
-  let userConfigPathXdg    = userBritPathXdg FilePath.</> "config.yaml"
-  let
-    findLocalConfig :: MaybeT IO (Maybe (CConfig Option))
-    findLocalConfig = do
-      cwd <- liftIO $ Directory.getCurrentDirectory
-      let dirParts = FilePath.splitDirectories cwd
-      let searchDirs =
-            [ FilePath.joinPath x | x <- reverse $ List.inits dirParts ]
-      -- when cwd is "a/b/c", searchDirs is ["a/b/c", "a/b", "a", "/"]
-      mFilePath <- liftIO $ Directory.findFileWith Directory.doesFileExist
-                                                   searchDirs
-                                                   "brittany.yaml"
-      case mFilePath of
-        Nothing -> pure Nothing
-        Just fp -> readConfig fp
-  configsRead <- case configPaths of
-    [] -> do
-      localConfig      <- findLocalConfig
-      userConfigSimple <- readConfig userConfigPathSimple
-      userConfigXdg    <- readConfig userConfigPathXdg
-      let userConfig = userConfigSimple <|> userConfigXdg
-      when (Data.Maybe.isNothing userConfig) $ do
-        liftIO $ Directory.createDirectoryIfMissing True userBritPathXdg
-        writeDefaultConfig userConfigPathXdg
-      -- rightmost has highest priority
-      pure $ [userConfig, localConfig]
-    paths -> readConfig `mapM` reverse paths
-                   -- reverse to give highest priority to the first
-  merged <-
-    pure $ Semigroup.mconcat $ catMaybes $ configsRead ++ [Just cmdlineConfig]
-  return $ cZipWith fromOptionIdentity staticDefaultConfig merged
