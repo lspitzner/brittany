@@ -99,7 +99,7 @@ layoutWriteAppend t = do
   mTell $ Text.Builder.fromText $ t
   mModify $ \s -> s
     { _lstate_curYOrAddNewline = Left $ case _lstate_curYOrAddNewline s of
-        Left c -> c + Text.length t + spaces
+        Left c -> c + elasticLength t + spaces
         Right{} -> Text.length t + spaces
     , _lstate_addSepSpace = Nothing
     }
@@ -170,7 +170,7 @@ layoutWriteNewlineBlock = do
 --   mSet $ state
 --     { _lstate_addSepSpace = Just
 --                           $ if isJust $ _lstate_addNewline state
---         then i 
+--         then i
 --         else _lstate_indLevelLinger state + i - _lstate_curY state
 --     }
 
@@ -600,7 +600,7 @@ layoutIndentRestorePostComment = do
 -- layoutWritePriorCommentsRestore x = do
 --   layoutWritePriorComments x
 --   layoutIndentRestorePostComment
--- 
+--
 -- layoutWritePostCommentsRestore :: (Data.Data.Data ast,
 --                                                MonadMultiWriter Text.Builder.Builder m,
 --                                                MonadMultiState LayoutState m
