@@ -32,6 +32,7 @@ module Language.Haskell.Brittany.Internal.BackendUtils
   , layoutWritePriorComments
   , layoutWritePostComments
   , layoutRemoveIndentLevelLinger
+  , elasticLength
   )
 where
 
@@ -51,6 +52,7 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 import           GHC ( Located, GenLocated(L), moduleNameString )
 
+import Text.Ascii (isAscii)
 
 
 traceLocal
@@ -101,6 +103,16 @@ layoutWriteAppend t = do
         Right{} -> Text.length t + spaces
     , _lstate_addSepSpace = Nothing
     }
+
+-- |
+-- >>> elasticLength "あ"
+-- 2
+-- >>> elasticLength "abc"
+-- 3
+-- >>> elasticLength "aあa"
+-- 4
+elasticLength :: Text -> Int
+elasticLength = Text.foldl' (\len c -> if isAscii c then len + 1 else len + 2) 0
 
 layoutWriteAppendSpaces
   :: ( MonadMultiWriter Text.Builder.Builder m
