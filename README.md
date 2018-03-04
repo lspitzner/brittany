@@ -160,8 +160,6 @@ a good amount of high-level documentation at
 
 [the documentation index](doc/implementation/index.md)
 
-Note that most development happens on the `dev` branch of this repository!
-
 # License
 
 Copyright (C) 2016-2017 Lennart Spitzner
