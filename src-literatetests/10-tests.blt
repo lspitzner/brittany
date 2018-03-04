@@ -235,6 +235,17 @@ func
   -> ColInfo
   -> m ()
 
+#test forall context multiline with comments
+{-# LANGUAGE RankNTypes #-}
+addFlagStringParam
+  :: forall f out
+   . (Applicative f)
+  => String -- ^ short flag chars, i.e. "v" for -v
+  -> [String] -- ^ list of long names, i.e. ["verbose"]
+  -> String -- ^ param name
+  -> Flag String -- ^ properties
+  -> CmdParser f out String
+
 #test language pragma issue
 {-# LANGUAGE ScopedTypeVariables #-}
 func :: forall (a :: *) b . a -> b
