@@ -32,6 +32,7 @@ module Language.Haskell.Brittany.Internal.BackendUtils
   , layoutWritePriorComments
   , layoutWritePostComments
   , layoutRemoveIndentLevelLinger
+  , elasticLength
   )
 where
 
@@ -51,6 +52,7 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 import           GHC ( Located, GenLocated(L), moduleNameString )
 
+import Text.Ascii (isAscii)
 
 
 traceLocal
@@ -97,10 +99,20 @@ layoutWriteAppend t = do
   mTell $ Text.Builder.fromText $ t
   mModify $ \s -> s
     { _lstate_curYOrAddNewline = Left $ case _lstate_curYOrAddNewline s of
-        Left c -> c + Text.length t + spaces
+        Left c -> c + elasticLength t + spaces
         Right{} -> Text.length t + spaces
     , _lstate_addSepSpace = Nothing
     }
+
+-- |
+-- >>> elasticLength "あ"
+-- 2
+-- >>> elasticLength "abc"
+-- 3
+-- >>> elasticLength "aあa"
+-- 4
+elasticLength :: Text -> Int
+elasticLength = Text.foldl' (\len c -> if isAscii c then len + 1 else len + 2) 0
 
 layoutWriteAppendSpaces
   :: ( MonadMultiWriter Text.Builder.Builder m
@@ -158,7 +170,7 @@ layoutWriteNewlineBlock = do
 --   mSet $ state
 --     { _lstate_addSepSpace = Just
 --                           $ if isJust $ _lstate_addNewline state
---         then i 
+--         then i
 --         else _lstate_indLevelLinger state + i - _lstate_curY state
 --     }
 
@@ -588,7 +600,7 @@ layoutIndentRestorePostComment = do
 -- layoutWritePriorCommentsRestore x = do
 --   layoutWritePriorComments x
 --   layoutIndentRestorePostComment
--- 
+--
 -- layoutWritePostCommentsRestore :: (Data.Data.Data ast,
 --                                                MonadMultiWriter Text.Builder.Builder m,
 --                                                MonadMultiState LayoutState m

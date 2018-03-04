@@ -264,7 +264,7 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
  where
   rec = \case
     BDEmpty                 -> return $ 0
-    BDLit t                 -> StateS.put False $> Text.length t
+    BDLit t                 -> StateS.put False $> elasticLength t
     BDSeq bds               -> sum <$> rec `mapM` bds
     BDCols _ bds            -> sum <$> rec `mapM` bds
     BDSeparator -> StateS.get >>= \b -> StateS.put True $> if b then 0 else 1
