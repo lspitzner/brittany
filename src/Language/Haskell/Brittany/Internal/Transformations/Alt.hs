@@ -72,12 +72,11 @@ transformAlts
      )
   => BriDocNumbered
   -> MultiRWSS.MultiRWS r w s BriDoc
-transformAlts briDoc =
+transformAlts =
   MultiRWSS.withMultiStateA (AltCurPos 0 0 0 AltLineModeStateNone)
-    $ Memo.startEvalMemoT
-    $ fmap unwrapBriDocNumbered
-    $ rec
-    $ briDoc
+    . Memo.startEvalMemoT
+    . fmap unwrapBriDocNumbered
+    . rec
   where
     -- this function is exponential by nature and cannot be improved in any
     -- way i can think of, and i've tried. (stupid StableNames.)
@@ -721,11 +720,12 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                       $ sequence
                       $ reverse
                       $ lSpss
-              summed = worbled <&> \lSps@(lSp1:_) ->
-                VerticalSpacing (_vs_sameLine lSp1) 
-                                (spMakePar $ maxVs lSps)
-                                False
-          return $ summed
+              sumF lSps@(lSp1:_) = VerticalSpacing (_vs_sameLine lSp1)
+                                                   (spMakePar $ maxVs lSps)
+                                                   False
+              sumF [] = error $ "should not happen. if my logic does not fail"
+                             ++ "me, this follows from not (null ls)."
+          return $ sumF <$> worbled
           -- lSpss@(mVs:_) <- rec `mapM` ls
           -- return $ case Control.Lens.transposeOf traverse lSpss of -- TODO: we currently only
           --                      -- consider the first alternative for the
@@ -758,6 +758,34 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                   VerticalSpacingParAlways i -> VerticalSpacingParAlways i
                   VerticalSpacingParSome i -> VerticalSpacingParAlways i
               }
+            -- the version below is an alternative idea: fold the input
+            -- spacings into a single spacing. This was hoped to improve in
+            -- certain cases where non-bottom alternatives took up "too much
+            -- explored search space"; the downside is that it also cuts
+            -- the search-space short in other cases where it is not necessary,
+            -- leading to unnecessary new-lines. Disabled for now. A better
+            -- solution would require conditionally folding the search-space
+            -- only in appropriate locations (i.e. a new BriDoc node type
+            -- for this purpose, perhaps "BDFNonBottomSpacing1").
+            -- else
+            --   [ Foldable.foldl1
+            --     (\(VerticalSpacing x1 x2 _) (VerticalSpacing y1 y2 _) ->
+            --       VerticalSpacing
+            --         (min x1 y1)
+            --         (case (x2, y2) of
+            --           (x, VerticalSpacingParNone) -> x
+            --           (VerticalSpacingParNone, x) -> x
+            --           (VerticalSpacingParAlways i, VerticalSpacingParAlways j) ->
+            --             VerticalSpacingParAlways $ min i j
+            --           (VerticalSpacingParAlways i, VerticalSpacingParSome j) ->
+            --             VerticalSpacingParAlways $ min i j
+            --           (VerticalSpacingParSome i, VerticalSpacingParAlways j) ->
+            --             VerticalSpacingParAlways $ min i j
+            --           (VerticalSpacingParSome x, VerticalSpacingParSome y) ->
+            --             VerticalSpacingParSome $ min x y)
+            --         False)
+            --     mVs
+            --   ]
         BDFSetParSpacing bd -> do
           mVs <- rec bd
           return $ mVs <&> \vs -> vs { _vs_parFlag = True }
