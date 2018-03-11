@@ -792,27 +792,30 @@ import Test (Long(List, Of, Things))
 
 #test things-with-with-comments
 import Test
-  ( Thing( With
-         -- Comments
-         , and
-         -- also
-         , items
-         -- !
-         )
+  ( Thing
+    ( With
+    -- Comments
+    , and
+    -- also
+    , items
+    -- !
+    )
   )
 import Test
-  ( Thing( Item
-         -- and Comment
-         )
+  ( Thing
+    ( Item
+    -- and Comment
+    )
   )
 import Test
-  ( Thing( With
-         -- Comments
-         , and
-         -- also
-         , items
-         -- !
-         )
+  ( Thing
+    ( With
+    -- Comments
+    , and
+    -- also
+    , items
+    -- !
+    )
   )
 
 #test prefer-dense-empty-list

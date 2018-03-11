@@ -47,10 +47,16 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   IEThingWith _ _ ns _ -> do
     hasComments <- hasAnyCommentsBelow lie
     docAltFilter
-      [(not hasComments, docSeq $  [ien, docLit $ Text.pack "("]
+      [ ( not hasComments
+        , docSeq
+        $  [ien, docLit $ Text.pack "("]
         ++ intersperse docCommaSep (map nameDoc ns)
-        ++ [docParenR])
-      ,(otherwise, docSeq [ien, layoutItems (splitFirstLast ns)])
+        ++ [docParenR]
+        )
+      , (otherwise
+        , docAddBaseY BrIndentRegular
+        $ docPar ien (layoutItems (splitFirstLast ns))
+        )
       ]
    where
     nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
@@ -113,21 +119,27 @@ layoutAnnAndSepLLIEs llies@(L _ lies) = do
 -- )
 layoutLLIEs :: Located [LIE RdrName] -> ToBriDocM BriDocNumbered
 layoutLLIEs llies = do
-  ieDs <- layoutAnnAndSepLLIEs llies
+  ieDs        <- layoutAnnAndSepLLIEs llies
   hasComments <- hasAnyCommentsBelow llies
   case ieDs of
     [] -> docAltFilter
-            [ (not hasComments, docLit $ Text.pack "()")
-            , ( hasComments
-              , docPar
-                  (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
-                  docParenR
-              )
-            ]
-    (ieDsH:ieDsT) ->
-      docAltFilter
-        [ (not hasComments, docSeq $ docLit (Text.pack "("):ieDs ++ [docParenR])
-        , (otherwise, docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH]) $
-            docLines $ ieDsT
-            ++ [docParenR])
-        ]
+      [ (not hasComments, docLit $ Text.pack "()")
+      , ( hasComments
+        , docPar (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
+                 docParenR
+        )
+      ]
+    (ieDsH:ieDsT) -> docAltFilter
+      [ ( not hasComments
+        , docSeq
+        $  [docLit (Text.pack "(")]
+        ++ (docForceSingleline <$> ieDs)
+        ++ [docParenR]
+        )
+      , ( otherwise
+        , docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH])
+        $  docLines
+        $  ieDsT
+        ++ [docParenR]
+        )
+      ]

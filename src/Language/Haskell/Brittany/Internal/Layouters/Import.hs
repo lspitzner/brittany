@@ -95,9 +95,22 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
                   docParenR
                 else docSeq [hidDoc, docParenLSep, docSeparator, docParenR]
                 -- ..[hiding].( b )
-              [ieD] -> if hasComments
-                then docPar (docSeq [hidDoc, docParenLSep, ieD]) docParenR
-                else docSeq [hidDoc, docParenLSep, ieD, docSeparator, docParenR]
+              [ieD] -> docAltFilter
+                [ ( not hasComments
+                  , docSeq
+                    [ hidDoc
+                    , docParenLSep
+                    , docForceSingleline $ ieD
+                    , docSeparator
+                    , docParenR
+                    ]
+                  )
+                , ( otherwise
+                  , docPar
+                    (docSeq [hidDoc, docParenLSep, docNonBottomSpacing ieD])
+                    docParenR
+                  )
+                ]
                 -- ..[hiding].( b
                 --            , b'
                 --            )
@@ -114,8 +127,7 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
     then
       let asDoc = maybe docEmpty makeAsDoc masT
       in docAlt
-        [ docForceSingleline $
-            docSeq [importHead, asDoc, docSetBaseY $ bindingsD]
+        [ docForceSingleline $ docSeq [importHead, asDoc, bindingsD]
         , docAddBaseY BrIndentRegular $
             docPar (docSeq [importHead, asDoc]) bindingsD
         ]
