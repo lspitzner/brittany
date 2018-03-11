@@ -46,6 +46,9 @@ traceFunctionWith name s1 s2 f x =
 putStrErrLn :: String -> IO ()
 putStrErrLn s = hPutStrLn stderr s
 
+putStrErr :: String -> IO ()
+putStrErr s = hPutStr stderr s
+
 printErr :: Show a => a -> IO ()
 printErr = putStrErrLn . show
 

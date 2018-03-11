@@ -173,6 +173,7 @@ defaultTestConfig = Config
     , _lconfig_columnAlignMode           = coerce (ColumnAlignModeMajority 0.7)
     , _lconfig_alignmentLimit            = coerce (30 :: Int)
     , _lconfig_alignmentBreakOnMultiline = coerce True
+    , _lconfig_hangingTypeSignature      = coerce False
     }
   , _conf_errorHandling = (_conf_errorHandling staticDefaultConfig)
     { _econf_omit_output_valid_check = coerce True

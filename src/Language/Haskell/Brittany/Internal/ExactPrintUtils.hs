@@ -24,10 +24,16 @@ import qualified DynFlags      as GHC
 import qualified GHC           as GHC hiding (parseModule)
 import qualified Parser        as GHC
 import qualified SrcLoc        as GHC
+import qualified FastString    as GHC
+import qualified GHC           as GHC hiding (parseModule)
+import qualified Lexer         as GHC
+import qualified StringBuffer  as GHC
+import qualified Outputable    as GHC
 import           RdrName ( RdrName(..) )
 import           HsSyn
 import           SrcLoc ( SrcSpan, Located )
 import           RdrName ( RdrName(..) )
+
 
 import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate   as ExactPrint
@@ -106,12 +112,12 @@ parseModuleFromString args fp dynCheck str =
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> \(L _ s) -> s)
-    x <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
-    either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
-           (\(a, m) -> pure (a, m, x))
-      $ ExactPrint.parseWith dflags1 fp GHC.parseModule str
+    dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
+    let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
+    case res of
+      Left  (span, err) -> ExceptT.throwE $ show span ++ ": " ++ err
+      Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
------------
 
 commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()
 commentAnnFixTransformGlob ast = do

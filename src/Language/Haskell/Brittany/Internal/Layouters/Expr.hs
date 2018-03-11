@@ -327,7 +327,7 @@ layoutExpr lexpr@(L _ expr) = do
           ]
         , docSetBaseY $ docLines
           [ docCols ColOpPrefix
-            [ docParenLSep
+            [ docLit $ Text.pack "("
             , docAddBaseY (BrIndentSpecial 2) innerExpDoc
             ]
           , docLit $ Text.pack ")"
@@ -531,46 +531,49 @@ layoutExpr lexpr@(L _ expr) = do
     HsLet binds exp1 -> do
       expDoc1 <- docSharedWrapper layoutExpr exp1
       mBindDocs <- layoutLocalBinds binds
-      -- this `docSetIndentLevel` might seem out of place, but is here due to
-      -- ghc-exactprint's DP handling of "let" in particular.
+      let
+        ifIndentLeftElse :: a -> a -> a
+        ifIndentLeftElse x y =
+          if indentPolicy == IndentPolicyLeft then x else y
+      -- this `docSetBaseAndIndent` might seem out of place (especially the
+      -- Indent part; setBase is necessary due to the use of docLines below),
+      -- but is here due to ghc-exactprint's DP handling of "let" in
+      -- particular.
       -- Just pushing another indentation level is a straightforward approach
       -- to making brittany idempotent, even though the result is non-optimal
       -- if "let" is moved horizontally as part of the transformation, as the
       -- comments before the first let item are moved horizontally with it.
-      docSetIndentLevel $ case mBindDocs of
-        Just [bindDoc] -> docAltFilter
-          [ ( True
-            , docSeq
+      docSetBaseAndIndent $ case mBindDocs of
+        Just [bindDoc] -> docAlt
+          [ docSeq
               [ appSep $ docLit $ Text.pack "let"
               , appSep $ docForceSingleline $ return bindDoc
               , appSep $ docLit $ Text.pack "in"
               , docForceSingleline $ expDoc1
               ]
-            )
-          , ( indentPolicy /= IndentPolicyLeft
-            , docLines
-              [ docSeq
-                [ appSep $ docLit $ Text.pack "let"
-                , docSetBaseAndIndent $ return bindDoc
-                ]
-              , docSeq
-                [ appSep $ docLit $ Text.pack "in "
-                , docSetBaseY $ expDoc1
-                ]
+          , docLines
+              [ docAlt
+                  [ docSeq
+                      [ appSep $ docLit $ Text.pack "let"
+                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent
+                      $ return bindDoc
+                      ]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar
+                    (docLit $ Text.pack "let")
+                    (docSetBaseAndIndent $ return bindDoc)
+                  ]
+              , docAlt
+                  [ docSeq
+                      [ appSep $ docLit $ Text.pack $ ifIndentLeftElse "in" "in "
+                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent expDoc1
+                      ]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar
+                    (docLit $ Text.pack "in")
+                    (docSetBaseY $ expDoc1)
+                  ]
               ]
-            )
-          , ( True
-            , docLines
-              [ docAddBaseY BrIndentRegular
-              $ docPar
-                (appSep $ docLit $ Text.pack "let")
-                (docSetBaseAndIndent $ return bindDoc)
-              , docAddBaseY BrIndentRegular
-              $ docPar
-                (appSep $ docLit $ Text.pack "in")
-                (docSetBaseY $ expDoc1)
-              ]
-            )
           ]
         Just bindDocs@(_:_) -> docAltFilter
           --either
@@ -732,6 +735,8 @@ layoutExpr lexpr@(L _ expr) = do
         , docLit $ Text.pack "}"
         ]
     RecordCon lname _ _ (HsRecFields fs@(_:_) Nothing) -> do
+      -- TODO: the layouter for RecordUpd is slightly more clever. Should
+      -- probably copy the approach from there.
       let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
       ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr pun)) -> do
         fExpDoc <- if pun
@@ -851,7 +856,7 @@ layoutExpr lexpr@(L _ expr) = do
             Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
       docAltFilter
-        -- singleline
+        -- container { fieldA = blub, fieldB = blub }
         [ ( True
           , docSeq
             [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
@@ -869,7 +874,10 @@ layoutExpr lexpr@(L _ expr) = do
             , docLit $ Text.pack "}"
             ]
           )
-        -- wild-indentation block
+        -- hanging single-line fields
+        -- container { fieldA = blub
+        --           , fieldB = blub
+        --           }
         , ( indentPolicy /= IndentPolicyLeft
           , docSeq
             [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
@@ -880,7 +888,7 @@ layoutExpr lexpr@(L _ expr) = do
                   , case rF1e of
                       Just x -> docWrapNodeRest rF1f $ docSeq
                                       [ appSep $ docLit $ Text.pack "="
-                                      , docForceSingleline $ x
+                                      , docForceSingleline x
                                       ]
                       Nothing -> docEmpty
                   ]
@@ -900,36 +908,54 @@ layoutExpr lexpr@(L _ expr) = do
                 in [line1] ++ lineR ++ [lineN]
             ]
           )
-        -- strict indentation block
+          -- non-hanging with expressions placed to the right of the names
+          -- container
+          -- { fieldA = blub
+          -- , fieldB = potentially
+          --     multiline
+          -- }
         , ( True
           , docSetParSpacing
           $ docAddBaseY BrIndentRegular
           $ docPar
               (docNodeAnnKW lexpr Nothing $ rExprDoc)
               (docNonBottomSpacing $ docLines $ let
+                expressionWrapper = if indentPolicy == IndentPolicyLeft
+                  then docForceParSpacing
+                  else docSetBaseY
                 line1 = docCols ColRecUpdate
                   [ appSep $ docLit $ Text.pack "{"
                   , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
                   , docWrapNodeRest rF1f $ case rF1e of
-                      Just x -> docSeq [ appSep $ docLit $ Text.pack "="
-                                      , docAddBaseY BrIndentRegular $ x
-                                      ]
+                      Just x -> docAlt
+                        [ docSeq [ appSep $ docLit $ Text.pack "="
+                                 , expressionWrapper x
+                                 ]
+                        , docAddBaseY BrIndentRegular
+                        $ docPar (docLit $ Text.pack "=") x
+                        ]
                       Nothing -> docEmpty
                   ]
-                lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
+                lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield
+                  $ docCols ColRecUpdate
                   [ docCommaSep
                   , appSep $ docLit $ fText
                   , case fDoc of
-                      Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
-                                        , docAddBaseY BrIndentRegular x
-                                        ]
+                      Just x -> docAlt
+                        [ docSeq [ appSep $ docLit $ Text.pack "="
+                                 , expressionWrapper x
+                                 ]
+                        , docAddBaseY BrIndentRegular
+                        $ docPar (docLit $ Text.pack "=") x
+                        ]
                       Nothing -> docEmpty
                   ]
                 lineN = docSeq
                   [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
                   , docLit $ Text.pack "}"
                   ]
-                in [line1] ++ lineR ++ [lineN])
+                in [line1] ++ lineR ++ [lineN]
+              )
           )
         ]
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */

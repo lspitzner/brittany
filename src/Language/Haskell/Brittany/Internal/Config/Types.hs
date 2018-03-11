@@ -73,6 +73,17 @@ data CLayoutConfig f = LayoutConfig
     --     short <- some more stuff
     --       that requires two lines
     --     loooooooong <- stuff
+  , _lconfig_hangingTypeSignature :: f (Last Bool)
+    -- Do not put "::" in a new line, and use hanging indentation for the
+    -- signature, i.e.:
+    -- func :: SomeLongStuff
+    --      -> SomeLongStuff
+    -- instead of the usual
+    -- func
+    --   :: SomeLongStuff
+    --   -> SomeLongStuff
+    -- As usual for hanging indentation, the result will be
+    -- context-sensitive (in the function name).
   }
   deriving (Generic)
 
