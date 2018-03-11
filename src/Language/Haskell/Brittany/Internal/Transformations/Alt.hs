@@ -319,11 +319,16 @@ transformAlts briDoc =
                 BrIndentNone -> 0
                 BrIndentRegular -> indAmount
                 BrIndentSpecial i -> i
-          mSet $ acp { _acp_indentPrep = 0 -- TODO: i am not sure this is valid,
-                                           -- in general.
-                     , _acp_indent = _acp_indent acp + indAdd
-                     , _acp_line = _acp_line acp + indAdd
-                     }
+          mSet $ acp
+            { _acp_indentPrep = 0
+              -- TODO: i am not sure this is valid, in general.
+            , _acp_indent = _acp_indent acp + indAdd
+            , _acp_line = max (_acp_line acp) (_acp_indent acp + indAdd)
+              -- we cannot use just _acp_line acp + indAdd because of the case
+              -- where there are multiple BDFEnsureIndents in the same line.
+              -- Then, the actual indentation is relative to the current
+              -- indentation, not the current cursor position.
+            }
           r <- rec bd
           acp' <- mGet
           mSet $ acp' { _acp_indent = _acp_indent acp }
