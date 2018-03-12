@@ -16,7 +16,7 @@ where
 #include "prelude.inc"
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 
 import           Data.Data
@@ -133,7 +133,7 @@ parsePrintModule configRaw inputText = runExceptT $ do
 -- can occur.
 pPrintModule
   :: Config
-  -> ExactPrint.Types.Anns
+  -> ExactPrint.Anns
   -> GHC.ParsedSource
   -> ([BrittanyError], TextL.Text)
 pPrintModule conf anns parsedModule =
@@ -169,7 +169,7 @@ pPrintModule conf anns parsedModule =
 -- if it does not.
 pPrintModuleAndCheck
   :: Config
-  -> ExactPrint.Types.Anns
+  -> ExactPrint.Anns
   -> GHC.ParsedSource
   -> IO ([BrittanyError], TextL.Text)
 pPrintModuleAndCheck conf anns parsedModule = do
@@ -253,7 +253,7 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
   post <- ppPreamble lmod
   decls `forM_` \decl -> do
     filteredAnns <- mAsk <&> \annMap ->
-      Map.findWithDefault Map.empty (ExactPrint.Types.mkAnnKey decl) annMap
+      Map.findWithDefault Map.empty (ExactPrint.mkAnnKey decl) annMap
 
     traceIfDumpConf "bridoc annotations filtered/transformed"
                     _dconf_dump_annotations
@@ -266,26 +266,26 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
       ppDecl decl
   let finalComments = filter
         ( fst .> \case
-          ExactPrint.Types.AnnComment{} -> True
+          ExactPrint.AnnComment{} -> True
           _                             -> False
         )
         post
   post `forM_` \case
-    (ExactPrint.Types.AnnComment (ExactPrint.Types.Comment cmStr _ _), l) -> do
+    (ExactPrint.AnnComment (ExactPrint.Comment cmStr _ _), l) -> do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
-    (ExactPrint.Types.G AnnEofPos, (ExactPrint.Types.DP (eofX, eofY))) ->
+    (ExactPrint.G AnnEofPos, (ExactPrint.DP (eofZ, eofX))) ->
       let
-        folder (acc, _) (kw, ExactPrint.Types.DP (x, y)) = case kw of
-          ExactPrint.Types.AnnComment cm
-            | GHC.RealSrcSpan span <- ExactPrint.Types.commentIdentifier cm
-            -> ( acc + x + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
-               , y + GHC.srcSpanEndCol span - GHC.srcSpanStartCol span
+        folder (acc, _) (kw, ExactPrint.DP (y, x)) = case kw of
+          ExactPrint.AnnComment cm
+            | GHC.RealSrcSpan span <- ExactPrint.commentIdentifier cm
+            -> ( acc + y + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
+               , x + GHC.srcSpanEndCol span - GHC.srcSpanStartCol span
                )
-          _ -> (acc + x, y)
-        (cmX, cmY) = foldl' folder (0, 0) finalComments
+          _ -> (acc + y, x)
+        (cmY, cmX) = foldl' folder (0, 0) finalComments
       in
-        ppmMoveToExactLoc $ ExactPrint.Types.DP (eofX - cmX, eofY - cmY)
+        ppmMoveToExactLoc $ ExactPrint.DP (eofZ - cmY, eofX - cmX)
     _ -> return ()
 
 withTransformedAnns :: Data ast => ast -> PPMLocal () -> PPMLocal ()
@@ -323,23 +323,23 @@ ppDecl d@(L loc decl) = case decl of
 -- Prints the information associated with the module annotation
 -- This includes the imports
 ppPreamble :: GenLocated SrcSpan (HsModule RdrName)
-           -> PPM [(ExactPrint.Types.KeywordId, ExactPrint.Types.DeltaPos)]
+           -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
 ppPreamble lmod@(L _ (HsModule _ _ _ _ _ _)) = do
   filteredAnns <- mAsk <&> \annMap ->
-    Map.findWithDefault Map.empty (ExactPrint.Types.mkAnnKey lmod) annMap
+    Map.findWithDefault Map.empty (ExactPrint.mkAnnKey lmod) annMap
     -- Since ghc-exactprint adds annotations following (implicit)
     -- modules to both HsModule and the elements in the module
     -- this can cause duplication of comments. So strip
     -- attached annotations that come after the module's where
     -- from the module node
   let (filteredAnns', post) =
-        case (ExactPrint.Types.mkAnnKey lmod) `Map.lookup` filteredAnns of
+        case (ExactPrint.mkAnnKey lmod) `Map.lookup` filteredAnns of
           Nothing -> (filteredAnns, [])
           Just mAnn ->
-            let modAnnsDp = ExactPrint.Types.annsDP mAnn
-                isWhere (ExactPrint.Types.G AnnWhere) = True
+            let modAnnsDp = ExactPrint.annsDP mAnn
+                isWhere (ExactPrint.G AnnWhere) = True
                 isWhere _                             = False
-                isEof (ExactPrint.Types.G AnnEofPos) = True
+                isEof (ExactPrint.G AnnEofPos) = True
                 isEof _                              = False
                 whereInd    = List.findIndex (isWhere . fst) modAnnsDp
                 eofInd      = List.findIndex (isEof . fst) modAnnsDp
@@ -348,8 +348,22 @@ ppPreamble lmod@(L _ (HsModule _ _ _ _ _ _)) = do
                   (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
                   (Nothing, Just _i) -> ([], modAnnsDp)
                   (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
-                mAnn'       = mAnn { ExactPrint.Types.annsDP = pre }
-                filteredAnns'' = Map.insert (ExactPrint.Types.mkAnnKey lmod) mAnn' filteredAnns
+                findInitialCommentSize = \case
+                  ((ExactPrint.AnnComment cm, ExactPrint.DP (y, _)):rest) ->
+                    let GHC.RealSrcSpan span = ExactPrint.commentIdentifier cm
+                    in   y
+                       + GHC.srcSpanEndLine span
+                       - GHC.srcSpanStartLine span
+                       + findInitialCommentSize rest
+                  _ -> 0
+                initialCommentSize = findInitialCommentSize pre
+                fixAbsoluteModuleDP = \case
+                  (g@(ExactPrint.G AnnModule), ExactPrint.DP (y, x)) ->
+                    (g, ExactPrint.DP (y - initialCommentSize, x))
+                  x -> x
+                pre' = map fixAbsoluteModuleDP pre
+                mAnn'       = mAnn { ExactPrint.annsDP = pre' }
+                filteredAnns'' = Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
             in (filteredAnns'', post')
     in do
       traceIfDumpConf "bridoc annotations filtered/transformed"
@@ -415,7 +429,7 @@ layoutBriDoc briDoc = do
     -- simpl <- mGet <&> transformToSimple
     -- return simpl
 
-  anns :: ExactPrint.Types.Anns <- mAsk
+  anns :: ExactPrint.Anns <- mAsk
 
   let state = LayoutState
         { _lstate_baseYs           = [0]

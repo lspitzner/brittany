@@ -84,7 +84,7 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         Just (_, llies) -> do
           hasComments <- hasAnyCommentsBelow llies
           if compact
-          then docSeq [hidDoc, layoutLLIEs llies]
+          then docSeq [hidDoc, layoutLLIEs True llies]
           else do
             ieDs <- layoutAnnAndSepLLIEs llies
             docWrapNodeRest llies $ case ieDs of

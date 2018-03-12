@@ -117,8 +117,8 @@ layoutAnnAndSepLLIEs llies@(L _ lies) = do
 -- () -- no comments
 -- ( -- a comment
 -- )
-layoutLLIEs :: Located [LIE RdrName] -> ToBriDocM BriDocNumbered
-layoutLLIEs llies = do
+layoutLLIEs :: Bool -> Located [LIE RdrName] -> ToBriDocM BriDocNumbered
+layoutLLIEs enableSingleline llies = do
   ieDs        <- layoutAnnAndSepLLIEs llies
   hasComments <- hasAnyCommentsBelow llies
   case ieDs of
@@ -130,7 +130,7 @@ layoutLLIEs llies = do
         )
       ]
     (ieDsH:ieDsT) -> docAltFilter
-      [ ( not hasComments
+      [ ( not hasComments && enableSingleline
         , docSeq
         $  [docLit (Text.pack "(")]
         ++ (docForceSingleline <$> ieDs)

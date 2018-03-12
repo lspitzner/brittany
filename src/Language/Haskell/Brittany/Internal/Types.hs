@@ -233,6 +233,7 @@ data BriDoc
   | BDAnnotationPrior AnnKey BriDoc
   | BDAnnotationKW AnnKey (Maybe AnnKeywordId) BriDoc
   | BDAnnotationRest  AnnKey BriDoc
+  | BDMoveToKWDP AnnKey AnnKeywordId BriDoc
   | BDLines [BriDoc]
   | BDEnsureIndent BrIndent BriDoc
   -- the following constructors are only relevant for the alt transformation
@@ -278,6 +279,7 @@ data BriDocF f
   | BDFAnnotationPrior AnnKey (f (BriDocF f))
   | BDFAnnotationKW AnnKey (Maybe AnnKeywordId) (f (BriDocF f))
   | BDFAnnotationRest  AnnKey (f (BriDocF f))
+  | BDFMoveToKWDP AnnKey AnnKeywordId (f (BriDocF f))
   | BDFLines [(f (BriDocF f))]
   | BDFEnsureIndent BrIndent (f (BriDocF f))
   | BDFForceMultiline (f (BriDocF f))
@@ -311,6 +313,7 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDAnnotationPrior annKey bd) = plate BDAnnotationPrior |- annKey |* bd
   uniplate (BDAnnotationKW annKey kw bd) = plate BDAnnotationKW |- annKey |- kw |* bd
   uniplate (BDAnnotationRest annKey bd)  = plate BDAnnotationRest |- annKey |* bd
+  uniplate (BDMoveToKWDP annKey kw bd)   = plate BDMoveToKWDP |- annKey |- kw |* bd
   uniplate (BDLines lines)               = plate BDLines ||* lines
   uniplate (BDEnsureIndent ind bd)       = plate BDEnsureIndent |- ind |* bd
   uniplate (BDForceMultiline   bd)       = plate BDForceMultiline |* bd
@@ -342,6 +345,7 @@ unwrapBriDocNumbered tpl = case snd tpl of
   BDFAnnotationPrior annKey bd -> BDAnnotationPrior annKey $ rec bd
   BDFAnnotationKW annKey kw bd -> BDAnnotationKW annKey kw $ rec bd
   BDFAnnotationRest annKey bd  -> BDAnnotationRest annKey $ rec bd
+  BDFMoveToKWDP annKey kw bd   -> BDMoveToKWDP annKey kw $ rec bd
   BDFLines lines               -> BDLines $ rec <$> lines
   BDFEnsureIndent ind bd       -> BDEnsureIndent ind $ rec bd
   BDFForceMultiline   bd       -> BDForceMultiline $ rec bd
@@ -377,6 +381,7 @@ briDocSeqSpine = \case
   BDAnnotationPrior _annKey bd  -> briDocSeqSpine bd
   BDAnnotationKW _annKey _kw bd -> briDocSeqSpine bd
   BDAnnotationRest _annKey bd   -> briDocSeqSpine bd
+  BDMoveToKWDP _annKey _kw bd   -> briDocSeqSpine bd
   BDLines lines                 -> foldl' (\(!()) -> briDocSeqSpine) () lines
   BDEnsureIndent _ind bd        -> briDocSeqSpine bd
   BDForceMultiline   bd         -> briDocSeqSpine bd

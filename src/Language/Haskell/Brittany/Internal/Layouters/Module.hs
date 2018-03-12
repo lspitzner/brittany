@@ -24,35 +24,37 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 layoutModule :: ToBriDoc HsModule
-layoutModule lmod@(L _ mod') =
-  case mod' of
+layoutModule lmod@(L _ mod') = case mod' of
     -- Implicit module Main
-    HsModule Nothing  _   imports _ _ _ -> docLines $ map layoutImport imports
-    HsModule (Just n) les imports _ _ _ -> do
-      let tn         = Text.pack $ moduleNameString $ unLoc n
-          exportsDoc = maybe docEmpty layoutLLIEs les
-      docLines
-        $ docSeq
-            [ docWrapNode lmod docEmpty
-               -- A pseudo node that serves merely to force documentation
-               -- before the node
-            , docAlt
-              (  [ docForceSingleline $ docSeq
-                     [ appSep $ docLit $ Text.pack "module"
-                     , appSep $ docLit tn
-                     , appSep exportsDoc
-                     , docLit $ Text.pack "where"
-                     ]
-                 ]
-              ++ [ docLines
-                     [ docAddBaseY BrIndentRegular $ docPar
-                       ( docSeq
-                         [appSep $ docLit $ Text.pack "module", docLit tn]
-                       )
-                       (docForceMultiline exportsDoc)
-                     , docLit $ Text.pack "where"
-                     ]
-                 ]
-              )
-            ]
-        : map layoutImport imports
+  HsModule Nothing  _   imports _ _ _ -> docLines $ map layoutImport imports
+  HsModule (Just n) les imports _ _ _ -> do
+    let tn = Text.pack $ moduleNameString $ unLoc n
+    docLines
+      $ docSeq
+          [ docNodeAnnKW lmod Nothing docEmpty
+             -- A pseudo node that serves merely to force documentation
+             -- before the node
+          , docNodeMoveToKWDP lmod AnnModule $ docAlt
+            (  [ docForceSingleline $ docSeq
+                   [ appSep $ docLit $ Text.pack "module"
+                   , appSep $ docLit tn
+                   , docWrapNode lmod $ appSep $ case les of
+                     Nothing -> docEmpty
+                     Just x  -> layoutLLIEs True x
+                   , docLit $ Text.pack "where"
+                   ]
+               ]
+            ++ [ docLines
+                   [ docAddBaseY BrIndentRegular $ docPar
+                     (docSeq [appSep $ docLit $ Text.pack "module", docLit tn]
+                     )
+                     (docWrapNode lmod $ case les of
+                       Nothing -> docEmpty
+                       Just x  -> layoutLLIEs False x
+                     )
+                   , docLit $ Text.pack "where"
+                   ]
+               ]
+            )
+          ]
+      : map layoutImport imports

@@ -625,6 +625,15 @@ module Main (module Main) where
 #test export-with-things
 module Main (Test(Test, a, b)) where
 
+#test export-with-things-comment
+-- comment1
+
+module Main
+  ( Test(Test, a, b)
+  , foo -- comment2
+  ) -- comment3
+where
+
 #test export-with-empty-thing
 module Main (Test()) where
 
