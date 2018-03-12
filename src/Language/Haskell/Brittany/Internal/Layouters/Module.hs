@@ -29,13 +29,17 @@ layoutModule lmod@(L _ mod') = case mod' of
   HsModule Nothing  _   imports _ _ _ -> docLines $ map layoutImport imports
   HsModule (Just n) les imports _ _ _ -> do
     let tn = Text.pack $ moduleNameString $ unLoc n
+    allowSingleLineExportList <- mAsk
+      <&> _conf_layout
+      .>  _lconfig_allowSingleLineExportList
+      .>  confUnpack
     docLines
       $ docSeq
           [ docNodeAnnKW lmod Nothing docEmpty
              -- A pseudo node that serves merely to force documentation
              -- before the node
-          , docNodeMoveToKWDP lmod AnnModule $ docAlt
-            (  [ docForceSingleline $ docSeq
+          , docNodeMoveToKWDP lmod AnnModule $ docAltFilter
+            [ (,) allowSingleLineExportList $ docForceSingleline $ docSeq
                    [ appSep $ docLit $ Text.pack "module"
                    , appSep $ docLit tn
                    , docWrapNode lmod $ appSep $ case les of
@@ -43,8 +47,7 @@ layoutModule lmod@(L _ mod') = case mod' of
                      Just x  -> layoutLLIEs True x
                    , docLit $ Text.pack "where"
                    ]
-               ]
-            ++ [ docLines
+            , (,) otherwise $ docLines
                    [ docAddBaseY BrIndentRegular $ docPar
                      (docSeq [appSep $ docLit $ Text.pack "module", docLit tn]
                      )
@@ -54,7 +57,6 @@ layoutModule lmod@(L _ mod') = case mod' of
                      )
                    , docLit $ Text.pack "where"
                    ]
-               ]
-            )
+            ]
           ]
       : map layoutImport imports

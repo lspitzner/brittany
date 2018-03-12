@@ -324,7 +324,7 @@ ppDecl d@(L loc decl) = case decl of
 -- This includes the imports
 ppPreamble :: GenLocated SrcSpan (HsModule RdrName)
            -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
-ppPreamble lmod@(L _ (HsModule _ _ _ _ _ _)) = do
+ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
   filteredAnns <- mAsk <&> \annMap ->
     Map.findWithDefault Map.empty (ExactPrint.mkAnnKey lmod) annMap
     -- Since ghc-exactprint adds annotations following (implicit)
@@ -332,52 +332,63 @@ ppPreamble lmod@(L _ (HsModule _ _ _ _ _ _)) = do
     -- this can cause duplication of comments. So strip
     -- attached annotations that come after the module's where
     -- from the module node
-  let (filteredAnns', post) =
-        case (ExactPrint.mkAnnKey lmod) `Map.lookup` filteredAnns of
-          Nothing -> (filteredAnns, [])
-          Just mAnn ->
-            let modAnnsDp = ExactPrint.annsDP mAnn
-                isWhere (ExactPrint.G AnnWhere) = True
-                isWhere _                             = False
-                isEof (ExactPrint.G AnnEofPos) = True
-                isEof _                              = False
-                whereInd    = List.findIndex (isWhere . fst) modAnnsDp
-                eofInd      = List.findIndex (isEof . fst) modAnnsDp
-                (pre, post') = case (whereInd, eofInd) of
-                  (Nothing, Nothing) -> ([], modAnnsDp)
-                  (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
-                  (Nothing, Just _i) -> ([], modAnnsDp)
-                  (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
-                findInitialCommentSize = \case
-                  ((ExactPrint.AnnComment cm, ExactPrint.DP (y, _)):rest) ->
-                    let GHC.RealSrcSpan span = ExactPrint.commentIdentifier cm
-                    in   y
-                       + GHC.srcSpanEndLine span
-                       - GHC.srcSpanStartLine span
-                       + findInitialCommentSize rest
-                  _ -> 0
-                initialCommentSize = findInitialCommentSize pre
-                fixAbsoluteModuleDP = \case
-                  (g@(ExactPrint.G AnnModule), ExactPrint.DP (y, x)) ->
-                    (g, ExactPrint.DP (y - initialCommentSize, x))
-                  x -> x
-                pre' = map fixAbsoluteModuleDP pre
-                mAnn'       = mAnn { ExactPrint.annsDP = pre' }
-                filteredAnns'' = Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
-            in (filteredAnns'', post')
-    in do
-      traceIfDumpConf "bridoc annotations filtered/transformed"
-                      _dconf_dump_annotations
-        $ annsDoc filteredAnns'
+  config <- mAsk
+  let shouldReformatPreamble =
+        config & _conf_layout & _lconfig_reformatModulePreamble & confUnpack
 
-      config <- mAsk
+  let
+    (filteredAnns', post) =
+      case (ExactPrint.mkAnnKey lmod) `Map.lookup` filteredAnns of
+        Nothing -> (filteredAnns, [])
+        Just mAnn ->
+          let
+            modAnnsDp = ExactPrint.annsDP mAnn
+            isWhere (ExactPrint.G AnnWhere) = True
+            isWhere _                       = False
+            isEof (ExactPrint.G AnnEofPos) = True
+            isEof _                        = False
+            whereInd     = List.findIndex (isWhere . fst) modAnnsDp
+            eofInd       = List.findIndex (isEof . fst) modAnnsDp
+            (pre, post') = case (whereInd, eofInd) of
+              (Nothing, Nothing) -> ([], modAnnsDp)
+              (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
+              (Nothing, Just _i) -> ([], modAnnsDp)
+              (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
+            findInitialCommentSize = \case
+              ((ExactPrint.AnnComment cm, ExactPrint.DP (y, _)) : rest) ->
+                let GHC.RealSrcSpan span = ExactPrint.commentIdentifier cm
+                in  y
+                    + GHC.srcSpanEndLine span
+                    - GHC.srcSpanStartLine span
+                    + findInitialCommentSize rest
+              _ -> 0
+            initialCommentSize  = findInitialCommentSize pre
+            fixAbsoluteModuleDP = \case
+              (g@(ExactPrint.G AnnModule), ExactPrint.DP (y, x)) ->
+                (g, ExactPrint.DP (y - initialCommentSize, x))
+              x -> x
+            pre' = if shouldReformatPreamble
+              then map fixAbsoluteModuleDP pre
+              else pre
+            mAnn' = mAnn { ExactPrint.annsDP = pre' }
+            filteredAnns'' =
+              Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
+          in
+            (filteredAnns'', post')
+  traceIfDumpConf "bridoc annotations filtered/transformed"
+                  _dconf_dump_annotations
+    $ annsDoc filteredAnns'
 
-      MultiRWSS.withoutMultiReader $ do
-        MultiRWSS.mPutRawR $ config :+: filteredAnns' :+: HNil
-        withTransformedAnns lmod $ do
-          briDoc <- briDocMToPPM $ layoutModule lmod
-          layoutBriDoc briDoc
-      return post
+  if shouldReformatPreamble
+    then MultiRWSS.withoutMultiReader $ do
+      MultiRWSS.mPutRawR $ config :+: filteredAnns' :+: HNil
+      withTransformedAnns lmod $ do
+        briDoc <- briDocMToPPM $ layoutModule lmod
+        layoutBriDoc briDoc
+    else
+      let emptyModule = L loc m { hsmodDecls = [] }
+      in  MultiRWSS.withMultiReader filteredAnns' $ processDefault emptyModule
+  return post
 
 _sigHead :: Sig RdrName -> String
 _sigHead = \case

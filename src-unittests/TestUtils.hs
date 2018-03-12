@@ -56,6 +56,8 @@ defaultTestConfig = Config
     , _lconfig_alignmentLimit            = coerce (30 :: Int)
     , _lconfig_alignmentBreakOnMultiline = coerce True
     , _lconfig_hangingTypeSignature      = coerce False
+    , _lconfig_reformatModulePreamble    = coerce True
+    , _lconfig_allowSingleLineExportList = coerce True
     }
   , _conf_errorHandling = (_conf_errorHandling staticDefaultConfig)
     { _econf_ExactPrintFallback = coerce ExactPrintFallbackModeNever

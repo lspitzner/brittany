@@ -64,6 +64,8 @@ staticDefaultConfig = Config
     , _lconfig_alignmentLimit            = coerce (30 :: Int)
     , _lconfig_alignmentBreakOnMultiline = coerce True
     , _lconfig_hangingTypeSignature      = coerce False
+    , _lconfig_reformatModulePreamble    = coerce True
+    , _lconfig_allowSingleLineExportList = coerce False
     }
   , _conf_errorHandling = ErrorHandlingConfig
     { _econf_produceOutputOnErrors   = coerce False
@@ -158,6 +160,8 @@ configParser = do
       , _lconfig_alignmentLimit            = mempty
       , _lconfig_alignmentBreakOnMultiline = mempty
       , _lconfig_hangingTypeSignature      = mempty
+      , _lconfig_reformatModulePreamble    = mempty
+      , _lconfig_allowSingleLineExportList = mempty
       }
     , _conf_errorHandling = ErrorHandlingConfig
       { _econf_produceOutputOnErrors   = wrapLast $ falseToNothing outputOnErrors
