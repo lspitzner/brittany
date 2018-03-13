@@ -1,7 +1,4 @@
-resolver: lts-10.5
+resolver: lts-11.0
 
 packages:
   - .
-
-extra-deps:
-  - butcher-1.3.0.0
