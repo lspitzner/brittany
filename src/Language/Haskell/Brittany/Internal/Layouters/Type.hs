@@ -317,7 +317,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsAppsTy [L _ (HsAppPrefix typ1)] -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     typeDoc1
-  HsAppsTy [_lname@(L _ (HsAppInfix name))] -> do
+  HsAppsTy [lname@(L _ (HsAppInfix name))] -> do
     -- this redirection is somewhat hacky, but whatever.
     -- TODO: a general problem when doing deep inspections on
     --       the type (and this is not the only instance)
@@ -326,7 +326,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     --       circumstances exactly important annotations (comments)
     --       would be assigned to such constructors.
     typeDoc1 <- -- docSharedWrapper layoutType $ (L l $ HsTyVar name)
-      lrdrNameToTextAnnTypeEqualityIsSpecial name
+      lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick lname name
     docLit typeDoc1
   HsAppsTy (L _ (HsAppPrefix typHead):typRestA)
     | Just typRest <- mapM (\case L _ (HsAppPrefix t) -> Just t
@@ -350,7 +350,8 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
     where
       layoutAppType (L _ (HsAppPrefix t)) = layoutType t
-      layoutAppType (L _ (HsAppInfix t))  = docLit =<< lrdrNameToTextAnnTypeEqualityIsSpecial t
+      layoutAppType lt@(L _ (HsAppInfix t)) =
+        docLit =<< lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick lt t
   HsListTy typ1 -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt

@@ -4,6 +4,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , lrdrNameToText
   , lrdrNameToTextAnn
   , lrdrNameToTextAnnTypeEqualityIsSpecial
+  , lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick
   , askIndent
   , extractAllComments
   , filterAnns
@@ -215,6 +216,27 @@ lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
   return $ if x == Text.pack "Data.Type.Equality~"
     then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
     else x
+
+-- | Same as lrdrNameToTextAnnTypeEqualityIsSpecial, but also inspects
+-- the annotations for a (parent) node for a tick to be added to the
+-- literal.
+-- Excessively long name to reflect on us having to work around such
+-- excessively obscure special cases in the exactprint API.
+lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick
+  :: ( Data ast
+     , MonadMultiReader Config m
+     , MonadMultiReader (Map AnnKey Annotation) m
+     )
+  => Located ast
+  -> Located RdrName
+  -> m Text
+lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick ast1 ast2 = do
+  hasQuote <- hasAnnKeyword ast1 AnnSimpleQuote
+  x        <- lrdrNameToTextAnn ast2
+  let lit = if x == Text.pack "Data.Type.Equality~"
+        then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
+        else x
+  return $ if hasQuote then Text.cons '\'' lit else lit
 
 askIndent :: (MonadMultiReader Config m) => m Int
 askIndent = confUnpack . _lconfig_indentAmount . _conf_layout <$> mAsk
