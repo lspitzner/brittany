@@ -234,8 +234,8 @@ readConfig path = do
       return $ Just fileConf
     else return $ Nothing
 
--- | Returns a global brittany config file
--- If there is no global config in a system, one will be created
+-- | Looks for a user-global config file and return its path.
+-- If there is no global config in a system, one will be created.
 userConfigPath :: IO System.IO.FilePath
 userConfigPath = do
   userBritPathSimple <- Directory.getAppUserDataDirectory "brittany"
@@ -250,7 +250,7 @@ userConfigPath = do
       writeDefaultConfig $ createConfPath
       pure createConfPath
 
--- | Searhes for a local brittany config path starting from a given directory
+-- | Searches for a local (per-project) brittany config starting from a given directory
 findLocalConfigPath :: System.IO.FilePath -> IO (Maybe System.IO.FilePath)
 findLocalConfigPath dir = do
   let dirParts = FilePath.splitDirectories dir
@@ -269,7 +269,7 @@ readConfigs cmdlineConfig configPaths = do
   return $ cZipWith fromOptionIdentity staticDefaultConfig merged
 
 -- | Reads provided configs
--- but also applies the user default configuration (with a lowest priority)
+-- but also applies the user default configuration (with lowest priority)
 readConfigsWithUserConfig
   :: CConfig Option        -- ^ Explicit options, take highest priority
   -> [System.IO.FilePath]  -- ^ List of config files to load and merge, highest priority first
