@@ -9,6 +9,10 @@ module Language.Haskell.Brittany.Internal.Config
   , staticDefaultConfig
   , forwardOptionsSyntaxExtsEnabled
   , readConfig
+  , userConfigPath
+  , findLocalConfigPath
+  , readConfigs
+  , readConfigsWithUserConfig
   , writeDefaultConfig
   , showConfigYaml
   )
@@ -22,8 +26,10 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
 import qualified Data.Yaml
+import           Data.CZipWith
 
 import           UI.Butcher.Monadic
+import Data.Monoid ((<>))
 
 import qualified System.Console.CmdArgs.Explicit as CmdArgs
 
@@ -33,7 +39,8 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 import           Data.Coerce ( Coercible, coerce )
 
-
+import qualified System.Directory as Directory
+import qualified System.FilePath.Posix as FilePath
 
 staticDefaultConfig :: Config
 staticDefaultConfig = Config
@@ -189,10 +196,10 @@ configParser = do
 --     <*> switch (long "barb")
 --     <*> flag 3 5 (long "barc")
 --   )
--- 
+--
 -- configParserInfo :: ParserInfo Config
 -- configParserInfo = ParserInfo
---   { infoParser      = configParser 
+--   { infoParser      = configParser
 --   , infoFullDesc    = True
 --   , infoProgDesc    = return $ PP.text "a haskell code formatting utility based on ghc-exactprint"
 --   , infoHeader      = return $ PP.text "brittany"
@@ -226,6 +233,50 @@ readConfig path = do
         Right x -> return x
       return $ Just fileConf
     else return $ Nothing
+
+-- | Looks for a user-global config file and return its path.
+-- If there is no global config in a system, one will be created.
+userConfigPath :: IO System.IO.FilePath
+userConfigPath = do
+  userBritPathSimple <- Directory.getAppUserDataDirectory "brittany"
+  userBritPathXdg    <- Directory.getXdgDirectory Directory.XdgConfig "brittany"
+  let searchDirs = [userBritPathSimple, userBritPathXdg]
+  globalConfig <- Directory.findFileWith Directory.doesFileExist searchDirs "config.yaml"
+  maybe (writeUserConfig userBritPathXdg) pure globalConfig
+  where
+    writeUserConfig dir = do
+      let createConfPath = dir FilePath.</> "config.yaml"
+      liftIO $ Directory.createDirectoryIfMissing True dir
+      writeDefaultConfig $ createConfPath
+      pure createConfPath
+
+-- | Searches for a local (per-project) brittany config starting from a given directory
+findLocalConfigPath :: System.IO.FilePath -> IO (Maybe System.IO.FilePath)
+findLocalConfigPath dir = do
+  let dirParts = FilePath.splitDirectories dir
+  -- when provided dir is "a/b/c", searchDirs is ["a/b/c", "a/b", "a", "/"]
+  let searchDirs = FilePath.joinPath <$> reverse (List.inits dirParts)
+  Directory.findFileWith Directory.doesFileExist searchDirs "brittany.yaml"
+
+-- | Reads specified configs.
+readConfigs
+  :: CConfig Option        -- ^ Explicit options, take highest priority
+  -> [System.IO.FilePath]  -- ^ List of config files to load and merge, highest priority first
+  -> MaybeT IO Config
+readConfigs cmdlineConfig configPaths = do
+  configs <- readConfig `mapM` configPaths
+  let merged = Semigroup.mconcat $ reverse (cmdlineConfig:catMaybes configs)
+  return $ cZipWith fromOptionIdentity staticDefaultConfig merged
+
+-- | Reads provided configs
+-- but also applies the user default configuration (with lowest priority)
+readConfigsWithUserConfig
+  :: CConfig Option        -- ^ Explicit options, take highest priority
+  -> [System.IO.FilePath]  -- ^ List of config files to load and merge, highest priority first
+  -> MaybeT IO Config
+readConfigsWithUserConfig cmdlineConfig configPaths = do
+  defaultPath <- liftIO $ userConfigPath
+  readConfigs cmdlineConfig (configPaths ++ [defaultPath])
 
 writeDefaultConfig :: MonadIO m => System.IO.FilePath -> m ()
 writeDefaultConfig path =
