@@ -17,6 +17,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docSeq
   , docPar
   , docNodeAnnKW
+  , docNodeMoveToKWDP
   , docWrapNode
   , docWrapNodePrior
   , docWrapNodeRest
@@ -30,6 +31,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docAnnotationPrior
   , docAnnotationKW
   , docAnnotationRest
+  , docMoveToKWDP
   , docNonBottomSpacing
   , docSetParSpacing
   , docForceParSpacing
@@ -43,6 +45,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , appSep
   , docCommaSep
   , docParenLSep
+  , docParenR
   , docTick
   , spacifyDocs
   , briDocMToPPM
@@ -462,6 +465,13 @@ docAnnotationKW
   -> ToBriDocM BriDocNumbered
 docAnnotationKW annKey kw bdm = allocateNode . BDFAnnotationKW annKey kw =<< bdm
 
+docMoveToKWDP
+  :: AnnKey
+  -> AnnKeywordId
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
+docMoveToKWDP annKey kw bdm = allocateNode . BDFMoveToKWDP annKey kw =<< bdm
+
 docAnnotationRest
   :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docAnnotationRest annKey bdm = allocateNode . BDFAnnotationRest annKey =<< bdm
@@ -487,6 +497,9 @@ docCommaSep = appSep $ docLit $ Text.pack ","
 docParenLSep :: ToBriDocM BriDocNumbered
 docParenLSep = appSep $ docLit $ Text.pack "("
 
+docParenR :: ToBriDocM BriDocNumbered
+docParenR = docLit $ Text.pack ")"
+
 docTick :: ToBriDocM BriDocNumbered
 docTick = docLit $ Text.pack "'"
 
@@ -498,6 +511,15 @@ docNodeAnnKW
   -> ToBriDocM BriDocNumbered
 docNodeAnnKW ast kw bdm =
   docAnnotationKW (ExactPrint.Types.mkAnnKey ast) kw bdm
+
+docNodeMoveToKWDP
+  :: Data.Data.Data ast
+  => Located ast
+  -> AnnKeywordId
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
+docNodeMoveToKWDP ast kw bdm =
+  docMoveToKWDP (ExactPrint.Types.mkAnnKey ast) kw bdm
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)

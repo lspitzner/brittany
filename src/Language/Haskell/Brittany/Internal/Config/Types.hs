@@ -53,7 +53,12 @@ data CLayoutConfig f = LayoutConfig
   , _lconfig_indentListSpecial  :: f (Last Bool) -- use some special indentation for ","
                                                  -- when creating zero-indentation
                                                  -- multi-line list literals.
-  , _lconfig_importColumn :: f (Last Int)
+  , _lconfig_importColumn    :: f (Last Int)
+    -- ^ for import statement layouting, column at which to align the
+    -- elements to be imported from a module.
+  , _lconfig_importAsColumn  :: f (Last Int)
+    -- ^ for import statement layouting, column at which put the module's
+    -- "as" name (which also affects the positioning of the "as" keyword).
   , _lconfig_altChooser      :: f (Last AltChooser)
   , _lconfig_columnAlignMode :: f (Last ColumnAlignMode)
   , _lconfig_alignmentLimit  :: f (Last Int)
@@ -84,6 +89,21 @@ data CLayoutConfig f = LayoutConfig
     --   -> SomeLongStuff
     -- As usual for hanging indentation, the result will be
     -- context-sensitive (in the function name).
+  , _lconfig_reformatModulePreamble :: f (Last Bool)
+    -- whether the module preamble/header (module keyword, name, export list,
+    -- import statements) are reformatted. If false, only the elements of the
+    -- module (everything past the "where") are reformatted.
+  , _lconfig_allowSingleLineExportList :: f (Last Bool)
+    -- if true, and it fits in a single line, and there are no comments in the
+    -- export list, the following layout will be used:
+    -- > module MyModule (abc, def) where
+    -- > [stuff]
+    -- otherwise, the multi-line version is used:
+    -- > module MyModule
+    -- >   ( abc
+    -- >   , def
+    -- >   )
+    -- > where
   }
   deriving (Generic)
 

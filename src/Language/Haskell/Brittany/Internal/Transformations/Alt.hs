@@ -301,6 +301,8 @@ transformAlts briDoc =
           reWrap . BDFAnnotationRest annKey <$> rec bd
         BDFAnnotationKW annKey kw bd ->
           reWrap . BDFAnnotationKW annKey kw <$> rec bd
+        BDFMoveToKWDP annKey kw bd ->
+          reWrap . BDFMoveToKWDP annKey kw <$> rec bd
         BDFLines [] -> return $ reWrap BDFEmpty -- evil transformation. or harmless.
         BDFLines (l:lr) -> do
           ind <- _acp_indent <$> mGet
@@ -319,11 +321,16 @@ transformAlts briDoc =
                 BrIndentNone -> 0
                 BrIndentRegular -> indAmount
                 BrIndentSpecial i -> i
-          mSet $ acp { _acp_indentPrep = 0 -- TODO: i am not sure this is valid,
-                                           -- in general.
-                     , _acp_indent = _acp_indent acp + indAdd
-                     , _acp_line = _acp_line acp + indAdd
-                     }
+          mSet $ acp
+            { _acp_indentPrep = 0
+              -- TODO: i am not sure this is valid, in general.
+            , _acp_indent = _acp_indent acp + indAdd
+            , _acp_line = max (_acp_line acp) (_acp_indent acp + indAdd)
+              -- we cannot use just _acp_line acp + indAdd because of the case
+              -- where there are multiple BDFEnsureIndents in the same line.
+              -- Then, the actual indentation is relative to the current
+              -- indentation, not the current cursor position.
+            }
           r <- rec bd
           acp' <- mGet
           mSet $ acp' { _acp_indent = _acp_indent acp }
@@ -455,6 +462,7 @@ getSpacing !bridoc = rec bridoc
       BDFAnnotationPrior _annKey bd -> rec bd
       BDFAnnotationKW _annKey _kw bd -> rec bd
       BDFAnnotationRest  _annKey bd -> rec bd
+      BDFMoveToKWDP _annKey _kw bd -> rec bd
       BDFLines [] -> return
         $ LineModeValid
         $ VerticalSpacing 0 VerticalSpacingParNone False
@@ -700,6 +708,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFAnnotationPrior _annKey bd -> rec bd
         BDFAnnotationKW _annKey _kw bd -> rec bd
         BDFAnnotationRest  _annKey bd -> rec bd
+        BDFMoveToKWDP _annKey _kw bd -> rec bd
         BDFLines [] -> return $ [VerticalSpacing 0 VerticalSpacingParNone False]
         BDFLines ls@(_:_) -> do
           -- we simply assume that lines is only used "properly", i.e. in

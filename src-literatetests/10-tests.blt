@@ -565,3 +565,297 @@ func =
        ]
     ++ [ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc]
 
+
+###############################################################################
+###############################################################################
+###############################################################################
+#group module
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test simple
+module Main where
+
+#test no-exports
+module Main () where
+
+#test one-export
+module Main (main) where
+
+#test several-exports
+module Main (main, test1, test2) where
+
+#test many-exports
+module Main
+  ( main
+  , test1
+  , test2
+  , test3
+  , test4
+  , test5
+  , test6
+  , test7
+  , test8
+  , test9
+  )
+where
+
+#test exports-with-comments
+module Main
+  ( main
+  -- main
+  , test1
+  , test2
+  -- Test 3
+  , test3
+  , test4
+  -- Test 5
+  , test5
+  -- Test 6
+  )
+where
+
+#test simple-export-with-things
+module Main (Test(..)) where
+
+#test simple-export-with-module-contents
+module Main (module Main) where
+
+#test export-with-things
+module Main (Test(Test, a, b)) where
+
+#test export-with-things-comment
+-- comment1
+
+module Main
+  ( Test(Test, a, b)
+  , foo -- comment2
+  ) -- comment3
+where
+
+#test export-with-empty-thing
+module Main (Test()) where
+
+#test empty-with-comment
+-- Intentionally left empty
+
+###############################################################################
+###############################################################################
+###############################################################################
+#group module.import
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test simple-import
+import           Data.List
+
+#test simple-import-alias
+import           Data.List                               as L
+
+#test simple-qualified-import
+import qualified Data.List
+
+#test simple-qualified-import-alias
+import qualified Data.List                               as L
+
+#test simple-safe
+import safe      Data.List                               as L
+
+#test simple-source
+import {-# SOURCE #-} Data.List                           ( )
+
+#test simple-safe-qualified
+import safe qualified Data.List
+
+#test simple-safe-qualified-source
+import {-# SOURCE #-} safe qualified Data.List
+
+#test simple-qualified-package
+import qualified "base" Data.List
+
+#test qualifier-effect
+import {-# SOURCE #-} safe qualified "base" Data.List    as L
+import {-# SOURCE #-} safe qualified "base" Data.List     ( )
+import {-# SOURCE #-} safe qualified Data.List     hiding ( )
+
+#test instances-only
+import qualified Data.List                                ( )
+
+#test one-element
+import           Data.List                                ( nub )
+
+#test several-elements
+import           Data.List                                ( nub
+                                                          , foldl'
+                                                          , indexElem
+                                                          )
+
+#test a-ridiculous-amount-of-elements
+import           Test                                     ( Long
+                                                          , list
+                                                          , with
+                                                          , items
+                                                          , that
+                                                          , will
+                                                          , not
+                                                          , quite
+                                                          , fit
+                                                          , onA
+                                                          , single
+                                                          , line
+                                                          , anymore
+                                                          )
+
+#test with-things
+import           Test                                     ( T
+                                                          , T2()
+                                                          , T3(..)
+                                                          , T4(T4)
+                                                          , T5(T5, t5)
+                                                          , T6((<|>))
+                                                          , (+)
+                                                          )
+
+#test hiding
+import           Test                              hiding ( )
+import           Test                                    as T
+                                                   hiding ( )
+
+#test long-module-name
+import           TestJustShortEnoughModuleNameLikeThisOne ( )
+import           TestJustAbitToLongModuleNameLikeThisOneIs
+                                                          ( )
+
+import           TestJustShortEnoughModuleNameLikeThisOn as T
+import           TestJustAbitToLongModuleNameLikeThisOneI
+                                                         as T
+
+import           TestJustShortEnoughModuleNameLike hiding ( )
+import           TestJustAbitToLongModuleNameLikeTh
+                                                   hiding ( )
+
+import           MoreThanSufficientlyLongModuleNameWithSome
+                                                          ( items
+                                                          , that
+                                                          , will
+                                                          , not
+                                                          , fit
+                                                          , inA
+                                                          , compact
+                                                          , layout
+                                                          )
+
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff ( )
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAffe
+                                                          ( )
+
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAf as T
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff
+                                                         as T
+import {-# SOURCE #-} safe qualified "qualifier" A hiding ( )
+import {-# SOURCE #-} safe qualified "qualifiers" A
+                                                   hiding ( )
+
+#test import-with-comments
+-- Test
+import           Data.List                                ( nub ) -- Test
+{- Test -}
+import qualified Data.List                               as L
+                                                          ( foldl' ) {- Test -}
+
+-- Test
+import           Test                                     ( test )
+
+#test import-with-comments-2
+
+import           Test                                     ( abc
+                                                          , def
+                                                          -- comment
+                                                          )
+
+#test import-with-comments-3
+
+import           Test                                     ( abc
+                                                          -- comment
+                                                          )
+
+#test import-with-comments-4
+import           Test                                     ( abc
+                                                          -- comment
+                                                          , def
+                                                          , ghi
+                                                          {- comment -}
+                                                          , jkl
+                                                          -- comment
+                                                          )
+
+#test import-with-comments-5
+import           Test                                     ( -- comment
+                                                          )
+
+#test long-bindings
+import           Test                                     ( longbindingNameThatoverflowsColum
+                                                          )
+import           Test                                     ( Long
+                                                            ( List
+                                                            , Of
+                                                            , Things
+                                                            )
+                                                          )
+
+#test things-with-with-comments
+import           Test                                     ( Thing
+                                                            ( -- Comments
+                                                            )
+                                                          )
+import           Test                                     ( Thing
+                                                            ( Item
+                                                            -- and Comment
+                                                            )
+                                                          )
+import           Test                                     ( Thing
+                                                            ( With
+                                                            -- Comments
+                                                            , and
+                                                            -- also
+                                                            , items
+                                                            -- !
+                                                            )
+                                                          )
+#test prefer-dense-empty-list
+import           VeryLongModuleNameThatCouldEvenCauseAnEmptyBindingListToExpandIntoMultipleLine
+                                                          ( )
+
+#test preamble full-preamble
+{-# LANGUAGE BangPatterns #-}
+
+{-
+ - Test module
+ -}
+module Test
+  ( test1
+  -- ^ test
+  , test2
+  -- | test
+  , test3
+  , test4
+  , test5
+  , test6
+  , test7
+  , test8
+  , test9
+  , test10
+  -- Test 10
+  )
+where
+
+-- Test
+import           Data.List                                ( nub ) -- Test
+{- Test -}
+import qualified Data.List                               as L
+                                                          ( foldl' ) {- Test -}
+
+-- Test
+import           Test                                     ( test )
