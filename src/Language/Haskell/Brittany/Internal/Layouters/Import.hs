@@ -46,6 +46,7 @@ layoutImport :: ToBriDoc ImportDecl
 layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
   ImportDecl _ (L _ modName) pkg src safe q False mas mllies -> do
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
+    importAsCol <- mAsk <&> _conf_layout .> _lconfig_importAsColumn .> confUnpack
     indentPolicy <- mAsk <&>  _conf_layout .> _lconfig_indentPolicy .> confUnpack
     let
       compact  = indentPolicy == IndentPolicyLeft
@@ -136,9 +137,9 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         Just n | enoughRoom -> docLines [docSeq [importHead, asDoc], bindingLine]
                | otherwise  -> docLines [importHead, asDoc, bindingLine]
          where
-          enoughRoom = nameCost < importCol - asCost
+          enoughRoom = nameCost < importAsCol - asCost
           asDoc =
-            docEnsureIndent (BrIndentSpecial (importCol - asCost))
+            docEnsureIndent (BrIndentSpecial (importAsCol - asCost))
               $ makeAsDoc n
         Nothing | enoughRoom -> docSeq [importHead, bindingLine]
                 | otherwise  -> docLines [importHead, bindingLine]

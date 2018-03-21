@@ -53,7 +53,12 @@ data CLayoutConfig f = LayoutConfig
   , _lconfig_indentListSpecial  :: f (Last Bool) -- use some special indentation for ","
                                                  -- when creating zero-indentation
                                                  -- multi-line list literals.
-  , _lconfig_importColumn :: f (Last Int)
+  , _lconfig_importColumn    :: f (Last Int)
+    -- ^ for import statement layouting, column at which to align the
+    -- elements to be imported from a module.
+  , _lconfig_importAsColumn  :: f (Last Int)
+    -- ^ for import statement layouting, column at which put the module's
+    -- "as" name (which also affects the positioning of the "as" keyword).
   , _lconfig_altChooser      :: f (Last AltChooser)
   , _lconfig_columnAlignMode :: f (Last ColumnAlignMode)
   , _lconfig_alignmentLimit  :: f (Last Int)

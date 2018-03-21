@@ -59,6 +59,7 @@ staticDefaultConfig = Config
     , _lconfig_indentWhereSpecial        = coerce True
     , _lconfig_indentListSpecial         = coerce True
     , _lconfig_importColumn              = coerce (50 :: Int)
+    , _lconfig_importAsColumn            = coerce (50 :: Int)
     , _lconfig_altChooser                = coerce (AltChooserBoundedSearch 3)
     , _lconfig_columnAlignMode           = coerce (ColumnAlignModeMajority 0.7)
     , _lconfig_alignmentLimit            = coerce (30 :: Int)
@@ -106,6 +107,7 @@ configParser = do
   ind                <- addFlagReadParams "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
   cols               <- addFlagReadParams "" ["columns"] "AMOUNT" (flagHelpStr "target max columns (80 is an old default for this)")
   importCol          <- addFlagReadParams "" ["import-col"] "N" (flagHelpStr "column to align import lists at")
+  importAsCol        <- addFlagReadParams "" ["import-as-col"] "N" (flagHelpStr "column to qualified-as module names at")
 
   dumpConfig         <- addSimpleBoolFlag "" ["dump-config"] (flagHelp $ parDoc "dump the programs full config (merged commandline + file + defaults)")
   dumpAnnotations    <- addSimpleBoolFlag "" ["dump-annotations"] (flagHelp $ parDoc "dump the full annotations returned by ghc-exactprint")
@@ -155,6 +157,7 @@ configParser = do
       , _lconfig_indentWhereSpecial        = mempty -- falseToNothing _
       , _lconfig_indentListSpecial         = mempty -- falseToNothing _
       , _lconfig_importColumn              = optionConcat importCol
+      , _lconfig_importAsColumn            = optionConcat importAsCol
       , _lconfig_altChooser                = mempty
       , _lconfig_columnAlignMode           = mempty
       , _lconfig_alignmentLimit            = mempty

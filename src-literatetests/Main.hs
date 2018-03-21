@@ -169,6 +169,7 @@ defaultTestConfig = Config
     , _lconfig_indentWhereSpecial        = coerce True
     , _lconfig_indentListSpecial         = coerce True
     , _lconfig_importColumn              = coerce (60 :: Int)
+    , _lconfig_importAsColumn            = coerce (60 :: Int)
     , _lconfig_altChooser                = coerce $ AltChooserBoundedSearch 3
     , _lconfig_columnAlignMode           = coerce (ColumnAlignModeMajority 0.7)
     , _lconfig_alignmentLimit            = coerce (30 :: Int)
