@@ -174,7 +174,7 @@ data ColSig
   | ColRecUpdate -- used for both RecCon and RecUpd. TODO: refactor to reflect?
   | ColListComp
   | ColList
-  | ColApp
+  | ColApp Text
   | ColTuple
   | ColTuples
   | ColOpPrefix -- merge with ColList ? other stuff?

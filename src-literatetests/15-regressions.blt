@@ -501,6 +501,21 @@ func
   -> Proxy (str :: [*])
   -> m (Tagged str String)
 
+#test issue 65
+widgetsDyn =
+  [ [ vBox
+        [ padTop Max outputLinesWidget
+        , padRight Max wid1 <+> flowWidget  -- alignment here is strange/buggy
+        , padBottom (Pad 5) help
+        ]
+    ]
+  | wid1              <- promptDyn
+  , (flowWidget, _)   <- flowResultD
+  , outputLinesWidget <- outputLinesWidgetD
+  , help              <- suggestionHelpBox
+  , parser            <- cmdParserD
+  ]
+
 #test issue 67
 fmapuv :: U.Unbox a => (a -> b) -> U.Vector a -> V.Vector b
 fmapuv f xs = G.generate (G.length xs) (f . (xs G.!))
@@ -527,3 +542,8 @@ spanKey p q = case minViewWithKey q of
 
 #test issue 125
 a :: () ':- ()
+
+#test issue 128
+func = do
+  createDirectoryIfMissing True path
+  openFile fileName AppendMode

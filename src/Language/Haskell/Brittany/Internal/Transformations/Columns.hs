@@ -23,11 +23,12 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDLit{} -> Nothing
   BDSeq list | any (\case BDSeq{} -> True
                           BDEmpty{} -> True
-                          _ -> False) list -> Just $ BDSeq $
-    filter isNotEmpty list >>= \case
-      BDSeq l -> l
-      x -> [x]
-  BDSeq (BDCols sig1 cols1@(_:_):rest) ->
+                          _ -> False) list -> Just $ BDSeq $ list >>= \case
+                            BDEmpty -> []
+                            BDSeq l -> l
+                            x -> [x]
+  BDSeq (BDCols sig1 cols1@(_:_):rest)
+    | all (\case BDSeparator -> True; _ -> False) rest ->
     Just $ BDCols sig1 (List.init cols1 ++ [BDSeq (List.last cols1:rest)])
   BDLines lines | any (\case BDLines{} -> True
                              BDEmpty{} -> True

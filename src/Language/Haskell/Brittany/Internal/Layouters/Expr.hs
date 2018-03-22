@@ -117,12 +117,16 @@ layoutExpr lexpr@(L _ expr) = do
             (L _ (HsApp l r)) -> gather (r:list) l
             x -> (x, list)
       let (headE, paramEs) = gather [exp2] exp1
+      let colsOrSequence = case headE of
+            L _ (HsVar (L _ (Unqual occname))) ->
+              docCols (ColApp $ Text.pack $ occNameString occname)
+            _ -> docSeq
       headDoc <- docSharedWrapper layoutExpr headE
       paramDocs <- docSharedWrapper layoutExpr `mapM` paramEs
       docAltFilter
         [ -- foo x y
           ( True
-          , docCols ColApp
+          , colsOrSequence
           $ appSep (docForceSingleline headDoc)
           : spacifyDocs (docForceSingleline <$> paramDocs)
           )
