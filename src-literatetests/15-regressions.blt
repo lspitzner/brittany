@@ -538,6 +538,18 @@ cs0 = 0 : [ c / Interval n | c <- cs | n <- [1..] ]
 {-# LANGUAGE TemplateHaskell #-}
 deriveFromJSON (unPrefix "assignPost") ''AssignmentPost
 
+#test issue 111
+
+alternatives :: Parser (Maybe Text)
+alternatives =
+  alternativeOne   -- first try this one
+    <|> alterantiveTwo   -- then this one
+    <|> alternativeThree -- then this one
+ where
+  alternativeOne   = purer "one"
+  alternativeTwo   = purer "two"
+  alterantiveThree = purer "three"
+
 #test issue 116
 {-# LANGUAGE BangPatterns #-}
 func = do

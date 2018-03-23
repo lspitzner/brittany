@@ -237,24 +237,27 @@ layoutExpr lexpr@(L _ expr) = do
                                               ]
       opLastDoc <- docSharedWrapper layoutExpr expOp
       expLastDoc <- docSharedWrapper layoutExpr expRight
+      hasComments <- hasAnyCommentsBelow lexpr
       let allowPar = case (expOp, expRight) of
             (L _ (HsVar (L _ (Unqual occname))), _)
               | occNameString occname == "$" -> True
             (_, L _ (HsApp _ (L _ HsVar{}))) -> False
             _ -> True
-      docAlt
-        [ docSeq
-          [ appSep $ docForceSingleline leftOperandDoc
+      docAltFilter
+        [ ( not hasComments
           , docSeq
-          $ (appListDocs <&> \(od, ed) -> docSeq
-              [ appSep $ docForceSingleline od
-              , appSep $ docForceSingleline ed
-              ]
-            )
-          , appSep $ docForceSingleline opLastDoc
-          , (if allowPar then docForceParSpacing else docForceSingleline)
-              expLastDoc
-          ]
+            [ appSep $ docForceSingleline leftOperandDoc
+            , docSeq
+            $ (appListDocs <&> \(od, ed) -> docSeq
+                [ appSep $ docForceSingleline od
+                , appSep $ docForceSingleline ed
+                ]
+              )
+            , appSep $ docForceSingleline opLastDoc
+            , (if allowPar then docForceParSpacing else docForceSingleline)
+                expLastDoc
+            ]
+          )
         -- this case rather leads to some unfortunate layouting than to anything
         -- useful; disabling for now. (it interfers with cols stuff.)
         -- , docSetBaseY
@@ -264,12 +267,14 @@ layoutExpr lexpr@(L _ expr) = do
         -- -    $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
         --       ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
         --     )
-        , docPar
+        , (otherwise
+          , docPar
             leftOperandDoc
             ( docLines
             $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
               ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
             )
+          )
         ]
     OpApp expLeft expOp _ expRight -> do
       expDocLeft  <- docSharedWrapper layoutExpr expLeft
