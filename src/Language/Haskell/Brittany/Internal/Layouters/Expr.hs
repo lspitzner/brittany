@@ -327,7 +327,7 @@ layoutExpr lexpr@(L _ expr) = do
                , opDoc
                ]
     HsPar innerExp -> do
-      innerExpDoc <- docSharedWrapper layoutExpr innerExp
+      innerExpDoc <- docSharedWrapper (docWrapNode lexpr . layoutExpr) innerExp
       docAlt
         [ docSeq
           [ docLit $ Text.pack "("

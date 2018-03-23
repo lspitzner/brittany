@@ -569,3 +569,13 @@ a :: () ':- ()
 func = do
   createDirectoryIfMissing True path
   openFile fileName AppendMode
+
+#test hspar-comments
+
+alternatives :: Parser (Maybe Text)
+alternatives = -- a
+  ( -- b
+      alternativeOne   -- c
+  <|> alterantiveTwo   -- d
+  <|> alternativeThree -- e
+  ) -- f
