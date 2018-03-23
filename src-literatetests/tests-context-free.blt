@@ -736,15 +736,26 @@ import Test (T, T2(), T3(..), T4(T4), T5(T5, t5), T6((<|>)), (+))
 import Test hiding ()
 import Test as T hiding ()
 
-#test long-module-name
+#test long-module-name-simple
 import TestJustShortEnoughModuleNameLikeThisOne ()
 import TestJustAbitToLongModuleNameLikeThisOneIs ()
-import TestJustShortEnoughModuleNameLikeThisOn as T
-import TestJustAbitToLongModuleNameLikeThisOneI as T
-import TestJustShortEnoughModuleNameLike hiding ()
-import TestJustAbitToLongModuleNameLikeTh hiding ()
 import MoreThanSufficientlyLongModuleNameWithSome
   (items, that, will, not, fit, inA, compact, layout)
+
+#test long-module-name-as
+import TestJustShortEnoughModuleNameLikeThisOn as T
+import TestJustAbitToLongModuleNameLikeThisOneI as T
+
+#test long-module-name-hiding
+import TestJustShortEnoughModuleNameLike hiding ()
+import TestJustAbitToLongModuleNameLikeTh hiding ()
+
+#test long-module-name-simple-items
+import MoreThanSufficientlyLongModuleNameWithSome
+  (items, that, will, not, fit, inA, compact, layout)
+
+#test long-module-name-hiding-items
+import TestJustShortEnoughModuleNameLike hiding (abc, def, ghci, jklm)
 
 #test import-with-comments
 -- Test

@@ -101,9 +101,9 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDDebug s (BDIndentLevelPop x)
       _ -> Nothing
     descendAddB = transformDownMay $ \case
-      -- AddIndent floats into Lines.
       BDAddBaseY BrIndentNone x ->
         Just x
+      -- AddIndent floats into Lines.
       BDAddBaseY indent (BDLines lines) ->
         Just $ BDLines $ BDAddBaseY indent <$> lines
       -- AddIndent floats into last column
@@ -145,9 +145,9 @@ transformSimplifyFloating = stepBO .> stepFull
           x -> x
     stepFull = -- traceFunctionWith "stepFull" (show . briDocToDocWithAnns) (show . briDocToDocWithAnns) $
                Uniplate.rewrite $ \case
-      -- AddIndent floats into Lines.
       BDAddBaseY BrIndentNone x ->
         Just $ x
+      -- AddIndent floats into Lines.
       BDAddBaseY indent (BDLines lines) ->
         Just $ BDLines $ BDAddBaseY indent <$> lines
       -- AddIndent floats into last column

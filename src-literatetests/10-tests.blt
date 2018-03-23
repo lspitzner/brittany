@@ -734,19 +734,22 @@ import           Test                              hiding ( )
 import           Test                                    as T
                                                    hiding ( )
 
-#test long-module-name
+#test long-module-name-simple
 import           TestJustShortEnoughModuleNameLikeThisOne ( )
 import           TestJustAbitToLongModuleNameLikeThisOneIs
                                                           ( )
 
+#test long-module-name-as
 import           TestJustShortEnoughModuleNameLikeThisOn as T
 import           TestJustAbitToLongModuleNameLikeThisOneI
                                                          as T
 
+#test long-module-name-hiding
 import           TestJustShortEnoughModuleNameLike hiding ( )
 import           TestJustAbitToLongModuleNameLikeTh
                                                    hiding ( )
 
+#test long-module-name-simple-items
 import           MoreThanSufficientlyLongModuleNameWithSome
                                                           ( items
                                                           , that
@@ -758,6 +761,20 @@ import           MoreThanSufficientlyLongModuleNameWithSome
                                                           , layout
                                                           )
 
+#test long-module-name-hiding-items
+import           TestJustShortEnoughModuleNameLike hiding ( abc
+                                                          , def
+                                                          , ghci
+                                                          , jklm
+                                                          )
+import           TestJustAbitToLongModuleNameLikeTh
+                                                   hiding ( abc
+                                                          , def
+                                                          , ghci
+                                                          , jklm
+                                                          )
+
+#test long-module-name-other
 import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff ( )
 import {-# SOURCE #-} safe qualified "qualifiers" AlsoAffe
                                                           ( )

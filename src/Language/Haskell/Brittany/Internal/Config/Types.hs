@@ -56,9 +56,11 @@ data CLayoutConfig f = LayoutConfig
   , _lconfig_importColumn    :: f (Last Int)
     -- ^ for import statement layouting, column at which to align the
     -- elements to be imported from a module.
+    -- It is expected that importAsColumn >= importCol.
   , _lconfig_importAsColumn  :: f (Last Int)
     -- ^ for import statement layouting, column at which put the module's
     -- "as" name (which also affects the positioning of the "as" keyword).
+    -- It is expected that importAsColumn >= importCol.
   , _lconfig_altChooser      :: f (Last AltChooser)
   , _lconfig_columnAlignMode :: f (Last ColumnAlignMode)
   , _lconfig_alignmentLimit  :: f (Last Int)
