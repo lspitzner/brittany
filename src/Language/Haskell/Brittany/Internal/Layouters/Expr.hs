@@ -543,7 +543,9 @@ layoutExpr lexpr@(L _ expr) = do
         (layoutPatternBindFinal Nothing binderDoc Nothing clauseDocs Nothing hasComments)
     HsLet binds exp1 -> do
       expDoc1 <- docSharedWrapper layoutExpr exp1
-      mBindDocs <- layoutLocalBinds binds
+      -- We jump through some ugly hoops here to ensure proper sharing.
+      mBindDocs <- mapM (fmap (fmap return) . docWrapNodeRest lexpr . return)
+               =<< layoutLocalBinds binds
       let
         ifIndentLeftElse :: a -> a -> a
         ifIndentLeftElse x y =
@@ -560,7 +562,7 @@ layoutExpr lexpr@(L _ expr) = do
         Just [bindDoc] -> docAlt
           [ docSeq
               [ appSep $ docLit $ Text.pack "let"
-              , appSep $ docForceSingleline $ return bindDoc
+              , appSep $ docForceSingleline $ bindDoc
               , appSep $ docLit $ Text.pack "in"
               , docForceSingleline $ expDoc1
               ]
@@ -569,12 +571,12 @@ layoutExpr lexpr@(L _ expr) = do
                   [ docSeq
                       [ appSep $ docLit $ Text.pack "let"
                       , ifIndentLeftElse docForceSingleline docSetBaseAndIndent
-                      $ return bindDoc
+                      $ bindDoc
                       ]
                   , docAddBaseY BrIndentRegular
                   $ docPar
                     (docLit $ Text.pack "let")
-                    (docSetBaseAndIndent $ return bindDoc)
+                    (docSetBaseAndIndent $ bindDoc)
                   ]
               , docAlt
                   [ docSeq
@@ -607,7 +609,7 @@ layoutExpr lexpr@(L _ expr) = do
               [ docAddBaseY BrIndentRegular
               $ docPar
                 (docLit $ Text.pack "let")
-                (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+                (docSetBaseAndIndent $ docLines $ bindDocs)
               , docSeq
                 [ docLit $ Text.pack "in "
                 , docAddBaseY BrIndentRegular $ expDoc1
@@ -618,7 +620,7 @@ layoutExpr lexpr@(L _ expr) = do
             , docLines
               [ docSeq
                 [ appSep $ docLit $ Text.pack "let"
-                , docSetBaseAndIndent $ docLines $ return <$> bindDocs
+                , docSetBaseAndIndent $ docLines $ bindDocs
                 ]
               , docSeq
                 [ appSep $ docLit $ Text.pack "in "
@@ -631,7 +633,7 @@ layoutExpr lexpr@(L _ expr) = do
               [ docAddBaseY BrIndentRegular
               $ docPar
                 (docLit $ Text.pack "let")
-                (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+                (docSetBaseAndIndent $ docLines $ bindDocs)
               , docAddBaseY BrIndentRegular
               $ docPar
                 (docLit $ Text.pack "in")
