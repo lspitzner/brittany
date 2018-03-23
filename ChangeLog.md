@@ -1,5 +1,28 @@
 # Revision history for brittany
 
+## 0.10.0.0 -- March 2018
+
+* Implement module/exports/imports layouting (thanks to sniperrifle2004)
+* Expose config paths/parsing functions (thanks to Alexey Raga)
+* Bugfixes:
+    - Fix layouting of `NOINLINE` pragma
+    - Fix ticked type operator (e.g. `':-`) losing tick (#125)
+    - Fix alignment issue with cases involving operators (#65)
+    - Fix comments in tuples being dropped (#37)
+    - Fix comment placements with let-in (#110)
+* Layouting changes:
+    - Align arguments only if it is the same function being called (#128)
+    - Do not use single-line layout when infix operator expression contains
+      comments (#111)
+* New layouting config items:
+    - `lconfig_importColumn`/`--import-col`: column for import items
+    - `lconfig_importAsColumn`/`--import-as-col`: column for the "as" name of
+      a module
+    - `lconfig_reformatModulePreamble`: controls module/export/import layouting
+      (default True)
+    - `lconfig_allowSingleLineExportList`: permit one-line module header, e.g.
+      `module Main (main)` (default False)
+
 ## 0.9.0.1  -- February 2018
 
 * Support `TupleSections` (thanks to Matthew Piziak)
