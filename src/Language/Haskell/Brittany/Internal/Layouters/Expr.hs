@@ -346,8 +346,12 @@ layoutExpr lexpr@(L _ expr) = do
       rightDoc <- docSharedWrapper layoutExpr right
       docSeq [opDoc, docSeparator, rightDoc]
     ExplicitTuple args boxity -> do
-      let argExprs = fmap (\case (L _ (Present e)) -> Just e; (L _ (Missing PlaceHolder)) -> Nothing) args
-      argDocs <- docSharedWrapper (maybe docEmpty layoutExpr) `mapM` argExprs
+      let argExprs = args <&> \arg -> case arg of
+            (L _ (Present e)) -> (arg, Just e);
+            (L _ (Missing PlaceHolder)) -> (arg, Nothing)
+      argDocs <- forM argExprs
+        $ docSharedWrapper
+        $ \(arg, exprM) -> docWrapNode arg $ maybe docEmpty layoutExpr exprM
       hasComments <- hasAnyCommentsBelow lexpr
       let (openLit, closeLit) = case boxity of
             Boxed -> (docLit $ Text.pack "(", docLit $ Text.pack ")")

@@ -373,6 +373,16 @@ runBrittany tabSize text = do
       }
   parsePrintModule config text
 
+#test issue 37
+
+foo =
+  ( a
+  , -- comment1
+    b
+    -- comment2
+  , c
+  )
+
 #test issue 38
 
 {-# LANGUAGE TypeApplications #-}
