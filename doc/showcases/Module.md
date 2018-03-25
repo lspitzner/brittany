@@ -5,6 +5,16 @@ Last updated for brittany version `0.10.0.0`.
 
 ## On default settings
 
+default settings are:
+
+~~~~
+conf_layout:
+  lconfig_indentPolicy: IndentPolicyFree
+  lconfig_importColumn: 50
+  lconfig_importAsColumn: 50
+~~~~
+
+
 ~~~~.hs
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -54,16 +64,16 @@ before. Long identifiers may overflow our 80 column limit:
 import qualified Example.Very.Long.Module.Name.Internal
                                                as T
 import           Example.Very.Long.Module.Name.Internal
-                                                ( a
-                                                , b
-                                                , c
+                                                ( someFunc
+                                                , MyDataType
+                                                , globalConstant
                                                 )
 import           Example.Very.Long.Module.Name.Internal
                                                 ( someVeryLongAndDescriptiveFunctionName
                                                 )
 ~~~~
 
-## Alternative setting
+## Alternative setting - long identifiers
 
 If you have many long module names or use large identifiers, you might
 be interested in these alternative settings:
@@ -77,13 +87,32 @@ conf_layout:
 Now, our previous examples becomes:
 
 ~~~~.hs
-import qualified Example.Very.Long.Module.Name.Strict.Internal     as T
-import           Example.Very.Long.Module.Name.Strict.Internal
-                   ( a
-                   , b
-                   , c
+import qualified Example.Very.Long.Module.Name.Internal            as T
+import           Example.Very.Long.Module.Name.Internal
+                   ( someFunc
+                   , MyDataType
+                   , globalConstant
                    )
-import           Example.Very.Long.Module.Name.Strict.Internal
-                   ( someVeryLongAndDescriptiveFunctionName
-                   )
+import           Example.Very.Long.Module.Name.Internal
+                   ( someVeryLongAndDescriptiveFunctionName )
+~~~~
+
+## Alternative setting - "IndentPolicyLeft"
+
+The global switch "indent policy" that has the rough intention of removing any
+cases of "hanging indentation" also affects module layouting:
+
+~~~~
+conf_layout:
+  lconfig_indentPolicy: IndentPolicyLeft
+~~~~
+
+Now, our previous examples becomes:
+
+~~~~.hs
+import qualified Example.Very.Long.Module.Name.Internal as T
+import Example.Very.Long.Module.Name.Internal
+  (someFunc, MyDataType, globalConstant)
+import Example.Very.Long.Module.Name.Internal
+  (someVeryLongAndDescriptiveFunctionName)
 ~~~~
