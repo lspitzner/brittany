@@ -63,7 +63,8 @@ helpDoc = PP.vcat $ List.intersperse
   (PP.text "")
   [ parDocW
     [ "Reformats one or more haskell modules."
-    , "Currently affects only type signatures and function bindings;"
+    , "Currently affects only the module head (imports/exports), type"
+    , "signatures and function bindings;"
     , "everything else is left unmodified."
     , "Based on ghc-exactprint, thus (theoretically) supporting all"
     , "that ghc does."
@@ -71,7 +72,7 @@ helpDoc = PP.vcat $ List.intersperse
   , parDoc $ "Example invocations:"
   , PP.hang (PP.text "") 2 $ PP.vcat
       [ PP.text "brittany"
-      , PP.hang (PP.text "  ") 2 $ PP.text "read from stdin, output to stdout"
+      , PP.nest 2 $ PP.text "read from stdin, output to stdout"
       ]
   , PP.hang (PP.text "") 2 $ PP.vcat
       [ PP.text "brittany --indent=4 --write-mode=inplace *.hs"

@@ -8,13 +8,12 @@ haskell source code formatter
 This project's goals roughly are to:
 
 - Always retain the semantics of the source being transformed;
-- Be idempotent (this also directly ensures that only valid haskell is
-  produced);
+- Be idempotent;
 - Support the full GHC-haskell syntax including syntactic extensions
   (but excluding `-XCPP` which is too hard);
 - Retain newlines and comments unmodified;
 - Be clever about using the available horizontal space while not overflowing
-  it if it cannot be avoided;
+  the column maximum if it cannot be avoided;
 - Be clever about aligning things horizontally (this can be turned off
   completely however);
 - Have linear complexity in the size of the input.
@@ -27,8 +26,9 @@ size of the input (although the constant factor is not small). See
 But brittany is not finished yet, and there are some open issues that yet
 require fixing:
 
-- **only type-signatures and function/value bindings** are processed;
-  other module elements (data-decls, classes, instances, imports/exports etc.)
+- **only the module header (imports/exports), type-signatures and
+  function/value bindings** are processed;
+  other module elements (data-decls, classes, instances, etc.)
   are not transformed in any way; this extends to e.g. **bindings inside class
   instance definitions** - they **won't be touched** (yet).
 - By using `ghc-exactprint` as the parser, brittany supports full GHC 
@@ -47,7 +47,7 @@ require fixing:
 
 You can [paste haskell code over here](https://hexagoxel.de/brittany/)
 to test how it gets formatted by brittany. (Rg. privacy: the server does
-log the size of the input, but _not_ the full requests.)
+log the size of the input, but _not_ the full input/output of requests.)
 
 # Other usage notes
 
