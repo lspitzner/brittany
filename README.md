@@ -39,9 +39,6 @@ require fixing:
   be detected and the user will get an error); there are other cases where
   comments are moved slightly; there are also cases where comments result in
   wonky newline insertion (although this should be a purely aesthetic issue.)
-- ~~There is an **open performance issue on large inputs** (due to an
-  accidentally quadratic sub-algorithm); noticable for inputs with >1k loc.~~
-  (fixed in `0.8.0.3`)
 
 ## Try without Installing
 
