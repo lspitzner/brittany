@@ -11,6 +11,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 import qualified Data.Map as Map
+import qualified Data.Monoid
 
 import           Text.Read (Read(..))
 import qualified Text.ParserCombinators.ReadP as ReadP
@@ -148,7 +149,7 @@ mainCmdParser helpDesc = do
           , PP.text "inplace: override respective input file (without backup!)"
           ]
         )
-    <> flagDefault Display
+    Data.Monoid.<> flagDefault Display
     )
   inputParams <- addParamNoFlagStrings "PATH" (paramHelpStr "paths to input/inout haskell source files")
   reorderStop

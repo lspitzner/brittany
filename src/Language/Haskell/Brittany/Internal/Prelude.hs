@@ -255,14 +255,16 @@ import Debug.Trace                   as E ( trace
 import Foreign.ForeignPtr            as E ( ForeignPtr
                                           )
 
-import Data.Monoid                   as E ( (<>)
-                                          , mconcat
+import Data.Monoid                   as E ( mconcat
                                           , Monoid (..)
                                           )
 
 import Data.Bifunctor                as E ( bimap )
 import Data.Functor                  as E ( (<$), ($>) )
 import Data.Function                 as E ( (&) )
+import Data.Semigroup                as E ( (<>)
+                                          , Semigroup(..)
+                                          )
 import System.IO                     as E ( hFlush
                                           , stdout
                                           )
