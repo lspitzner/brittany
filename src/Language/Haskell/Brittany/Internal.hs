@@ -93,8 +93,8 @@ parsePrintModule configRaw inputText = runExceptT $ do
       cppCheckFunc
       (hackTransform $ Text.unpack inputText)
     case parseResult of
-      Left  err -> throwE $ [ErrorInput err]
-      Right x   -> pure $ x
+      Left  err -> throwE [ErrorInput err]
+      Right x   -> pure x
   (errsWarns, outputTextL) <- do
     let omitCheck =
           config

@@ -94,14 +94,14 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       fExpDoc <- if pun
         then return Nothing
         else Just <$> docSharedWrapper layoutPat fPat
-      return $ (lrdrNameToText lnameF, fExpDoc)
+      return (lrdrNameToText lnameF, fExpDoc)
     fmap Seq.singleton $ docSeq
       [ appSep $ docLit t
       , appSep $ docLit $ Text.pack "{"
       , docSeq $ List.intersperse docCommaSep
                $ fds <&> \case
           (fieldName, Just fieldDoc) -> docSeq
-            [ appSep $ docLit $ fieldName
+            [ appSep $ docLit fieldName
             , appSep $ docLit $ Text.pack "="
             , fieldDoc >>= colsWrapPat
             ]
@@ -123,13 +123,13 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
       fExpDoc <- if pun
         then return Nothing
         else Just <$> docSharedWrapper layoutPat fPat
-      return $ (lrdrNameToText lnameF, fExpDoc)
+      return (lrdrNameToText lnameF, fExpDoc)
     fmap Seq.singleton $ docSeq
       [ appSep $ docLit t
       , appSep $ docLit $ Text.pack "{"
       , docSeq $ fds >>= \case
           (fieldName, Just fieldDoc) ->
-            [ appSep $ docLit $ fieldName
+            [ appSep $ docLit fieldName
             , appSep $ docLit $ Text.pack "="
             , fieldDoc >>= colsWrapPat
             , docCommaSep
@@ -167,7 +167,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
                docAddBaseY BrIndentRegular $ docSeq
           [ appSep $ return xN
           , appSep $ docLit $ Text.pack "::"
-          , docForceSingleline $ tyDoc
+          , docForceSingleline tyDoc
           ]
         return $ xR Seq.|> xN'
   ListPat elems _ _ ->
@@ -205,7 +205,7 @@ wrapPatPrepend
 wrapPatPrepend pat prepElem = do
   patDocs <- layoutPat pat
   case Seq.viewl patDocs of
-    Seq.EmptyL -> return $ Seq.empty
+    Seq.EmptyL -> return Seq.empty
     x1 Seq.:< xR -> do
       x1' <- docSeq [prepElem, return x1]
       return $ x1' Seq.<| xR
