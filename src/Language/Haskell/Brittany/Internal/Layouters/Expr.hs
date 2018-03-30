@@ -137,7 +137,7 @@ layoutExpr lexpr@(L _ expr) = do
           , docSetBaseY
           $ docAddBaseY BrIndentRegular
           $ docLines
-          $ (docForceSingleline <$> paramDocs)
+          $ docForceSingleline <$> paramDocs
           ]
         -- foo
         --   x
@@ -243,11 +243,10 @@ layoutExpr lexpr@(L _ expr) = do
           $ docSeq
           [ appSep $ docForceSingleline leftOperandDoc
           , docSeq
-          $ (appListDocs <&> \(od, ed) -> docSeq
+          $ appListDocs <&> \(od, ed) -> docSeq
               [ appSep $ docForceSingleline od
               , appSep $ docForceSingleline ed
               ]
-            )
           , appSep $ docForceSingleline opLastDoc
           , (if allowPar then docForceParSpacing else docForceSingleline)
               expLastDoc
@@ -1056,7 +1055,7 @@ layoutExpr lexpr@(L _ expr) = do
       docLit $ Text.pack "_"
     EAsPat asName asExpr -> do
       docSeq
-        [ docLit $ (lrdrNameToText asName) <> Text.pack "@"
+        [ docLit $ lrdrNameToText asName <> Text.pack "@"
         , layoutExpr asExpr
         ]
     EViewPat{} -> do
