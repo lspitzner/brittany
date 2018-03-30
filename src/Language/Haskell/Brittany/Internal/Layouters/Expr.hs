@@ -106,7 +106,7 @@ layoutExpr lexpr@(L _ expr) = do
 #else /* ghc-8.0 */
     HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
 #endif
-      binderDoc <- docLit $ Text.pack "->"
+      binderDoc   <- docLit $ Text.pack "->"
       funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
       docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "\\case")
@@ -114,8 +114,8 @@ layoutExpr lexpr@(L _ expr) = do
     HsApp exp1@(L _ HsApp{}) exp2 -> do
       let gather :: [LHsExpr RdrName] -> LHsExpr RdrName -> (LHsExpr RdrName, [LHsExpr RdrName])
           gather list = \case
-            (L _ (HsApp l r)) -> gather (r:list) l
-            x -> (x, list)
+            L _ (HsApp l r) -> gather (r:list) l
+            x               -> (x, list)
       let (headE, paramEs) = gather [exp2] exp1
       let colsOrSequence = case headE of
             L _ (HsVar (L _ (Unqual occname))) ->
@@ -230,8 +230,8 @@ layoutExpr lexpr@(L _ expr) = do
                                               | xD <- docSharedWrapper layoutExpr x
                                               , yD <- docSharedWrapper layoutExpr y
                                               ]
-      opLastDoc <- docSharedWrapper layoutExpr expOp
-      expLastDoc <- docSharedWrapper layoutExpr expRight
+      opLastDoc   <- docSharedWrapper layoutExpr expOp
+      expLastDoc  <- docSharedWrapper layoutExpr expRight
       hasComments <- hasAnyCommentsBelow lexpr
       let allowPar = case (expOp, expRight) of
             (L _ (HsVar (L _ (Unqual occname))), _)
@@ -1090,10 +1090,10 @@ litBriDoc = \case
   HsWordPrim   (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
   HsInt64Prim  (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
   HsWord64Prim (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsInteger (SourceText t) _i _type       -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsRat (FL t _) _type       -> BDFLit $ Text.pack t
-  HsFloatPrim  (FL t _)      -> BDFLit $ Text.pack t
-  HsDoublePrim (FL t _)      -> BDFLit $ Text.pack t
+  HsInteger    (SourceText t) _i _type    -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsRat        (FL t _) _type             -> BDFLit $ Text.pack t
+  HsFloatPrim  (FL t _)                   -> BDFLit $ Text.pack t
+  HsDoublePrim (FL t _)                   -> BDFLit $ Text.pack t
   _ -> error "litBriDoc: literal with no SourceText"
 
 overLitValBriDoc :: OverLitVal -> BriDocFInt
