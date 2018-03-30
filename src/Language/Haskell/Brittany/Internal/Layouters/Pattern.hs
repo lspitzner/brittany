@@ -95,7 +95,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
         then return Nothing
         else Just <$> docSharedWrapper layoutPat fPat
       return (lrdrNameToText lnameF, fExpDoc)
-    fmap Seq.singleton $ docSeq
+    Seq.singleton <$> docSeq
       [ appSep $ docLit t
       , appSep $ docLit $ Text.pack "{"
       , docSeq $ List.intersperse docCommaSep
@@ -112,7 +112,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   ConPatIn lname (RecCon (HsRecFields [] (Just 0))) -> do
     -- Abc { .. } -> expr
     let t = lrdrNameToText lname
-    fmap Seq.singleton $ docSeq
+    Seq.singleton <$> docSeq
       [ appSep $ docLit t
       , docLit $ Text.pack "{..}"
       ]
@@ -124,7 +124,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
         then return Nothing
         else Just <$> docSharedWrapper layoutPat fPat
       return (lrdrNameToText lnameF, fExpDoc)
-    fmap Seq.singleton $ docSeq
+    Seq.singleton <$> docSeq
       [ appSep $ docLit t
       , appSep $ docLit $ Text.pack "{"
       , docSeq $ fds >>= \case
@@ -193,7 +193,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
 -- else
 --   VarPat n -> return $ stringLayouter lpat $ rdrNameToText n
 -- endif
-  _ -> fmap return $ briDocByExactInlineOnly "some unknown pattern" lpat
+  _ -> return <$> briDocByExactInlineOnly "some unknown pattern" lpat
 
 colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
 colsWrapPat = docCols ColPatterns . fmap return . Foldable.toList

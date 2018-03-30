@@ -659,7 +659,7 @@ layoutExpr lexpr@(L _ expr) = do
           $ List.last stmtDocs
           , appSep $ docLit $ Text.pack "|"
           , docSeq $ List.intersperse docCommaSep
-                  $ fmap docForceSingleline $ List.init stmtDocs
+          $ docForceSingleline <$> List.init stmtDocs
           , docLit $ Text.pack " ]"
           ]
         addAlternative $
