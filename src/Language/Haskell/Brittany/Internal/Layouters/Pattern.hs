@@ -216,7 +216,7 @@ wrapPatListy
   -> String
   -> ToBriDocM (Seq BriDocNumbered)
 wrapPatListy elems start end = do
-  elemDocs <- Seq.fromList elems `forM` \e -> layoutPat e >>= colsWrapPat
+  elemDocs <- Seq.fromList elems `forM` (layoutPat >=> colsWrapPat)
   sDoc <- docLit $ Text.pack start
   eDoc <- docLit $ Text.pack end
   case Seq.viewl elemDocs of

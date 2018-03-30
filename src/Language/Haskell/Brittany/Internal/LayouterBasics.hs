@@ -264,8 +264,8 @@ extractAllComments ann =
        )
 
 filterAnns :: Data.Data.Data ast => ast -> ExactPrint.Anns -> ExactPrint.Anns
-filterAnns ast anns =
-  Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast) anns
+filterAnns ast =
+  Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast)
 
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) = do
