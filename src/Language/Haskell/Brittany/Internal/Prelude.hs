@@ -308,7 +308,7 @@ import Data.Tree                     as E ( Tree(..)
 import Control.Monad.Trans.MultiRWS  as E ( -- MultiRWST (..)
                                           -- , MultiRWSTNull
                                           -- , MultiRWS
-                                          -- , 
+                                          -- ,
                                             MonadMultiReader(..)
                                           , MonadMultiWriter(..)
                                           , MonadMultiState(..)

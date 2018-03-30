@@ -225,7 +225,7 @@ tellDebugMess :: MonadMultiWriter
 tellDebugMess s = mTell $ Seq.singleton s
 
 tellDebugMessShow :: forall a m . (MonadMultiWriter
-  (Seq String) m, Show a) => a -> m () 
+  (Seq String) m, Show a) => a -> m ()
 tellDebugMessShow = tellDebugMess . show
 
 -- i should really put that into multistate..

@@ -297,10 +297,10 @@ allocNodeIndex = do
 
 -- docEmpty :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docEmpty = allocateNode BDFEmpty
--- 
+--
 -- docLit :: MonadMultiState NodeAllocIndex m => Text -> m BriDocNumbered
 -- docLit t = allocateNode $ BDFLit t
--- 
+--
 -- docExt :: (ExactPrint.Annotate.Annotate ast, MonadMultiState NodeAllocIndex m)
 --        => Located ast -> ExactPrint.Types.Anns -> Bool -> m BriDocNumbered
 -- docExt x anns shouldAddComment = allocateNode $ BDFExternal
@@ -308,51 +308,51 @@ allocNodeIndex = do
 --                   (foldedAnnKeys x)
 --                   shouldAddComment
 --                   (Text.pack $ ExactPrint.exactPrint x anns)
--- 
+--
 -- docAlt :: MonadMultiState NodeAllocIndex m => [m BriDocNumbered] -> m BriDocNumbered
 -- docAlt l = allocateNode . BDFAlt =<< sequence l
--- 
--- 
+--
+--
 -- docSeq :: MonadMultiState NodeAllocIndex m => [m BriDocNumbered] -> m BriDocNumbered
 -- docSeq l = allocateNode . BDFSeq =<< sequence l
--- 
+--
 -- docLines :: MonadMultiState NodeAllocIndex m => [m BriDocNumbered] -> m BriDocNumbered
 -- docLines l = allocateNode . BDFLines =<< sequence l
--- 
+--
 -- docCols :: MonadMultiState NodeAllocIndex m => ColSig -> [m BriDocNumbered] -> m BriDocNumbered
 -- docCols sig l = allocateNode . BDFCols sig =<< sequence l
--- 
+--
 -- docAddBaseY :: MonadMultiState NodeAllocIndex m => BrIndent -> m BriDocNumbered -> m BriDocNumbered
 -- docAddBaseY ind bdm = allocateNode . BDFAddBaseY ind =<< bdm
--- 
+--
 -- docSetBaseY :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docSetBaseY bdm = allocateNode . BDFSetBaseY =<< bdm
--- 
+--
 -- docSetIndentLevel :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docSetIndentLevel bdm = allocateNode . BDFSetIndentLevel =<< bdm
--- 
+--
 -- docSeparator :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docSeparator = allocateNode BDFSeparator
--- 
+--
 -- docAnnotationPrior :: MonadMultiState NodeAllocIndex m => AnnKey -> m BriDocNumbered -> m BriDocNumbered
 -- docAnnotationPrior annKey bdm = allocateNode . BDFAnnotationPrior annKey =<< bdm
--- 
+--
 -- docAnnotationPost :: MonadMultiState NodeAllocIndex m => AnnKey -> m BriDocNumbered -> m BriDocNumbered
 -- docAnnotationPost  annKey bdm = allocateNode . BDFAnnotationPost annKey =<< bdm
--- 
+--
 -- docNonBottomSpacing :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing =<< bdm
--- 
+--
 -- appSep :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- appSep x = docSeq [x, docSeparator]
--- 
+--
 -- docCommaSep :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docCommaSep = appSep $ docLit $ Text.pack ","
--- 
+--
 -- docParenLSep :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docParenLSep = appSep $ docLit $ Text.pack "("
--- 
--- 
+--
+--
 -- docPostComment :: (Data.Data.Data ast, MonadMultiState NodeAllocIndex m)
 --                => Located ast
 --                -> m BriDocNumbered
@@ -360,7 +360,7 @@ allocNodeIndex = do
 -- docPostComment ast bdm = do
 --   bd <- bdm
 --   allocateNode $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast) bd
--- 
+--
 -- docWrapNode :: ( Data.Data.Data ast, MonadMultiState NodeAllocIndex m)
 --             => Located ast
 --             -> m BriDocNumbered
@@ -375,7 +375,7 @@ allocNodeIndex = do
 --     $ (,) i2
 --     $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast)
 --     $ bd
--- 
+--
 -- docPar :: MonadMultiState NodeAllocIndex m
 --        => m BriDocNumbered
 --        -> m BriDocNumbered
@@ -384,13 +384,13 @@ allocNodeIndex = do
 --   line <- lineM
 --   indented <- indentedM
 --   allocateNode $ BDFPar BrIndentNone line indented
--- 
+--
 -- docForceSingleline :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docForceSingleline bdm = allocateNode . BDFForceSingleline =<< bdm
--- 
+--
 -- docForceMultiline :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docForceMultiline bdm = allocateNode . BDFForceMultiline =<< bdm
--- 
+--
 -- docEnsureIndent :: MonadMultiState NodeAllocIndex m => BrIndent -> m BriDocNumbered -> m BriDocNumbered
 -- docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 
