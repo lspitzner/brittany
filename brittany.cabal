@@ -15,7 +15,7 @@ maintainer:           Lennart Spitzner <hexagoxel@hexagoxel.de>
 copyright:            Copyright (C) 2016-2017 Lennart Spitzner
 category:             Language
 build-type:           Simple
-cabal-version:        >=1.18
+cabal-version:        1.18
 homepage:             https://github.com/lspitzner/brittany/
 bug-reports:          https://github.com/lspitzner/brittany/issues
 extra-doc-files: {
