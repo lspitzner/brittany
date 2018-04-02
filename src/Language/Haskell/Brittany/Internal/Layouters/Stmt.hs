@@ -71,46 +71,40 @@ layoutStmt lstmt@(L _ stmt) = do
           (docLit $ Text.pack "let")
           (docSetBaseAndIndent $ return bindDoc)
         ]
-      Just bindDocs -> docAltFilter
-        [ -- let aaa = expra
-          --     bbb = exprb
-          --     ccc = exprc
-          ( indentPolicy /= IndentPolicyLeft
-          , docSeq
-            [ appSep $ docLit $ Text.pack "let"
-            , docSetBaseAndIndent $ docLines $ return <$> bindDocs
-            ]
-          )
-        , -- let
-          --   aaa = expra
-          --   bbb = exprb
-          --   ccc = exprc
-          ( True
-          , docAddBaseY BrIndentRegular $ docPar
+      Just bindDocs -> runFilteredAlternative $ do
+        -- let aaa = expra
+        --     bbb = exprb
+        --     ccc = exprc
+        addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+          $ docSeq
+          [ appSep $ docLit $ Text.pack "let"
+          , docSetBaseAndIndent $ docLines $ return <$> bindDocs
+          ]
+        -- let
+        --   aaa = expra
+        --   bbb = exprb
+        --   ccc = exprc
+        addAlternative $
+          docAddBaseY BrIndentRegular $ docPar
             (docLit $ Text.pack "let")
             (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
-          )
+    RecStmt stmts _ _ _ _ _ _ _ _ _ -> runFilteredAlternative $ do
+      -- rec stmt1
+      --     stmt2
+      --     stmt3
+      addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+        $ docSeq
+        [ docLit (Text.pack "rec")
+        , docSeparator
+        , docSetBaseAndIndent $ docLines $ layoutStmt <$> stmts
         ]
-    RecStmt stmts _ _ _ _ _ _ _ _ _ -> docAltFilter
-      [ -- rec stmt1
-        --     stmt2
-        --     stmt3
-        ( indentPolicy /= IndentPolicyLeft
-        , docSeq
-          [ docLit (Text.pack "rec")
-          , docSeparator
-          , docSetBaseAndIndent $ docLines $ layoutStmt <$> stmts
-          ]
-        )
-      , -- rec
-        --   stmt1
-        --   stmt2
-        --   stmt3
-        ( True
-        , docAddBaseY BrIndentRegular
-          $ docPar (docLit (Text.pack "rec")) (docLines $ layoutStmt <$> stmts)
-        )
-      ]
+      -- rec
+      --   stmt1
+      --   stmt2
+      --   stmt3
+      addAlternative
+        $ docAddBaseY BrIndentRegular
+        $ docPar (docLit (Text.pack "rec")) (docLines $ layoutStmt <$> stmts)
     BodyStmt expr _ _ _ -> do
       expDoc <- docSharedWrapper layoutExpr expr
       docAddBaseY BrIndentRegular $ expDoc

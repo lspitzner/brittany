@@ -98,25 +98,21 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
                 [] -> if hasComments
                   then docPar
                     (docSeq [hidDoc, docParenLSep, docWrapNode llies docEmpty])
-                    (docEnsureIndent (BrIndentSpecial hidDocColDiff) $ docParenR)
+                    (docEnsureIndent (BrIndentSpecial hidDocColDiff) docParenR)
                   else docSeq [hidDoc, docParenLSep, docSeparator, docParenR]
                   -- ..[hiding].( b )
-                [ieD] -> docAltFilter
-                  [ ( not hasComments
-                    , docSeq
-                      [ hidDoc
-                      , docParenLSep
-                      , docForceSingleline $ ieD
-                      , docSeparator
-                      , docParenR
-                      ]
-                    )
-                  , ( otherwise
-                    , docPar
-                      (docSeq [hidDoc, docParenLSep, docNonBottomSpacing ieD])
-                      (docEnsureIndent (BrIndentSpecial hidDocColDiff) docParenR)
-                    )
-                  ]
+                [ieD] -> runFilteredAlternative $ do
+                  addAlternativeCond (not hasComments)
+                    $ docSeq
+                    [ hidDoc
+                    , docParenLSep
+                    , docForceSingleline ieD
+                    , docSeparator
+                    , docParenR
+                    ]
+                  addAlternative $ docPar
+                    (docSeq [hidDoc, docParenLSep, docNonBottomSpacing ieD])
+                    (docEnsureIndent (BrIndentSpecial hidDocColDiff) docParenR)
                   -- ..[hiding].( b
                   --            , b'
                   --            )

@@ -38,25 +38,27 @@ layoutModule lmod@(L _ mod') = case mod' of
           [ docNodeAnnKW lmod Nothing docEmpty
              -- A pseudo node that serves merely to force documentation
              -- before the node
-          , docNodeMoveToKWDP lmod AnnModule $ docAltFilter
-            [ (,) allowSingleLineExportList $ docForceSingleline $ docSeq
-                   [ appSep $ docLit $ Text.pack "module"
-                   , appSep $ docLit tn
-                   , docWrapNode lmod $ appSep $ case les of
-                     Nothing -> docEmpty
-                     Just x  -> layoutLLIEs True x
-                   , docLit $ Text.pack "where"
-                   ]
-            , (,) otherwise $ docLines
-                   [ docAddBaseY BrIndentRegular $ docPar
-                     (docSeq [appSep $ docLit $ Text.pack "module", docLit tn]
-                     )
-                     (docWrapNode lmod $ case les of
-                       Nothing -> docEmpty
-                       Just x  -> layoutLLIEs False x
-                     )
-                   , docLit $ Text.pack "where"
-                   ]
-            ]
+          , docNodeMoveToKWDP lmod AnnModule $ runFilteredAlternative $ do
+            addAlternativeCond allowSingleLineExportList $
+              docForceSingleline
+                $ docSeq
+                [ appSep $ docLit $ Text.pack "module"
+                , appSep $ docLit tn
+                , docWrapNode lmod $ appSep $ case les of
+                  Nothing -> docEmpty
+                  Just x  -> layoutLLIEs True x
+                , docLit $ Text.pack "where"
+                ]
+            addAlternative
+              $ docLines
+              [ docAddBaseY BrIndentRegular $ docPar
+                (docSeq [appSep $ docLit $ Text.pack "module", docLit tn]
+                )
+                (docWrapNode lmod $ case les of
+                  Nothing -> docEmpty
+                  Just x  -> layoutLLIEs False x
+                )
+              , docLit $ Text.pack "where"
+              ]
           ]
       : map layoutImport imports

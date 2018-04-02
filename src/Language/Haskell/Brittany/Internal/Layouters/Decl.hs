@@ -313,253 +313,231 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
     <&> _conf_layout
     .>  _lconfig_indentPolicy
     .>  confUnpack
-  docAltFilter
-    $  -- one-line solution
-       [ ( True
-         , docCols
-         (ColBindingLine alignmentToken)
-         [ docSeq (patPartInline ++ [guardPart])
-         , docSeq
-           [ appSep $ return binderDoc
-           , docForceSingleline $ return body
-           , wherePart
-           ]
-         ]
-         )
-       | not hasComments
-       , [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
-       , wherePart <- case mWhereDocs of
-         Nothing  -> return @[] $ docEmpty
-         Just [w] -> return @[] $ docSeq
-           [ docSeparator
-           , appSep $ docLit $ Text.pack "where"
-           , docSetIndentLevel $ docForceSingleline $ return w
-           ]
-         _        -> []
-       ]
-    ++ -- one-line solution + where in next line(s)
-       [ ( True
-         , docLines
-         $  [ docCols
-              (ColBindingLine alignmentToken)
-              [ docSeq (patPartInline ++ [guardPart])
-              , docSeq
-                [appSep $ return binderDoc, docForceParSpacing $ return body]
+  runFilteredAlternative $ do
+
+    let wherePart = case mWhereDocs of
+          Nothing  -> Just docEmpty
+          Just [w] -> Just $ docSeq
+            [ docSeparator
+            , appSep $ docLit $ Text.pack "where"
+            , docSetIndentLevel $ docForceSingleline $ return w
+            ]
+          _        -> Nothing
+    case clauseDocs of
+      [(guards, body, _bodyRaw)] -> do
+        let guardPart = singleLineGuardsDoc guards
+        forM_ wherePart $ \wherePart' ->
+          -- one-line solution
+          addAlternativeCond (not hasComments) $ docCols
+            (ColBindingLine alignmentToken)
+            [ docSeq (patPartInline ++ [guardPart])
+            , docSeq
+              [ appSep $ return binderDoc
+              , docForceSingleline $ return body
+              , wherePart'
               ]
             ]
-         ++ wherePartMultiLine
-         )
-       | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
-       , Data.Maybe.isJust mWhereDocs
-       ]
-    ++ -- two-line solution + where in next line(s)
-       [ ( True 
-         , docLines
-         $  [ docForceSingleline
-            $ docSeq (patPartInline ++ [guardPart, return binderDoc])
-            , docEnsureIndent BrIndentRegular $ docForceSingleline $ return body
-            ]
-         ++ wherePartMultiLine
-         )
-       | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
-       ]
-    ++ -- pattern and exactly one clause in single line, body as par;
-       -- where in following lines
-       [ ( True
-         , docLines
-         $  [ docCols
-              (ColBindingLine alignmentToken)
-              [ docSeq (patPartInline ++ [guardPart])
-              , docSeq
-                [ appSep $ return binderDoc
-                , docForceParSpacing $ docAddBaseY BrIndentRegular $ return body
-                ]
-              ]
-            ]
-          -- , lineMod $ docAlt
-          --   [ docSetBaseY $ return body
-          --   , docAddBaseY BrIndentRegular $ return body
-          --   ]
-         ++ wherePartMultiLine
-         )
-       | [(guards, body, _bodyRaw)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
-       ]
-    ++ -- pattern and exactly one clause in single line, body in new line.
-       [ ( True
-         , docLines
-         $  [ docSeq (patPartInline ++ [guardPart, return binderDoc])
-            , docEnsureIndent BrIndentRegular
-            $ docNonBottomSpacing
-            $ (docAddBaseY BrIndentRegular $ return body)
-            ]
-         ++ wherePartMultiLine
-         )
-       | [(guards, body, _)] <- [clauseDocs]
-       , let guardPart = singleLineGuardsDoc guards
-       ]
-    ++ -- multiple clauses added in-paragraph, each in a single line
-       -- example: foo | bar = baz
-       --              | lll = asd
-       [ ( indentPolicy /= IndentPolicyLeft
-         , docLines
-         $  [ docSeq
-              [ appSep $ docForceSingleline $ return patDoc
-              , docSetBaseY
-              $   docLines
-              $   clauseDocs
-              <&> \(guardDocs, bodyDoc, _) -> do
-                    let guardPart = singleLineGuardsDoc guardDocs
-                    -- the docForceSingleline might seems superflous, but it
-                    -- helps the alternative resolving impl.
-                    docForceSingleline $ docCols
-                      ColGuardedBody
-                      [ guardPart
-                      , docSeq
-                        [ appSep $ return binderDoc
-                        , docForceSingleline $ return bodyDoc
-                        -- i am not sure if there is a benefit to using
-                        -- docForceParSpacing additionally here:
-                        -- , docAddBaseY BrIndentRegular $ return bodyDoc
-                        ]
-                      ]
-              ]
-            ]
-         ++ wherePartMultiLine
-         )
-       | Just patDoc <- [mPatDoc]
-       ]
-    ++ -- multiple clauses, each in a separate, single line
-       [ ( True
-         , docLines
-         $  [ docAddBaseY BrIndentRegular
-              $   patPartParWrap
-              $   docLines
-              $   map docSetBaseY
-              $   clauseDocs
-              <&> \(guardDocs, bodyDoc, _) -> do
-                    let guardPart = singleLineGuardsDoc guardDocs
-                    -- the docForceSingleline might seems superflous, but it
-                    -- helps the alternative resolving impl.
-                    docForceSingleline $ docCols
-                      ColGuardedBody
-                      [ guardPart
-                      , docSeq
-                        [ appSep $ return binderDoc
-                        , docForceSingleline $ return bodyDoc
-                        -- i am not sure if there is a benefit to using
-                        -- docForceParSpacing additionally here:
-                        -- , docAddBaseY BrIndentRegular $ return bodyDoc
-                        ]
-                      ]
-            ]
-         ++ wherePartMultiLine
-         )
-       ]
-    ++ -- multiple clauses, each with the guard(s) in a single line, body
-       -- as a paragraph
-       [ ( True
-         , docLines
-         $  [ docAddBaseY BrIndentRegular
-              $   patPartParWrap
-              $   docLines
-              $   map docSetBaseY
-              $   clauseDocs
-              <&> \(guardDocs, bodyDoc, _) ->
-                    docSeq
-                    $ ( case guardDocs of
-                        [] -> []
-                        [g] ->
-                          [ docForceSingleline
-                          $ docSeq [appSep $ docLit $ Text.pack "|", return g]
-                          ]
-                        gs ->
-                          [  docForceSingleline
-                          $  docSeq
-                          $  [appSep $ docLit $ Text.pack "|"]
-                          ++ List.intersperse docCommaSep (return <$> gs)
-                          ]
-                      )
-                      ++ [ docSeparator
-                         , docCols
-                           ColOpPrefix
-                           [ appSep $ return binderDoc
-                           , docAddBaseY BrIndentRegular
-                           $ docForceParSpacing
-                           $ return bodyDoc
-                           ]
-                         ]
-            ]
-         ++ wherePartMultiLine
-         )
-       ]
-    ++ -- multiple clauses, each with the guard(s) in a single line, body
-       -- in a new line as a paragraph
-       [ ( True
-         , docLines
-         $  [ docAddBaseY BrIndentRegular
-              $   patPartParWrap
-              $   docLines
-              $   map docSetBaseY
-              $   clauseDocs
-              >>= \(guardDocs, bodyDoc, _) ->
-                    ( case guardDocs of
-                      [] -> []
-                      [g] ->
-                        [ docForceSingleline
-                        $ docSeq [appSep $ docLit $ Text.pack "|", return g]
-                        ]
-                      gs ->
-                        [  docForceSingleline
-                        $  docSeq
-                        $  [appSep $ docLit $ Text.pack "|"]
-                        ++ List.intersperse docCommaSep (return <$> gs)
-                        ]
-                    )
-                    ++ [ docCols
-                         ColOpPrefix
+        -- one-line solution + where in next line(s)
+        addAlternativeCond (Data.Maybe.isJust mWhereDocs)
+          $ docLines
+          $  [ docCols
+               (ColBindingLine alignmentToken)
+               [ docSeq (patPartInline ++ [guardPart])
+               , docSeq
+                 [appSep $ return binderDoc, docForceParSpacing $ return body]
+               ]
+             ]
+          ++ wherePartMultiLine
+        -- two-line solution + where in next line(s)
+        addAlternative
+          $ docLines
+          $  [ docForceSingleline
+             $ docSeq (patPartInline ++ [guardPart, return binderDoc])
+             , docEnsureIndent BrIndentRegular $ docForceSingleline $ return body
+             ]
+          ++ wherePartMultiLine
+        -- pattern and exactly one clause in single line, body as par;
+        -- where in following lines
+        addAlternative
+          $ docLines
+          $  [ docCols
+               (ColBindingLine alignmentToken)
+               [ docSeq (patPartInline ++ [guardPart])
+               , docSeq
+                 [ appSep $ return binderDoc
+                 , docForceParSpacing $ docAddBaseY BrIndentRegular $ return body
+                 ]
+               ]
+             ]
+           -- , lineMod $ docAlt
+           --   [ docSetBaseY $ return body
+           --   , docAddBaseY BrIndentRegular $ return body
+           --   ]
+          ++ wherePartMultiLine
+        -- pattern and exactly one clause in single line, body in new line.
+        addAlternative
+          $ docLines
+          $  [ docSeq (patPartInline ++ [guardPart, return binderDoc])
+             , docEnsureIndent BrIndentRegular
+             $ docNonBottomSpacing
+             $ docAddBaseY BrIndentRegular
+             $ return body
+             ]
+          ++ wherePartMultiLine
+
+      _ -> return ()
+
+    case mPatDoc of
+      Nothing     -> return ()
+      Just patDoc ->
+        -- multiple clauses added in-paragraph, each in a single line
+        -- example: foo | bar = baz
+        --              | lll = asd
+        addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+          $ docLines
+          $  [ docSeq
+               [ appSep $ docForceSingleline $ return patDoc
+               , docSetBaseY
+               $   docLines
+               $   clauseDocs
+               <&> \(guardDocs, bodyDoc, _) -> do
+                     let guardPart = singleLineGuardsDoc guardDocs
+                     -- the docForceSingleline might seems superflous, but it
+                     -- helps the alternative resolving impl.
+                     docForceSingleline $ docCols
+                       ColGuardedBody
+                       [ guardPart
+                       , docSeq
                          [ appSep $ return binderDoc
-                         , docAddBaseY BrIndentRegular
-                         $ docForceParSpacing
-                         $ return bodyDoc
+                         , docForceSingleline $ return bodyDoc
+                         -- i am not sure if there is a benefit to using
+                         -- docForceParSpacing additionally here:
+                         -- , docAddBaseY BrIndentRegular $ return bodyDoc
                          ]
                        ]
-            ]
-         ++ wherePartMultiLine
-         )
-       ]
-    ++ -- conservative approach: everything starts on the left.
-       [ ( True
-         , docLines
-         $  [ docAddBaseY BrIndentRegular
-              $   patPartParWrap
-              $   docLines
-              $   map docSetBaseY
-              $   clauseDocs
-              >>= \(guardDocs, bodyDoc, _) ->
-                    ( case guardDocs of
-                        [] -> []
-                        [g] ->
-                          [docSeq [appSep $ docLit $ Text.pack "|", return g]]
-                        (g1:gr) ->
-                          ( docSeq [appSep $ docLit $ Text.pack "|", return g1]
-                          : (   gr
-                            <&> \g ->
-                                  docSeq
-                                    [appSep $ docLit $ Text.pack ",", return g]
-                            )
-                          )
-                      )
-                      ++ [ docCols
-                           ColOpPrefix
-                           [ appSep $ return binderDoc
-                           , docAddBaseY BrIndentRegular $ return bodyDoc
-                           ]
-                         ]
-            ]
-         ++ wherePartMultiLine
-         )
-       ]
+               ]
+             ]
+          ++ wherePartMultiLine
+    -- multiple clauses, each in a separate, single line
+    addAlternative
+      $ docLines
+      $  [ docAddBaseY BrIndentRegular
+           $   patPartParWrap
+           $   docLines
+           $   map docSetBaseY
+           $   clauseDocs
+           <&> \(guardDocs, bodyDoc, _) -> do
+                 let guardPart = singleLineGuardsDoc guardDocs
+                 -- the docForceSingleline might seems superflous, but it
+                 -- helps the alternative resolving impl.
+                 docForceSingleline $ docCols
+                   ColGuardedBody
+                   [ guardPart
+                   , docSeq
+                     [ appSep $ return binderDoc
+                     , docForceSingleline $ return bodyDoc
+                     -- i am not sure if there is a benefit to using
+                     -- docForceParSpacing additionally here:
+                     -- , docAddBaseY BrIndentRegular $ return bodyDoc
+                     ]
+                   ]
+         ]
+      ++ wherePartMultiLine
+    -- multiple clauses, each with the guard(s) in a single line, body
+    -- as a paragraph
+    addAlternative
+      $ docLines
+      $  [ docAddBaseY BrIndentRegular
+           $   patPartParWrap
+           $   docLines
+           $   map docSetBaseY
+           $   clauseDocs
+           <&> \(guardDocs, bodyDoc, _) ->
+                 docSeq
+                 $ ( case guardDocs of
+                     [] -> []
+                     [g] ->
+                       [ docForceSingleline
+                       $ docSeq [appSep $ docLit $ Text.pack "|", return g]
+                       ]
+                     gs ->
+                       [  docForceSingleline
+                       $  docSeq
+                       $  [appSep $ docLit $ Text.pack "|"]
+                       ++ List.intersperse docCommaSep (return <$> gs)
+                       ]
+                   )
+                   ++ [ docSeparator
+                      , docCols
+                        ColOpPrefix
+                        [ appSep $ return binderDoc
+                        , docAddBaseY BrIndentRegular
+                        $ docForceParSpacing
+                        $ return bodyDoc
+                        ]
+                      ]
+         ]
+      ++ wherePartMultiLine
+    -- multiple clauses, each with the guard(s) in a single line, body
+    -- in a new line as a paragraph
+    addAlternative
+      $ docLines
+      $  [ docAddBaseY BrIndentRegular
+           $   patPartParWrap
+           $   docLines
+           $   map docSetBaseY
+           $   clauseDocs
+           >>= \(guardDocs, bodyDoc, _) ->
+                 ( case guardDocs of
+                   [] -> []
+                   [g] ->
+                     [ docForceSingleline
+                     $ docSeq [appSep $ docLit $ Text.pack "|", return g]
+                     ]
+                   gs ->
+                     [  docForceSingleline
+                     $  docSeq
+                     $  [appSep $ docLit $ Text.pack "|"]
+                     ++ List.intersperse docCommaSep (return <$> gs)
+                     ]
+                 )
+                 ++ [ docCols
+                      ColOpPrefix
+                      [ appSep $ return binderDoc
+                      , docAddBaseY BrIndentRegular
+                      $ docForceParSpacing
+                      $ return bodyDoc
+                      ]
+                    ]
+         ]
+      ++ wherePartMultiLine
+    -- conservative approach: everything starts on the left.
+    addAlternative
+      $ docLines
+      $  [ docAddBaseY BrIndentRegular
+           $   patPartParWrap
+           $   docLines
+           $   map docSetBaseY
+           $   clauseDocs
+           >>= \(guardDocs, bodyDoc, _) ->
+                 ( case guardDocs of
+                     [] -> []
+                     [g] ->
+                       [docSeq [appSep $ docLit $ Text.pack "|", return g]]
+                     (g1:gr) ->
+                       ( docSeq [appSep $ docLit $ Text.pack "|", return g1]
+                       : (   gr
+                         <&> \g ->
+                               docSeq
+                                 [appSep $ docLit $ Text.pack ",", return g]
+                         )
+                       )
+                   )
+                   ++ [ docCols
+                        ColOpPrefix
+                        [ appSep $ return binderDoc
+                        , docAddBaseY BrIndentRegular $ return bodyDoc
+                        ]
+                      ]
+         ]
+      ++ wherePartMultiLine

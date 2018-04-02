@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Language.Haskell.Brittany.Internal.LayouterBasics
   ( processDefault
   , rdrNameToText
@@ -11,7 +13,11 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docEmpty
   , docLit
   , docAlt
-  , docAltFilter
+  , CollectAltM
+  , addAlternativeCondM
+  , addAlternativeCond
+  , addAlternative
+  , runFilteredAlternative
   , docLines
   , docCols
   , docSeq
@@ -59,6 +65,8 @@ where
 
 
 #include "prelude.inc"
+
+import qualified Control.Monad.Writer.Strict as Writer
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
@@ -415,8 +423,24 @@ docExt x anns shouldAddComment = allocateNode $ BDFExternal
 docAlt :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
 docAlt l = allocateNode . BDFAlt =<< sequence l
 
-docAltFilter :: [(Bool, ToBriDocM BriDocNumbered)] -> ToBriDocM BriDocNumbered
-docAltFilter = docAlt . map snd . filter fst
+newtype CollectAltM a = CollectAltM (Writer.Writer [ToBriDocM BriDocNumbered] a)
+  deriving (Functor, Applicative, Monad)
+
+addAlternativeCondM :: Bool -> CollectAltM (ToBriDocM BriDocNumbered) -> CollectAltM ()
+addAlternativeCondM cond doc =
+  addAlternativeCond cond =<< doc
+
+addAlternativeCond :: Bool -> ToBriDocM BriDocNumbered -> CollectAltM ()
+addAlternativeCond cond doc =
+  when cond (addAlternative doc)
+
+addAlternative :: ToBriDocM BriDocNumbered -> CollectAltM ()
+addAlternative =
+  CollectAltM . Writer.tell . (: [])
+
+runFilteredAlternative :: CollectAltM () -> ToBriDocM BriDocNumbered
+runFilteredAlternative (CollectAltM action) =
+  docAlt $ Writer.execWriter action
 
 
 docSeq :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
