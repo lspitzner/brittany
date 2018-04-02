@@ -587,3 +587,15 @@ alternatives = -- a
   <|> alterantiveTwo   -- d
   <|> alternativeThree -- e
   ) -- f
+
+#test issue 133
+{-# LANGUAGE ScopedTypeVariables #-}
+func
+  :: forall a
+   . ()
+  => aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+func
+  :: ()
+  => aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

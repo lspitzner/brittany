@@ -47,7 +47,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     t <- lrdrNameToTextAnn name
     docWrapNode name $ docLit t
 #endif
-  HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts@(_:_)) typ2)) -> do
+  HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts) typ2)) -> do
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- bndrs `forM` \case
       (L _ (UserTyVar name)) -> return $ (lrdrNameToText name, Nothing)
@@ -90,6 +90,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
                     ])
         ]
       contextDoc = case cntxtDocs of
+        [] -> docLit $ Text.pack "()"
         [x] -> x
         _ -> docAlt
           [ let
@@ -210,13 +211,12 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-  (HsQualTy (L _ []) _) ->
-    briDocByExactInlineOnly "HsQualTy [] _" ltype
-  HsQualTy lcntxts@(L _ cntxts@(_:_)) typ1 -> do
+  HsQualTy lcntxts@(L _ cntxts) typ1 -> do
     typeDoc <- docSharedWrapper layoutType typ1
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
     let
       contextDoc = docWrapNode lcntxts $ case cntxtDocs of
+        [] -> docLit $ Text.pack "()"
         [x] -> x
         _ -> docAlt
           [ let
