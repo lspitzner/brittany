@@ -308,21 +308,22 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
             ++ (List.intersperse docCommaSep
                                  (docForceSingleline . return <$> gs)
                )
+      wherePart = case mWhereDocs of
+        Nothing  -> Just docEmpty
+        Just [w] -> Just $ docSeq
+          [ docSeparator
+          , appSep $ docLit $ Text.pack "where"
+          , docSetIndentLevel $ docForceSingleline $ return w
+          ]
+        _        -> Nothing
 
   indentPolicy <- mAsk
     <&> _conf_layout
     .>  _lconfig_indentPolicy
     .>  confUnpack
+
   runFilteredAlternative $ do
 
-    let wherePart = case mWhereDocs of
-          Nothing  -> Just docEmpty
-          Just [w] -> Just $ docSeq
-            [ docSeparator
-            , appSep $ docLit $ Text.pack "where"
-            , docSetIndentLevel $ docForceSingleline $ return w
-            ]
-          _        -> Nothing
     case clauseDocs of
       [(guards, body, _bodyRaw)] -> do
         let guardPart = singleLineGuardsDoc guards
@@ -385,7 +386,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
              ]
           ++ wherePartMultiLine
 
-      _ -> return ()
+      _ -> return () -- no alternatives exclusively when `length clauseDocs /= 1`
 
     case mPatDoc of
       Nothing     -> return ()

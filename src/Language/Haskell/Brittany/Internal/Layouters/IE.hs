@@ -118,21 +118,22 @@ layoutLLIEs :: Bool -> Located [LIE RdrName] -> ToBriDocM BriDocNumbered
 layoutLLIEs enableSingleline llies = do
   ieDs        <- layoutAnnAndSepLLIEs llies
   hasComments <- hasAnyCommentsBelow llies
-  case ieDs of
-    [] -> runFilteredAlternative $ do
-      addAlternativeCond (not hasComments) $
-        docLit $ Text.pack "()"
-      addAlternativeCond hasComments $
-        docPar (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
-               docParenR
-    (ieDsH:ieDsT) -> runFilteredAlternative $ do
-      addAlternativeCond (not hasComments && enableSingleline)
-        $  docSeq
-        $  [docLit (Text.pack "(")]
-        ++ (docForceSingleline <$> ieDs)
-        ++ [docParenR]
-      addAlternative
-        $  docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH])
-        $  docLines
-        $  ieDsT
-        ++ [docParenR]
+  runFilteredAlternative $
+    case ieDs of
+      [] -> do
+        addAlternativeCond (not hasComments) $
+          docLit $ Text.pack "()"
+        addAlternativeCond hasComments $
+          docPar (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
+                 docParenR
+      (ieDsH:ieDsT) -> do
+        addAlternativeCond (not hasComments && enableSingleline)
+          $  docSeq
+          $  [docLit (Text.pack "(")]
+          ++ (docForceSingleline <$> ieDs)
+          ++ [docParenR]
+        addAlternative
+          $  docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH])
+          $  docLines
+          $  ieDsT
+          ++ [docParenR]

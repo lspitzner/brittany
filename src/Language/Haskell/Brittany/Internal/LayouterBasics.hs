@@ -14,7 +14,6 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docLit
   , docAlt
   , CollectAltM
-  , addAlternativeCondM
   , addAlternativeCond
   , addAlternative
   , runFilteredAlternative
@@ -425,10 +424,6 @@ docAlt l = allocateNode . BDFAlt =<< sequence l
 
 newtype CollectAltM a = CollectAltM (Writer.Writer [ToBriDocM BriDocNumbered] a)
   deriving (Functor, Applicative, Monad)
-
-addAlternativeCondM :: Bool -> CollectAltM (ToBriDocM BriDocNumbered) -> CollectAltM ()
-addAlternativeCondM cond doc =
-  addAlternativeCond cond =<< doc
 
 addAlternativeCond :: Bool -> ToBriDocM BriDocNumbered -> CollectAltM ()
 addAlternativeCond cond doc =
