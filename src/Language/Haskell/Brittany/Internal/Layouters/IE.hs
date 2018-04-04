@@ -46,18 +46,15 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   IEThingWith _ (IEWildcard _) _ _ -> docSeq [ien, docLit $ Text.pack "(..)"]
   IEThingWith _ _ ns _ -> do
     hasComments <- hasAnyCommentsBelow lie
-    docAltFilter
-      [ ( not hasComments
-        , docSeq
+    runFilteredAlternative $ do
+      addAlternativeCond (not hasComments)
+        $  docSeq
         $  [ien, docLit $ Text.pack "("]
         ++ intersperse docCommaSep (map nameDoc ns)
         ++ [docParenR]
-        )
-      , (otherwise
-        , docAddBaseY BrIndentRegular
+      addAlternative
+        $ docAddBaseY BrIndentRegular
         $ docPar ien (layoutItems (splitFirstLast ns))
-        )
-      ]
    where
     nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
     layoutItem n = docSeq [docCommaSep, docWrapNode n $ nameDoc n]
@@ -121,25 +118,22 @@ layoutLLIEs :: Bool -> Located [LIE RdrName] -> ToBriDocM BriDocNumbered
 layoutLLIEs enableSingleline llies = do
   ieDs        <- layoutAnnAndSepLLIEs llies
   hasComments <- hasAnyCommentsBelow llies
-  case ieDs of
-    [] -> docAltFilter
-      [ (not hasComments, docLit $ Text.pack "()")
-      , ( hasComments
-        , docPar (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
+  runFilteredAlternative $
+    case ieDs of
+      [] -> do
+        addAlternativeCond (not hasComments) $
+          docLit $ Text.pack "()"
+        addAlternativeCond hasComments $
+          docPar (docSeq [docParenLSep, docWrapNodeRest llies docEmpty])
                  docParenR
-        )
-      ]
-    (ieDsH:ieDsT) -> docAltFilter
-      [ ( not hasComments && enableSingleline
-        , docSeq
-        $  [docLit (Text.pack "(")]
-        ++ (docForceSingleline <$> ieDs)
-        ++ [docParenR]
-        )
-      , ( otherwise
-        , docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH])
-        $  docLines
-        $  ieDsT
-        ++ [docParenR]
-        )
-      ]
+      (ieDsH:ieDsT) -> do
+        addAlternativeCond (not hasComments && enableSingleline)
+          $  docSeq
+          $  [docLit (Text.pack "(")]
+          ++ (docForceSingleline <$> ieDs)
+          ++ [docParenR]
+        addAlternative
+          $  docPar (docSetBaseY $ docSeq [docParenLSep, ieDsH])
+          $  docLines
+          $  ieDsT
+          ++ [docParenR]

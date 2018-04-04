@@ -61,7 +61,7 @@ layoutExpr lexpr@(L _ expr) = do
       bodyDoc <- docAddBaseY BrIndentRegular <$> docSharedWrapper layoutExpr body
       let funcPatternPartLine =
             docCols ColCasePattern
-              $ (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
+              (patDocs <&> (\p -> docSeq [docForceSingleline p, docSeparator]))
       docAlt
         [ -- single line
           docSeq
@@ -106,7 +106,7 @@ layoutExpr lexpr@(L _ expr) = do
 #else /* ghc-8.0 */
     HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
 #endif
-      binderDoc <- docLit $ Text.pack "->"
+      binderDoc   <- docLit $ Text.pack "->"
       funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
       docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "\\case")
@@ -114,8 +114,8 @@ layoutExpr lexpr@(L _ expr) = do
     HsApp exp1@(L _ HsApp{}) exp2 -> do
       let gather :: [LHsExpr RdrName] -> LHsExpr RdrName -> (LHsExpr RdrName, [LHsExpr RdrName])
           gather list = \case
-            (L _ (HsApp l r)) -> gather (r:list) l
-            x -> (x, list)
+            L _ (HsApp l r) -> gather (r:list) l
+            x               -> (x, list)
       let (headE, paramEs) = gather [exp2] exp1
       let colsOrSequence = case headE of
             L _ (HsVar (L _ (Unqual occname))) ->
@@ -123,51 +123,46 @@ layoutExpr lexpr@(L _ expr) = do
             _ -> docSeq
       headDoc <- docSharedWrapper layoutExpr headE
       paramDocs <- docSharedWrapper layoutExpr `mapM` paramEs
-      docAltFilter
-        [ -- foo x y
-          ( True
-          , colsOrSequence
+      runFilteredAlternative $ do
+        -- foo x y
+        addAlternative
+          $ colsOrSequence
           $ appSep (docForceSingleline headDoc)
           : spacifyDocs (docForceSingleline <$> paramDocs)
-          )
-        , -- foo x
-          --     y
-          ( allowFreeIndent
-          , docSeq
-            [ appSep (docForceSingleline headDoc)
-            , docSetBaseY
-            $ docAddBaseY BrIndentRegular
-            $ docLines
-            $ (docForceSingleline <$> paramDocs)
-            ]
-          )
-        , -- foo
-          --   x
-          --   y
-          ( True
-          , docSetParSpacing
+        -- foo x
+        --     y
+        addAlternativeCond allowFreeIndent
+          $ docSeq
+          [ appSep (docForceSingleline headDoc)
+          , docSetBaseY
+          $ docAddBaseY BrIndentRegular
+          $ docLines
+          $ docForceSingleline <$> paramDocs
+          ]
+        -- foo
+        --   x
+        --   y
+        addAlternative
+          $ docSetParSpacing
           $ docAddBaseY BrIndentRegular
           $ docPar
             (docForceSingleline headDoc)
             ( docNonBottomSpacing
             $ docLines paramDocs
             )
-          )
-        , -- ( multi
-          --   line
-          --   function
-          -- )
-          --   x
-          --   y
-          ( True
-          , docAddBaseY BrIndentRegular
+        -- ( multi
+        --   line
+        --   function
+        -- )
+        --   x
+        --   y
+        addAlternative
+          $ docAddBaseY BrIndentRegular
           $ docPar
             headDoc
             ( docNonBottomSpacing
             $ docLines paramDocs
             )
-          )
-        ]
     HsApp exp1 exp2 -> do
       -- TODO: if expDoc1 is some literal, we may want to create a docCols here.
       expDoc1 <- docSharedWrapper layoutExpr exp1
@@ -235,47 +230,44 @@ layoutExpr lexpr@(L _ expr) = do
                                               | xD <- docSharedWrapper layoutExpr x
                                               , yD <- docSharedWrapper layoutExpr y
                                               ]
-      opLastDoc <- docSharedWrapper layoutExpr expOp
-      expLastDoc <- docSharedWrapper layoutExpr expRight
+      opLastDoc   <- docSharedWrapper layoutExpr expOp
+      expLastDoc  <- docSharedWrapper layoutExpr expRight
       hasComments <- hasAnyCommentsBelow lexpr
       let allowPar = case (expOp, expRight) of
             (L _ (HsVar (L _ (Unqual occname))), _)
               | occNameString occname == "$" -> True
             (_, L _ (HsApp _ (L _ HsVar{}))) -> False
             _ -> True
-      docAltFilter
-        [ ( not hasComments
+      runFilteredAlternative $ do
+        addAlternativeCond (not hasComments)
+          $ docSeq
+          [ appSep $ docForceSingleline leftOperandDoc
           , docSeq
-            [ appSep $ docForceSingleline leftOperandDoc
-            , docSeq
-            $ (appListDocs <&> \(od, ed) -> docSeq
-                [ appSep $ docForceSingleline od
-                , appSep $ docForceSingleline ed
-                ]
-              )
-            , appSep $ docForceSingleline opLastDoc
-            , (if allowPar then docForceParSpacing else docForceSingleline)
-                expLastDoc
-            ]
-          )
+          $ appListDocs <&> \(od, ed) -> docSeq
+              [ appSep $ docForceSingleline od
+              , appSep $ docForceSingleline ed
+              ]
+          , appSep $ docForceSingleline opLastDoc
+          , (if allowPar then docForceParSpacing else docForceSingleline)
+              expLastDoc
+          ]
         -- this case rather leads to some unfortunate layouting than to anything
         -- useful; disabling for now. (it interfers with cols stuff.)
-        -- , docSetBaseY
-        -- - $ docPar
+        -- addAlternative
+        --   $ docSetBaseY
+        --   $ docPar
         --     leftOperandDoc
         --     ( docLines
-        -- -    $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
+        --      $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
         --       ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
         --     )
-        , (otherwise
-          , docPar
+        addAlternative $
+          docPar
             leftOperandDoc
             ( docLines
             $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
               ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
             )
-          )
-        ]
     OpApp expLeft expOp _ expRight -> do
       expDocLeft  <- docSharedWrapper layoutExpr expLeft
       expDocOp    <- docSharedWrapper layoutExpr expOp
@@ -285,47 +277,47 @@ layoutExpr lexpr@(L _ expr) = do
               | occNameString occname == "$" -> True
             (_, L _ (HsApp _ (L _ HsVar{}))) -> False
             _ -> True
-      docAltFilter
-        $   [ -- one-line
-              (,) True
-            $ docSeq
-              [ appSep $ docForceSingleline expDocLeft
-              , appSep $ docForceSingleline expDocOp
-              , docForceSingleline expDocRight
-              ]
-            -- , -- line + freely indented block for right expression
-            --   docSeq
-            --   [ appSep $ docForceSingleline expDocLeft
-            --   , appSep $ docForceSingleline expDocOp
-            --   , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
-            --   ]
-            , -- two-line
-              (,) True
-            $ docAddBaseY BrIndentRegular
-            $ docPar
-                expDocLeft
-                ( docForceSingleline
-                $ docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight]
-                )
-            , -- one-line + par
-              (,) allowPar
-            $ docSeq
-              [ appSep $ docForceSingleline expDocLeft
-              , appSep $ docForceSingleline expDocOp
-              , docForceParSpacing expDocRight
-              ]
-            , -- more lines
-              (,) True
-            $ docAddBaseY BrIndentRegular
-            $ docPar
-                expDocLeft
-                (docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight])
-            ]
+      runFilteredAlternative $ do
+        -- one-line
+        addAlternative
+          $ docSeq
+          [ appSep $ docForceSingleline expDocLeft
+          , appSep $ docForceSingleline expDocOp
+          , docForceSingleline expDocRight
+          ]
+        -- -- line + freely indented block for right expression
+        -- addAlternative
+        --   $ docSeq
+        --   [ appSep $ docForceSingleline expDocLeft
+        --   , appSep $ docForceSingleline expDocOp
+        --   , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
+        --   ]
+        -- two-line
+        addAlternative
+          $ docAddBaseY BrIndentRegular
+          $ docPar
+              expDocLeft
+              ( docForceSingleline
+              $ docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight]
+              )
+        -- one-line + par
+        addAlternativeCond allowPar
+          $ docSeq
+          [ appSep $ docForceSingleline expDocLeft
+          , appSep $ docForceSingleline expDocOp
+          , docForceParSpacing expDocRight
+          ]
+        -- more lines
+        addAlternative
+          $ docAddBaseY BrIndentRegular
+          $ docPar
+              expDocLeft
+              (docCols ColOpPrefix [appSep expDocOp, docSetBaseY expDocRight])
     NegApp op _ -> do
       opDoc <- docSharedWrapper layoutExpr op
-      docSeq $ [ docLit $ Text.pack "-"
-               , opDoc
-               ]
+      docSeq [ docLit $ Text.pack "-"
+             , opDoc
+             ]
     HsPar innerExp -> do
       innerExpDoc <- docSharedWrapper (docWrapNode lexpr . layoutExpr) innerExp
       docAlt
@@ -364,7 +356,7 @@ layoutExpr lexpr@(L _ expr) = do
       case splitFirstLast argDocs of
         FirstLastEmpty -> docSeq
           [ openLit
-          , docNodeAnnKW lexpr (Just AnnOpenP) $ closeLit
+          , docNodeAnnKW lexpr (Just AnnOpenP) closeLit
           ]
         FirstLastSingleton e -> docAlt
           [ docCols ColTuple
@@ -380,24 +372,21 @@ layoutExpr lexpr@(L _ expr) = do
             , closeLit
             ]
           ]
-        FirstLast e1 ems eN ->
-          docAltFilter
-            [ (,) (not hasComments)
-            $ docCols ColTuple
-              (  [docSeq [openLit, docForceSingleline e1]]
-              ++ (ems <&> \e -> docSeq [docCommaSep, docForceSingleline e])
-              ++ [docSeq [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) (docForceSingleline eN), closeLit]]
-              )
-            , (,) True
-            $ let
-                start = docCols ColTuples
-                          [appSep $ openLit, e1]
-                linesM = ems <&> \d ->
-                        docCols ColTuples [docCommaSep, d]
-                lineN = docCols ColTuples [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) eN]
-                end   = closeLit
-              in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
-            ]
+        FirstLast e1 ems eN -> runFilteredAlternative $ do
+          addAlternativeCond (not hasComments)
+            $  docCols ColTuple
+            $  [docSeq [openLit, docForceSingleline e1]]
+            ++ (ems <&> \e -> docSeq [docCommaSep, docForceSingleline e])
+            ++ [docSeq [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) (docForceSingleline eN), closeLit]]
+          addAlternative $
+            let
+              start = docCols ColTuples
+                        [appSep openLit, e1]
+              linesM = ems <&> \d ->
+                      docCols ColTuples [docCommaSep, d]
+              lineN = docCols ColTuples [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) eN]
+              end   = closeLit
+            in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN, end]
     HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
       cExpDoc <- docSharedWrapper layoutExpr cExp
       binderDoc <- docLit $ Text.pack "->"
@@ -432,10 +421,10 @@ layoutExpr lexpr@(L _ expr) = do
               _ -> BrIndentSpecial 3
       -- TODO: some of the alternatives (especially last and last-but-one)
       -- overlap.
-      docAltFilter
-        [ -- if _ then _ else _
-          (,) (not hasComments)
-        $ docSeq
+      runFilteredAlternative $ do
+        -- if _ then _ else _
+        addAlternativeCond (not hasComments)
+          $ docSeq
           [ appSep $ docLit $ Text.pack "if"
           , appSep $ docForceSingleline ifExprDoc
           , appSep $ docLit $ Text.pack "then"
@@ -443,106 +432,105 @@ layoutExpr lexpr@(L _ expr) = do
           , appSep $ docLit $ Text.pack "else"
           , docForceSingleline elseExprDoc
           ]
-        , -- either
-          --   if expr
-          --   then foo
-          --     bar
-          --   else foo
-          --     bar
-          -- or
-          --   if expr
-          --   then
-          --     stuff
-          --   else
-          --     stuff
-          -- note that this has par-spacing
-          (,) True
-        $ docSetParSpacing
-        $ docAddBaseY BrIndentRegular
-        $ docPar
-            ( docSeq
-              [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
-              , docNodeAnnKW lexpr (Just AnnIf) $ docForceSingleline ifExprDoc
-              ])
-            (docLines
-              [ docAddBaseY BrIndentRegular
-              $ docNodeAnnKW lexpr (Just AnnThen)
-              $ docAlt
-                [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
+        -- either
+        --   if expr
+        --   then foo
+        --     bar
+        --   else foo
+        --     bar
+        -- or
+        --   if expr
+        --   then
+        --     stuff
+        --   else
+        --     stuff
+        -- note that this has par-spacing
+        addAlternative
+          $ docSetParSpacing
+          $ docAddBaseY BrIndentRegular
+          $ docPar
+              ( docSeq
+                [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
+                , docNodeAnnKW lexpr (Just AnnIf) $ docForceSingleline ifExprDoc
+                ])
+              (docLines
+                [ docAddBaseY BrIndentRegular
+                $ docNodeAnnKW lexpr (Just AnnThen)
+                $ docAlt
+                  [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar (docLit $ Text.pack "then") thenExprDoc
+                  ]
                 , docAddBaseY BrIndentRegular
-                $ docPar (docLit $ Text.pack "then") thenExprDoc
-                ]
-              , docAddBaseY BrIndentRegular
-              $ docAlt
-                [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
+                $ docAlt
+                  [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar (docLit $ Text.pack "else") elseExprDoc
+                  ]
+                ])
+        -- either
+        --   if multi
+        --      line
+        --      condition
+        --   then foo
+        --     bar
+        --   else foo
+        --     bar
+        -- or
+        --   if multi
+        --      line
+        --      condition
+        --   then
+        --     stuff
+        --   else
+        --     stuff
+        -- note that this does _not_ have par-spacing
+        addAlternative
+          $ docAddBaseY BrIndentRegular
+          $ docPar
+              ( docAddBaseY maySpecialIndent
+              $ docSeq
+                [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
+                , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
+                ])
+              (docLines
+                [ docAddBaseY BrIndentRegular
+                $ docNodeAnnKW lexpr (Just AnnThen)
+                $ docAlt
+                  [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar (docLit $ Text.pack "then") thenExprDoc
+                  ]
                 , docAddBaseY BrIndentRegular
-                $ docPar (docLit $ Text.pack "else") elseExprDoc
-                ]
-              ])
-        , -- either
-          --   if multi
-          --      line
-          --      condition
-          --   then foo
-          --     bar
-          --   else foo
-          --     bar
-          -- or
-          --   if multi
-          --      line
-          --      condition
-          --   then
-          --     stuff
-          --   else
-          --     stuff
-          -- note that this does _not_ have par-spacing
-          (,) True
-        $ docAddBaseY BrIndentRegular
-        $ docPar
-            ( docAddBaseY maySpecialIndent
+                $ docAlt
+                  [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
+                  , docAddBaseY BrIndentRegular
+                  $ docPar (docLit $ Text.pack "else") elseExprDoc
+                  ]
+                ])
+        addAlternative
+          $ docSetBaseY
+          $ docLines
+            [ docAddBaseY maySpecialIndent
             $ docSeq
               [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
               , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
-              ])
-            (docLines
-              [ docAddBaseY BrIndentRegular
-              $ docNodeAnnKW lexpr (Just AnnThen)
-              $ docAlt
-                [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
-                , docAddBaseY BrIndentRegular
-                $ docPar (docLit $ Text.pack "then") thenExprDoc
-                ]
-              , docAddBaseY BrIndentRegular
-              $ docAlt
-                [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
-                , docAddBaseY BrIndentRegular
-                $ docPar (docLit $ Text.pack "else") elseExprDoc
-                ]
-              ])
-        , (,) True
-        $ docSetBaseY
-        $ docLines
-          [ docAddBaseY maySpecialIndent
-          $ docSeq
-            [ docNodeAnnKW lexpr Nothing $ appSep $ docLit $ Text.pack "if"
-            , docNodeAnnKW lexpr (Just AnnIf) $ ifExprDoc
+              ]
+            , docNodeAnnKW lexpr (Just AnnThen)
+            $ docAddBaseY BrIndentRegular
+            $ docPar (docLit $ Text.pack "then") thenExprDoc
+            , docAddBaseY BrIndentRegular
+            $ docPar (docLit $ Text.pack "else") elseExprDoc
             ]
-          , docNodeAnnKW lexpr (Just AnnThen)
-          $ docAddBaseY BrIndentRegular
-          $ docPar (docLit $ Text.pack "then") thenExprDoc
-          , docAddBaseY BrIndentRegular
-          $ docPar (docLit $ Text.pack "else") elseExprDoc
-          ]
-        ]
     HsMultiIf _ cases -> do
-      clauseDocs <- cases `forM` layoutGrhs
-      binderDoc <- docLit $ Text.pack "->"
+      clauseDocs  <- cases `forM` layoutGrhs
+      binderDoc   <- docLit $ Text.pack "->"
       hasComments <- hasAnyCommentsBelow lexpr
       docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "if")
         (layoutPatternBindFinal Nothing binderDoc Nothing clauseDocs Nothing hasComments)
     HsLet binds exp1 -> do
-      expDoc1 <- docSharedWrapper layoutExpr exp1
+      expDoc1   <- docSharedWrapper layoutExpr exp1
       -- We jump through some ugly hoops here to ensure proper sharing.
       mBindDocs <- mapM (fmap (fmap return) . docWrapNodeRest lexpr . return)
                =<< layoutLocalBinds binds
@@ -562,9 +550,9 @@ layoutExpr lexpr@(L _ expr) = do
         Just [bindDoc] -> docAlt
           [ docSeq
               [ appSep $ docLit $ Text.pack "let"
-              , appSep $ docForceSingleline $ bindDoc
+              , appSep $ docForceSingleline bindDoc
               , appSep $ docLit $ Text.pack "in"
-              , docForceSingleline $ expDoc1
+              , docForceSingleline expDoc1
               ]
           , docLines
               [ docAlt
@@ -576,7 +564,7 @@ layoutExpr lexpr@(L _ expr) = do
                   , docAddBaseY BrIndentRegular
                   $ docPar
                     (docLit $ Text.pack "let")
-                    (docSetBaseAndIndent $ bindDoc)
+                    (docSetBaseAndIndent bindDoc)
                   ]
               , docAlt
                   [ docSeq
@@ -586,11 +574,11 @@ layoutExpr lexpr@(L _ expr) = do
                   , docAddBaseY BrIndentRegular
                   $ docPar
                     (docLit $ Text.pack "in")
-                    (docSetBaseY $ expDoc1)
+                    (docSetBaseY expDoc1)
                   ]
               ]
           ]
-        Just bindDocs@(_:_) -> docAltFilter
+        Just bindDocs@(_:_) -> runFilteredAlternative $ do
           --either
           --  let
           --    a = b
@@ -604,43 +592,39 @@ layoutExpr lexpr@(L _ expr) = do
           --    c = d
           --  in
           --    fooooooooooooooooooo
-          [ ( indentPolicy == IndentPolicyLeft
-            , docLines
-              [ docAddBaseY BrIndentRegular
-              $ docPar
-                (docLit $ Text.pack "let")
-                (docSetBaseAndIndent $ docLines $ bindDocs)
-              , docSeq
-                [ docLit $ Text.pack "in "
-                , docAddBaseY BrIndentRegular $ expDoc1
-                ]
+          addAlternativeCond (indentPolicy == IndentPolicyLeft)
+            $ docLines
+            [ docAddBaseY BrIndentRegular
+            $ docPar
+              (docLit $ Text.pack "let")
+              (docSetBaseAndIndent $ docLines bindDocs)
+            , docSeq
+              [ docLit $ Text.pack "in "
+              , docAddBaseY BrIndentRegular expDoc1
               ]
-            )
-          , ( indentPolicy /= IndentPolicyLeft
-            , docLines
-              [ docSeq
-                [ appSep $ docLit $ Text.pack "let"
-                , docSetBaseAndIndent $ docLines $ bindDocs
-                ]
-              , docSeq
-                [ appSep $ docLit $ Text.pack "in "
-                , docSetBaseY $ expDoc1
-                ]
+            ]
+          addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+            $ docLines
+            [ docSeq
+              [ appSep $ docLit $ Text.pack "let"
+              , docSetBaseAndIndent $ docLines bindDocs
               ]
-            )
-          , ( True
-            , docLines
-              [ docAddBaseY BrIndentRegular
-              $ docPar
-                (docLit $ Text.pack "let")
-                (docSetBaseAndIndent $ docLines $ bindDocs)
-              , docAddBaseY BrIndentRegular
-              $ docPar
-                (docLit $ Text.pack "in")
-                (docSetBaseY $ expDoc1)
+            , docSeq
+              [ appSep $ docLit $ Text.pack "in "
+              , docSetBaseY expDoc1
               ]
-            )
-          ]
+            ]
+          addAlternative
+            $ docLines
+            [ docAddBaseY BrIndentRegular
+            $ docPar
+              (docLit $ Text.pack "let")
+              (docSetBaseAndIndent $ docLines $ bindDocs)
+            , docAddBaseY BrIndentRegular
+            $ docPar
+              (docLit $ Text.pack "in")
+              (docSetBaseY $ expDoc1)
+            ]
         _ -> docSeq [appSep $ docLit $ Text.pack "let in", expDoc1]
       -- docSeq [appSep $ docLit "let in", expDoc1]
     HsDo DoExpr (L _ stmts) _ -> do
@@ -660,11 +644,11 @@ layoutExpr lexpr@(L _ expr) = do
     HsDo x  (L _ stmts) _ | case x of { ListComp -> True
                                       ; MonadComp -> True
                                       ; _ -> False } -> do
-      stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
+      stmtDocs    <- docSharedWrapper layoutStmt `mapM` stmts
       hasComments <- hasAnyCommentsBelow lexpr
-      docAltFilter
-        [ (,) (not hasComments)
-        $ docSeq
+      runFilteredAlternative $ do
+        addAlternativeCond (not hasComments)
+          $ docSeq
           [ docNodeAnnKW lexpr Nothing
           $ appSep
           $ docLit
@@ -675,11 +659,11 @@ layoutExpr lexpr@(L _ expr) = do
           $ List.last stmtDocs
           , appSep $ docLit $ Text.pack "|"
           , docSeq $ List.intersperse docCommaSep
-                  $ fmap docForceSingleline $ List.init stmtDocs
+          $ docForceSingleline <$> List.init stmtDocs
           , docLit $ Text.pack " ]"
           ]
-        , (,) True
-        $ let
+        addAlternative $
+          let
             start = docCols ColListComp
                       [ docNodeAnnKW lexpr Nothing
                       $ appSep $ docLit $ Text.pack "["
@@ -694,12 +678,11 @@ layoutExpr lexpr@(L _ expr) = do
                     docCols ColListComp [docCommaSep, d]
             end   = docLit $ Text.pack "]"
           in docSetBaseY $ docLines $ [start, line1] ++ lineM ++ [end]
-        ]
     HsDo{} -> do
       -- TODO
       unknownNodeError "HsDo{} no comp" lexpr
     ExplicitList _ _ elems@(_:_) -> do
-      elemDocs <- elems `forM` docSharedWrapper layoutExpr
+      elemDocs    <- elems `forM` docSharedWrapper layoutExpr
       hasComments <- hasAnyCommentsBelow lexpr
       case splitFirstLast elemDocs of
         FirstLastEmpty -> docSeq
@@ -716,28 +699,26 @@ layoutExpr lexpr@(L _ expr) = do
             [ docSeq
               [ docLit $ Text.pack "["
               , docSeparator
-              , docSetBaseY $ docNodeAnnKW lexpr (Just AnnOpenS) $ e
+              , docSetBaseY $ docNodeAnnKW lexpr (Just AnnOpenS) e
               ]
             , docLit $ Text.pack "]"
             ]
           ]
-        FirstLast e1 ems eN ->
-          docAltFilter
-            [  (,) (not hasComments)
+        FirstLast e1 ems eN -> runFilteredAlternative $ do
+          addAlternativeCond (not hasComments)
             $  docSeq
             $  [docLit $ Text.pack "["]
             ++ List.intersperse docCommaSep (docForceSingleline <$> (e1:ems ++ [docNodeAnnKW lexpr (Just AnnOpenS) eN]))
             ++ [docLit $ Text.pack "]"]
-            , (,) True
-            $ let
-                start = docCols ColList
-                          [appSep $ docLit $ Text.pack "[", e1]
-                linesM = ems <&> \d ->
-                        docCols ColList [docCommaSep, d]
-                lineN = docCols ColList [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenS) eN]
-                end   = docLit $ Text.pack "]"
-              in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
-            ]
+          addAlternative $
+            let
+              start = docCols ColList
+                        [appSep $ docLit $ Text.pack "[", e1]
+              linesM = ems <&> \d ->
+                      docCols ColList [docCommaSep, d]
+              lineN = docCols ColList [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenS) eN]
+              end   = docLit $ Text.pack "]"
+            in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
     ExplicitList _ _ [] ->
       docLit $ Text.pack "[]"
     ExplicitPArr{} -> do
@@ -757,20 +738,20 @@ layoutExpr lexpr@(L _ expr) = do
         fExpDoc <- if pun
           then return Nothing
           else Just <$> docSharedWrapper layoutExpr fExpr
-        return $ (fieldl, lrdrNameToText lnameF, fExpDoc)
+        return (fieldl, lrdrNameToText lnameF, fExpDoc)
       let line1 appender wrapper =
             [ appender $ docLit $ Text.pack "{"
-            , docWrapNodePrior fd1l $ appSep $ docLit $ fd1n
+            , docWrapNodePrior fd1l $ appSep $ docLit fd1n
             , case fd1e of
                 Just x -> docSeq
                   [ appSep $ docLit $ Text.pack "="
-                  , docWrapNodeRest fd1l $ wrapper $ x
+                  , docWrapNodeRest fd1l $ wrapper x
                   ]
                 Nothing -> docEmpty
             ]
       let lineR wrapper = fdr <&> \(lfield, fText, fDoc) ->
             [ docCommaSep
-            , appSep $ docLit $ fText
+            , appSep $ docLit fText
             , case fDoc of
                 Just x -> docWrapNode lfield $ docSeq
                   [ appSep $ docLit $ Text.pack "="
@@ -784,14 +765,14 @@ layoutExpr lexpr@(L _ expr) = do
             ]
       docAlt
         [  docSeq
-        $  [docNodeAnnKW lexpr Nothing $ nameDoc, docSeparator]
+        $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
         ++ line1 id docForceSingleline
         ++ join (lineR docForceSingleline)
         ++ lineN
         , docSetParSpacing
         $ docAddBaseY BrIndentRegular
         $ docPar
-            (docNodeAnnKW lexpr Nothing $ nameDoc)
+            (docNodeAnnKW lexpr Nothing nameDoc)
             ( docNonBottomSpacing
             $ docLines
             $  [docCols ColRecUpdate $ line1 appSep (docAddBaseY BrIndentRegular)]
@@ -808,20 +789,20 @@ layoutExpr lexpr@(L _ expr) = do
         fExpDoc <- if pun
           then return Nothing
           else Just <$> docSharedWrapper layoutExpr fExpr
-        return $ (fieldl, lrdrNameToText lnameF, fExpDoc)
+        return (fieldl, lrdrNameToText lnameF, fExpDoc)
       let line1 appender wrapper =
             [ appender $ docLit $ Text.pack "{"
-            , docWrapNodePrior fd1l $ appSep $ docLit $ fd1n
+            , docWrapNodePrior fd1l $ appSep $ docLit fd1n
             , case fd1e of
                 Just x -> docSeq
                   [ appSep $ docLit $ Text.pack "="
-                  , docWrapNodeRest fd1l $ wrapper $ x
+                  , docWrapNodeRest fd1l $ wrapper x
                   ]
                 Nothing -> docEmpty
             ]
       let lineR wrapper = fdr <&> \(lfield, fText, fDoc) ->
             [ docCommaSep
-            , appSep $ docLit $ fText
+            , appSep $ docLit fText
             , case fDoc of
                 Just x -> docWrapNode lfield $ docSeq
                   [ appSep $ docLit $ Text.pack "="
@@ -839,7 +820,7 @@ layoutExpr lexpr@(L _ expr) = do
             ]
       docAlt
         [  docSeq
-        $  [docNodeAnnKW lexpr Nothing $ nameDoc, docSeparator]
+        $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
         ++ line1 id docForceSingleline
         ++ join (lineR docForceSingleline)
         ++ lineDot
@@ -847,7 +828,7 @@ layoutExpr lexpr@(L _ expr) = do
         , docSetParSpacing
         $ docAddBaseY BrIndentRegular
         $ docPar
-            (docNodeAnnKW lexpr Nothing $ nameDoc)
+            (docNodeAnnKW lexpr Nothing nameDoc)
             ( docNonBottomSpacing
             $ docLines
             $  [docCols ColRecUpdate $ line1 appSep (docAddBaseY BrIndentRegular)]
@@ -870,77 +851,75 @@ layoutExpr lexpr@(L _ expr) = do
           return $ case ambName of
             Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
-      docAltFilter
+      runFilteredAlternative $ do
         -- container { fieldA = blub, fieldB = blub }
-        [ ( True
-          , docSeq
-            [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
-            , appSep $ docLit $ Text.pack "{"
-            , appSep $ docSeq $ List.intersperse docCommaSep
-                    $ rFs <&> \case
-                      (lfield, fieldStr, Just fieldDoc) ->
-                        docWrapNode lfield $ docSeq
-                              [ appSep $ docLit fieldStr
-                              , appSep $ docLit $ Text.pack "="
-                              , docForceSingleline fieldDoc
-                              ]
-                      (lfield, fieldStr, Nothing) ->
-                        docWrapNode lfield $ docLit fieldStr
-            , docLit $ Text.pack "}"
-            ]
-          )
+        addAlternative
+          $ docSeq
+          [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
+          , appSep $ docLit $ Text.pack "{"
+          , appSep $ docSeq $ List.intersperse docCommaSep
+                  $ rFs <&> \case
+                    (lfield, fieldStr, Just fieldDoc) ->
+                      docWrapNode lfield $ docSeq
+                            [ appSep $ docLit fieldStr
+                            , appSep $ docLit $ Text.pack "="
+                            , docForceSingleline fieldDoc
+                            ]
+                    (lfield, fieldStr, Nothing) ->
+                      docWrapNode lfield $ docLit fieldStr
+          , docLit $ Text.pack "}"
+          ]
         -- hanging single-line fields
         -- container { fieldA = blub
         --           , fieldB = blub
         --           }
-        , ( indentPolicy /= IndentPolicyLeft
-          , docSeq
-            [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
-            , docSetBaseY $ docLines $ let
-                line1 = docCols ColRecUpdate
-                  [ appSep $ docLit $ Text.pack "{"
-                  , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
-                  , case rF1e of
-                      Just x -> docWrapNodeRest rF1f $ docSeq
-                                      [ appSep $ docLit $ Text.pack "="
+        addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+          $ docSeq
+          [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
+          , docSetBaseY $ docLines $ let
+              line1 = docCols ColRecUpdate
+                [ appSep $ docLit $ Text.pack "{"
+                , docWrapNodePrior rF1f $ appSep $ docLit rF1n
+                , case rF1e of
+                    Just x -> docWrapNodeRest rF1f $ docSeq
+                                    [ appSep $ docLit $ Text.pack "="
+                                    , docForceSingleline x
+                                    ]
+                    Nothing -> docEmpty
+                ]
+              lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
+                [ docCommaSep
+                , appSep $ docLit fText
+                , case fDoc of
+                    Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
                                       , docForceSingleline x
                                       ]
-                      Nothing -> docEmpty
-                  ]
-                lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
-                  [ docCommaSep
-                  , appSep $ docLit $ fText
-                  , case fDoc of
-                      Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
-                                        , docForceSingleline x
-                                        ]
-                      Nothing -> docEmpty
-                  ]
-                lineN = docSeq
-                  [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
-                  , docLit $ Text.pack "}"
-                  ]
-                in [line1] ++ lineR ++ [lineN]
-            ]
-          )
-          -- non-hanging with expressions placed to the right of the names
-          -- container
-          -- { fieldA = blub
-          -- , fieldB = potentially
-          --     multiline
-          -- }
-        , ( True
-          , docSetParSpacing
+                    Nothing -> docEmpty
+                ]
+              lineN = docSeq
+                [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+                , docLit $ Text.pack "}"
+                ]
+              in [line1] ++ lineR ++ [lineN]
+          ]
+        -- non-hanging with expressions placed to the right of the names
+        -- container
+        -- { fieldA = blub
+        -- , fieldB = potentially
+        --     multiline
+        -- }
+        addAlternative
+          $ docSetParSpacing
           $ docAddBaseY BrIndentRegular
           $ docPar
-              (docNodeAnnKW lexpr Nothing $ rExprDoc)
+              (docNodeAnnKW lexpr Nothing rExprDoc)
               (docNonBottomSpacing $ docLines $ let
                 expressionWrapper = if indentPolicy == IndentPolicyLeft
                   then docForceParSpacing
                   else docSetBaseY
                 line1 = docCols ColRecUpdate
                   [ appSep $ docLit $ Text.pack "{"
-                  , docWrapNodePrior rF1f $ appSep $ docLit $ rF1n
+                  , docWrapNodePrior rF1f $ appSep $ docLit rF1n
                   , docWrapNodeRest rF1f $ case rF1e of
                       Just x -> docAlt
                         [ docSeq [ appSep $ docLit $ Text.pack "="
@@ -954,7 +933,7 @@ layoutExpr lexpr@(L _ expr) = do
                 lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield
                   $ docCols ColRecUpdate
                   [ docCommaSep
-                  , appSep $ docLit $ fText
+                  , appSep $ docLit fText
                   , case fDoc of
                       Just x -> docAlt
                         [ docSeq [ appSep $ docLit $ Text.pack "="
@@ -971,8 +950,6 @@ layoutExpr lexpr@(L _ expr) = do
                   ]
                 in [line1] ++ lineR ++ [lineN]
               )
-          )
-        ]
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
     ExprWithTySig exp1 (HsWC _ (HsIB _ typ1 _)) -> do
 #else /* ghc-8.0 */
@@ -1078,7 +1055,7 @@ layoutExpr lexpr@(L _ expr) = do
       docLit $ Text.pack "_"
     EAsPat asName asExpr -> do
       docSeq
-        [ docLit $ (lrdrNameToText asName) <> Text.pack "@"
+        [ docLit $ lrdrNameToText asName <> Text.pack "@"
         , layoutExpr asExpr
         ]
     EViewPat{} -> do
@@ -1112,10 +1089,10 @@ litBriDoc = \case
   HsWordPrim   (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
   HsInt64Prim  (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
   HsWord64Prim (SourceText t) _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsInteger (SourceText t) _i _type       -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsRat (FL t _) _type       -> BDFLit $ Text.pack t
-  HsFloatPrim  (FL t _)      -> BDFLit $ Text.pack t
-  HsDoublePrim (FL t _)      -> BDFLit $ Text.pack t
+  HsInteger    (SourceText t) _i _type    -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsRat        (FL t _) _type             -> BDFLit $ Text.pack t
+  HsFloatPrim  (FL t _)                   -> BDFLit $ Text.pack t
+  HsDoublePrim (FL t _)                   -> BDFLit $ Text.pack t
   _ -> error "litBriDoc: literal with no SourceText"
 
 overLitValBriDoc :: OverLitVal -> BriDocFInt

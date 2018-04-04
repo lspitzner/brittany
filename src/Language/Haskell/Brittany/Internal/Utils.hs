@@ -84,9 +84,12 @@ fromOptionIdentity x y =
 newtype Max a = Max { getMax :: a }
   deriving (Eq, Ord, Show, Bounded, Num)
 
+instance (Num a, Ord a) => Semigroup (Max a) where
+  (<>) = Data.Coerce.coerce (max :: a -> a -> a)
+
 instance (Num a, Ord a) => Monoid (Max a) where
   mempty  = Max 0
-  mappend = Data.Coerce.coerce (max :: a -> a -> a)
+  mappend = (<>)
 
 newtype ShowIsId = ShowIsId String deriving Data
 
@@ -222,7 +225,7 @@ tellDebugMess :: MonadMultiWriter
 tellDebugMess s = mTell $ Seq.singleton s
 
 tellDebugMessShow :: forall a m . (MonadMultiWriter
-  (Seq String) m, Show a) => a -> m () 
+  (Seq String) m, Show a) => a -> m ()
 tellDebugMessShow = tellDebugMess . show
 
 -- i should really put that into multistate..

@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Language.Haskell.Brittany.Internal.LayouterBasics
   ( processDefault
   , rdrNameToText
@@ -11,7 +13,10 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docEmpty
   , docLit
   , docAlt
-  , docAltFilter
+  , CollectAltM
+  , addAlternativeCond
+  , addAlternative
+  , runFilteredAlternative
   , docLines
   , docCols
   , docSeq
@@ -59,6 +64,8 @@ where
 
 
 #include "prelude.inc"
+
+import qualified Control.Monad.Writer.Strict as Writer
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
@@ -111,7 +118,7 @@ processDefault x = do
   --       the module (header). This would remove the need for this hack!
   case str of
     "\n" -> return ()
-    _    -> mTell $ Text.Builder.fromString $ str
+    _    -> mTell $ Text.Builder.fromString str
 
 -- | Use ExactPrint's output for this node; add a newly generated inline comment
 -- at insertion position (meant to point out to the user that this node is
@@ -166,7 +173,7 @@ briDocByExactInlineOnly infoStr ast = do
         False
         t
   let errorAction = do
-        mTell $ [ErrorUnknownNode infoStr ast]
+        mTell [ErrorUnknownNode infoStr ast]
         docLit
           $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
   case (fallbackMode, Text.lines exactPrinted) of
@@ -256,8 +263,8 @@ extractAllComments ann =
        )
 
 filterAnns :: Data.Data.Data ast => ast -> ExactPrint.Anns -> ExactPrint.Anns
-filterAnns ast anns =
-  Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast) anns
+filterAnns ast =
+  Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast)
 
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) = do
@@ -297,10 +304,10 @@ allocNodeIndex = do
 
 -- docEmpty :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docEmpty = allocateNode BDFEmpty
--- 
+--
 -- docLit :: MonadMultiState NodeAllocIndex m => Text -> m BriDocNumbered
 -- docLit t = allocateNode $ BDFLit t
--- 
+--
 -- docExt :: (ExactPrint.Annotate.Annotate ast, MonadMultiState NodeAllocIndex m)
 --        => Located ast -> ExactPrint.Types.Anns -> Bool -> m BriDocNumbered
 -- docExt x anns shouldAddComment = allocateNode $ BDFExternal
@@ -308,51 +315,51 @@ allocNodeIndex = do
 --                   (foldedAnnKeys x)
 --                   shouldAddComment
 --                   (Text.pack $ ExactPrint.exactPrint x anns)
--- 
+--
 -- docAlt :: MonadMultiState NodeAllocIndex m => [m BriDocNumbered] -> m BriDocNumbered
 -- docAlt l = allocateNode . BDFAlt =<< sequence l
--- 
--- 
+--
+--
 -- docSeq :: MonadMultiState NodeAllocIndex m => [m BriDocNumbered] -> m BriDocNumbered
 -- docSeq l = allocateNode . BDFSeq =<< sequence l
--- 
+--
 -- docLines :: MonadMultiState NodeAllocIndex m => [m BriDocNumbered] -> m BriDocNumbered
 -- docLines l = allocateNode . BDFLines =<< sequence l
--- 
+--
 -- docCols :: MonadMultiState NodeAllocIndex m => ColSig -> [m BriDocNumbered] -> m BriDocNumbered
 -- docCols sig l = allocateNode . BDFCols sig =<< sequence l
--- 
+--
 -- docAddBaseY :: MonadMultiState NodeAllocIndex m => BrIndent -> m BriDocNumbered -> m BriDocNumbered
 -- docAddBaseY ind bdm = allocateNode . BDFAddBaseY ind =<< bdm
--- 
+--
 -- docSetBaseY :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docSetBaseY bdm = allocateNode . BDFSetBaseY =<< bdm
--- 
+--
 -- docSetIndentLevel :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docSetIndentLevel bdm = allocateNode . BDFSetIndentLevel =<< bdm
--- 
+--
 -- docSeparator :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docSeparator = allocateNode BDFSeparator
--- 
+--
 -- docAnnotationPrior :: MonadMultiState NodeAllocIndex m => AnnKey -> m BriDocNumbered -> m BriDocNumbered
 -- docAnnotationPrior annKey bdm = allocateNode . BDFAnnotationPrior annKey =<< bdm
--- 
+--
 -- docAnnotationPost :: MonadMultiState NodeAllocIndex m => AnnKey -> m BriDocNumbered -> m BriDocNumbered
 -- docAnnotationPost  annKey bdm = allocateNode . BDFAnnotationPost annKey =<< bdm
--- 
+--
 -- docNonBottomSpacing :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing =<< bdm
--- 
+--
 -- appSep :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- appSep x = docSeq [x, docSeparator]
--- 
+--
 -- docCommaSep :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docCommaSep = appSep $ docLit $ Text.pack ","
--- 
+--
 -- docParenLSep :: MonadMultiState NodeAllocIndex m => m BriDocNumbered
 -- docParenLSep = appSep $ docLit $ Text.pack "("
--- 
--- 
+--
+--
 -- docPostComment :: (Data.Data.Data ast, MonadMultiState NodeAllocIndex m)
 --                => Located ast
 --                -> m BriDocNumbered
@@ -360,7 +367,7 @@ allocNodeIndex = do
 -- docPostComment ast bdm = do
 --   bd <- bdm
 --   allocateNode $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast) bd
--- 
+--
 -- docWrapNode :: ( Data.Data.Data ast, MonadMultiState NodeAllocIndex m)
 --             => Located ast
 --             -> m BriDocNumbered
@@ -375,7 +382,7 @@ allocNodeIndex = do
 --     $ (,) i2
 --     $ BDFAnnotationPost (ExactPrint.Types.mkAnnKey ast)
 --     $ bd
--- 
+--
 -- docPar :: MonadMultiState NodeAllocIndex m
 --        => m BriDocNumbered
 --        -> m BriDocNumbered
@@ -384,13 +391,13 @@ allocNodeIndex = do
 --   line <- lineM
 --   indented <- indentedM
 --   allocateNode $ BDFPar BrIndentNone line indented
--- 
+--
 -- docForceSingleline :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docForceSingleline bdm = allocateNode . BDFForceSingleline =<< bdm
--- 
+--
 -- docForceMultiline :: MonadMultiState NodeAllocIndex m => m BriDocNumbered -> m BriDocNumbered
 -- docForceMultiline bdm = allocateNode . BDFForceMultiline =<< bdm
--- 
+--
 -- docEnsureIndent :: MonadMultiState NodeAllocIndex m => BrIndent -> m BriDocNumbered -> m BriDocNumbered
 -- docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 
@@ -415,8 +422,20 @@ docExt x anns shouldAddComment = allocateNode $ BDFExternal
 docAlt :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
 docAlt l = allocateNode . BDFAlt =<< sequence l
 
-docAltFilter :: [(Bool, ToBriDocM BriDocNumbered)] -> ToBriDocM BriDocNumbered
-docAltFilter = docAlt . map snd . filter fst
+newtype CollectAltM a = CollectAltM (Writer.Writer [ToBriDocM BriDocNumbered] a)
+  deriving (Functor, Applicative, Monad)
+
+addAlternativeCond :: Bool -> ToBriDocM BriDocNumbered -> CollectAltM ()
+addAlternativeCond cond doc =
+  when cond (addAlternative doc)
+
+addAlternative :: ToBriDocM BriDocNumbered -> CollectAltM ()
+addAlternative =
+  CollectAltM . Writer.tell . (: [])
+
+runFilteredAlternative :: CollectAltM () -> ToBriDocM BriDocNumbered
+runFilteredAlternative (CollectAltM action) =
+  docAlt $ Writer.execWriter action
 
 
 docSeq :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
@@ -565,7 +584,7 @@ instance DocWrapable a => DocWrapable [a] where
   docWrapNode ast bdsm = do
     bds <- bdsm
     case bds of
-      [] -> return $ [] -- TODO: this might be bad. maybe. then again, not really. well.
+      [] -> return [] -- TODO: this might be bad. maybe. then again, not really. well.
       [bd] -> do
         bd' <- docWrapNode ast (return bd)
         return [bd']
@@ -577,23 +596,23 @@ instance DocWrapable a => DocWrapable [a] where
   docWrapNodePrior ast bdsm = do
     bds <- bdsm
     case bds of
-      [] -> return $ []
+      [] -> return []
       (bd1:bdR) -> do
         bd1' <- docWrapNodePrior ast (return bd1)
-        return $ (bd1':bdR)
+        return (bd1':bdR)
   docWrapNodeRest ast bdsm = do
     bds <- bdsm
     case reverse bds of
-      [] -> return $ []
+      [] -> return []
       (bdN:bdR) -> do
         bdN' <- docWrapNodeRest ast (return bdN)
-        return $ reverse $ (bdN':bdR)
+        return $ reverse (bdN':bdR)
 
 instance DocWrapable a => DocWrapable (Seq a) where
   docWrapNode ast bdsm = do
     bds <- bdsm
     case Seq.viewl bds of
-      Seq.EmptyL -> return $ Seq.empty -- TODO: this might be bad. maybe. then again, not really. well.
+      Seq.EmptyL -> return Seq.empty -- TODO: this might be bad. maybe. then again, not really. well.
       bd1 Seq.:< rest -> case Seq.viewr rest of
         Seq.EmptyR -> do
           bd1' <- docWrapNode ast (return bd1)
@@ -605,14 +624,14 @@ instance DocWrapable a => DocWrapable (Seq a) where
   docWrapNodePrior ast bdsm = do
     bds <- bdsm
     case Seq.viewl bds of
-      Seq.EmptyL -> return $ Seq.empty
+      Seq.EmptyL -> return Seq.empty
       bd1 Seq.:< bdR -> do
         bd1' <- docWrapNodePrior ast (return bd1)
         return $ bd1' Seq.<| bdR
   docWrapNodeRest ast bdsm = do
     bds <- bdsm
     case Seq.viewr bds of
-      Seq.EmptyR -> return $ Seq.empty
+      Seq.EmptyR -> return Seq.empty
       bdR Seq.:> bdN -> do
         bdN' <- docWrapNodeRest ast (return bdN)
         return $ bdR Seq.|> bdN'
@@ -623,19 +642,19 @@ instance DocWrapable ([BriDocNumbered], BriDocNumbered, a) where
     if null bds
       then do
         bd' <- docWrapNode ast (return bd)
-        return $ (bds, bd', x)
+        return (bds, bd', x)
       else do
         bds' <- docWrapNodePrior ast (return bds)
         bd' <- docWrapNodeRest ast (return bd)
-        return $ (bds', bd', x)
+        return (bds', bd', x)
   docWrapNodePrior ast stuffM = do
     (bds, bd, x) <- stuffM
     bds' <- docWrapNodePrior ast (return bds)
-    return $ (bds', bd, x)
+    return (bds', bd, x)
   docWrapNodeRest ast stuffM = do
     (bds, bd, x) <- stuffM
     bd' <- docWrapNodeRest ast (return bd)
-    return $ (bds, bd', x)
+    return (bds, bd', x)
 
 
 
@@ -661,7 +680,7 @@ docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 unknownNodeError
   :: Data.Data.Data ast => String -> ast -> ToBriDocM BriDocNumbered
 unknownNodeError infoStr ast = do
-  mTell $ [ErrorUnknownNode infoStr ast]
+  mTell [ErrorUnknownNode infoStr ast]
   docLit $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
 
 spacifyDocs :: [ToBriDocM BriDocNumbered] -> [ToBriDocM BriDocNumbered]
