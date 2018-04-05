@@ -10,3 +10,5 @@ local/
 .cabal-sandbox/
 .stack-work/
 cabal.sandbox.config
+cabal.project.local
+.ghc.environment.*
