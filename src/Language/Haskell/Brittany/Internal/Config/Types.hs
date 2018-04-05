@@ -5,6 +5,9 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module Language.Haskell.Brittany.Internal.Config.Types
+  ( module Language.Haskell.Brittany.Internal.Config.Types
+  , cMap
+  )
 where
 
 
@@ -277,8 +280,12 @@ data ExactPrintFallbackMode
                                  -- A PROGRAM BY TRANSFORMING IT.
   deriving (Show, Generic, Data)
 
-cMap :: CZipWith k => (forall a . f a -> g a) -> k f -> k g
-cMap f c = cZipWith (\_ -> f) c c
+instance CFunctor CDebugConfig
+instance CFunctor CLayoutConfig
+instance CFunctor CErrorHandlingConfig
+instance CFunctor CForwardOptions
+instance CFunctor CPreProcessorConfig
+instance CFunctor CConfig
 
 deriveCZipWith ''CDebugConfig
 deriveCZipWith ''CLayoutConfig

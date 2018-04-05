@@ -109,7 +109,7 @@ library {
     , deepseq >=1.4.2.0 && <1.5
     , semigroups >=0.18.2 && <0.19
     , cmdargs >=0.10.14 && <0.11
-    , czipwith >=1.0.0.0 && <1.1
+    , czipwith >=1.0.1.0 && <1.1
     , ghc-boot-th >=8.0.1 && <8.3
     , filepath >=1.4.1.0 && <1.5
     }
