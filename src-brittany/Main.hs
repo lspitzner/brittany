@@ -183,9 +183,10 @@ mainCmdParser helpDesc = do
       trace (showConfigYaml config) $ return ()
 
     results <- zipWithM (coreIO putStrErrLn config suppressOutput) inputPaths outputPaths
-    case sequence_ results of
-      Left  _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
-      Right _ -> pure ()
+    case results of
+      xs | all Data.Either.isRight xs -> pure ()
+      [Left x] -> System.Exit.exitWith (System.Exit.ExitFailure x)
+      _        -> System.Exit.exitWith (System.Exit.ExitFailure 1)
 
 
 -- | The main IO parts for the default mode of operation, and after commandline
