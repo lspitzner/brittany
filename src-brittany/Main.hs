@@ -247,19 +247,20 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
       when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
         let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
         trace ("---- ast ----\n" ++ show val) $ return ()
-      (errsWarns, outLText) <- do
+      (errsWarns, outSText) <- do
         if exactprintOnly
           then do
-            pure ([], TextL.pack $ ExactPrint.exactPrint parsedSource anns)
+            pure ([], Text.pack $ ExactPrint.exactPrint parsedSource anns)
           else do
             let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
             (ews, outRaw) <- if hasCPP || omitCheck
               then return $ pPrintModule config anns parsedSource
               else liftIO $ pPrintModuleAndCheck config anns parsedSource
             let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITTANY_INCLUDE_HACK ") s
-            pure $ if hackAroundIncludes
-              then (ews, TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn (TextL.pack "\n") outRaw)
-              else (ews, outRaw)
+            let out = TextL.toStrict $ if hackAroundIncludes
+                  then TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn (TextL.pack "\n") outRaw
+                  else outRaw
+            pure $ (ews, out)
       let customErrOrder ErrorInput{}         = 4
           customErrOrder LayoutWarning{}      = 0 :: Int
           customErrOrder ErrorOutputCheck{}   = 1
@@ -305,8 +306,20 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
           shouldOutput = not suppressOutput && (not hasErrors || outputOnErrs)
 
       when shouldOutput $ addTraceSep (_conf_debug config) $ case outputPathM of
-        Nothing -> liftIO $ TextL.IO.putStr $ outLText
-        Just p  -> liftIO $ TextL.IO.writeFile p $ outLText
+        Nothing -> liftIO $ Text.IO.putStr $ outSText
+        Just p  -> liftIO $ do
+          isIdentical <- case inputPathM of
+            Nothing   -> pure False
+            Just path -> do
+              (== outSText) <$> Text.IO.readFile path
+              -- The above means we read the file twice, but the
+              -- GHC API does not really expose the source it
+              -- read. Should be in cache still anyways.
+              --
+              -- We do not use TextL.IO.readFile because lazy IO is evil.
+              -- (not identical -> read is not finished -> handle still open ->
+              -- write below crashes - evil.)
+          unless isIdentical $ Text.IO.writeFile p $ outSText
 
       when hasErrors $ ExceptT.throwE 70
  where
