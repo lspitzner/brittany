@@ -33,13 +33,16 @@ layoutModule lmod@(L _ mod') = case mod' of
       <&> _conf_layout
       .>  _lconfig_allowSingleLineExportList
       .>  confUnpack
+    -- the config should not prevent single-line layout when there is no
+    -- export list
+    let allowSingleLine = allowSingleLineExportList || Data.Maybe.isNothing les
     docLines
       $ docSeq
           [ docNodeAnnKW lmod Nothing docEmpty
              -- A pseudo node that serves merely to force documentation
              -- before the node
           , docNodeMoveToKWDP lmod AnnModule $ runFilteredAlternative $ do
-            addAlternativeCond allowSingleLineExportList $
+            addAlternativeCond allowSingleLine $
               docForceSingleline
                 $ docSeq
                 [ appSep $ docLit $ Text.pack "module"
