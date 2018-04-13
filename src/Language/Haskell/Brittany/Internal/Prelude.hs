@@ -312,6 +312,7 @@ import Control.Monad.Trans.MultiRWS  as E ( -- MultiRWST (..)
                                             MonadMultiReader(..)
                                           , MonadMultiWriter(..)
                                           , MonadMultiState(..)
+                                          , mGet
                                           -- , runMultiRWST
                                           -- , runMultiRWSTASW
                                           -- , runMultiRWSTW
