@@ -1,7 +1,23 @@
-module Language.Haskell.Brittany.Internal.Prelude (module E)
+module Language.Haskell.Brittany.Internal.Prelude
+  ( module E
+  , module Language.Haskell.Brittany.Internal.Prelude
+  )
 where
 
 
+
+-- rather project-specific stuff:
+---------------------------------
+#if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
+import HsExtension                    as E ( GhcPs )
+#endif
+
+import RdrName                        as E ( RdrName )
+
+
+
+-- more general:
+----------------
 
 import Data.Functor.Identity         as E ( Identity(..) )
 import Control.Concurrent.Chan       as E ( Chan )
@@ -379,3 +395,10 @@ import Control.Monad.Trans.Maybe     as E ( MaybeT (..)
 import Data.Data                     as E ( toConstr
                                           )
 
+todo :: a
+todo = error "todo"
+
+
+#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.0, ghc-8.2 */
+type GhcPs = RdrName
+#endif

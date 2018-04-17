@@ -11,7 +11,6 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName (RdrName(..))
 import           GHC     ( unLoc
                          , runGhc
                          , GenLocated(L)
@@ -89,7 +88,7 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
 -- handling of the resulting list. Adding parens is
 -- left to the caller since that is context sensitive
 layoutAnnAndSepLLIEs
-  :: Located [LIE RdrName] -> ToBriDocM [ToBriDocM BriDocNumbered]
+  :: Located [LIE GhcPs] -> ToBriDocM [ToBriDocM BriDocNumbered]
 layoutAnnAndSepLLIEs llies@(L _ lies) = do
   let makeIENode ie = docSeq [docCommaSep, ie]
   let ieDocs = layoutIE <$> lies
@@ -114,7 +113,7 @@ layoutAnnAndSepLLIEs llies@(L _ lies) = do
 -- () -- no comments
 -- ( -- a comment
 -- )
-layoutLLIEs :: Bool -> Located [LIE RdrName] -> ToBriDocM BriDocNumbered
+layoutLLIEs :: Bool -> Located [LIE GhcPs] -> ToBriDocM BriDocNumbered
 layoutLLIEs enableSingleline llies = do
   ieDs        <- layoutAnnAndSepLLIEs llies
   hasComments <- hasAnyCommentsBelow llies

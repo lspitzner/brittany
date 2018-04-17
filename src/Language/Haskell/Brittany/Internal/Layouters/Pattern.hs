@@ -13,7 +13,6 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
-import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import           HsSyn
 import           Name
@@ -34,7 +33,7 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 --        ^^^^^^^^^^ this part
 -- We will use `case .. of` as the imagined prefix to the examples used in
 -- the different cases below.
-layoutPat :: ToBriDocC (Pat RdrName) (Seq BriDocNumbered)
+layoutPat :: ToBriDocC (Pat GhcPs) (Seq BriDocNumbered)
 layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   WildPat _  -> fmap Seq.singleton $ docLit $ Text.pack "_"
     -- _ -> expr
@@ -199,7 +198,7 @@ colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
 colsWrapPat = docCols ColPatterns . fmap return . Foldable.toList
 
 wrapPatPrepend
-  :: Located (Pat RdrName)
+  :: Located (Pat GhcPs)
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM (Seq BriDocNumbered)
 wrapPatPrepend pat prepElem = do
@@ -211,7 +210,7 @@ wrapPatPrepend pat prepElem = do
       return $ x1' Seq.<| xR
 
 wrapPatListy
-  :: [Located (Pat RdrName)]
+  :: [Located (Pat GhcPs)]
   -> String
   -> String
   -> ToBriDocM (Seq BriDocNumbered)

@@ -17,7 +17,6 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
-import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString, AnnKeywordId )
 
 import           Language.Haskell.GHC.ExactPrint ( AnnKey, Comment )
@@ -205,9 +204,9 @@ data BrIndent = BrIndentNone
 
 type ToBriDocM = MultiRWSS.MultiRWS '[Config, Anns] '[[BrittanyError], Seq String] '[NodeAllocIndex]
 
-type ToBriDoc (sym :: * -> *) = Located (sym RdrName) -> ToBriDocM BriDocNumbered
-type ToBriDoc' sym            = Located sym           -> ToBriDocM BriDocNumbered
-type ToBriDocC sym c          = Located sym           -> ToBriDocM c
+type ToBriDoc (sym :: * -> *) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
+type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
+type ToBriDocC sym c          = Located sym         -> ToBriDocM c
 
 data DocMultiLine
   = MultiLineNo

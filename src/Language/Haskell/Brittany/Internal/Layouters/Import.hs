@@ -7,7 +7,6 @@ import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Layouters.IE
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName                                  ( RdrName(..) )
 import           GHC                                      ( unLoc
                                                           , GenLocated(L)
                                                           , moduleNameString

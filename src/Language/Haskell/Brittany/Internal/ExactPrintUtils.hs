@@ -29,10 +29,9 @@ import qualified GHC           as GHC hiding (parseModule)
 import qualified Lexer         as GHC
 import qualified StringBuffer  as GHC
 import qualified Outputable    as GHC
-import           RdrName ( RdrName(..) )
+import qualified CmdLineParser as GHC
 import           HsSyn
 import           SrcLoc ( SrcSpan, Located )
-import           RdrName ( RdrName(..) )
 
 
 import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
@@ -79,7 +78,7 @@ parseModuleWithCpp cpp opts args fp dynCheck =
     when (not $ null warnings)
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
-      ++ show (warnings <&> \(L _ s) -> s)
+      ++ show (warnings <&> warnExtractorCompat)
     x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
     either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
@@ -111,7 +110,7 @@ parseModuleFromString args fp dynCheck str =
     when (not $ null warnings)
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
-      ++ show (warnings <&> \(L _ s) -> s)
+      ++ show (warnings <&> warnExtractorCompat)
     dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
     let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
     case res of
@@ -187,7 +186,7 @@ commentAnnFixTransform modul = SYB.everything (>>) genF modul
  where
   genF :: Data.Data.Data a => a -> ExactPrint.Transform ()
   genF = (\_ -> return ()) `SYB.extQ` exprF
-  exprF :: Located (HsExpr RdrName) -> ExactPrint.Transform ()
+  exprF :: Located (HsExpr GhcPs) -> ExactPrint.Transform ()
   exprF lexpr@(L _ expr) = case expr of
     RecordCon _lname _ _ (HsRecFields fs@(_:_) Nothing) ->
       moveTrailingComments lexpr (List.last fs)
@@ -226,7 +225,7 @@ moveTrailingComments astFrom astTo = do
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
 -- implementation would have.
 extractToplevelAnns
-  :: Located (HsModule RdrName)
+  :: Located (HsModule GhcPs)
   -> ExactPrint.Anns
   -> Map ExactPrint.AnnKey ExactPrint.Anns
 extractToplevelAnns lmod anns = output
@@ -265,3 +264,12 @@ foldedAnnKeys ast = SYB.everything
   )
   ast
   where locTyCon = SYB.typeRepTyCon (SYB.typeOf (L () ()))
+
+
+#if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
+warnExtractorCompat :: GHC.Warn -> String
+warnExtractorCompat (GHC.Warn _ (L _ s)) = s
+#else /* ghc-8.0 && ghc-8.2 */
+warnExtractorCompat :: GenLocated l String -> String
+warnExtractorCompat (L _ s) = s
+#endif

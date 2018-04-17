@@ -15,8 +15,7 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName ( RdrName(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..) )
+import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..), RdrName(..) )
 import           HsSyn
 import           Name
 import qualified FastString
@@ -56,7 +55,12 @@ layoutExpr lexpr@(L _ expr) = do
       allocateNode $ overLitValBriDoc olit
     HsLit lit -> do
       allocateNode $ litBriDoc lit
-    HsLam (MG (L _ [lmatch@(L _ (Match _ pats _ (GRHSs [lgrhs@(L _ (GRHS [] body))] (L _ EmptyLocalBinds))))]) _ _ _) -> do
+    HsLam (MG (L _ [lmatch@(L _ match)]) _ _ _)
+      |  pats                  <- m_pats match
+      ,  GRHSs [lgrhs] llocals <- m_grhss match
+      ,  L _ EmptyLocalBinds   <- llocals
+      ,  L _ (GRHS [] body)    <- lgrhs
+      -> do
       patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
       bodyDoc <- docAddBaseY BrIndentRegular <$> docSharedWrapper layoutExpr body
       let funcPatternPartLine =
@@ -112,7 +116,7 @@ layoutExpr lexpr@(L _ expr) = do
         (docLit $ Text.pack "\\case")
         (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
     HsApp exp1@(L _ HsApp{}) exp2 -> do
-      let gather :: [LHsExpr RdrName] -> LHsExpr RdrName -> (LHsExpr RdrName, [LHsExpr RdrName])
+      let gather :: [LHsExpr GhcPs] -> LHsExpr GhcPs -> (LHsExpr GhcPs, [LHsExpr GhcPs])
           gather list = \case
             L _ (HsApp l r) -> gather (r:list) l
             x               -> (x, list)
@@ -220,7 +224,7 @@ layoutExpr lexpr@(L _ expr) = do
       -- TODO
       briDocByExactInlineOnly "HsAppTypeOut{}" lexpr
     OpApp expLeft@(L _ OpApp{}) expOp _ expRight -> do
-      let gather :: [(LHsExpr RdrName, LHsExpr RdrName)] -> LHsExpr RdrName -> (LHsExpr RdrName, [(LHsExpr RdrName, LHsExpr RdrName)])
+      let gather :: [(LHsExpr GhcPs, LHsExpr GhcPs)] -> LHsExpr GhcPs -> (LHsExpr GhcPs, [(LHsExpr GhcPs, LHsExpr GhcPs)])
           gather opExprList = \case
             (L _ (OpApp l1 op1 _ r1)) -> gather ((op1, r1): opExprList) l1
             final -> (final, opExprList)
@@ -1077,7 +1081,31 @@ layoutExpr lexpr@(L _ expr) = do
 #endif
 
 
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+#if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
+litBriDoc :: HsLit GhcPs -> BriDocFInt
+litBriDoc = \case
+  HsChar       (SourceText t) _c                         -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
+  HsCharPrim   (SourceText t) _c                         -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
+  HsString     (SourceText t) _fastString                -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ FastString.unpackFS fastString
+  HsStringPrim (SourceText t) _byteString                -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ Data.ByteString.Char8.unpack byteString
+  HsInt        _              (IL (SourceText t) _ _)    -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsIntPrim    (SourceText t) _i                         -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsWordPrim   (SourceText t) _i                         -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsInt64Prim  (SourceText t) _i                         -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsWord64Prim (SourceText t) _i                         -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsInteger (SourceText t) _i                      _type -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
+  HsRat     _              (FL (SourceText t) _ _) _type -> BDFLit $ Text.pack t
+  HsFloatPrim  _ (FL (SourceText t) _ _)                 -> BDFLit $ Text.pack t
+  HsDoublePrim _ (FL (SourceText t) _ _)                 -> BDFLit $ Text.pack t
+  _ -> error "litBriDoc: literal with no SourceText"
+
+overLitValBriDoc :: OverLitVal -> BriDocFInt
+overLitValBriDoc = \case
+  HsIntegral   (IL (SourceText t) _ _) -> BDFLit $ Text.pack t
+  HsFractional (FL (SourceText t) _ _) -> BDFLit $ Text.pack t
+  HsIsString (SourceText t) _ -> BDFLit $ Text.pack t
+  _ -> error "overLitValBriDoc: literal with no SourceText"
+#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case
   HsChar       (SourceText t) _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
@@ -1101,7 +1129,7 @@ overLitValBriDoc = \case
   HsFractional (FL t _) -> BDFLit $ Text.pack t
   HsIsString (SourceText t) _        -> BDFLit $ Text.pack t
   _ -> error "overLitValBriDoc: literal with no SourceText"
-#else
+#else                        /* ghc-8.0 */
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case
   HsChar       t _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
