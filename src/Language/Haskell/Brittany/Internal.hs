@@ -432,7 +432,7 @@ parsePrintModuleTests conf filename input = do
 toLocal :: Config -> ExactPrint.Anns -> PPMLocal a -> PPM a
 toLocal conf anns m = do
   (x, write) <- lift $ MultiRWSS.runMultiRWSTAW (conf :+: anns :+: HNil) HNil $ m
-  MultiRWSS.mGetRawW >>= \w -> MultiRWSS.mPutRawW (w <> write)
+  MultiRWSS.mGetRawW >>= \w -> MultiRWSS.mPutRawW (w `mappend` write)
   pure x
 
 ppModule :: GenLocated SrcSpan (HsModule GhcPs) -> PPM ()
@@ -495,7 +495,7 @@ withTransformedAnns ast m = do
     in  annsBalanced
 
 
-getDeclBindingNames :: LHsDecl RdrName -> [String]
+getDeclBindingNames :: LHsDecl GhcPs -> [String]
 getDeclBindingNames (L _ decl) = case decl of
   SigD (TypeSig ns _) -> ns <&> \(L _ n) -> Text.unpack (rdrNameToText n)
   ValD (FunBind (L _ n) _ _ _ _) -> [Text.unpack $ rdrNameToText n]
