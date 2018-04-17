@@ -64,8 +64,8 @@ matrix:
   ##### OSX test via stack #####
 
   # Build on macOS in addition to Linux
-  - env: BUILD=stack ARGS=""
-    compiler: ": #stack default osx"
+  - env: BUILD=stack ARGS="--stack-yaml stack-8.2.2.yaml"
+    compiler: ": #stack 8.2.2 osx"
     os: osx
 
   ##### CABAL #####
