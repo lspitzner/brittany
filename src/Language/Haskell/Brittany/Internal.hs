@@ -47,7 +47,6 @@ import           Language.Haskell.Brittany.Internal.Transformations.Indent
 
 import qualified GHC as GHC hiding (parseModule)
 import           ApiAnnotation ( AnnKeywordId(..) )
-import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
 import           HsSyn
@@ -248,7 +247,7 @@ parsePrintModuleTests conf filename input = do
 --           Left $ "pretty printing error(s):\n" ++ List.unlines errStrs
 --         else return $ TextL.toStrict $ Text.Builder.toLazyText out
 
-ppModule :: GenLocated SrcSpan (HsModule RdrName) -> PPM ()
+ppModule :: GenLocated SrcSpan (HsModule GhcPs) -> PPM ()
 ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
   post <- ppPreamble lmod
   decls `forM_` \decl -> do
@@ -302,7 +301,7 @@ withTransformedAnns ast m = do
     in  annsBalanced
 
 
-ppDecl :: LHsDecl RdrName -> PPMLocal ()
+ppDecl :: LHsDecl GhcPs -> PPMLocal ()
 ppDecl d@(L loc decl) = case decl of
   SigD sig -> -- trace (_sigHead sig) $
               withTransformedAnns d $ do
@@ -322,7 +321,7 @@ ppDecl d@(L loc decl) = case decl of
 
 -- Prints the information associated with the module annotation
 -- This includes the imports
-ppPreamble :: GenLocated SrcSpan (HsModule RdrName)
+ppPreamble :: GenLocated SrcSpan (HsModule GhcPs)
            -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
 ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
   filteredAnns <- mAsk <&> \annMap ->
@@ -390,13 +389,13 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
       in  MultiRWSS.withMultiReader filteredAnns' $ processDefault emptyModule
   return post
 
-_sigHead :: Sig RdrName -> String
+_sigHead :: Sig GhcPs -> String
 _sigHead = \case
   TypeSig names _ ->
     "TypeSig " ++ intercalate "," (Text.unpack . lrdrNameToText <$> names)
   _ -> "unknown sig"
 
-_bindHead :: HsBind RdrName -> String
+_bindHead :: HsBind GhcPs -> String
 _bindHead = \case
   FunBind fId _ _ _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
   PatBind _pat _ _ _ ([], []) -> "PatBind smth"

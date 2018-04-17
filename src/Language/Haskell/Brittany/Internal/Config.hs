@@ -38,6 +38,7 @@ import           Language.Haskell.Brittany.Internal.Config.Types.Instances
 import           Language.Haskell.Brittany.Internal.Utils
 
 import           Data.Coerce ( Coercible, coerce )
+import qualified Data.List.NonEmpty as NonEmpty
 
 import qualified System.Directory as Directory
 import qualified System.FilePath.Posix as FilePath
@@ -272,7 +273,7 @@ readConfigs
   -> MaybeT IO Config
 readConfigs cmdlineConfig configPaths = do
   configs <- readConfig `mapM` configPaths
-  let merged = Semigroup.mconcat $ reverse (cmdlineConfig:catMaybes configs)
+  let merged = Semigroup.sconcat $ NonEmpty.reverse (cmdlineConfig :| catMaybes configs)
   return $ cZipWith fromOptionIdentity staticDefaultConfig merged
 
 -- | Reads provided configs

@@ -8,7 +8,6 @@ import           Language.Haskell.Brittany.Internal.Layouters.IE
 import           Language.Haskell.Brittany.Internal.Layouters.Import
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName (RdrName(..))
 import GHC (unLoc, runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..))
 import           HsSyn
 import           Name

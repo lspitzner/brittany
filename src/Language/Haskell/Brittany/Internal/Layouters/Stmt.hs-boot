@@ -12,7 +12,6 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
-import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           HsSyn
 import           Name
@@ -21,4 +20,4 @@ import           BasicTypes
 
 
 
-layoutStmt :: ToBriDoc' (StmtLR RdrName RdrName (LHsExpr RdrName))
+layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))

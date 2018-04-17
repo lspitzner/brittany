@@ -13,7 +13,6 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           HsSyn
 import           Name
@@ -26,7 +25,7 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
 
 
 
-layoutStmt :: ToBriDoc' (StmtLR RdrName RdrName (LHsExpr RdrName))
+layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))
 layoutStmt lstmt@(L _ stmt) = do
   indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
   docWrapNode lstmt $ case stmt of

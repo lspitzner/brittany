@@ -20,7 +20,6 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName ( RdrName(..) )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
 import           HsSyn
@@ -88,11 +87,7 @@ layoutSig lsig@(L _loc sig) = case sig of
   InlineSig name (InlinePragma _ spec _arity phaseAct conlike) ->
     docWrapNode lsig $ do
       nameStr <- lrdrNameToTextAnn name
-      let specStr = case spec of
-            Inline          -> "INLINE "
-            Inlinable       -> "INLINABLE "
-            NoInline        -> "NOINLINE "
-            EmptyInlineSpec -> "" -- i have no idea if this is correct.
+      specStr <- specStringCompat lsig spec
       let phaseStr = case phaseAct of
             NeverActive      -> "" -- not [] - for NOINLINE NeverActive is
                                    -- in fact the default
@@ -108,7 +103,23 @@ layoutSig lsig@(L _loc sig) = case sig of
         <> Text.pack " #-}"
   _ -> briDocByExactNoComment lsig -- TODO
 
-layoutGuardLStmt :: ToBriDoc' (Stmt RdrName (LHsExpr RdrName))
+specStringCompat
+  :: MonadMultiWriter [BrittanyError] m => LSig GhcPs -> InlineSpec -> m String
+#if MIN_VERSION_ghc(8,4,0)
+specStringCompat ast = \case
+  NoUserInline    -> mTell [ErrorUnknownNode "NoUserInline" ast] $> ""
+  Inline          -> pure "INLINE "
+  Inlinable       -> pure "INLINABLE "
+  NoInline        -> pure "NOINLINE "
+#else
+specStringCompat _ = \case
+  Inline          -> pure "INLINE "
+  Inlinable       -> pure "INLINABLE "
+  NoInline        -> pure "NOINLINE "
+  EmptyInlineSpec -> pure ""
+#endif
+
+layoutGuardLStmt :: ToBriDoc' (Stmt GhcPs (LHsExpr GhcPs))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
   BodyStmt body _ _ _      -> layoutExpr body
   BindStmt lPat expr _ _ _ -> do
@@ -122,7 +133,7 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
 
 layoutBind
   :: ToBriDocC
-       (HsBindLR RdrName RdrName)
+       (HsBindLR GhcPs GhcPs)
        (Either [BriDocNumbered] BriDocNumbered)
 layoutBind lbind@(L _ bind) = case bind of
   FunBind fId (MG lmatches@(L _ matches) _ _ _) _ _ [] -> do
@@ -148,15 +159,15 @@ layoutBind lbind@(L _ bind) = case bind of
                                                             hasComments
   _ -> Right <$> unknownNodeError "" lbind
 
-data BagBindOrSig = BagBind (LHsBindLR RdrName RdrName)
-                  | BagSig (LSig RdrName)
+data BagBindOrSig = BagBind (LHsBindLR GhcPs GhcPs)
+                  | BagSig (LSig GhcPs)
 
 bindOrSigtoSrcSpan :: BagBindOrSig -> SrcSpan
 bindOrSigtoSrcSpan (BagBind (L l _)) = l
 bindOrSigtoSrcSpan (BagSig  (L l _)) = l
 
 layoutLocalBinds
-  :: ToBriDocC (HsLocalBindsLR RdrName RdrName) (Maybe [BriDocNumbered])
+  :: ToBriDocC (HsLocalBindsLR GhcPs GhcPs) (Maybe [BriDocNumbered])
 layoutLocalBinds lbinds@(L _ binds) = case binds of
   -- HsValBinds (ValBindsIn lhsBindsLR []) ->
   --   Just . (>>= either id return) . Data.Foldable.toList <$> mapBagM layoutBind lhsBindsLR -- TODO: fix ordering
@@ -178,11 +189,11 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
   x@(HsIPBinds _ipBinds) -> Just . (:[]) <$> unknownNodeError "HsIPBinds" x
   EmptyLocalBinds        -> return $ Nothing
 
--- TODO: we don't need the `LHsExpr RdrName` anymore, now that there is
+-- TODO: we don't need the `LHsExpr GhcPs` anymore, now that there is
 -- parSpacing stuff.B
 layoutGrhs
-  :: LGRHS RdrName (LHsExpr RdrName)
-  -> ToBriDocM ([BriDocNumbered], BriDocNumbered, LHsExpr RdrName)
+  :: LGRHS GhcPs (LHsExpr GhcPs)
+  -> ToBriDocM ([BriDocNumbered], BriDocNumbered, LHsExpr GhcPs)
 layoutGrhs lgrhs@(L _ (GRHS guards body)) = do
   guardDocs <- docWrapNode lgrhs $ layoutStmt `mapM` guards
   bodyDoc   <- layoutExpr body
@@ -191,12 +202,14 @@ layoutGrhs lgrhs@(L _ (GRHS guards body)) = do
 layoutPatternBind
   :: Maybe Text
   -> BriDocNumbered
-  -> LMatch RdrName (LHsExpr RdrName)
+  -> LMatch GhcPs (LHsExpr GhcPs)
   -> ToBriDocM BriDocNumbered
-layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match fixityOrCtx pats _ (GRHSs grhss whereBinds))) = do
+layoutPatternBind mIdStr binderDoc lmatch@(L _ match) = do
+  let pats                     = m_pats match
+  let (GRHSs grhss whereBinds) = m_grhss match
   patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
   let isInfix = isInfixMatch match
-  let mIdStr' = fixPatternBindIdentifier fixityOrCtx <$> mIdStr
+  let mIdStr' = fixPatternBindIdentifier match <$> mIdStr
   patDoc <- docWrapNodePrior lmatch $ case (mIdStr', patDocs) of
     (Just idStr, p1 : pr) | isInfix -> docCols
       ColPatternsFuncInfix
@@ -222,25 +235,26 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match@(Match fixityOrCtx pats _ (
                          mWhereDocs
                          hasComments
 
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 && ghc-8.4 */
 fixPatternBindIdentifier
-  :: HsMatchContext (NameOrRdrName RdrName) -> Text -> Text
-fixPatternBindIdentifier ctx idStr = case ctx of
-  (FunRhs _ _ SrcLazy    ) -> Text.cons '~' idStr
-  (FunRhs _ _ SrcStrict  ) -> Text.cons '!' idStr
-  (FunRhs _ _ NoSrcStrict) -> idStr
-  (StmtCtxt ctx1         ) -> fixPatternBindIdentifier' ctx1
-  _                        -> idStr
+  :: Match GhcPs (LHsExpr GhcPs) -> Text -> Text
+fixPatternBindIdentifier match idStr = go $ m_ctxt match
  where
+  go = \case
+    (FunRhs _ _ SrcLazy    ) -> Text.cons '~' idStr
+    (FunRhs _ _ SrcStrict  ) -> Text.cons '!' idStr
+    (FunRhs _ _ NoSrcStrict) -> idStr
+    (StmtCtxt ctx1         ) -> goInner ctx1
+    _                        -> idStr
   -- I have really no idea if this path ever occurs, but better safe than
   -- risking another "drop bangpatterns" bugs.
-  fixPatternBindIdentifier' = \case
-    (PatGuard      ctx1) -> fixPatternBindIdentifier ctx1 idStr
-    (ParStmtCtxt   ctx1) -> fixPatternBindIdentifier' ctx1
-    (TransStmtCtxt ctx1) -> fixPatternBindIdentifier' ctx1
+  goInner = \case
+    (PatGuard      ctx1) -> go ctx1
+    (ParStmtCtxt   ctx1) -> goInner ctx1
+    (TransStmtCtxt ctx1) -> goInner ctx1
     _                    -> idStr
-#else                      /* ghc-8.0 */
-fixPatternBindIdentifier :: MatchFixity RdrName -> Text -> Text
+#else                       /* ghc-8.0 */
+fixPatternBindIdentifier :: Match GhcPs (LHsExpr GhcPs) -> Text -> Text
 fixPatternBindIdentifier _ x = x
 #endif
 
@@ -248,7 +262,7 @@ layoutPatternBindFinal
   :: Maybe Text
   -> BriDocNumbered
   -> Maybe BriDocNumbered
-  -> [([BriDocNumbered], BriDocNumbered, LHsExpr RdrName)]
+  -> [([BriDocNumbered], BriDocNumbered, LHsExpr GhcPs)]
   -> Maybe [BriDocNumbered]
   -> Bool
   -> ToBriDocM BriDocNumbered
