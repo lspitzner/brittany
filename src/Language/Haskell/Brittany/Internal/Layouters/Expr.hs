@@ -456,13 +456,13 @@ layoutExpr lexpr@(L _ expr) = do
               (docLines
                 [ docAddBaseY BrIndentRegular
                 $ docNodeAnnKW lexpr (Just AnnThen)
-                $ docAlt
+                $ docNonBottomSpacing $ docAlt
                   [ docSeq [appSep $ docLit $ Text.pack "then", docForceParSpacing thenExprDoc]
                   , docAddBaseY BrIndentRegular
                   $ docPar (docLit $ Text.pack "then") thenExprDoc
                   ]
                 , docAddBaseY BrIndentRegular
-                $ docAlt
+                $ docNonBottomSpacing $ docAlt
                   [ docSeq [appSep $ docLit $ Text.pack "else", docForceParSpacing elseExprDoc]
                   , docAddBaseY BrIndentRegular
                   $ docPar (docLit $ Text.pack "else") elseExprDoc
