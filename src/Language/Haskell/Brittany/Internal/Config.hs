@@ -89,6 +89,7 @@ staticDefaultConfig = Config
   , _conf_forward = ForwardOptions
     { _options_ghc = Identity []
     }
+  , _conf_roundtrip_exactprint_only  = coerce False
   }
 
 forwardOptionsSyntaxExtsEnabled :: ForwardOptions
@@ -109,6 +110,7 @@ forwardOptionsSyntaxExtsEnabled = ForwardOptions
     ]
   }
 
+-- brittany-next-binding --columns=200
 cmdlineConfigParser :: CmdParser Identity out (CConfig Option)
 cmdlineConfigParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
@@ -156,7 +158,7 @@ cmdlineConfigParser = do
       , _dconf_dump_bridoc_simpl_columns  = wrapLast $ falseToNothing dumpBriDocColumns
       , _dconf_dump_bridoc_simpl_indent   = wrapLast $ falseToNothing dumpBriDocIndent
       , _dconf_dump_bridoc_final          = wrapLast $ falseToNothing dumpBriDocFinal
-      , _dconf_roundtrip_exactprint_only  = wrapLast $ falseToNothing roundtripOnly
+      , _dconf_roundtrip_exactprint_only  = mempty
       }
     , _conf_layout = LayoutConfig
       { _lconfig_cols                      = optionConcat cols
@@ -187,6 +189,7 @@ cmdlineConfigParser = do
     , _conf_forward = ForwardOptions
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]
       }
+    , _conf_roundtrip_exactprint_only  = wrapLast $ falseToNothing roundtripOnly
     }
  where
   falseToNothing = Option . Bool.bool Nothing (Just True)

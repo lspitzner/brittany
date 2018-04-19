@@ -145,6 +145,11 @@ data CConfig f = Config
   , _conf_errorHandling :: CErrorHandlingConfig f
   , _conf_forward       :: CForwardOptions f
   , _conf_preprocessor  :: CPreProcessorConfig f
+  , _conf_roundtrip_exactprint_only :: f (Semigroup.Last Bool)
+    -- ^ this field is somewhat of a duplicate of the one in DebugConfig.
+    -- It is used for per-declaration disabling by the inline config
+    -- implementation. Could have re-used the existing field, but felt risky
+    -- to use a "debug" labeled field for non-debug functionality.
   }
   deriving (Generic)
 

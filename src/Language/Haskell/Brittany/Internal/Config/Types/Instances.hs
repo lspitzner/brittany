@@ -119,6 +119,7 @@ instance FromJSON (CConfig Maybe) where
     <*> v .:?= Text.pack "conf_errorHandling"
     <*> v .:?= Text.pack "conf_forward"
     <*> v .:?= Text.pack "conf_preprocessor"
+    <*> v .:?  Text.pack "conf_roundtrip_exactprint_only"
   parseJSON invalid    = Aeson.typeMismatch "Config" invalid
 
 -- Pretends that the value is {} when the key is not present.

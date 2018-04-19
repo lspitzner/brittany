@@ -136,27 +136,19 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
       Butcher.addCmd "-next-binding" nextBinding
       Butcher.addCmd "-Next-Binding" nextBinding
       Butcher.addCmd "-NEXT-BINDING" nextBinding
-      let
-        disableNextBinding = do
-          Butcher.addCmdImpl
-            ( InlineConfigTargetNextBinding
-            , mempty
-              { _conf_debug =
-                mempty { _dconf_roundtrip_exactprint_only = pure $ pure True }
-              }
-            )
+      let disableNextBinding = do
+            Butcher.addCmdImpl
+              ( InlineConfigTargetNextBinding
+              , mempty { _conf_roundtrip_exactprint_only = pure $ pure True }
+              )
       Butcher.addCmd "-disable-next-binding" disableNextBinding
       Butcher.addCmd "-Disable-Next-Binding" disableNextBinding
       Butcher.addCmd "-DISABLE-NEXT-BINDING" disableNextBinding
-      let
-        disableNextDecl = do
-          Butcher.addCmdImpl
-            ( InlineConfigTargetNextDecl
-            , mempty
-              { _conf_debug =
-                mempty { _dconf_roundtrip_exactprint_only = pure $ pure True }
-              }
-            )
+      let disableNextDecl = do
+            Butcher.addCmdImpl
+              ( InlineConfigTargetNextDecl
+              , mempty { _conf_roundtrip_exactprint_only = pure $ pure True }
+              )
       Butcher.addCmd "-disable-next-declaration" disableNextDecl
       Butcher.addCmd "-Disable-Next-Declaration" disableNextDecl
       Butcher.addCmd "-DISABLE-NEXT-DECLARATION" disableNextDecl
@@ -458,7 +450,11 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
     let config' = cZipWith fromOptionIdentity config $ mconcat
           (inlineModConf : (catMaybes (mBindingConfs ++ [mDeclConf])))
 
-    toLocal config' filteredAnns $ ppDecl decl
+    toLocal config' filteredAnns
+      $ if (config' & _conf_roundtrip_exactprint_only & confUnpack)
+          then briDocMToPPM (briDocByExactNoComment decl) >>= layoutBriDoc
+          else ppDecl decl
+
   let finalComments = filter
         (fst .> \case
           ExactPrint.AnnComment{} -> True

@@ -217,7 +217,8 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
   -- The flag is intentionally misspelled to prevent clashing with
   -- inline-config stuff.
   let hackAroundIncludes = config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
-  let exactprintOnly     = config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
+  let exactprintOnly     = (config & _conf_roundtrip_exactprint_only & confUnpack)
+                        || (config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack)
   let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
         then case cppMode of
           CPPModeAbort -> do
