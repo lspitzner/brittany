@@ -80,7 +80,6 @@ library {
     -Wall
     -fno-warn-unused-imports
     -fno-warn-redundant-constraints
-    -j
   }
   build-depends:
     { base >=4.9 && <4.12
