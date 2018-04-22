@@ -1,0 +1,33 @@
+###############################################################################
+###############################################################################
+###############################################################################
+#group indent-policy-multiple
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test long
+-- brittany { lconfig_indentAmount: 4, lconfig_indentPolicy: IndentPolicyMultiple }
+-- brittany { lconfig_columnAlignMode: { tag: ColumnAlignModeDisabled }}
+func =
+    mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+        + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+
+#test let
+-- brittany { lconfig_indentAmount: 4, lconfig_indentPolicy: IndentPolicyMultiple }
+-- brittany { lconfig_columnAlignMode: { tag: ColumnAlignModeDisabled }}
+foo = do
+    let
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    foo
+
+#test nested do-block
+-- brittany { lconfig_indentAmount: 4, lconfig_indentPolicy: IndentPolicyMultiple }
+-- brittany { lconfig_columnAlignMode: { tag: ColumnAlignModeDisabled }}
+foo = asdyf8asdf
+    "ajsdfas"
+    [ asjdf asyhf $ do
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    ]
