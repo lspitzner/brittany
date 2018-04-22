@@ -145,6 +145,11 @@ data CConfig f = Config
   , _conf_errorHandling :: CErrorHandlingConfig f
   , _conf_forward       :: CForwardOptions f
   , _conf_preprocessor  :: CPreProcessorConfig f
+  , _conf_roundtrip_exactprint_only :: f (Semigroup.Last Bool)
+    -- ^ this field is somewhat of a duplicate of the one in DebugConfig.
+    -- It is used for per-declaration disabling by the inline config
+    -- implementation. Could have re-used the existing field, but felt risky
+    -- to use a "debug" labeled field for non-debug functionality.
   }
   deriving (Generic)
 
@@ -175,6 +180,16 @@ deriving instance Data (CErrorHandlingConfig Identity)
 deriving instance Data (CForwardOptions Identity)
 deriving instance Data (CPreProcessorConfig Identity)
 deriving instance Data (CConfig Identity)
+
+#if MIN_VERSION_ghc(8,2,0)
+-- these instances break on earlier ghcs
+deriving instance Data (CDebugConfig Option)
+deriving instance Data (CLayoutConfig Option)
+deriving instance Data (CErrorHandlingConfig Option)
+deriving instance Data (CForwardOptions Option)
+deriving instance Data (CPreProcessorConfig Option)
+deriving instance Data (CConfig Option)
+#endif
 
 instance Semigroup.Semigroup (CDebugConfig Option) where
   (<>) = gmappend
