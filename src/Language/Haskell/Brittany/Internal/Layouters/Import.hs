@@ -48,7 +48,7 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
     importAsCol <- mAsk <&> _conf_layout .> _lconfig_importAsColumn .> confUnpack
     indentPolicy <- mAsk <&>  _conf_layout .> _lconfig_indentPolicy .> confUnpack
     let
-      compact  = indentPolicy == IndentPolicyLeft
+      compact  = indentPolicy /= IndentPolicyFree
       modNameT = Text.pack $ moduleNameString modName
       pkgNameT = Text.pack . prepPkg . sl_st <$> pkg
       masT     = Text.pack . moduleNameString . prepModName <$> mas

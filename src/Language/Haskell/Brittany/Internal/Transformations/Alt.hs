@@ -142,17 +142,23 @@ transformAlts =
         BDFAddBaseY indent bd -> do
           acp <- mGet
           indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
+          indPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
           let indAdd = case indent of
                 BrIndentNone -> 0
                 BrIndentRegular -> indAmount
                 BrIndentSpecial i -> i
-          mSet $ acp { _acp_indentPrep = max (_acp_indentPrep acp) indAdd }
+          let indAdd' =
+                if indPolicy == IndentPolicyMultiple
+                then
+                  max 0 (indAdd - ((_acp_indent acp + indAdd) `mod` indAmount))
+                else indAdd
+          mSet $ acp { _acp_indentPrep = max (_acp_indentPrep acp) indAdd' }
           r <- rec bd
           acp' <- mGet
           mSet $ acp' { _acp_indent = _acp_indent acp }
           return $ case indent of
             BrIndentNone -> r
-            BrIndentRegular ->   reWrap $ BDFAddBaseY (BrIndentSpecial indAdd) r
+            BrIndentRegular ->   reWrap $ BDFAddBaseY (BrIndentSpecial indAdd') r
             BrIndentSpecial i -> reWrap $ BDFAddBaseY (BrIndentSpecial i) r
         BDFBaseYPushCur bd -> do
           acp <- mGet

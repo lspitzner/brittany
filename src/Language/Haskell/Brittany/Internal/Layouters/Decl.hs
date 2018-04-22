@@ -436,7 +436,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
         -- multiple clauses added in-paragraph, each in a single line
         -- example: foo | bar = baz
         --              | lll = asd
-        addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+        addAlternativeCond (indentPolicy == IndentPolicyFree)
           $ docLines
           $  [ docSeq
                [ appSep $ docForceSingleline $ return patDoc

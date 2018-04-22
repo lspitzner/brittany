@@ -422,7 +422,8 @@ layoutExpr lexpr@(L _ expr) = do
       let maySpecialIndent =
             case indentPolicy of
               IndentPolicyLeft -> BrIndentRegular
-              _ -> BrIndentSpecial 3
+              IndentPolicyMultiple -> BrIndentRegular
+              IndentPolicyFree -> BrIndentSpecial 3
       -- TODO: some of the alternatives (especially last and last-but-one)
       -- overlap.
       runFilteredAlternative $ do
@@ -541,7 +542,10 @@ layoutExpr lexpr@(L _ expr) = do
       let
         ifIndentLeftElse :: a -> a -> a
         ifIndentLeftElse x y =
-          if indentPolicy == IndentPolicyLeft then x else y
+          case indentPolicy of
+            IndentPolicyLeft -> x
+            IndentPolicyMultiple -> x
+            IndentPolicyFree -> y
       -- this `docSetBaseAndIndent` might seem out of place (especially the
       -- Indent part; setBase is necessary due to the use of docLines below),
       -- but is here due to ghc-exactprint's DP handling of "let" in
@@ -596,18 +600,21 @@ layoutExpr lexpr@(L _ expr) = do
           --    c = d
           --  in
           --    fooooooooooooooooooo
+          let noHangingBinds =
+                [ docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "let")
+                  (docSetBaseAndIndent $ docLines bindDocs)
+                , docSeq
+                  [ docLit $ Text.pack "in "
+                  , docAddBaseY BrIndentRegular expDoc1
+                  ]
+                ]
           addAlternativeCond (indentPolicy == IndentPolicyLeft)
-            $ docLines
-            [ docAddBaseY BrIndentRegular
-            $ docPar
-              (docLit $ Text.pack "let")
-              (docSetBaseAndIndent $ docLines bindDocs)
-            , docSeq
-              [ docLit $ Text.pack "in "
-              , docAddBaseY BrIndentRegular expDoc1
-              ]
-            ]
-          addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+            $ docLines noHangingBinds
+          addAlternativeCond (indentPolicy == IndentPolicyMultiple)
+            $ docLines noHangingBinds
+          addAlternativeCond (indentPolicy == IndentPolicyFree)
             $ docLines
             [ docSeq
               [ appSep $ docLit $ Text.pack "let"
@@ -877,7 +884,7 @@ layoutExpr lexpr@(L _ expr) = do
         -- container { fieldA = blub
         --           , fieldB = blub
         --           }
-        addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+        addAlternativeCond (indentPolicy == IndentPolicyFree)
           $ docSeq
           [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
           , docSetBaseY $ docLines $ let
@@ -918,9 +925,10 @@ layoutExpr lexpr@(L _ expr) = do
           $ docPar
               (docNodeAnnKW lexpr Nothing rExprDoc)
               (docNonBottomSpacing $ docLines $ let
-                expressionWrapper = if indentPolicy == IndentPolicyLeft
-                  then docForceParSpacing
-                  else docSetBaseY
+                expressionWrapper = case indentPolicy of
+                  IndentPolicyLeft -> docForceParSpacing
+                  IndentPolicyMultiple -> docForceParSpacing
+                  IndentPolicyFree -> docSetBaseY
                 line1 = docCols ColRecUpdate
                   [ appSep $ docLit $ Text.pack "{"
                   , docWrapNodePrior rF1f $ appSep $ docLit rF1n
