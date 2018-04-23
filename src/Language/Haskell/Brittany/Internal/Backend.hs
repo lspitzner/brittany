@@ -345,6 +345,81 @@ briDocIsMultiLine briDoc = rec briDoc
     BDNonBottomSpacing bd   -> rec bd
     BDDebug _ bd            -> rec bd
 
+-- In theory
+-- =========
+
+-- .. this algorithm works roughly in these steps:
+--
+-- 1. For each line, get the (nested) column info, descending as far as
+--    BDCols nodes go. The column info is a (rose) tree where the leafs
+--    are arbitrary (non-BDCols) BriDocs.
+-- 2. Walk through the lines and compare its column info with that of its
+--    predecessor. If both are non-leafs and the column "signatures" align
+--    (they don't align e.g. when they are totally different syntactical
+--    structures or the number of children differs), mark these parts of
+--    the two tree structures as connected and recurse to its children
+--    (i.e. again comparing the children in this line with the children in
+--    the previous line).
+-- 3. What we now have is one tree per line, and connections between "same"
+--    nodes between lines. These connection can span multiple lines.
+--    We next look at spacing information. This is available at the leafs,
+--    but in this step we aggregate _over connections_. At the top level, this
+--    gives us one piece of data: How long would each line be, if we fully
+--    aligned everything (kept all connections "active"). In contrast to
+--    just taking the sum of all leafs for each tree, this line length includes
+--    the spaces used for alignment.
+-- 4. Treat those lines where alignment would result in overflowing of the
+--    column limit. This "treatment" is currently configurable, and can e.g.
+--    mean:
+--    a) we stop alignment alltogether,
+--    b) we remove alignment just from the overflowing lines,
+--    c) we reduce the number of spaces inserted in overflowing lines using
+--       some technique to make them not overflow, but without reducing the
+--       space insertion to zero,
+--    d) don't do anything
+-- 5. Actually print the lines, walking over each tree and inserting spaces
+--    according to the info and decisions gathered in the previous steps.
+--
+-- Possible improvements
+-- =====================
+--
+-- - If alignment is disabled for specific lines, the aggregated per-connection
+--   info of those lines is still retained and not recalculated. This can
+--   result in spaces being inserted to create alignment with a line that
+--   would overflow and thus gets disabled entirely.
+--   An better approach would be to repeat step 3 after marking overflowing
+--   lines as such, and not include the overflowing spacings as references
+--   for non-overflowing ones. In the simplest case one additional iteration
+--   would suffice, e.g. 1-2-3-4-3-5, but it would also be possible to refine
+--   this and first remove alignment in the deepest parts of the tree for
+--   overflowing lines, repeating and moving upwards until no lines are
+--   anymore overflowing.
+--   Further, it may make sense to break up connections when overflowing would
+--   occur.
+-- - It may also make sense to not filter all overflowing lines, but remove
+--   them one-by-one and in each step recalculate the aggregated connection
+--   spacing info. Because removing one overflowing line from the calculation
+--   may very well cause another previously overflowing line to not overflow
+--   any longer.
+--   There is also a nasty optimization problem hiding in there (find the
+--   minimal amount of alignment disabling that results in no overflows)
+--   but that is overkill.
+--
+--   (with both these improvements there would be quite some repetition between
+--   steps 3 and 4, but it should be possible to ensure termination. Still,
+--   performance might become an issue as such an approach is not necessarily
+--   linear in bridoc size any more.)
+--
+-- In practice
+-- ===========
+--
+-- .. the current implementation is somewhat sloppy. Steps 1 and 2
+-- are executed in one step, step 3 already applies one strategy that disables
+-- certain connections (see `_lconfig_alignmentLimit`) and step 4 does some
+-- of the calculations one might expect to occur in step 3. Steps 4 and 5
+-- are executed in the same recursion, too.
+-- Also, _lconfig_alignmentLimit really is itself a hack that hides the issue
+-- mentioned in the first "possible improvement".
 alignColsLines :: LayoutConstraints m => [BriDoc] -> m ()
 alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
   -- tellDebugMess ("alignColsLines: at " ++ take 100 (show $ briDocToDoc $ head bridocs))
@@ -362,7 +437,7 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
       sequence_
         $   List.intersperse layoutWriteEnsureNewlineBlock
         $   colInfos
-        <&> processInfo processedMap
+        <&> processInfo colMax processedMap
      where
       (colInfos, finalState) =
         StateS.runState (mergeBriDocs bridocs) (ColBuildState IntMapS.empty 0)
@@ -393,10 +468,9 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
                 Nothing           -> 0
                 Just (_, maxs, _) -> sum maxs
             maxCols = {-Foldable.foldl1 maxZipper-}
-              fmap colAggregation $ transpose $ Foldable.toList
-              --  $ trace ("colss=" ++ show colss ++ " for" ++ take 100 (show $ briDocToDoc $ head bridocs))
-              colss
-            (_, posXs) = mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
+              fmap colAggregation $ transpose $ Foldable.toList colss
+            (_, posXs) = -- trace ("colss=" ++ show colss ++ ", maxCols=" ++ show maxCols ++ " for " ++ take 100 (show $ briDocToDoc $ head bridocs)) $
+                         mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
             counter count l = if List.last posXs + List.last l <= colMax
               then count + 1
               else count
@@ -528,12 +602,13 @@ withAlloc lastFlag f = do
     $ c { _cbs_map = IntMapS.insert ind (lastFlag, space) $ _cbs_map c }
   return info
 
-processInfo :: LayoutConstraints m => ColMap2 -> ColInfo -> m ()
-processInfo m = \case
+processInfo :: LayoutConstraints m => Int -> ColMap2 -> ColInfo -> m ()
+processInfo maxSpace m = \case
   ColInfoStart       -> error "should not happen (TM)"
   ColInfoNo doc      -> layoutBriDocM doc
-  ColInfo ind _ list -> do
-    colMax    <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
+  ColInfo ind _ list -> -- trace ("processInfo ind=" ++ show ind ++ ", list=" ++ show list ++ ", colmap=" ++ show m) $
+                        do
+    colMaxConf <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
     alignMode <- mAsk <&> _conf_layout .> _lconfig_columnAlignMode .> confUnpack
     curX      <- do
       state <- mGet
@@ -546,6 +621,7 @@ processInfo m = \case
           Nothing -> spaceAdd + i
           Just c -> c
         Right{} -> spaceAdd
+    let colMax = min colMaxConf (curX + maxSpace)
     -- tellDebugMess $ show curX
     let Just (ratio, maxCols, _colss) = IntMapS.lookup ind m
     let (maxX, posXs) = mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
@@ -568,15 +644,18 @@ processInfo m = \case
             offsets = (subtract curX) <$> posXs
             fixed   = offsets <&> fromIntegral .> (*factor) .> truncate
           _ -> posXs
+    let spacings = zipWith (-)
+                           (List.tail fixedPosXs ++ [min maxX colMax])
+                           fixedPosXs
     -- tellDebugMess $ "maxCols = " ++ show maxCols
     -- tellDebugMess $ "fixedPosXs = " ++ show fixedPosXs
-    let alignAct = zip fixedPosXs list `forM_` \(destX, x) -> do
+    let alignAct = zip3 fixedPosXs spacings list `forM_` \(destX, s, x) -> do
           layoutWriteEnsureAbsoluteN destX
-          processInfo m (snd x)
+          processInfo s m (snd x)
         noAlignAct = list `forM_` (snd .> processInfoIgnore)
-        animousAct =
-          -- per-item check if there is overflowing.
+        animousAct = -- trace ("animousAct fixedPosXs=" ++ show fixedPosXs ++ ", list=" ++ show list ++ ", maxSpace=" ++ show maxSpace ++ ", colMax="++show colMax) $
                      if List.last fixedPosXs + fst (List.last list) > colMax
+                     -- per-item check if there is overflowing.
           then noAlignAct
           else alignAct
     case alignMode of
