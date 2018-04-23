@@ -183,7 +183,7 @@ defaultTestConfig = Config
     }
   , _conf_preprocessor              = _conf_preprocessor staticDefaultConfig
   , _conf_forward = ForwardOptions {_options_ghc = Identity []}
-  , _conf_roundtrip_exactprint_only = coerce True
+  , _conf_roundtrip_exactprint_only = coerce False
   }
 
 contextFreeTestConfig :: Config

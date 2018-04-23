@@ -56,7 +56,7 @@ data ColInfo
 
 instance Show ColInfo where
   show ColInfoStart = "ColInfoStart"
-  show ColInfoNo{} = "ColInfoNo{}"
+  show (ColInfoNo bd) = "ColInfoNo " ++ show (take 30 (show (briDocToDoc bd)) ++ "..")
   show (ColInfo ind sig list) = "ColInfo " ++ show ind ++ " " ++ show sig ++ " " ++ show list
 
 data ColBuildState = ColBuildState
@@ -433,7 +433,8 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
   alignBreak <-
     mAsk <&> _conf_layout .> _lconfig_alignmentBreakOnMultiline .> confUnpack
   case () of
-    _ ->
+    _ -> do
+      -- tellDebugMess ("processedMap: " ++ show processedMap)
       sequence_
         $   List.intersperse layoutWriteEnsureNewlineBlock
         $   colInfos
@@ -623,7 +624,12 @@ processInfo maxSpace m = \case
         Right{} -> spaceAdd
     let colMax = min colMaxConf (curX + maxSpace)
     -- tellDebugMess $ show curX
-    let Just (ratio, maxCols, _colss) = IntMapS.lookup ind m
+    let Just (ratio, maxCols1, _colss) = IntMapS.lookup ind m
+    let maxCols2 = list <&> \e -> case e of
+          (_, ColInfo i _ _) ->
+            let Just (_, ms, _) = IntMapS.lookup i m in sum ms
+          (l, _) -> l
+    let maxCols = zipWith max maxCols1 maxCols2
     let (maxX, posXs) = mapAccumL (\acc x -> (acc + x, acc)) curX maxCols
     -- handle the cases that the vertical alignment leads to more than max
     -- cols:
@@ -647,8 +653,11 @@ processInfo maxSpace m = \case
     let spacings = zipWith (-)
                            (List.tail fixedPosXs ++ [min maxX colMax])
                            fixedPosXs
+    -- tellDebugMess $ "ind = " ++ show ind
     -- tellDebugMess $ "maxCols = " ++ show maxCols
     -- tellDebugMess $ "fixedPosXs = " ++ show fixedPosXs
+    -- tellDebugMess $ "list = " ++ show list
+    -- tellDebugMess $ "maxSpace = " ++ show maxSpace
     let alignAct = zip3 fixedPosXs spacings list `forM_` \(destX, s, x) -> do
           layoutWriteEnsureAbsoluteN destX
           processInfo s m (snd x)
