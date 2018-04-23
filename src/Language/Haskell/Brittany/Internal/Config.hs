@@ -90,6 +90,7 @@ staticDefaultConfig = Config
     { _options_ghc = Identity []
     }
   , _conf_roundtrip_exactprint_only  = coerce False
+  , _conf_obfuscate                  = coerce False
   }
 
 forwardOptionsSyntaxExtsEnabled :: ForwardOptions
@@ -143,6 +144,7 @@ cmdlineConfigParser = do
                                            ["ghc-options"]
                                            "STRING"
                                            (flagHelp $ parDoc "allows to define default language extensions. The parameter is forwarded to ghc.")
+  obfuscate <- addSimpleBoolFlag "" ["obfuscate"] (flagHelp $ parDoc "apply obfuscator to the output.")
 
   return $ Config
     { _conf_version = mempty
@@ -190,6 +192,7 @@ cmdlineConfigParser = do
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]
       }
     , _conf_roundtrip_exactprint_only  = wrapLast $ falseToNothing roundtripOnly
+    , _conf_obfuscate                  = wrapLast $ falseToNothing obfuscate
     }
  where
   falseToNothing = Option . Bool.bool Nothing (Just True)

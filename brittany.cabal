@@ -55,6 +55,7 @@ library {
     Language.Haskell.Brittany.Internal.Config
     Language.Haskell.Brittany.Internal.Config.Types
     Language.Haskell.Brittany.Internal.Config.Types.Instances
+    Language.Haskell.Brittany.Internal.Obfuscation
     Paths_brittany
   }
   other-modules: {
@@ -112,6 +113,7 @@ library {
     , czipwith >=1.0.1.0 && <1.1
     , ghc-boot-th >=8.0.1 && <8.5
     , filepath >=1.4.1.0 && <1.5
+    , random >= 1.1 && <1.2
     }
   default-extensions: {
     CPP

@@ -28,6 +28,7 @@ import           Language.Haskell.Brittany.Internal
 import           Language.Haskell.Brittany.Internal.Config
 import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Utils
+import           Language.Haskell.Brittany.Internal.Obfuscation
 
 import qualified Text.PrettyPrint as PP
 
@@ -272,7 +273,10 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
             let out = TextL.toStrict $ if hackAroundIncludes
                   then TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn (TextL.pack "\n") outRaw
                   else outRaw
-            pure $ (ews, out)
+            out' <- if config & _conf_obfuscate & confUnpack
+              then lift $ obfuscate out
+              else pure out
+            pure $ (ews, out')
       let customErrOrder ErrorInput{}         = 4
           customErrOrder LayoutWarning{}      = 0 :: Int
           customErrOrder ErrorOutputCheck{}   = 1
