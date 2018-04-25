@@ -7,6 +7,7 @@ module Language.Haskell.Brittany.Internal.ExactPrintUtils
   , commentAnnFixTransformGlob
   , extractToplevelAnns
   , foldedAnnKeys
+  , withTransformedAnns
   )
 where
 
@@ -17,6 +18,8 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Utils
+import           Data.Data
+import           Data.HList.HList
 
 import           DynFlags ( getDynFlags )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
@@ -264,6 +267,25 @@ foldedAnnKeys ast = SYB.everything
   )
   ast
   where locTyCon = SYB.typeRepTyCon (SYB.typeOf (L () ()))
+
+
+withTransformedAnns
+  :: Data ast
+  => ast
+  -> MultiRWSS.MultiRWS '[Config, ExactPrint.Anns] w s a
+  -> MultiRWSS.MultiRWS '[Config, ExactPrint.Anns] w s a
+withTransformedAnns ast m = do
+  -- TODO: implement `local` for MultiReader/MultiRWS
+  readers@(conf :+: anns :+: HNil) <- MultiRWSS.mGetRawR
+  MultiRWSS.mPutRawR (conf :+: f anns :+: HNil)
+  x <- m
+  MultiRWSS.mPutRawR readers
+  pure x
+ where
+  f anns =
+    let ((), (annsBalanced, _), _) =
+          ExactPrint.runTransform anns (commentAnnFixTransformGlob ast)
+    in  annsBalanced
 
 
 #if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */

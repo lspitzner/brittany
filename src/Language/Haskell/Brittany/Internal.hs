@@ -450,10 +450,12 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
     let config' = cZipWith fromOptionIdentity config $ mconcat
           (inlineModConf : (catMaybes (mBindingConfs ++ [mDeclConf])))
 
-    toLocal config' filteredAnns
-      $ if (config' & _conf_roundtrip_exactprint_only & confUnpack)
-          then briDocMToPPM (briDocByExactNoComment decl) >>= layoutBriDoc
-          else ppDecl decl
+    let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
+    toLocal config' filteredAnns $ do
+      bd <- briDocMToPPM $ if exactprintOnly
+        then briDocByExactNoComment decl
+        else layoutDecl decl
+      layoutBriDoc bd
 
   let finalComments = filter
         (fst .> \case
@@ -477,19 +479,6 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
       in  ppmMoveToExactLoc $ ExactPrint.DP (eofZ - cmY, eofX - cmX)
     _ -> return ()
 
-withTransformedAnns :: Data ast => ast -> PPMLocal () -> PPMLocal ()
-withTransformedAnns ast m = do
-  -- TODO: implement `local` for MultiReader/MultiRWS
-  readers@(conf :+: anns :+: HNil) <- MultiRWSS.mGetRawR
-  MultiRWSS.mPutRawR (conf :+: f anns :+: HNil)
-  m
-  MultiRWSS.mPutRawR readers
- where
-  f anns =
-    let ((), (annsBalanced, _), _) =
-          ExactPrint.runTransform anns (commentAnnFixTransformGlob ast)
-    in  annsBalanced
-
 
 getDeclBindingNames :: LHsDecl GhcPs -> [String]
 getDeclBindingNames (L _ decl) = case decl of
@@ -497,38 +486,6 @@ getDeclBindingNames (L _ decl) = case decl of
   ValD (FunBind (L _ n) _ _ _ _) -> [Text.unpack $ rdrNameToText n]
   _ -> []
 
-
-ppDecl :: LHsDecl GhcPs -> PPMLocal ()
-ppDecl d@(L loc decl) = case decl of
-  SigD sig -> -- trace (_sigHead sig) $
-              withTransformedAnns d $ do
-    -- runLayouter $ Old.layoutSig (L loc sig)
-    briDoc <- briDocMToPPM $ layoutSig (L loc sig)
-    layoutBriDoc briDoc
-  ValD bind -> -- trace (_bindHead bind) $
-               withTransformedAnns d $ do
-    -- Old.layoutBind (L loc bind)
-    briDoc <- briDocMToPPM $ do
-      eitherNode <- layoutBind (L loc bind)
-      case eitherNode of
-        Left  ns -> docLines $ return <$> ns
-        Right n  -> return n
-    layoutBriDoc briDoc
-  InstD (TyFamInstD{}) -> do
-    -- this is a (temporary (..)) workaround for "type instance" decls
-    -- that do not round-trip through exactprint properly.
-    let fixer s = case List.stripPrefix "type " s of
-          Just rest | not ("instance" `isPrefixOf` rest) ->
-            "type instance " ++ rest
-          _ -> s
-    str <- mAsk <&> \anns ->
-      intercalate "\n" $ fmap fixer $ lines' $ ExactPrint.exactPrint d anns
-    bd <- briDocMToPPM $ allocateNode $ BDFExternal (ExactPrint.mkAnnKey d)
-                                                    (foldedAnnKeys d)
-                                                    False
-                                                    (Text.pack str)
-    layoutBriDoc bd
-  _ -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc
 
 -- Prints the information associated with the module annotation
 -- This includes the imports

@@ -2,7 +2,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Decl
-  ( layoutSig
+  ( layoutDecl
+  , layoutSig
   , layoutBind
   , layoutLocalBinds
   , layoutGuardLStmt
@@ -19,6 +20,11 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
+
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
+import           Language.Haskell.Brittany.Internal.ExactPrintUtils
+import           Language.Haskell.Brittany.Internal.Utils
 
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import           SrcLoc ( SrcSpan )
@@ -38,6 +44,28 @@ import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 
 import           Bag ( mapBagM )
 
+
+
+layoutDecl :: ToBriDoc HsDecl
+layoutDecl d@(L loc decl) = case decl of
+  SigD sig  -> withTransformedAnns d $ layoutSig (L loc sig)
+  ValD bind -> withTransformedAnns d $ layoutBind (L loc bind) >>= \case
+    Left  ns -> docLines $ return <$> ns
+    Right n  -> return n
+  InstD (TyFamInstD{}) -> do
+    -- this is a (temporary (..)) workaround for "type instance" decls
+    -- that do not round-trip through exactprint properly.
+    let fixer s = case List.stripPrefix "type " s of
+          Just rest | not ("instance" `isPrefixOf` rest) ->
+            "type instance " ++ rest
+          _ -> s
+    str <- mAsk <&> \anns ->
+      intercalate "\n" $ fmap fixer $ lines' $ ExactPrint.exactPrint d anns
+    allocateNode $ BDFExternal (ExactPrint.mkAnnKey d)
+                               (foldedAnnKeys d)
+                               False
+                               (Text.pack str)
+  _ -> briDocByExactNoComment d
 
 
 layoutSig :: ToBriDoc Sig
