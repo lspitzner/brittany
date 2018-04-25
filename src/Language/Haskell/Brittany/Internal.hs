@@ -514,6 +514,20 @@ ppDecl d@(L loc decl) = case decl of
         Left  ns -> docLines $ return <$> ns
         Right n  -> return n
     layoutBriDoc briDoc
+  InstD (TyFamInstD{}) -> do
+    -- this is a (temporary (..)) workaround for "type instance" decls
+    -- that do not round-trip through exactprint properly.
+    let fixer s = case List.stripPrefix "type " s of
+          Just rest | not ("instance" `isPrefixOf` rest) ->
+            "type instance " ++ rest
+          _ -> s
+    str <- mAsk <&> \anns ->
+      intercalate "\n" $ fmap fixer $ lines' $ ExactPrint.exactPrint d anns
+    bd <- briDocMToPPM $ allocateNode $ BDFExternal (ExactPrint.mkAnnKey d)
+                                                    (foldedAnnKeys d)
+                                                    False
+                                                    (Text.pack str)
+    layoutBriDoc bd
   _ -> briDocMToPPM (briDocByExactNoComment d) >>= layoutBriDoc
 
 -- Prints the information associated with the module annotation
