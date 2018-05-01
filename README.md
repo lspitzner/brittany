@@ -48,7 +48,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Other usage notes
 
-- Supports GHC versions `8.0.*` and `8.2.*`.
+- Supports GHC versions `8.0`, `8.2` and `8.4`.
 - included in stackage with lts>=10.0 (or nightlies dating to >=2017-11-15)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
@@ -72,7 +72,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
     ~~~~.sh
     cabal unpack brittany
-    cd brittany-0.8.0.2
+    cd brittany-0.11.0.0
     # cabal new-configure -w $PATH_TO_GHC_8_0
     cabal new-build exe:brittany
     # and it should be safe to just copy the executable, e.g.
@@ -159,7 +159,7 @@ a good amount of high-level documentation at
 
 # License
 
-Copyright (C) 2016-2017 Lennart Spitzner
+Copyright (C) 2016-2018 Lennart Spitzner
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the
