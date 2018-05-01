@@ -46,7 +46,7 @@ main = do
           $ filter (".blt"`isSuffixOf`) files
   inputs <- blts `forM` \blt -> Text.IO.readFile ("src-literatetests" </> blt)
   let groups = createChunks =<< inputs
-  inputCtxFree <- Text.IO.readFile "src-literatetests/tests-context-free.blt"
+  inputCtxFree <- Text.IO.readFile "src-literatetests/30-tests-context-free.blt"
   let groupsCtxFree = createChunks inputCtxFree
   hspec $ do
     groups `forM_` \(groupname, tests) -> do
