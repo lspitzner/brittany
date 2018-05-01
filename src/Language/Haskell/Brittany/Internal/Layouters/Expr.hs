@@ -422,7 +422,8 @@ layoutExpr lexpr@(L _ expr) = do
       let maySpecialIndent =
             case indentPolicy of
               IndentPolicyLeft -> BrIndentRegular
-              _ -> BrIndentSpecial 3
+              IndentPolicyMultiple -> BrIndentRegular
+              IndentPolicyFree -> BrIndentSpecial 3
       -- TODO: some of the alternatives (especially last and last-but-one)
       -- overlap.
       runFilteredAlternative $ do
@@ -539,9 +540,12 @@ layoutExpr lexpr@(L _ expr) = do
       mBindDocs <- mapM (fmap (fmap return) . docWrapNodeRest lexpr . return)
                =<< layoutLocalBinds binds
       let
-        ifIndentLeftElse :: a -> a -> a
-        ifIndentLeftElse x y =
-          if indentPolicy == IndentPolicyLeft then x else y
+        ifIndentFreeElse :: a -> a -> a
+        ifIndentFreeElse x y =
+          case indentPolicy of
+            IndentPolicyLeft -> y
+            IndentPolicyMultiple -> y
+            IndentPolicyFree -> x
       -- this `docSetBaseAndIndent` might seem out of place (especially the
       -- Indent part; setBase is necessary due to the use of docLines below),
       -- but is here due to ghc-exactprint's DP handling of "let" in
@@ -562,7 +566,7 @@ layoutExpr lexpr@(L _ expr) = do
               [ docAlt
                   [ docSeq
                       [ appSep $ docLit $ Text.pack "let"
-                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent
+                      , ifIndentFreeElse docSetBaseAndIndent docForceSingleline
                       $ bindDoc
                       ]
                   , docAddBaseY BrIndentRegular
@@ -572,8 +576,8 @@ layoutExpr lexpr@(L _ expr) = do
                   ]
               , docAlt
                   [ docSeq
-                      [ appSep $ docLit $ Text.pack $ ifIndentLeftElse "in" "in "
-                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent expDoc1
+                      [ appSep $ docLit $ Text.pack $ ifIndentFreeElse "in " "in"
+                      , ifIndentFreeElse docSetBaseAndIndent docForceSingleline expDoc1
                       ]
                   , docAddBaseY BrIndentRegular
                   $ docPar
@@ -596,28 +600,29 @@ layoutExpr lexpr@(L _ expr) = do
           --    c = d
           --  in
           --    fooooooooooooooooooo
-          addAlternativeCond (indentPolicy == IndentPolicyLeft)
-            $ docLines
-            [ docAddBaseY BrIndentRegular
-            $ docPar
-              (docLit $ Text.pack "let")
-              (docSetBaseAndIndent $ docLines bindDocs)
-            , docSeq
-              [ docLit $ Text.pack "in "
-              , docAddBaseY BrIndentRegular expDoc1
+          let noHangingBinds =
+                [ docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "let")
+                  (docSetBaseAndIndent $ docLines bindDocs)
+                , docSeq
+                  [ docLit $ Text.pack "in "
+                  , docAddBaseY BrIndentRegular expDoc1
+                  ]
+                ]
+          addAlternative $ case indentPolicy of
+            IndentPolicyLeft     -> docLines noHangingBinds
+            IndentPolicyMultiple -> docLines noHangingBinds
+            IndentPolicyFree     -> docLines
+              [ docSeq
+                [ appSep $ docLit $ Text.pack "let"
+                , docSetBaseAndIndent $ docLines bindDocs
+                ]
+              , docSeq
+                [ appSep $ docLit $ Text.pack "in "
+                , docSetBaseY expDoc1
+                ]
               ]
-            ]
-          addAlternativeCond (indentPolicy /= IndentPolicyLeft)
-            $ docLines
-            [ docSeq
-              [ appSep $ docLit $ Text.pack "let"
-              , docSetBaseAndIndent $ docLines bindDocs
-              ]
-            , docSeq
-              [ appSep $ docLit $ Text.pack "in "
-              , docSetBaseY expDoc1
-              ]
-            ]
           addAlternative
             $ docLines
             [ docAddBaseY BrIndentRegular
@@ -877,7 +882,7 @@ layoutExpr lexpr@(L _ expr) = do
         -- container { fieldA = blub
         --           , fieldB = blub
         --           }
-        addAlternativeCond (indentPolicy /= IndentPolicyLeft)
+        addAlternativeCond (indentPolicy == IndentPolicyFree)
           $ docSeq
           [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
           , docSetBaseY $ docLines $ let
@@ -918,9 +923,10 @@ layoutExpr lexpr@(L _ expr) = do
           $ docPar
               (docNodeAnnKW lexpr Nothing rExprDoc)
               (docNonBottomSpacing $ docLines $ let
-                expressionWrapper = if indentPolicy == IndentPolicyLeft
-                  then docForceParSpacing
-                  else docSetBaseY
+                expressionWrapper = case indentPolicy of
+                  IndentPolicyLeft -> docForceParSpacing
+                  IndentPolicyMultiple -> docForceParSpacing
+                  IndentPolicyFree -> docSetBaseY
                 line1 = docCols ColRecUpdate
                   [ appSep $ docLit $ Text.pack "{"
                   , docWrapNodePrior rF1f $ appSep $ docLit rF1n
