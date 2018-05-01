@@ -29,6 +29,8 @@
     2) one or more specifications in the form of what brittany
        accepts in its config files for the layouting config
        (a one-line yaml document), e.g. "{ lconfig_cols: 50 }"
+* Implement `IndentPolicyMultiple` (thanks to Bryan Richter @chreekat)
+    Restrict indentation amounts to `n * indentAmount`
 * Implement `--obfuscate` that replaces non-keyword identifiers with random
   names
 * Do not write files unless there are changes (don't update modtime)
@@ -42,6 +44,8 @@
     - On default settings, allow single-line module header
       `module MyModule where` when no exports
     - Fix one case of non-optimal layouting for if-then-else
+    - Allow same-line let binding inside do-notation with
+      `IndentPolicyLeft/Multiple` and `indentAmount>=4`
 
 ## 0.10.0.0 -- March 2018
 
