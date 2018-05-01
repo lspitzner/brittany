@@ -540,12 +540,12 @@ layoutExpr lexpr@(L _ expr) = do
       mBindDocs <- mapM (fmap (fmap return) . docWrapNodeRest lexpr . return)
                =<< layoutLocalBinds binds
       let
-        ifIndentLeftElse :: a -> a -> a
-        ifIndentLeftElse x y =
+        ifIndentFreeElse :: a -> a -> a
+        ifIndentFreeElse x y =
           case indentPolicy of
-            IndentPolicyLeft -> x
-            IndentPolicyMultiple -> x
-            IndentPolicyFree -> y
+            IndentPolicyLeft -> y
+            IndentPolicyMultiple -> y
+            IndentPolicyFree -> x
       -- this `docSetBaseAndIndent` might seem out of place (especially the
       -- Indent part; setBase is necessary due to the use of docLines below),
       -- but is here due to ghc-exactprint's DP handling of "let" in
@@ -566,7 +566,7 @@ layoutExpr lexpr@(L _ expr) = do
               [ docAlt
                   [ docSeq
                       [ appSep $ docLit $ Text.pack "let"
-                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent
+                      , ifIndentFreeElse docSetBaseAndIndent docForceSingleline
                       $ bindDoc
                       ]
                   , docAddBaseY BrIndentRegular
@@ -576,8 +576,8 @@ layoutExpr lexpr@(L _ expr) = do
                   ]
               , docAlt
                   [ docSeq
-                      [ appSep $ docLit $ Text.pack $ ifIndentLeftElse "in" "in "
-                      , ifIndentLeftElse docForceSingleline docSetBaseAndIndent expDoc1
+                      [ appSep $ docLit $ Text.pack $ ifIndentFreeElse "in " "in"
+                      , ifIndentFreeElse docSetBaseAndIndent docForceSingleline expDoc1
                       ]
                   , docAddBaseY BrIndentRegular
                   $ docPar
@@ -610,21 +610,19 @@ layoutExpr lexpr@(L _ expr) = do
                   , docAddBaseY BrIndentRegular expDoc1
                   ]
                 ]
-          addAlternativeCond (indentPolicy == IndentPolicyLeft)
-            $ docLines noHangingBinds
-          addAlternativeCond (indentPolicy == IndentPolicyMultiple)
-            $ docLines noHangingBinds
-          addAlternativeCond (indentPolicy == IndentPolicyFree)
-            $ docLines
-            [ docSeq
-              [ appSep $ docLit $ Text.pack "let"
-              , docSetBaseAndIndent $ docLines bindDocs
+          addAlternative $ case indentPolicy of
+            IndentPolicyLeft     -> docLines noHangingBinds
+            IndentPolicyMultiple -> docLines noHangingBinds
+            IndentPolicyFree     -> docLines
+              [ docSeq
+                [ appSep $ docLit $ Text.pack "let"
+                , docSetBaseAndIndent $ docLines bindDocs
+                ]
+              , docSeq
+                [ appSep $ docLit $ Text.pack "in "
+                , docSetBaseY expDoc1
+                ]
               ]
-            , docSeq
-              [ appSep $ docLit $ Text.pack "in "
-              , docSetBaseY expDoc1
-              ]
-            ]
           addAlternative
             $ docLines
             [ docAddBaseY BrIndentRegular
