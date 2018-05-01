@@ -1,5 +1,47 @@
 # Revision history for brittany
 
+## 0.11.0.0 -- May 2018
+
+* Support for ghc-8.4
+* Implement inline-config
+    e.g. "-- brittany --indent=4"
+
+    respects the following comment forms as input:
+
+    ~~~~
+    source comment                       affected target
+    ======================================================
+    "-- brittany CONFIG"                 whole module
+    "-- brittany-next-binding CONFIG"    next binding
+    "-- brittany-disable-next-binding"   next binding
+    "-- brittany @ myExampleFunc CONFIG" `myExampleFunc`
+    ~~~~
+
+    multiline-comments are supported too, although
+    the specification must still be a single line. E.g.
+    
+    > "{- brittany --columns 50 -}"
+    
+    CONFIG is either:
+    
+    1) one or more flags in the form of what brittany accepts
+       on the commandline, e.g. "-- columns 50", or
+    2) one or more specifications in the form of what brittany
+       accepts in its config files for the layouting config
+       (a one-line yaml document), e.g. "{ lconfig_cols: 50 }"
+* Implement `--obfuscate` that replaces non-keyword identifiers with random
+  names
+* Do not write files unless there are changes (don't update modtime)
+  (`--write-mode=inplace`) (#93)
+* Bugfixes:
+    - Fix empty function constraints (`() => IO ()`) (#133)
+    - Fix overflowing columns caused by aligning with surrounding lines
+      for certain complex cases
+* Layouting changes:
+    - On default settings, allow single-line module header
+      `module MyModule where` when no exports
+    - Fix one case of non-optimal layouting for if-then-else
+
 ## 0.10.0.0 -- March 2018
 
 * Implement module/exports/imports layouting (thanks to sniperrifle2004)
