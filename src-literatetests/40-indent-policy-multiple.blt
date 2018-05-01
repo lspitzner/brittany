@@ -12,13 +12,25 @@ func =
     mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
         + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
 
-#test let
+#test let indAmount=4
 -- brittany { lconfig_indentAmount: 4, lconfig_indentPolicy: IndentPolicyMultiple }
 foo = do
-    let
-        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =
+    let aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =
             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     foo
+
+#test let indAmount=8
+-- brittany { lconfig_indentAmount: 8, lconfig_indentPolicy: IndentPolicyMultiple }
+foo = do
+        let aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =
+                aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        foo
+foo = do
+        let aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =
+                aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                        + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                        + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        foo
 
 #test nested do-block
 -- brittany { lconfig_indentAmount: 4, lconfig_indentPolicy: IndentPolicyMultiple }

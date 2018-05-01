@@ -141,24 +141,14 @@ transformAlts =
         BDFSeparator  -> processSpacingSimple bdX $> bdX
         BDFAddBaseY indent bd -> do
           acp <- mGet
-          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
-          indPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
-          let indAdd = case indent of
-                BrIndentNone -> 0
-                BrIndentRegular -> indAmount
-                BrIndentSpecial i -> i
-          let indAdd' =
-                if indPolicy == IndentPolicyMultiple
-                then
-                  max 0 (indAdd - ((_acp_indent acp + indAdd) `mod` indAmount))
-                else indAdd
-          mSet $ acp { _acp_indentPrep = max (_acp_indentPrep acp) indAdd' }
+          indAdd <- fixIndentationForMultiple acp indent
+          mSet $ acp { _acp_indentPrep = max (_acp_indentPrep acp) indAdd }
           r <- rec bd
           acp' <- mGet
           mSet $ acp' { _acp_indent = _acp_indent acp }
           return $ case indent of
             BrIndentNone -> r
-            BrIndentRegular ->   reWrap $ BDFAddBaseY (BrIndentSpecial indAdd') r
+            BrIndentRegular ->   reWrap $ BDFAddBaseY (BrIndentSpecial indAdd) r
             BrIndentSpecial i -> reWrap $ BDFAddBaseY (BrIndentSpecial i) r
         BDFBaseYPushCur bd -> do
           acp <- mGet
@@ -321,11 +311,7 @@ transformAlts =
           return $ reWrap $ BDFLines (l':lr')
         BDFEnsureIndent indent bd -> do
           acp <- mGet
-          indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
-          let indAdd = case indent of
-                BrIndentNone -> 0
-                BrIndentRegular -> indAmount
-                BrIndentSpecial i -> i
+          indAdd <- fixIndentationForMultiple acp indent
           mSet $ acp
             { _acp_indentPrep = 0
               -- TODO: i am not sure this is valid, in general.
@@ -863,3 +849,25 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
       VerticalSpacingParSome i -> VerticalSpacingParSome $ x1 `max` i
       VerticalSpacingParNone -> VerticalSpacingParSome $ x1
       VerticalSpacingParAlways i -> VerticalSpacingParAlways $ x1 `max` i
+
+fixIndentationForMultiple
+  :: (MonadMultiReader (CConfig Identity) m) => AltCurPos -> BrIndent -> m Int
+fixIndentationForMultiple acp indent = do
+  indAmount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
+  let indAddRaw = case indent of
+        BrIndentNone      -> 0
+        BrIndentRegular   -> indAmount
+        BrIndentSpecial i -> i
+  -- for IndentPolicyMultiple, we restrict the amount of added
+  -- indentation in such a manner that we end up on a multiple of the
+  -- base indentation.
+  indPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
+  pure $ if indPolicy == IndentPolicyMultiple
+    then
+      let indAddMultiple1 =
+            indAddRaw - ((_acp_indent acp + indAddRaw) `mod` indAmount)
+          indAddMultiple2 = if indAddMultiple1 <= 0
+            then indAddMultiple1 + indAmount
+            else indAddMultiple1
+      in  indAddMultiple2
+    else indAddRaw
