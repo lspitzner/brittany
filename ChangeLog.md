@@ -37,6 +37,7 @@
     - Fix empty function constraints (`() => IO ()`) (#133)
     - Fix overflowing columns caused by aligning with surrounding lines
       for certain complex cases
+    - Implement hacky workaround for `type instance`s (`-XTypeFamilies`) (#89)
 * Layouting changes:
     - On default settings, allow single-line module header
       `module MyModule where` when no exports
