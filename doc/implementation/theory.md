@@ -1,6 +1,6 @@
 # Introduction
 
-[The readme](../../master/README.md) mentions a couple of goals for this
+[The readme](../../README.md) mentions a couple of goals for this
 project, including the following two:
 
 - Be clever about using the available horizontal space while not overflowing
