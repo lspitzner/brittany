@@ -608,6 +608,25 @@ go _ ((IRTypeError ps t1 t2, _) : _) = Left $ makeError ps t1 t2
 go _ ((_, IRTypeError ps t1 t2) : _) = Left $ makeError ps t1 t2
 
 #test issue 89 - type-family-instance
-
 type instance (XPure StageParse) = ()
 type Pair a = (a, a)
+
+#test issue 144
+-- brittany { lconfig_indentAmount: 4, lconfig_indentPolicy: IndentPolicyMultiple }
+dsfnjKeekbwwbosbOfakxqRsiyix cnehokzozwbVaguvu migbnaRwutbz =
+    let
+        eyuAfrarIso'
+            :: (RveoexdxunuAafalm -> Axlau (Axlau (a, OinejrdCplle)))
+            -> Gbodoy
+            -> Axlau (Axlau OinejrdCplle, Gbodoy)
+        eyuAfrarIso' = ulcPaaekBst cnehokzozwbVaguvu
+        amkgoxEhalazJjxunecCuIfaw
+            :: Axlau (Axlau OinejrdCplle, Gbodoy) -> Axlau RqlnrluYqednbCiggxi
+        amkgoxEhalazJjxunecCuIfaw uKqviuBisjtn = do
+            (sEmo, quc) <- uKqviuBisjtn
+            pure (xoheccewfWoeyiagOkfodiq sEmo quc)
+        xoheccewfWoeyiagOkfodiq
+            :: Axlau OinejrdCplle -> Gbodoy -> RqlnrluYqednbCiggxi
+        xoheccewfWoeyiagOkfodiq sEmo quc = case migbnaRwutbz of
+            Afogmf -> xgeqe (OfBkkuih quc) (Ciitog quc) sEmo
+    in QabqyilexuiNizzhsQuxxac migbnaRwutbz (hwaTihhjt lhowvscIiozgqe)
