@@ -707,7 +707,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           -- paragraph". That most importantly means that Lines should never
           -- be inserted anywhere but at the start of the line. A
           -- counterexample would be anything like Seq[Lit "foo", Lines].
-          lSpss <- fmap filterAndLimit <$> rec `mapM` ls
+          lSpss <- map filterAndLimit <$> rec `mapM` ls
           let worbled = fmap reverse
                       $ sequence
                       $ reverse
@@ -745,7 +745,8 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           return $ if null mVs
             then [VerticalSpacing 0 (VerticalSpacingParAlways colMax) False]
             else mVs <&> \vs -> vs
-              { _vs_paragraph = case _vs_paragraph vs of
+              { _vs_sameLine = min colMax (_vs_sameLine vs)
+              , _vs_paragraph = case _vs_paragraph vs of
                   VerticalSpacingParNone -> VerticalSpacingParNone
                   VerticalSpacingParAlways i -> VerticalSpacingParAlways i
                   VerticalSpacingParSome i -> VerticalSpacingParAlways i

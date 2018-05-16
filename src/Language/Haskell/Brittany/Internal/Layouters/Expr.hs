@@ -601,13 +601,14 @@ layoutExpr lexpr@(L _ expr) = do
           --  in
           --    fooooooooooooooooooo
           let noHangingBinds =
-                [ docAddBaseY BrIndentRegular
+                [ docNonBottomSpacing $ docAddBaseY BrIndentRegular
                 $ docPar
                   (docLit $ Text.pack "let")
                   (docSetBaseAndIndent $ docLines bindDocs)
                 , docSeq
                   [ docLit $ Text.pack "in "
-                  , docAddBaseY BrIndentRegular expDoc1
+                  , docAddBaseY BrIndentRegular
+                  $ docForceParSpacing expDoc1
                   ]
                 ]
           addAlternative $ case indentPolicy of

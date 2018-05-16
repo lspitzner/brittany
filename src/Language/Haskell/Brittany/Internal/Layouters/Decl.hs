@@ -421,8 +421,8 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
         addAlternative
           $ docLines
           $  [ docSeq (patPartInline ++ [guardPart, return binderDoc])
-             , docEnsureIndent BrIndentRegular
-             $ docNonBottomSpacing
+             , docNonBottomSpacing
+             $ docEnsureIndent BrIndentRegular
              $ docAddBaseY BrIndentRegular
              $ return body
              ]
