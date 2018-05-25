@@ -43,7 +43,7 @@ func = do
     }
 
 #test record construction 1
-func = Foo {_lstate_indent = _lstate_indent state}
+func = Foo { _lstate_indent = _lstate_indent state }
 
 #test record construction 2
 func = Foo
@@ -478,17 +478,17 @@ foo =
 #test issue 52 a
 
 {-# LANGUAGE RecordWildCards #-}
-v = A {a = 1, ..} where b = 2
+v = A { a = 1, .. } where b = 2
 
 #test issue 52 b
 
 {-# LANGUAGE RecordWildCards #-}
-v = A {..} where b = 2
+v = A { .. } where b = 2
 
 #test issue 52 c
 
 {-# LANGUAGE RecordWildCards #-}
-v = A {a = 1, b = 2, c = 3}
+v = A { a = 1, b = 2, c = 3 }
 
 #test issue 63 a
 #pending fix does not work on 8.0.2

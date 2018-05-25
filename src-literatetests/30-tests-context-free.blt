@@ -931,7 +931,7 @@ func = do
     }
 
 #test record construction 1
-func = Foo {_lstate_indent = _lstate_indent state}
+func = Foo { _lstate_indent = _lstate_indent state }
 
 #test record construction 2
 func = Foo

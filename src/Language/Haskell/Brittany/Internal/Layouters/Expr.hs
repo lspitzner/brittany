@@ -749,8 +749,8 @@ layoutExpr lexpr@(L _ expr) = do
           then return Nothing
           else Just <$> docSharedWrapper layoutExpr fExpr
         return (fieldl, lrdrNameToText lnameF, fExpDoc)
-      let line1 appender wrapper =
-            [ appender $ docLit $ Text.pack "{"
+      let line1 wrapper =
+            [ appSep $ docLit $ Text.pack "{"
             , docWrapNodePrior fd1l $ appSep $ docLit fd1n
             , case fd1e of
                 Just x -> docSeq
@@ -776,8 +776,9 @@ layoutExpr lexpr@(L _ expr) = do
       docAlt
         [  docSeq
         $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
-        ++ line1 id docForceSingleline
+        ++ line1 docForceSingleline
         ++ join (lineR docForceSingleline)
+        ++ [docSeparator]
         ++ lineN
         , docSetParSpacing
         $ docAddBaseY BrIndentRegular
@@ -785,14 +786,14 @@ layoutExpr lexpr@(L _ expr) = do
             (docNodeAnnKW lexpr Nothing nameDoc)
             ( docNonBottomSpacing
             $ docLines
-            $  [docCols ColRecUpdate $ line1 appSep (docAddBaseY BrIndentRegular)]
+            $  [docCols ColRecUpdate $ line1 (docAddBaseY BrIndentRegular)]
             ++ (docCols ColRecUpdate <$> lineR (docAddBaseY BrIndentRegular))
             ++ [docSeq lineN]
             )
         ]
     RecordCon lname _ _ (HsRecFields [] (Just 0)) -> do
       let t = lrdrNameToText lname
-      docWrapNode lname $ docLit $ t <> Text.pack " {..}"
+      docWrapNode lname $ docLit $ t <> Text.pack " { .. }"
     RecordCon lname _ _ (HsRecFields fs@(_:_) (Just dotdoti)) | dotdoti == length fs -> do
       let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
       ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr pun)) -> do
@@ -800,8 +801,8 @@ layoutExpr lexpr@(L _ expr) = do
           then return Nothing
           else Just <$> docSharedWrapper layoutExpr fExpr
         return (fieldl, lrdrNameToText lnameF, fExpDoc)
-      let line1 appender wrapper =
-            [ appender $ docLit $ Text.pack "{"
+      let line1 wrapper =
+            [ appSep $ docLit $ Text.pack "{"
             , docWrapNodePrior fd1l $ appSep $ docLit fd1n
             , case fd1e of
                 Just x -> docSeq
@@ -831,9 +832,10 @@ layoutExpr lexpr@(L _ expr) = do
       docAlt
         [  docSeq
         $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
-        ++ line1 id docForceSingleline
+        ++ line1 docForceSingleline
         ++ join (lineR docForceSingleline)
         ++ lineDot
+        ++ [docSeparator]
         ++ lineN
         , docSetParSpacing
         $ docAddBaseY BrIndentRegular
@@ -841,7 +843,7 @@ layoutExpr lexpr@(L _ expr) = do
             (docNodeAnnKW lexpr Nothing nameDoc)
             ( docNonBottomSpacing
             $ docLines
-            $  [docCols ColRecUpdate $ line1 appSep (docAddBaseY BrIndentRegular)]
+            $  [docCols ColRecUpdate $ line1 (docAddBaseY BrIndentRegular)]
             ++ (docCols ColRecUpdate <$> lineR (docAddBaseY BrIndentRegular))
             ++ [docSeq lineDot, docSeq lineN]
             )
