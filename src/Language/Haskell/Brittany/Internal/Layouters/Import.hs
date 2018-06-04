@@ -89,7 +89,10 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
           if compact
           then docAlt
             [ docSeq [hidDoc, docForceSingleline $ layoutLLIEs True llies]
-            , docPar hidDoc (layoutLLIEs True llies)
+            , let makeParIfHiding = if hiding
+                    then docAddBaseY BrIndentRegular . docPar hidDoc
+                    else id
+              in makeParIfHiding (layoutLLIEs True llies)
             ]
           else do
             ieDs <- layoutAnnAndSepLLIEs llies
