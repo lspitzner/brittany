@@ -17,8 +17,9 @@ where
 
 #include "prelude.inc"
 
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
+-- brittany { lconfig_importAsColumn: 60, lconfig_importColumn: 60 }
+import qualified Language.Haskell.GHC.ExactPrint         as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Types   as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 
 import           Data.Data
@@ -27,9 +28,9 @@ import           Data.HList.HList
 import qualified Data.Yaml
 import qualified Data.ByteString.Char8
 import           Data.CZipWith
-import qualified UI.Butcher.Monadic as Butcher
+import qualified UI.Butcher.Monadic                      as Butcher
 
-import qualified Data.Text.Lazy.Builder as Text.Builder
+import qualified Data.Text.Lazy.Builder                  as Text.Builder
 
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.Config.Types
@@ -50,15 +51,19 @@ import           Language.Haskell.Brittany.Internal.Transformations.Par
 import           Language.Haskell.Brittany.Internal.Transformations.Columns
 import           Language.Haskell.Brittany.Internal.Transformations.Indent
 
-import qualified GHC as GHC hiding (parseModule)
-import           ApiAnnotation ( AnnKeywordId(..) )
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
-import           SrcLoc ( SrcSpan )
+import qualified GHC                                     as GHC
+                                                   hiding ( parseModule )
+import           ApiAnnotation                            ( AnnKeywordId(..) )
+import           GHC                                      ( runGhc
+                                                          , GenLocated(L)
+                                                          , moduleNameString
+                                                          )
+import           SrcLoc                                   ( SrcSpan )
 import           HsSyn
-import qualified DynFlags as GHC
-import qualified GHC.LanguageExtensions.Type as GHC
+import qualified DynFlags                                as GHC
+import qualified GHC.LanguageExtensions.Type             as GHC
 
-import           Data.Char (isSpace)
+import           Data.Char                                ( isSpace )
 
 
 
@@ -267,7 +272,8 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
             & confUnpack
     (ews, outRaw) <- if hasCPP || omitCheck
       then return $ pPrintModule moduleConfig perItemConf anns parsedSource
-      else lift $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
+      else lift
+        $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
     let hackF s = fromMaybe s
           $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
     pure $ if hackAroundIncludes
@@ -303,30 +309,26 @@ pPrintModule
   -> GHC.ParsedSource
   -> ([BrittanyError], TextL.Text)
 pPrintModule conf inlineConf anns parsedModule =
-  let
-    ((out, errs), debugStrings) =
-      runIdentity
-        $ MultiRWSS.runMultiRWSTNil
-        $ MultiRWSS.withMultiWriterAW
-        $ MultiRWSS.withMultiWriterAW
-        $ MultiRWSS.withMultiWriterW
-        $ MultiRWSS.withMultiReader anns
-        $ MultiRWSS.withMultiReader conf
-        $ MultiRWSS.withMultiReader inlineConf
-        $ MultiRWSS.withMultiReader (extractToplevelAnns parsedModule anns)
-        $ do
-            traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
-              $ annsDoc anns
-            ppModule parsedModule
-    tracer =
-      if Seq.null debugStrings
-      then
-        id
-      else
-        trace ("---- DEBUGMESSAGES ---- ")
-          . foldr (seq . join trace) id debugStrings
-  in
-    tracer $ (errs, Text.Builder.toLazyText out)
+  let ((out, errs), debugStrings) =
+        runIdentity
+          $ MultiRWSS.runMultiRWSTNil
+          $ MultiRWSS.withMultiWriterAW
+          $ MultiRWSS.withMultiWriterAW
+          $ MultiRWSS.withMultiWriterW
+          $ MultiRWSS.withMultiReader anns
+          $ MultiRWSS.withMultiReader conf
+          $ MultiRWSS.withMultiReader inlineConf
+          $ MultiRWSS.withMultiReader (extractToplevelAnns parsedModule anns)
+          $ do
+              traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
+                $ annsDoc anns
+              ppModule parsedModule
+      tracer = if Seq.null debugStrings
+        then id
+        else
+          trace ("---- DEBUGMESSAGES ---- ")
+            . foldr (seq . join trace) id debugStrings
+  in  tracer $ (errs, Text.Builder.toLazyText out)
   -- unless () $ do
   --
   --   debugStrings `forM_` \s ->
@@ -374,8 +376,8 @@ parsePrintModuleTests conf filename input = do
               .> confUnpack
       (errs, ltext) <- if omitCheck
         then return $ pPrintModule moduleConf perItemConf anns parsedModule
-        else
-          lift $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
+        else lift
+          $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
       if null errs
         then pure $ TextL.toStrict $ ltext
         else
@@ -426,7 +428,8 @@ parsePrintModuleTests conf filename input = do
 
 toLocal :: Config -> ExactPrint.Anns -> PPMLocal a -> PPM a
 toLocal conf anns m = do
-  (x, write) <- lift $ MultiRWSS.runMultiRWSTAW (conf :+: anns :+: HNil) HNil $ m
+  (x, write) <-
+    lift $ MultiRWSS.runMultiRWSTAW (conf :+: anns :+: HNil) HNil $ m
   MultiRWSS.mGetRawW >>= \w -> MultiRWSS.mPutRawW (w `mappend` write)
   pure x
 
@@ -437,7 +440,7 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
     let declAnnKey       = ExactPrint.mkAnnKey decl
     let declBindingNames = getDeclBindingNames decl
     inlineConf <- mAsk
-    let mDeclConf     = Map.lookup declAnnKey $ _icd_perKey inlineConf
+    let mDeclConf = Map.lookup declAnnKey $ _icd_perKey inlineConf
     let mBindingConfs =
           declBindingNames <&> \n -> Map.lookup n $ _icd_perBinding inlineConf
     filteredAnns <- mAsk
@@ -449,8 +452,8 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
 
     config <- mAsk
 
-    let config' = cZipWith fromOptionIdentity config $ mconcat
-          (catMaybes (mBindingConfs ++ [mDeclConf]))
+    let config' = cZipWith fromOptionIdentity config
+          $ mconcat (catMaybes (mBindingConfs ++ [mDeclConf]))
 
     let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
     toLocal config' filteredAnns $ do
@@ -486,13 +489,14 @@ getDeclBindingNames :: LHsDecl GhcPs -> [String]
 getDeclBindingNames (L _ decl) = case decl of
   SigD (TypeSig ns _) -> ns <&> \(L _ n) -> Text.unpack (rdrNameToText n)
   ValD (FunBind (L _ n) _ _ _ _) -> [Text.unpack $ rdrNameToText n]
-  _ -> []
+  _                              -> []
 
 
 -- Prints the information associated with the module annotation
 -- This includes the imports
-ppPreamble :: GenLocated SrcSpan (HsModule GhcPs)
-           -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
+ppPreamble
+  :: GenLocated SrcSpan (HsModule GhcPs)
+  -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
 ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
   filteredAnns <- mAsk <&> \annMap ->
     Map.findWithDefault Map.empty (ExactPrint.mkAnnKey lmod) annMap
@@ -550,8 +554,8 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
 
   if shouldReformatPreamble
     then toLocal config filteredAnns' $ withTransformedAnns lmod $ do
-        briDoc <- briDocMToPPM $ layoutModule lmod
-        layoutBriDoc briDoc
+      briDoc <- briDocMToPPM $ layoutModule lmod
+      layoutBriDoc briDoc
     else
       let emptyModule = L loc m { hsmodDecls = [] }
       in  MultiRWSS.withMultiReader filteredAnns' $ processDefault emptyModule
@@ -567,14 +571,14 @@ _bindHead :: HsBind GhcPs -> String
 _bindHead = \case
   FunBind fId _ _ _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
   PatBind _pat _ _ _ ([], []) -> "PatBind smth"
-  _ -> "unknown bind"
+  _                           -> "unknown bind"
 
 
 
 layoutBriDoc :: BriDocNumbered -> PPMLocal ()
 layoutBriDoc briDoc = do
   -- first step: transform the briDoc.
-  briDoc'                       <- MultiRWSS.withMultiStateS BDEmpty $ do
+  briDoc' <- MultiRWSS.withMultiStateS BDEmpty $ do
     -- Note that briDoc is BriDocNumbered, but state type is BriDoc.
     -- That's why the alt-transform looks a bit special here.
     traceIfDumpConf "bridoc raw" _dconf_dump_bridoc_raw
@@ -583,26 +587,33 @@ layoutBriDoc briDoc = do
       $ briDoc
     -- bridoc transformation: remove alts
     transformAlts briDoc >>= mSet
-    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-alt"
-                                            _dconf_dump_bridoc_simpl_alt
+    mGet
+      >>= briDocToDoc
+      .>  traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt
     -- bridoc transformation: float stuff in
     mGet >>= transformSimplifyFloating .> mSet
-    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-floating"
-                                            _dconf_dump_bridoc_simpl_floating
+    mGet
+      >>= briDocToDoc
+      .>  traceIfDumpConf "bridoc post-floating"
+                          _dconf_dump_bridoc_simpl_floating
     -- bridoc transformation: par removal
     mGet >>= transformSimplifyPar .> mSet
-    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-par"
-                                            _dconf_dump_bridoc_simpl_par
+    mGet
+      >>= briDocToDoc
+      .>  traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par
     -- bridoc transformation: float stuff in
     mGet >>= transformSimplifyColumns .> mSet
-    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-columns"
-                                            _dconf_dump_bridoc_simpl_columns
+    mGet
+      >>= briDocToDoc
+      .>  traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns
     -- bridoc transformation: indent
     mGet >>= transformSimplifyIndent .> mSet
-    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc post-indent"
-                                            _dconf_dump_bridoc_simpl_indent
-    mGet >>= briDocToDoc .> traceIfDumpConf "bridoc final"
-                                            _dconf_dump_bridoc_final
+    mGet
+      >>= briDocToDoc
+      .>  traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent
+    mGet
+      >>= briDocToDoc
+      .>  traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final
     -- -- convert to Simple type
     -- simpl <- mGet <&> transformToSimple
     -- return simpl
@@ -627,6 +638,6 @@ layoutBriDoc briDoc = do
   let remainingComments =
         extractAllComments =<< Map.elems (_lstate_comments state')
   remainingComments
-    `forM_` (fst .> show .> ErrorUnusedComment .> (:[]) .> mTell)
+    `forM_` (fst .> show .> ErrorUnusedComment .> (: []) .> mTell)
 
   return $ ()
