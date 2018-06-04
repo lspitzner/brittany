@@ -87,7 +87,10 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         Just (_, llies) -> do
           hasComments <- hasAnyCommentsBelow llies
           if compact
-          then docSeq [hidDoc, layoutLLIEs True llies]
+          then docAlt
+            [ docSeq [hidDoc, docForceSingleline $ layoutLLIEs True llies]
+            , docPar hidDoc (layoutLLIEs True llies)
+            ]
           else do
             ieDs <- layoutAnnAndSepLLIEs llies
             docWrapNodeRest llies
@@ -99,7 +102,7 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
                     (docSeq [hidDoc, docParenLSep, docWrapNode llies docEmpty])
                     (docEnsureIndent (BrIndentSpecial hidDocColDiff) docParenR)
                   else docSeq [hidDoc, docParenLSep, docSeparator, docParenR]
-                  -- ..[hiding].( b )
+                -- ..[hiding].( b )
                 [ieD] -> runFilteredAlternative $ do
                   addAlternativeCond (not hasComments)
                     $ docSeq
@@ -112,9 +115,9 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
                   addAlternative $ docPar
                     (docSeq [hidDoc, docParenLSep, docNonBottomSpacing ieD])
                     (docEnsureIndent (BrIndentSpecial hidDocColDiff) docParenR)
-                  -- ..[hiding].( b
-                  --            , b'
-                  --            )
+                -- ..[hiding].( b
+                --            , b'
+                --            )
                 (ieD:ieDs') ->
                   docPar
                     (docSeq [hidDoc, docSetBaseY $ docSeq [docParenLSep, ieD]])

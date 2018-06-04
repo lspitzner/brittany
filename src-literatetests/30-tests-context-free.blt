@@ -736,6 +736,22 @@ import Test (T, T2(), T3(..), T4(T4), T5(T5, t5), T6((<|>)), (+))
 import Test hiding ()
 import Test as T hiding ()
 
+#test import-hiding-many
+import Prelude as X
+  hiding
+  ( head
+  , init
+  , last
+  , maximum
+  , minimum
+  , pred
+  , read
+  , readFile
+  , succ
+  , tail
+  , undefined
+  )
+
 #test long-module-name-simple
 import TestJustShortEnoughModuleNameLikeThisOne ()
 import TestJustAbitToLongModuleNameLikeThisOneIs ()
