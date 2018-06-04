@@ -28,9 +28,8 @@ import           Data.Generics.Uniplate.Direct as Uniplate
 
 
 
-data InlineConfig = InlineConfig
-  { _icd_perModule :: CConfig Option
-  , _icd_perBinding :: Map String (CConfig Option)
+data PerItemConfig = PerItemConfig
+  { _icd_perBinding :: Map String (CConfig Option)
   , _icd_perKey :: Map ExactPrint.Types.AnnKey (CConfig Option)
   }
 #if MIN_VERSION_ghc(8,2,0)
@@ -38,7 +37,7 @@ data InlineConfig = InlineConfig
 #endif
 
 type PPM = MultiRWSS.MultiRWS
-  '[Map ExactPrint.AnnKey ExactPrint.Anns, InlineConfig, Config, ExactPrint.Anns]
+  '[Map ExactPrint.AnnKey ExactPrint.Anns, PerItemConfig, Config, ExactPrint.Anns]
   '[Text.Builder.Builder, [BrittanyError], Seq String]
   '[]
 

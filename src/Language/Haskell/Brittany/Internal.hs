@@ -71,7 +71,7 @@ data InlineConfigTarget
 extractCommentConfigs
   :: ExactPrint.Anns
   -> TopLevelDeclNameMap
-  -> Either (String, String) InlineConfig
+  -> Either (String, String) (CConfig Option, PerItemConfig)
 extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
   let
     commentLiness =
@@ -200,11 +200,10 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
         _ -> False
       ]
 
-  pure $ InlineConfig
-    { _icd_perModule  = perModule
-    , _icd_perBinding = perBinding
-    , _icd_perKey     = perKey
-    }
+  pure
+    $ ( perModule
+      , PerItemConfig { _icd_perBinding = perBinding, _icd_perKey = perKey }
+      )
 
 
 getTopLevelDeclNameMap :: GHC.ParsedSource -> TopLevelDeclNameMap
@@ -256,17 +255,19 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
     case parseResult of
       Left  err -> throwE [ErrorInput err]
       Right x   -> pure x
-  inlineConf <- either (throwE . (: []) . uncurry ErrorMacroConfig) pure
-    $ extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource)
+  (inlineConf, perItemConf) <-
+    either (throwE . (: []) . uncurry ErrorMacroConfig) pure
+      $ extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource)
+  let moduleConfig = cZipWith fromOptionIdentity config inlineConf
   (errsWarns, outputTextL) <- do
     let omitCheck =
-          config
+          moduleConfig
             & _conf_errorHandling
             & _econf_omit_output_valid_check
             & confUnpack
     (ews, outRaw) <- if hasCPP || omitCheck
-      then return $ pPrintModule config inlineConf anns parsedSource
-      else lift $ pPrintModuleAndCheck config inlineConf anns parsedSource
+      then return $ pPrintModule moduleConfig perItemConf anns parsedSource
+      else lift $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
     let hackF s = fromMaybe s
           $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
     pure $ if hackAroundIncludes
@@ -284,7 +285,7 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
       customErrOrder ErrorUnknownNode{}   = 3
       customErrOrder ErrorMacroConfig{}   = 5
   let hasErrors =
-        case config & _conf_errorHandling & _econf_Werror & confUnpack of
+        case moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack of
           False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
           True  -> not $ null errsWarns
   if hasErrors then throwE $ errsWarns else pure $ TextL.toStrict outputTextL
@@ -297,7 +298,7 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
 -- can occur.
 pPrintModule
   :: Config
-  -> InlineConfig
+  -> PerItemConfig
   -> ExactPrint.Anns
   -> GHC.ParsedSource
   -> ([BrittanyError], TextL.Text)
@@ -335,7 +336,7 @@ pPrintModule conf inlineConf anns parsedModule =
 -- if it does not.
 pPrintModuleAndCheck
   :: Config
-  -> InlineConfig
+  -> PerItemConfig
   -> ExactPrint.Anns
   -> GHC.ParsedSource
   -> IO ([BrittanyError], TextL.Text)
@@ -361,18 +362,20 @@ parsePrintModuleTests conf filename input = do
   case parseResult of
     Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
     Right (anns, parsedModule) -> runExceptT $ do
-      inlineConf <-
+      (inlineConf, perItemConf) <-
         case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
           Left  err -> throwE $ "error in inline config: " ++ show err
           Right x   -> pure x
+      let moduleConf = cZipWith fromOptionIdentity conf inlineConf
       let omitCheck =
             conf
               &  _conf_errorHandling
               .> _econf_omit_output_valid_check
               .> confUnpack
       (errs, ltext) <- if omitCheck
-        then return $ pPrintModule conf inlineConf anns parsedModule
-        else lift $ pPrintModuleAndCheck conf inlineConf anns parsedModule
+        then return $ pPrintModule moduleConf perItemConf anns parsedModule
+        else
+          lift $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
       if null errs
         then pure $ TextL.toStrict $ ltext
         else
@@ -434,7 +437,6 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
     let declAnnKey       = ExactPrint.mkAnnKey decl
     let declBindingNames = getDeclBindingNames decl
     inlineConf <- mAsk
-    let inlineModConf = _icd_perModule inlineConf
     let mDeclConf     = Map.lookup declAnnKey $ _icd_perKey inlineConf
     let mBindingConfs =
           declBindingNames <&> \n -> Map.lookup n $ _icd_perBinding inlineConf
@@ -448,7 +450,7 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
     config <- mAsk
 
     let config' = cZipWith fromOptionIdentity config $ mconcat
-          (inlineModConf : (catMaybes (mBindingConfs ++ [mDeclConf])))
+          (catMaybes (mBindingConfs ++ [mDeclConf]))
 
     let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
     toLocal config' filteredAnns $ do

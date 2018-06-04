@@ -248,7 +248,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
       putErrorLn $ show left
       ExceptT.throwE 60
     Right (anns, parsedSource, hasCPP) -> do
-      inlineConf <- case extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource) of
+      (inlineConf, perItemConf) <- case extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource) of
         Left (err, input) -> do
           putErrorLn
             $  "Error: parse error in inline configuration:"
@@ -257,6 +257,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
           ExceptT.throwE 61
         Right c -> -- trace (showTree c) $
           pure c
+      let moduleConf = cZipWith fromOptionIdentity config inlineConf
       when (config & _conf_debug .> _dconf_dump_ast_full .> confUnpack) $ do
         let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
         trace ("---- ast ----\n" ++ show val) $ return ()
@@ -265,15 +266,15 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM = ExceptT.runEx
           then do
             pure ([], Text.pack $ ExactPrint.exactPrint parsedSource anns)
           else do
-            let omitCheck = config & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
+            let omitCheck = moduleConf & _conf_errorHandling .> _econf_omit_output_valid_check .> confUnpack
             (ews, outRaw) <- if hasCPP || omitCheck
-              then return $ pPrintModule config inlineConf anns parsedSource
-              else liftIO $ pPrintModuleAndCheck config inlineConf anns parsedSource
+              then return $ pPrintModule moduleConf perItemConf anns parsedSource
+              else liftIO $ pPrintModuleAndCheck moduleConf perItemConf anns parsedSource
             let hackF s = fromMaybe s $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
             let out = TextL.toStrict $ if hackAroundIncludes
                   then TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn (TextL.pack "\n") outRaw
                   else outRaw
-            out' <- if config & _conf_obfuscate & confUnpack
+            out' <- if moduleConf & _conf_obfuscate & confUnpack
               then lift $ obfuscate out
               else pure out
             pure $ (ews, out')
