@@ -76,7 +76,7 @@ log the size of the input, but _not_ the full input/output of requests.)
     # cabal new-configure -w $PATH_TO_GHC_8_0
     cabal new-build exe:brittany
     # and it should be safe to just copy the executable, e.g.
-    cp `./find dist-newstyle/build/ -type f -name brittany` $HOME/.cabal/bin/
+    cp `find dist-newstyle/ -name brittany -type f | xargs -x ls -t | head -n1` $HOME/.cabal/bin/
     ~~~~
 
 - via `stack` using a sufficiently recent stackage snapshot (dated to >= 2017-11-15)
