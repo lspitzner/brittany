@@ -39,46 +39,51 @@ prepareName = id
 
 layoutIE :: ToBriDoc IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
-  IEVar      _                     -> ien
-  IEThingAbs _                     -> ien
-  IEThingAll _                     -> docSeq [ien, docLit $ Text.pack "(..)"]
-  IEThingWith _ (IEWildcard _) _ _ -> docSeq [ien, docLit $ Text.pack "(..)"]
+  IEVar      x -> layoutWrapped x
+  IEThingAbs x -> layoutWrapped x
+  IEThingAll _ -> docSeq [ienDoc, docLit $ Text.pack "(..)"]
+  IEThingWith _ (IEWildcard _) _ _ ->
+    docSeq [ienDoc, docLit $ Text.pack "(..)"]
   IEThingWith _ _ ns _ -> do
     hasComments <- hasAnyCommentsBelow lie
     runFilteredAlternative $ do
       addAlternativeCond (not hasComments)
         $  docSeq
-        $  [ien, docLit $ Text.pack "("]
+        $  [ienDoc, docLit $ Text.pack "("]
         ++ intersperse docCommaSep (map nameDoc ns)
         ++ [docParenR]
-      addAlternative
-        $ docAddBaseY BrIndentRegular
-        $ docPar ien (layoutItems (splitFirstLast ns))
+      addAlternative $ docAddBaseY BrIndentRegular $ docPar
+        ienDoc
+        (layoutItems (splitFirstLast ns))
    where
     nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
     layoutItem n = docSeq [docCommaSep, docWrapNode n $ nameDoc n]
-    layoutItems FirstLastEmpty =
-      docSetBaseY $
-        docLines [docSeq [docParenLSep, docWrapNodeRest lie docEmpty]
-                 ,docParenR
-                 ]
-    layoutItems (FirstLastSingleton n) =
-      docSetBaseY $ docLines
-        [docSeq [docParenLSep, docWrapNodeRest lie $ nameDoc n], docParenR]
-    layoutItems (FirstLast n1 nMs nN)  =
-      docSetBaseY $ docLines $
-         [docSeq [docParenLSep, docWrapNode n1 $ nameDoc n1]]
-         ++ map layoutItem nMs
-         ++ [ docSeq [docCommaSep, docWrapNodeRest lie $ nameDoc nN]
-            , docParenR
-            ]
+    layoutItems FirstLastEmpty = docSetBaseY $ docLines
+      [docSeq [docParenLSep, docWrapNodeRest lie docEmpty], docParenR]
+    layoutItems (FirstLastSingleton n) = docSetBaseY $ docLines
+      [docSeq [docParenLSep, docWrapNodeRest lie $ nameDoc n], docParenR]
+    layoutItems (FirstLast n1 nMs nN) =
+      docSetBaseY
+        $  docLines
+        $  [docSeq [docParenLSep, docWrapNode n1 $ nameDoc n1]]
+        ++ map layoutItem nMs
+        ++ [docSeq [docCommaSep, docWrapNodeRest lie $ nameDoc nN], docParenR]
   IEModuleContents n -> docSeq
     [ docLit $ Text.pack "module"
     , docSeparator
     , docLit . Text.pack . moduleNameString $ unLoc n
     ]
   _ -> docEmpty
-  where ien = docLit =<< lrdrNameToTextAnn (ieName <$> lie)
+ where
+  ienDoc        = docLit =<< lrdrNameToTextAnn (ieName <$> lie)
+  layoutWrapped = \case
+    L _ (IEName    n) -> docLit =<< lrdrNameToTextAnn n
+    L _ (IEPattern n) -> do
+      name <- lrdrNameToTextAnn n
+      docLit $ Text.pack "pattern " <> name
+    L _ (IEType n) -> do
+      name <- lrdrNameToTextAnn n
+      docLit $ Text.pack "type " <> name
 
 -- Helper function to deal with Located lists of LIEs.
 -- In particular this will also associate documentation

@@ -66,3 +66,17 @@ foo = do
       b <- g a
   return (a, b)
 
+###############################################################################
+## ExplicitNamespaces + PatternSynonyms
+#test explicitnamespaces_patternsynonyms export
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE PatternSynonyms #-}
+module Test (type (++), (++), pattern Foo) where
+
+#test explicitnamespaces_patternsynonyms import
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE PatternSynonyms #-}
+import           Test                                     ( type (++)
+                                                          , (++)
+                                                          , pattern Foo
+                                                          )
