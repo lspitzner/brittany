@@ -235,14 +235,14 @@ readConfig path = do
   if exists
     then do
       contents <- liftIO $ ByteString.readFile path -- no lazy IO, tyvm.
-      fileConf <- case Data.Yaml.decodeEither contents of
+      fileConf <- case Data.Yaml.decodeEither' contents of
         Left e -> do
           liftIO
             $  putStrErrLn
             $  "error reading in brittany config from "
             ++ path
             ++ ":"
-          liftIO $ putStrErrLn e
+          liftIO $ putStrErrLn (Data.Yaml.prettyPrintParseException e)
           mzero
         Right x -> return x
       return $ Just fileConf

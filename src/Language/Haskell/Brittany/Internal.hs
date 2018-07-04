@@ -122,7 +122,8 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
         , \s -> "{" `isPrefixOf` dropWhile (== ' ') s
         , Butcher.addCmdPart (Butcher.varPartDesc "yaml-config-document")
         $ fmap (\lconf -> (mempty { _conf_layout = lconf }, ""))
-        . Data.Yaml.decode
+        . either (\_ -> Nothing) Just
+        . Data.Yaml.decodeEither'
         . Data.ByteString.Char8.pack
           -- TODO: use some proper utf8 encoder instead?
         )
