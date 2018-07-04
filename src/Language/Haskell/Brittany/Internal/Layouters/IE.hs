@@ -39,8 +39,8 @@ prepareName = id
 
 layoutIE :: ToBriDoc IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
-  IEVar      x -> layoutWrapped x
-  IEThingAbs x -> layoutWrapped x
+  IEVar      x -> layoutWrapped lie x
+  IEThingAbs x -> layoutWrapped lie x
   IEThingAll _ -> docSeq [ienDoc, docLit $ Text.pack "(..)"]
   IEThingWith _ (IEWildcard _) _ _ ->
     docSeq [ienDoc, docLit $ Text.pack "(..)"]
@@ -76,7 +76,8 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   _ -> docEmpty
  where
   ienDoc        = docLit =<< lrdrNameToTextAnn (ieName <$> lie)
-  layoutWrapped = \case
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2, 8.4, .. */
+  layoutWrapped _ = \case
     L _ (IEName    n) -> docLit =<< lrdrNameToTextAnn n
     L _ (IEPattern n) -> do
       name <- lrdrNameToTextAnn n
@@ -84,6 +85,16 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     L _ (IEType n) -> do
       name <- lrdrNameToTextAnn n
       docLit $ Text.pack "type " <> name
+#else                      /* ghc-8.0 */
+  layoutWrapped outer n = do
+    name <- lrdrNameToTextAnn n
+    hasType <- hasAnnKeyword n AnnType
+    hasPattern <- hasAnnKeyword outer AnnPattern
+    docLit $ if
+      | hasType    -> Text.pack "type (" <> name <> Text.pack ")"
+      | hasPattern -> Text.pack "pattern " <> name
+      | otherwise  -> name
+#endif
 
 -- Helper function to deal with Located lists of LIEs.
 -- In particular this will also associate documentation
