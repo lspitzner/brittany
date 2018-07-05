@@ -630,3 +630,10 @@ dsfnjKeekbwwbosbOfakxqRsiyix cnehokzozwbVaguvu migbnaRwutbz =
         xoheccewfWoeyiagOkfodiq sEmo quc = case migbnaRwutbz of
             Afogmf -> xgeqe (OfBkkuih quc) (Ciitog quc) sEmo
     in QabqyilexuiNizzhsQuxxac migbnaRwutbz (hwaTihhjt lhowvscIiozgqe)
+
+#test issue 159
+spec = do
+  it "creates a snapshot at the given level" . withGraph runDB $ do
+    lift $ do
+      studentDiagnosticReadingLevel updatedStudent `shouldBe` Just 10 -- x
+      elaSnapshotReadingLevel snapshot `shouldBe` 12

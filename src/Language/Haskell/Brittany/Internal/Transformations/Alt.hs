@@ -440,7 +440,11 @@ getSpacing !bridoc = rec bridoc
       BDFPar{} -> error "BDPar with indent in getSpacing"
       BDFAlt [] -> error "empty BDAlt"
       BDFAlt (alt:_) -> rec alt
-      BDFForceMultiline  bd -> rec bd
+      BDFForceMultiline  bd -> do
+        mVs <- rec bd
+        return $ mVs >>= _vs_paragraph .> \case
+          VerticalSpacingParNone -> LineModeInvalid
+          _  -> mVs
       BDFForceSingleline bd -> do
         mVs <- rec bd
         return $ mVs >>= _vs_paragraph .> \case
@@ -686,7 +690,9 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFAlt alts -> do
           r <- rec `mapM` alts
           return $ filterAndLimit =<< r
-        BDFForceMultiline  bd -> rec bd
+        BDFForceMultiline  bd -> do
+          mVs <- filterAndLimit <$> rec bd
+          return $ filter ((/=VerticalSpacingParNone) . _vs_paragraph) mVs
         BDFForceSingleline bd -> do
           mVs <- filterAndLimit <$> rec bd
           return $ filter ((==VerticalSpacingParNone) . _vs_paragraph) mVs

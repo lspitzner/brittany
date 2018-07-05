@@ -57,6 +57,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , allocateNode
   , docSharedWrapper
   , hasAnyCommentsBelow
+  , hasAnyCommentsConnected
   , hasAnnKeyword
   )
 where
@@ -266,11 +267,26 @@ filterAnns :: Data.Data.Data ast => ast -> ExactPrint.Anns -> ExactPrint.Anns
 filterAnns ast =
   Map.filterWithKey (\k _ -> k `Set.member` foldedAnnKeys ast)
 
+-- | True if there are any comments that are
+-- a) connected to any node below (in AST sense) the given node AND
+-- b) after (in source code order) the node.
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) = do
   anns <- filterAnns ast <$> mAsk
   return
     $ List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
+    $ (=<<) extractAllComments
+    $ Map.elems
+    $ anns
+
+-- | True if there are any comments that are
+-- connected to any node below (in AST sense) the given node
+hasAnyCommentsConnected :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyCommentsConnected ast = do
+  anns <- filterAnns ast <$> mAsk
+  return
+    $ not
+    $ null
     $ (=<<) extractAllComments
     $ Map.elems
     $ anns

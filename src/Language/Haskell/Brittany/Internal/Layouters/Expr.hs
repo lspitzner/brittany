@@ -236,14 +236,21 @@ layoutExpr lexpr@(L _ expr) = do
                                               ]
       opLastDoc   <- docSharedWrapper layoutExpr expOp
       expLastDoc  <- docSharedWrapper layoutExpr expRight
-      hasComments <- hasAnyCommentsBelow lexpr
+      allowSinglelinePar <- do
+        hasComLeft <- hasAnyCommentsConnected expLeft
+        hasComOp   <- hasAnyCommentsConnected expOp
+        pure $ not hasComLeft && not hasComOp
       let allowPar = case (expOp, expRight) of
             (L _ (HsVar (L _ (Unqual occname))), _)
               | occNameString occname == "$" -> True
             (_, L _ (HsApp _ (L _ HsVar{}))) -> False
             _ -> True
       runFilteredAlternative $ do
-        addAlternativeCond (not hasComments)
+        -- > one + two + three
+        -- or
+        -- > one + two + case x of
+        -- >   _ -> three
+        addAlternativeCond allowSinglelinePar
           $ docSeq
           [ appSep $ docForceSingleline leftOperandDoc
           , docSeq
@@ -265,6 +272,9 @@ layoutExpr lexpr@(L _ expr) = do
         --      $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
         --       ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
         --     )
+        -- > one
+        -- >   + two
+        -- >   + three
         addAlternative $
           docPar
             leftOperandDoc
@@ -300,7 +310,10 @@ layoutExpr lexpr@(L _ expr) = do
         addAlternative
           $ docAddBaseY BrIndentRegular
           $ docPar
-              expDocLeft
+              expDocLeft -- TODO: this is not forced to single-line, which has
+                         -- certain.. interesting consequences.
+                         -- At least, the "two-line" label is not entirely
+                         -- accurate.
               ( docForceSingleline
               $ docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight]
               )
@@ -773,7 +786,7 @@ layoutExpr lexpr@(L _ expr) = do
             [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
             , docLit $ Text.pack "}"
             ]
-      docAlt
+      docAlt -- TODO: make this addFilteredAlternative and a hanging layout when Free
         [  docSeq
         $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
         ++ line1 docForceSingleline
@@ -829,7 +842,7 @@ layoutExpr lexpr@(L _ expr) = do
             [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
             , docLit $ Text.pack "}"
             ]
-      docAlt
+      docAlt -- TODO: make this addFilteredAlternative and a hanging layout when Free
         [  docSeq
         $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
         ++ line1 docForceSingleline
