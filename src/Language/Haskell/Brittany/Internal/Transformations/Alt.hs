@@ -545,6 +545,8 @@ getSpacing !bridoc = rec bridoc
     VerticalSpacingParNone -> 0
     VerticalSpacingParAlways i -> i
 
+data SpecialCompare = Unequal | Smaller | Bigger
+
 getSpacings
   :: forall m
    . (MonadMultiReader Config m, MonadMultiWriter (Seq String) m)
@@ -571,6 +573,29 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
               VerticalSpacingParNone -> True
               VerticalSpacingParSome i -> i <= colMax
               VerticalSpacingParAlways{} -> True
+      let specialCompare vs1 vs2 =
+            if (  (_vs_sameLine vs1 == _vs_sameLine vs2)
+               && (_vs_parFlag vs1 == _vs_parFlag vs2)
+               )
+              then case (_vs_paragraph vs1, _vs_paragraph vs2) of
+                (VerticalSpacingParAlways i1, VerticalSpacingParAlways i2) ->
+                  if i1 < i2 then Smaller else Bigger
+                (p1, p2) -> if p1 == p2 then Smaller else Unequal
+              else Unequal
+      let -- this is like List.nub, with one difference: if two elements
+          -- are unequal only in _vs_paragraph, with both ParAlways, we
+          -- treat them like equals and replace the first occurence with the
+          -- smallest member of this "equal group".
+          specialNub :: [VerticalSpacing] -> [VerticalSpacing]
+          specialNub [] = []
+          specialNub (x1 : xr) = case go x1 xr of
+            (r, xs') -> r : specialNub xs'
+           where
+            go y1 []        = (y1, [])
+            go y1 (y2 : yr) = case specialCompare y1 y2 of
+              Unequal -> let (r, yr') = go y1 yr in (r, y2 : yr')
+              Smaller -> go y1 yr
+              Bigger  -> go y2 yr
       let -- the standard function used to enforce a constant upper bound
           -- on the number of elements returned for each node. Should be
           -- applied whenever in a parent the combination of spacings from
@@ -579,11 +604,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           filterAndLimit = take limit
                            -- prune so we always consider a constant
                            -- amount of spacings per node of the BriDoc.
-                         . filter hasOkColCount
-                           -- throw out any spacings (i.e. children) that
-                           -- already use more columns than available in
-                           -- total.
-                         . List.nub
+                         . specialNub
                            -- In the end we want to know if there is at least
                            -- one valid spacing for any alternative.
                            -- If there are duplicates in the list, then these
@@ -605,6 +626,10 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                            -- layouts when we can than take non-optimal layouts
                            -- just to be consistent with other cases where
                            -- we'd choose non-optimal layouts.
+                         . filter hasOkColCount
+                           -- throw out any spacings (i.e. children) that
+                           -- already use more columns than available in
+                           -- total.
                          . preFilterLimit
       result <- case brdc of
         -- BDWrapAnnKey _annKey bd -> rec bd
