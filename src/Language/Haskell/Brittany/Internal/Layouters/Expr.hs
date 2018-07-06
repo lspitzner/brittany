@@ -177,10 +177,13 @@ layoutExpr lexpr@(L _ expr) = do
         , -- func argline1
           --   arglines
           -- e.g.
-          -- func if x
-          --   then 1
-          --   else 2
-          docSetParSpacing
+          -- func Abc
+          --   { member1 = True
+          --   , member2 = 13
+          --   }
+          docSetParSpacing -- this is most likely superfluous because
+                           -- this is a sequence of a one-line and a par-space
+                           -- anyways, so it is _always_ par-spaced.
         $ docAddBaseY BrIndentRegular
         $ docSeq
           [ appSep $ docForceSingleline expDoc1
