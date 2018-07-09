@@ -109,6 +109,8 @@ log the size of the input, but _not_ the full input/output of requests.)
 #### Neovim / Vim 8
   The [Neoformat](https://github.com/sbdchd/neoformat) plugin comes with support for
   brittany built in.
+#### Atom
+  [Atom Beautify](https://atom.io/packages/atom-beautify) supports brittany as a formatter for Haskell. Since the default formatter is set to hindent, you will need to change this setting to brittany, after installing the extension.
 
 # Usage
 
