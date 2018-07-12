@@ -43,7 +43,7 @@ library {
   hs-source-dirs:
     src
   install-includes: {
-    srcinc/prelude.inc
+    prelude.inc
   }
   exposed-modules: {
     Language.Haskell.Brittany

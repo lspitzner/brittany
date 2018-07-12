@@ -1,7 +1,6 @@
 name:                doc-svg-gen
 version:             0.1.0.0
 build-type:          Simple
-extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 executable doc-svg-gen
