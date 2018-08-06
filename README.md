@@ -88,7 +88,7 @@ log the size of the input, but _not_ the full input/output of requests.)
     (earlier ltss did not include `brittany` yet, but the repo should contain a
     `stack.yaml` that works with ghc-8.0.)
 
-- on ArchLinux via [the britanny AUR package](https://aur.archlinux.org/packages/brittany/)
+- on ArchLinux via [the brittany AUR package](https://aur.archlinux.org/packages/brittany/)
   using `aura`:
     ~~~~.sh
     aura -A brittany
