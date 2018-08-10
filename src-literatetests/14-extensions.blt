@@ -79,4 +79,5 @@ module Test (type (++), (++), pattern Foo) where
 import           Test                                     ( type (++)
                                                           , (++)
                                                           , pattern Foo
+                                                          , pattern (:.)
                                                           )
