@@ -41,19 +41,19 @@ layoutIE :: ToBriDoc IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   IEVar      x -> layoutWrapped lie x
   IEThingAbs x -> layoutWrapped lie x
-  IEThingAll _ -> docSeq [ienDoc, docLit $ Text.pack "(..)"]
-  IEThingWith _ (IEWildcard _) _ _ ->
-    docSeq [ienDoc, docLit $ Text.pack "(..)"]
-  IEThingWith _ _ ns _ -> do
+  IEThingAll x -> docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
+  IEThingWith x (IEWildcard _) _ _ ->
+    docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
+  IEThingWith x _ ns _ -> do
     hasComments <- hasAnyCommentsBelow lie
     runFilteredAlternative $ do
       addAlternativeCond (not hasComments)
         $  docSeq
-        $  [ienDoc, docLit $ Text.pack "("]
+        $  [layoutWrapped lie x, docLit $ Text.pack "("]
         ++ intersperse docCommaSep (map nameDoc ns)
         ++ [docParenR]
       addAlternative $ docAddBaseY BrIndentRegular $ docPar
-        ienDoc
+        (layoutWrapped lie x)
         (layoutItems (splitFirstLast ns))
    where
     nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
@@ -75,7 +75,6 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     ]
   _ -> docEmpty
  where
-  ienDoc        = docLit =<< lrdrNameToTextAnn (ieName <$> lie)
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2, 8.4, .. */
   layoutWrapped _ = \case
     L _ (IEName    n) -> docLit =<< lrdrNameToTextAnn n
