@@ -70,8 +70,14 @@ parseModuleWithCpp
 parseModuleWithCpp cpp opts args fp dynCheck =
   ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
     dflags0                       <- lift $ GHC.getSessionDynFlags
-    (dflags1, leftover, warnings) <- lift
-      $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
+    (dflags1, leftover, warnings) <- lift $ GHC.parseDynamicFlagsCmdLine
+      dflags0
+      (GHC.noLoc <$> ("-hide-all-packages" : args))
+      -- that we pass -hide-all-packages here is a duplication, because
+      -- ExactPrint.initDynFlags also does it, but necessary because of
+      -- stupid and careless GHC API design. We explicitly want to pass
+      -- our args before calling that, so this is what we do. Should be
+      -- harmless. See commit 1b7576dcd1823e1c685a44927b1fcaade1319063.
     void $ lift $ GHC.setSessionDynFlags dflags1
     dflags2 <- lift $ ExactPrint.initDynFlags fp
     when (not $ null leftover)
