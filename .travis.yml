@@ -290,8 +290,8 @@ script:
       (cd dist && better_wait cabal install -j$JOBS --force-reinstalls "$SRC_TGZ" --ghc-options="-j1 +RTS -M500M -RTS")
       ;;
     canew)
-      better_wait cabal new-build -j$JOBS --disable-tests --disable-benchmarks
-      better_wait cabal new-build -j$JOBS --enable-tests --enable-benchmarks
+      better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --disable-tests --disable-benchmarks
+      better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --enable-tests --enable-benchmarks
       cabal new-test --ghc-options="-j1 +RTS -M500M -RTS"
       ;;
   esac
