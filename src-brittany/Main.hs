@@ -156,6 +156,16 @@ mainCmdParser helpDesc = do
     "v"
     ["verbose"]
     (flagHelp $ parDoc "[currently without effect; TODO]")
+  checkMode <- addSimpleBoolFlag
+    "c"
+    ["check-mode"]
+    (flagHelp
+        (PP.vcat
+          [ PP.text "check for changes but do not write them out"
+          , PP.text "exits with code 0 if no changes necessary, 1 otherwise"
+          ]
+        )
+    )
   writeMode <- addFlagReadParam
     ""
     ["write-mode"]
@@ -209,14 +219,21 @@ mainCmdParser helpDesc = do
       $ trace (showConfigYaml config)
       $ return ()
 
-    results <- zipWithM (coreIO putStrErrLn config suppressOutput)
+    results <- zipWithM (coreIO putStrErrLn config (suppressOutput || checkMode))
                         inputPaths
                         outputPaths
-    case results of
-      xs | all Data.Either.isRight xs -> pure ()
-      [Left x] -> System.Exit.exitWith (System.Exit.ExitFailure x)
-      _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
 
+    if checkMode
+      then when (any (==Changes) (Data.Either.rights results)) $
+             System.Exit.exitWith (System.Exit.ExitFailure 1)
+      else case results of
+             xs | all Data.Either.isRight xs -> pure ()
+             [Left x] -> System.Exit.exitWith (System.Exit.ExitFailure x)
+             _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
+
+
+data ChangeStatus = Changes | NoChanges
+  deriving (Eq)
 
 -- | The main IO parts for the default mode of operation, and after commandline
 -- and config stuff is processed.
@@ -229,7 +246,7 @@ coreIO
             -- currently not part of program config.
   -> Maybe FilePath.FilePath -- ^ input filepath; stdin if Nothing.
   -> Maybe FilePath.FilePath -- ^ output filepath; stdout if Nothing.
-  -> IO (Either Int ())      -- ^ Either an errorNo, or success.
+  -> IO (Either Int ChangeStatus)      -- ^ Either an errorNo, or the change status.
 coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
   ExceptT.runExceptT $ do
     let putErrorLn = liftIO . putErrorLnIO :: String -> ExceptT.ExceptT e IO ()
@@ -268,7 +285,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             return $ Right True
           CPPModeNowarn -> return $ Right True
         else return $ Right False
-    parseResult <- case inputPathM of
+    (parseResult, originalContents) <- case inputPathM of
       Nothing -> do
         -- TODO: refactor this hack to not be mixed into parsing logic
         let hackF s = if "#include" `isPrefixOf` s
@@ -278,11 +295,22 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               then List.intercalate "\n" . fmap hackF . lines'
               else id
         inputString <- liftIO $ System.IO.hGetContents System.IO.stdin
-        liftIO $ parseModuleFromString ghcOptions
-                                       "stdin"
-                                       cppCheckFunc
-                                       (hackTransform inputString)
-      Just p -> liftIO $ parseModule ghcOptions p cppCheckFunc
+        parseRes <- liftIO $ parseModuleFromString ghcOptions
+                                                   "stdin"
+                                                   cppCheckFunc
+                                                   (hackTransform inputString)
+        return (parseRes, Text.pack inputString)
+      Just p -> liftIO $ do
+        parseRes <- parseModule ghcOptions p cppCheckFunc
+        inputText <- Text.IO.readFile p
+        -- The above means we read the file twice, but the
+        -- GHC API does not really expose the source it
+        -- read. Should be in cache still anyways.
+        --
+        -- We do not use TextL.IO.readFile because lazy IO is evil.
+        -- (not identical -> read is not finished ->
+        -- handle still open -> write below crashes - evil.)
+        return (parseRes, inputText)
     case parseResult of
       Left left -> do
         putErrorLn "parse error:"
@@ -401,25 +429,19 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               & confUnpack
           shouldOutput = not suppressOutput && (not hasErrors || outputOnErrs)
 
+        let noChanges = outSText == originalContents
         when shouldOutput
           $ addTraceSep (_conf_debug config)
           $ case outputPathM of
               Nothing -> liftIO $ Text.IO.putStr $ outSText
               Just p  -> liftIO $ do
-                isIdentical <- case inputPathM of
-                  Nothing   -> pure False
-                  Just path -> do
-                    (== outSText) <$> Text.IO.readFile path
-                    -- The above means we read the file twice, but the
-                    -- GHC API does not really expose the source it
-                    -- read. Should be in cache still anyways.
-                    --
-                    -- We do not use TextL.IO.readFile because lazy IO is evil.
-                    -- (not identical -> read is not finished ->
-                    -- handle still open -> write below crashes - evil.)
+                let isIdentical = case inputPathM of
+                      Nothing -> False
+                      Just _  -> noChanges
                 unless isIdentical $ Text.IO.writeFile p $ outSText
 
         when hasErrors $ ExceptT.throwE 70
+        return (if noChanges then NoChanges else Changes)
  where
   addTraceSep conf =
     if or
