@@ -15,7 +15,7 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           GHC ( runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..), RdrName(..) )
+import           GHC ( runGhc, GenLocated(L), SrcSpan, moduleNameString, AnnKeywordId(..), RdrName(..) )
 import           HsSyn
 import           Name
 import qualified FastString
@@ -750,67 +750,21 @@ layoutExpr lexpr@(L _ expr) = do
     ExplicitPArr{} -> do
       -- TODO
       briDocByExactInlineOnly "ExplicitPArr{}" lexpr
-    RecordCon lname _ _ (HsRecFields [] Nothing) -> do
-      let t = lrdrNameToText lname
-      docWrapNode lname $ docSeq
-        [ docNodeAnnKW lexpr (Just AnnOpenC) $ docLit $ t <> Text.pack "{"
-        , docLit $ Text.pack "}"
-        ]
-    RecordCon lname _ _ (HsRecFields fs@(_:_) Nothing) -> do
-      -- TODO: the layouter for RecordUpd is slightly more clever. Should
-      -- probably copy the approach from there.
+    RecordCon lname _ _ (HsRecFields fields Nothing) -> do
       let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
-      ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr pun)) -> do
-        fExpDoc <- if pun
-          then return Nothing
-          else Just <$> docSharedWrapper layoutExpr fExpr
-        return (fieldl, lrdrNameToText lnameF, fExpDoc)
-      let line1 wrapper =
-            [ appSep $ docLit $ Text.pack "{"
-            , docWrapNodePrior fd1l $ appSep $ docLit fd1n
-            , case fd1e of
-                Just x -> docSeq
-                  [ appSep $ docLit $ Text.pack "="
-                  , docWrapNodeRest fd1l $ wrapper x
-                  ]
-                Nothing -> docEmpty
-            ]
-      let lineR wrapper = fdr <&> \(lfield, fText, fDoc) ->
-            [ docCommaSep
-            , appSep $ docLit fText
-            , case fDoc of
-                Just x -> docWrapNode lfield $ docSeq
-                  [ appSep $ docLit $ Text.pack "="
-                  , wrapper x
-                  ]
-                Nothing -> docEmpty
-            ]
-      let lineN =
-            [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
-            , docLit $ Text.pack "}"
-            ]
-      docAlt -- TODO: make this addFilteredAlternative and a hanging layout when Free
-        [  docSeq
-        $  [docNodeAnnKW lexpr Nothing nameDoc, docSeparator]
-        ++ line1 docForceSingleline
-        ++ join (lineR docForceSingleline)
-        ++ [docSeparator]
-        ++ lineN
-        , docSetParSpacing
-        $ docAddBaseY BrIndentRegular
-        $ docPar
-            (docNodeAnnKW lexpr Nothing nameDoc)
-            ( docNonBottomSpacing
-            $ docLines
-            $  [docCols ColRecUpdate $ line1 (docAddBaseY BrIndentRegular)]
-            ++ (docCols ColRecUpdate <$> lineR (docAddBaseY BrIndentRegular))
-            ++ [docSeq lineN]
-            )
-        ]
+      rFs <- fields
+        `forM` \lfield@(L _ (HsRecField (L _ (FieldOcc lnameF _)) rFExpr pun)) -> do
+          rFExpDoc <- if pun
+            then return Nothing
+            else Just <$> docSharedWrapper layoutExpr rFExpr
+          return $ (lfield, lrdrNameToText lnameF, rFExpDoc)
+      recordExpression indentPolicy lexpr nameDoc rFs
+
     RecordCon lname _ _ (HsRecFields [] (Just 0)) -> do
       let t = lrdrNameToText lname
       docWrapNode lname $ docLit $ t <> Text.pack " { .. }"
     RecordCon lname _ _ (HsRecFields fs@(_:_) (Just dotdoti)) | dotdoti == length fs -> do
+      -- TODO this should be consolidated into `recordExpression`
       let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
       ((fd1l, fd1n, fd1e):fdr) <- fs `forM` \fieldl@(L _ (HsRecField (L _ (FieldOcc lnameF _)) fExpr pun)) -> do
         fExpDoc <- if pun
@@ -859,19 +813,16 @@ layoutExpr lexpr@(L _ expr) = do
             (docNodeAnnKW lexpr Nothing nameDoc)
             ( docNonBottomSpacing
             $ docLines
-            $  [docCols ColRecUpdate $ line1 (docAddBaseY BrIndentRegular)]
-            ++ (docCols ColRecUpdate <$> lineR (docAddBaseY BrIndentRegular))
+            $  [docCols ColRec $ line1 (docAddBaseY BrIndentRegular)]
+            ++ (docCols ColRec <$> lineR (docAddBaseY BrIndentRegular))
             ++ [docSeq lineDot, docSeq lineN]
             )
         ]
     RecordCon{} ->
       unknownNodeError "RecordCon with puns" lexpr
-    RecordUpd rExpr [] _ _ _ _ -> do
+    RecordUpd rExpr fields _ _ _ _ -> do
       rExprDoc <- docSharedWrapper layoutExpr rExpr
-      docSeq [rExprDoc, docLit $ Text.pack "{}"]
-    RecordUpd rExpr fields@(_:_) _ _ _ _ -> do
-      rExprDoc <- docSharedWrapper layoutExpr rExpr
-      rFs@((rF1f, rF1n, rF1e):rFr) <- fields
+      rFs <- fields
         `forM` \lfield@(L _ (HsRecField (L _ ambName) rFExpr pun)) -> do
           rFExpDoc <- if pun
             then return Nothing
@@ -879,106 +830,7 @@ layoutExpr lexpr@(L _ expr) = do
           return $ case ambName of
             Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
-      runFilteredAlternative $ do
-        -- container { fieldA = blub, fieldB = blub }
-        addAlternative
-          $ docSeq
-          [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline rExprDoc
-          , appSep $ docLit $ Text.pack "{"
-          , appSep $ docSeq $ List.intersperse docCommaSep
-                  $ rFs <&> \case
-                    (lfield, fieldStr, Just fieldDoc) ->
-                      docWrapNode lfield $ docSeq
-                            [ appSep $ docLit fieldStr
-                            , appSep $ docLit $ Text.pack "="
-                            , docForceSingleline fieldDoc
-                            ]
-                    (lfield, fieldStr, Nothing) ->
-                      docWrapNode lfield $ docLit fieldStr
-          , docLit $ Text.pack "}"
-          ]
-        -- hanging single-line fields
-        -- container { fieldA = blub
-        --           , fieldB = blub
-        --           }
-        addAlternativeCond (indentPolicy == IndentPolicyFree)
-          $ docSeq
-          [ docNodeAnnKW lexpr Nothing $ appSep rExprDoc
-          , docSetBaseY $ docLines $ let
-              line1 = docCols ColRecUpdate
-                [ appSep $ docLit $ Text.pack "{"
-                , docWrapNodePrior rF1f $ appSep $ docLit rF1n
-                , case rF1e of
-                    Just x -> docWrapNodeRest rF1f $ docSeq
-                                    [ appSep $ docLit $ Text.pack "="
-                                    , docForceSingleline x
-                                    ]
-                    Nothing -> docEmpty
-                ]
-              lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRecUpdate
-                [ docCommaSep
-                , appSep $ docLit fText
-                , case fDoc of
-                    Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
-                                      , docForceSingleline x
-                                      ]
-                    Nothing -> docEmpty
-                ]
-              lineN = docSeq
-                [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
-                , docLit $ Text.pack "}"
-                ]
-              in [line1] ++ lineR ++ [lineN]
-          ]
-        -- non-hanging with expressions placed to the right of the names
-        -- container
-        -- { fieldA = blub
-        -- , fieldB = potentially
-        --     multiline
-        -- }
-        addAlternative
-          $ docSetParSpacing
-          $ docAddBaseY BrIndentRegular
-          $ docPar
-              (docNodeAnnKW lexpr Nothing rExprDoc)
-              (docNonBottomSpacing $ docLines $ let
-                expressionWrapper = case indentPolicy of
-                  IndentPolicyLeft -> docForceParSpacing
-                  IndentPolicyMultiple -> docForceParSpacing
-                  IndentPolicyFree -> docSetBaseY
-                line1 = docCols ColRecUpdate
-                  [ appSep $ docLit $ Text.pack "{"
-                  , docWrapNodePrior rF1f $ appSep $ docLit rF1n
-                  , docWrapNodeRest rF1f $ case rF1e of
-                      Just x -> docAlt
-                        [ docSeq [ appSep $ docLit $ Text.pack "="
-                                 , expressionWrapper x
-                                 ]
-                        , docAddBaseY BrIndentRegular
-                        $ docPar (docLit $ Text.pack "=") x
-                        ]
-                      Nothing -> docEmpty
-                  ]
-                lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield
-                  $ docCols ColRecUpdate
-                  [ docCommaSep
-                  , appSep $ docLit fText
-                  , case fDoc of
-                      Just x -> docAlt
-                        [ docSeq [ appSep $ docLit $ Text.pack "="
-                                 , expressionWrapper x
-                                 ]
-                        , docAddBaseY BrIndentRegular
-                        $ docPar (docLit $ Text.pack "=") x
-                        ]
-                      Nothing -> docEmpty
-                  ]
-                lineN = docSeq
-                  [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
-                  , docLit $ Text.pack "}"
-                  ]
-                in [line1] ++ lineR ++ [lineN]
-              )
+      recordExpression indentPolicy lexpr rExprDoc rFs
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
     ExprWithTySig exp1 (HsWC _ (HsIB _ typ1 _)) -> do
 #else /* ghc-8.0 */
@@ -1104,6 +956,120 @@ layoutExpr lexpr@(L _ expr) = do
       -- TODO
       briDocByExactInlineOnly "ExplicitSum{}" lexpr
 #endif
+
+recordExpression
+  :: (Data.Data.Data lExpr, Data.Data.Data name)
+  => IndentPolicy
+  -> GenLocated SrcSpan lExpr
+  -> ToBriDocM BriDocNumbered
+  -> [(GenLocated SrcSpan name, Text, Maybe (ToBriDocM BriDocNumbered))]
+  -> ToBriDocM BriDocNumbered
+recordExpression _ lexpr nameDoc [] =
+  docSeq
+    [ docNodeAnnKW lexpr (Just AnnOpenC) $ docSeq [nameDoc, docLit $ Text.pack "{"]
+    , docLit $ Text.pack "}"
+    ]
+recordExpression indentPolicy lexpr nameDoc rFs@((rF1f, rF1n, rF1e):rFr) =
+  runFilteredAlternative $ do
+    -- container { fieldA = blub, fieldB = blub }
+    addAlternative
+      $ docSeq
+      [ docNodeAnnKW lexpr Nothing $ appSep $ docForceSingleline nameDoc
+      , appSep $ docLit $ Text.pack "{"
+      , appSep $ docSeq $ List.intersperse docCommaSep
+              $ rFs <&> \case
+                (lfield, fieldStr, Just fieldDoc) ->
+                  docWrapNode lfield $ docSeq
+                        [ appSep $ docLit fieldStr
+                        , appSep $ docLit $ Text.pack "="
+                        , docForceSingleline fieldDoc
+                        ]
+                (lfield, fieldStr, Nothing) ->
+                  docWrapNode lfield $ docLit fieldStr
+      , docLit $ Text.pack "}"
+      ]
+    -- hanging single-line fields
+    -- container { fieldA = blub
+    --           , fieldB = blub
+    --           }
+    addAlternativeCond (indentPolicy == IndentPolicyFree)
+      $ docSeq
+      [ docNodeAnnKW lexpr Nothing $ appSep nameDoc
+      , docSetBaseY $ docLines $ let
+          line1 = docCols ColRec
+            [ appSep $ docLit $ Text.pack "{"
+            , docWrapNodePrior rF1f $ appSep $ docLit rF1n
+            , case rF1e of
+                Just x -> docWrapNodeRest rF1f $ docSeq
+                                [ appSep $ docLit $ Text.pack "="
+                                , docForceSingleline x
+                                ]
+                Nothing -> docEmpty
+            ]
+          lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield $ docCols ColRec
+            [ docCommaSep
+            , appSep $ docLit fText
+            , case fDoc of
+                Just x ->  docSeq [ appSep $ docLit $ Text.pack "="
+                                  , docForceSingleline x
+                                  ]
+                Nothing -> docEmpty
+            ]
+          lineN = docSeq
+            [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+            , docLit $ Text.pack "}"
+            ]
+          in [line1] ++ lineR ++ [lineN]
+      ]
+    -- non-hanging with expressions placed to the right of the names
+    -- container
+    -- { fieldA = blub
+    -- , fieldB = potentially
+    --     multiline
+    -- }
+    addAlternative
+      $ docSetParSpacing
+      $ docAddBaseY BrIndentRegular
+      $ docPar
+          (docNodeAnnKW lexpr Nothing nameDoc)
+          (docNonBottomSpacing $ docLines $ let
+            expressionWrapper = case indentPolicy of
+              IndentPolicyLeft -> docForceParSpacing
+              IndentPolicyMultiple -> docForceParSpacing
+              IndentPolicyFree -> docSetBaseY
+            line1 = docCols ColRec
+              [ appSep $ docLit $ Text.pack "{"
+              , docWrapNodePrior rF1f $ appSep $ docLit rF1n
+              , docWrapNodeRest rF1f $ case rF1e of
+                  Just x -> docAlt
+                    [ docSeq [ appSep $ docLit $ Text.pack "="
+                             , expressionWrapper x
+                             ]
+                    , docAddBaseY BrIndentRegular
+                    $ docPar (docLit $ Text.pack "=") x
+                    ]
+                  Nothing -> docEmpty
+              ]
+            lineR = rFr <&> \(lfield, fText, fDoc) -> docWrapNode lfield
+              $ docCols ColRec
+              [ docCommaSep
+              , appSep $ docLit fText
+              , case fDoc of
+                  Just x -> docAlt
+                    [ docSeq [ appSep $ docLit $ Text.pack "="
+                             , expressionWrapper x
+                             ]
+                    , docAddBaseY BrIndentRegular
+                    $ docPar (docLit $ Text.pack "=") x
+                    ]
+                  Nothing -> docEmpty
+              ]
+            lineN = docSeq
+              [ docNodeAnnKW lexpr (Just AnnOpenC) docEmpty
+              , docLit $ Text.pack "}"
+              ]
+            in [line1] ++ lineR ++ [lineN]
+          )
 
 
 #if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
