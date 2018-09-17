@@ -15,6 +15,11 @@ import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 import qualified Data.Map                                as Map
 import qualified Data.Monoid
 
+import           GHC                                      ( GenLocated(L) )
+import           Outputable                               ( Outputable(..)
+                                                          , showSDocUnsafe
+                                                          )
+
 import           Text.Read                                ( Read(..) )
 import qualified Text.ParserCombinators.ReadP            as ReadP
 import qualified Text.ParserCombinators.ReadPrec         as ReadPrec
@@ -285,8 +290,6 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             return $ Right True
           CPPModeNowarn -> return $ Right True
         else return $ Right False
-    let
-      inputPathName = maybe "stdin" (("file " <>) . show) inputPathM
     (parseResult, originalContents) <- case inputPathM of
       Nothing -> do
         -- TODO: refactor this hack to not be mixed into parsing logic
@@ -384,10 +387,10 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             (ErrorInput str : _) -> do
               putErrorLn $ "ERROR: parse error: " ++ str
             uns@(ErrorUnknownNode{} : _) -> do
-              putErrorLn $ "ERROR: encountered unknown syntactical constructs when parsing " <> inputPathName <> ":"
+              putErrorLn $ "ERROR: encountered unknown syntactical constructs:"
               uns `forM_` \case
-                ErrorUnknownNode str ast -> do
-                  putErrorLn str
+                ErrorUnknownNode str ast@(L loc _) -> do
+                  putErrorLn $ str <> " at " <> showSDocUnsafe (ppr loc)
                   when
                       ( config
                       & _conf_debug

@@ -17,7 +17,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 
 import qualified Data.Text.Lazy.Builder as Text.Builder
 
-import           GHC ( Located, runGhc, GenLocated(L), moduleNameString, AnnKeywordId )
+import           GHC ( Located, runGhc, GenLocated(L), moduleNameString, AnnKeywordId, SrcSpan )
 
 import           Language.Haskell.GHC.ExactPrint ( AnnKey, Comment )
 import           Language.Haskell.GHC.ExactPrint.Types ( KeywordId, Anns, DeltaPos, mkAnnKey )
@@ -134,7 +134,7 @@ data BrittanyError
     --   output and second the corresponding, ill-formed input.
   | LayoutWarning String
     -- ^ some warning
-  | forall ast . Data.Data.Data ast => ErrorUnknownNode String ast
+  | forall ast . Data.Data.Data ast => ErrorUnknownNode String (GenLocated SrcSpan ast)
     -- ^ internal error: pretty-printing is not implemented for type of node
     --   in the syntax-tree
   | ErrorOutputCheck

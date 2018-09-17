@@ -694,7 +694,10 @@ docEnsureIndent
 docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 
 unknownNodeError
-  :: Data.Data.Data ast => String -> ast -> ToBriDocM BriDocNumbered
+  :: Data.Data.Data ast
+  => String
+  -> GenLocated GHC.SrcSpan ast
+  -> ToBriDocM BriDocNumbered
 unknownNodeError infoStr ast = do
   mTell [ErrorUnknownNode infoStr ast]
   docLit $ Text.pack "{- BRITTANY ERROR UNHANDLED SYNTACTICAL CONSTRUCT -}"
