@@ -285,6 +285,8 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             return $ Right True
           CPPModeNowarn -> return $ Right True
         else return $ Right False
+    let
+      inputPathName = maybe "stdin" (("file " <>) . show) inputPathM
     (parseResult, originalContents) <- case inputPathM of
       Nothing -> do
         -- TODO: refactor this hack to not be mixed into parsing logic
@@ -382,7 +384,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             (ErrorInput str : _) -> do
               putErrorLn $ "ERROR: parse error: " ++ str
             uns@(ErrorUnknownNode{} : _) -> do
-              putErrorLn $ "ERROR: encountered unknown syntactical constructs:"
+              putErrorLn $ "ERROR: encountered unknown syntactical constructs when parsing " <> inputPathName <> ":"
               uns `forM_` \case
                 ErrorUnknownNode str ast -> do
                   putErrorLn str
