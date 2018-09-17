@@ -53,10 +53,9 @@ func = Foo
 
 #test record construction 3
 func = do
-  Foo
-    { _lstate_indent = _lstate_indent lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-    , _lstate_foo    = _lstate_foo lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
-    }
+  Foo { _lstate_indent = _lstate_indent lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+      , _lstate_foo    = _lstate_foo lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+      }
 
 #test post-indent comment
 func = do
