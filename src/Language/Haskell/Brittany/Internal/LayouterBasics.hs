@@ -527,9 +527,11 @@ docAnnotationKW annKey kw bdm = allocateNode . BDFAnnotationKW annKey kw =<< bdm
 docMoveToKWDP
   :: AnnKey
   -> AnnKeywordId
+  -> Bool
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM BriDocNumbered
-docMoveToKWDP annKey kw bdm = allocateNode . BDFMoveToKWDP annKey kw =<< bdm
+docMoveToKWDP annKey kw shouldRestoreIndent bdm =
+  allocateNode . BDFMoveToKWDP annKey kw shouldRestoreIndent =<< bdm
 
 docAnnotationRest
   :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
@@ -597,10 +599,11 @@ docNodeMoveToKWDP
   :: Data.Data.Data ast
   => Located ast
   -> AnnKeywordId
+  -> Bool
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM BriDocNumbered
-docNodeMoveToKWDP ast kw bdm =
-  docMoveToKWDP (ExactPrint.Types.mkAnnKey ast) kw bdm
+docNodeMoveToKWDP ast kw shouldRestoreIndent bdm =
+  docMoveToKWDP (ExactPrint.Types.mkAnnKey ast) kw shouldRestoreIndent bdm
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)

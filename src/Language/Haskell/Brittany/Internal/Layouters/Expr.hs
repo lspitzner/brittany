@@ -111,7 +111,8 @@ layoutExpr lexpr@(L _ expr) = do
     HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
 #endif
       binderDoc   <- docLit $ Text.pack "->"
-      funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
+      funcPatDocs <- docWrapNode lmatches
+        $ layoutPatternBind Nothing binderDoc `mapM` matches
       docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "\\case")
         (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
@@ -410,7 +411,8 @@ layoutExpr lexpr@(L _ expr) = do
     HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
       cExpDoc <- docSharedWrapper layoutExpr cExp
       binderDoc <- docLit $ Text.pack "->"
-      funcPatDocs <- docWrapNode lmatches $ layoutPatternBind Nothing binderDoc `mapM` matches
+      funcPatDocs <- docWrapNode lmatches
+        $ layoutPatternBind Nothing binderDoc `mapM` matches
       docAlt
         [ docSetParSpacing
         $ docAddBaseY BrIndentRegular

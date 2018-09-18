@@ -40,7 +40,7 @@ layoutModule lmod@(L _ mod') = case mod' of
           [ docNodeAnnKW lmod Nothing docEmpty
              -- A pseudo node that serves merely to force documentation
              -- before the node
-          , docNodeMoveToKWDP lmod AnnModule $ runFilteredAlternative $ do
+          , docNodeMoveToKWDP lmod AnnModule True $ runFilteredAlternative $ do
             addAlternativeCond allowSingleLine $
               docForceSingleline
                 $ docSeq
