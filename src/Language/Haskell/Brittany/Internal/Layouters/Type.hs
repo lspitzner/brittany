@@ -234,7 +234,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
               list = List.tail cntxtDocs <&> \cntxtDoc ->
                      docCols ColTyOpPrefix
                       [ docCommaSep
-                      , docAddBaseY (BrIndentSpecial 2) 
+                      , docAddBaseY (BrIndentSpecial 2)
                       $ cntxtDoc
                       ]
             in docPar open $ docLines $ list ++ [close]
@@ -407,17 +407,18 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         ]
     unboxedL = do
       docs <- docSharedWrapper layoutType `mapM` typs
+      let start = docSeq [docLit $ Text.pack "(#", docSeparator]
+          end   = docSeq [docSeparator, docLit $ Text.pack "#)"]
       docAlt
-        [ docSeq $ [docLit $ Text.pack "(#"]
+        [ docSeq $ [start]
                ++ List.intersperse docCommaSep docs
-               ++ [docLit $ Text.pack "#)"]
+               ++ [end]
         , let
-            start = docCols ColTyOpPrefix [docLit $ Text.pack "(#", head docs]
-            lines = List.tail docs <&> \d ->
-                    docCols ColTyOpPrefix [docCommaSep, d]
-            end   = docLit $ Text.pack "#)"
+            start' = docCols ColTyOpPrefix [start, head docs]
+            lines  = List.tail docs <&> \d ->
+                     docCols ColTyOpPrefix [docCommaSep, d]
           in docPar
-            (docAddBaseY (BrIndentSpecial 2) start)
+            (docAddBaseY (BrIndentSpecial 2) start')
             (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
         ]
   HsOpTy{} -> -- TODO
