@@ -653,11 +653,12 @@ jaicyhHumzo btrKpeyiFej mava = do
 
 #test unboxed-tuple and vanilla names
 {-# LANGUAGE UnboxedTuples #-}
+spanKey :: (# Int, Int #) -> (# Int, Int #)
 spanKey = case foo of
   (# bar, baz #) -> (# baz, bar #)
 
 #test unboxed-tuple and hashed name
 {-# LANGUAGE MagicHash, UnboxedTuples #-}
-spanKey :: _ -> (# Int#, Int# #)
+spanKey :: (# Int#, Int# #) -> (# Int#, Int# #)
 spanKey = case foo of
   (# bar#, baz# #) -> (# baz# +# bar#, bar# #)

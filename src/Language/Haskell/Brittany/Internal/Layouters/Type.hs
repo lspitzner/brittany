@@ -407,8 +407,8 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         ]
     unboxedL = do
       docs <- docSharedWrapper layoutType `mapM` typs
-      let start = docSeq [docLit $ Text.pack "(#", docSeparator]
-          end   = docSeq [docSeparator, docLit $ Text.pack "#)"]
+      let start = docParenHashL
+          end   = docParenHashR
       docAlt
         [ docSeq $ [start]
                ++ List.intersperse docCommaSep docs

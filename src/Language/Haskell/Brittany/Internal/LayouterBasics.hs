@@ -50,7 +50,12 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , appSep
   , docCommaSep
   , docParenLSep
+  , docParenL
   , docParenR
+  , docParenHashL
+  , docParenHashR
+  , docBracketL
+  , docBracketR
   , docTick
   , spacifyDocs
   , briDocMToPPM
@@ -530,10 +535,26 @@ docCommaSep :: ToBriDocM BriDocNumbered
 docCommaSep = appSep $ docLit $ Text.pack ","
 
 docParenLSep :: ToBriDocM BriDocNumbered
-docParenLSep = appSep $ docLit $ Text.pack "("
+docParenLSep = appSep docParenL
+
+docParenL :: ToBriDocM BriDocNumbered
+docParenL = docLit $ Text.pack "("
 
 docParenR :: ToBriDocM BriDocNumbered
 docParenR = docLit $ Text.pack ")"
+
+docParenHashL :: ToBriDocM BriDocNumbered
+docParenHashL =  docSeq [docLit $ Text.pack "(#", docSeparator]
+
+docParenHashR :: ToBriDocM BriDocNumbered
+docParenHashR = docSeq [docSeparator, docLit $ Text.pack "#)"]
+
+docBracketL :: ToBriDocM BriDocNumbered
+docBracketL = docLit $ Text.pack "["
+
+docBracketR :: ToBriDocM BriDocNumbered
+docBracketR = docLit $ Text.pack "]"
+
 
 docTick :: ToBriDocM BriDocNumbered
 docTick = docLit $ Text.pack "'"

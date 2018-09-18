@@ -140,8 +140,8 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     -- (nestedpat1, nestedpat2, nestedpat3) -> expr
     -- (#nestedpat1, nestedpat2, nestedpat3#) -> expr
     case boxity of
-      Boxed   -> wrapPatListy args "(" ")" False
-      Unboxed -> wrapPatListy args "(#" "#)" True
+      Boxed   -> wrapPatListy args "()" docParenL docParenR
+      Unboxed -> wrapPatListy args "(##)" docParenHashL docParenHashR
   AsPat asName asPat -> do
     -- bind@nestedpat -> expr
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
@@ -172,7 +172,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   ListPat elems _ _ ->
     -- [] -> expr1
     -- [nestedpat1, nestedpat2, nestedpat3] -> expr2
-    wrapPatListy elems "[" "]" False
+    wrapPatListy elems "[]" docBracketL docBracketR
   BangPat pat1 -> do
     -- !nestedpat -> expr
     wrapPatPrepend pat1 (docLit $ Text.pack "!")
@@ -212,24 +212,18 @@ wrapPatPrepend pat prepElem = do
 wrapPatListy
   :: [Located (Pat GhcPs)]
   -> String
-  -> String
-  -> Bool
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
   -> ToBriDocM (Seq BriDocNumbered)
-wrapPatListy elems start end padSeparators = do
+wrapPatListy elems both start end = do
   elemDocs <- Seq.fromList elems `forM` (layoutPat >=> colsWrapPat)
   case Seq.viewl elemDocs of
-    Seq.EmptyL -> fmap Seq.singleton $ docLit $ Text.pack $ start ++ end
+    Seq.EmptyL -> fmap Seq.singleton $ docLit $ Text.pack both
     x1 Seq.:< rest -> do
-      sDoc <- docLit $ Text.pack start
-      eDoc <- docLit $ Text.pack end
-      let sDoc' | padSeparators = docSeq [return sDoc, docSeparator]
-                | otherwise     = return sDoc
-          eDoc' | padSeparators = docSeq [docSeparator, return eDoc]
-                | otherwise     = return eDoc
-      sDoc'' <- sDoc'
-      eDoc'' <- eDoc'
+      sDoc <- start
+      eDoc <- end
       rest' <- rest `forM` \bd -> docSeq
         [ docCommaSep
         , return bd
         ]
-      return $ (sDoc'' Seq.<| x1 Seq.<| rest') Seq.|> eDoc''
+      return $ (sDoc Seq.<| x1 Seq.<| rest') Seq.|> eDoc
