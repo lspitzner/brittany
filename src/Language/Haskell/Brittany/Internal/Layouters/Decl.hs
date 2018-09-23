@@ -27,7 +27,7 @@ import           Language.Haskell.Brittany.Internal.ExactPrintUtils
 import           Language.Haskell.Brittany.Internal.Utils
 
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
-import           SrcLoc ( SrcSpan )
+import           SrcLoc ( SrcSpan, noSrcSpan )
 import           HsSyn
 import           Name
 import           BasicTypes ( InlinePragma(..)
@@ -202,20 +202,21 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
   -- x@(HsValBinds (ValBindsIn{})) ->
   --   Just . (:[]) <$> unknownNodeError "HsValBinds (ValBindsIn _ (_:_))" x
   HsValBinds (ValBindsIn bindlrs sigs) -> do
-    let
-      unordered
-        =  [ BagBind b | b <- Data.Foldable.toList bindlrs ]
-        ++ [ BagSig s | s <- sigs ]
-      ordered = sortBy (comparing bindOrSigtoSrcSpan) unordered
+    let unordered =
+          [ BagBind b | b <- Data.Foldable.toList bindlrs ]
+            ++ [ BagSig s | s <- sigs ]
+        ordered = sortBy (comparing bindOrSigtoSrcSpan) unordered
     docs <- docWrapNode lbinds $ join <$> ordered `forM` \case
       BagBind b -> either id return <$> layoutBind b
       BagSig  s -> return <$> layoutSig s
     return $ Just $ docs
   x@(HsValBinds (ValBindsOut _binds _lsigs)) ->
     -- i _think_ this case never occurs in non-processed ast
-    Just . (:[]) <$> unknownNodeError "HsValBinds ValBindsOut{}" x
-  x@(HsIPBinds _ipBinds) -> Just . (:[]) <$> unknownNodeError "HsIPBinds" x
-  EmptyLocalBinds        -> return $ Nothing
+    Just . (: []) <$> unknownNodeError "HsValBinds ValBindsOut{}"
+                                       (L noSrcSpan x)
+  x@(HsIPBinds _ipBinds) ->
+    Just . (: []) <$> unknownNodeError "HsIPBinds" (L noSrcSpan x)
+  EmptyLocalBinds -> return $ Nothing
 
 -- TODO: we don't need the `LHsExpr GhcPs` anymore, now that there is
 -- parSpacing stuff.B
