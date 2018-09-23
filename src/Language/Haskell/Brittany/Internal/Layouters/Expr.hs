@@ -372,7 +372,7 @@ layoutExpr lexpr@(L _ expr) = do
       hasComments <- hasAnyCommentsBelow lexpr
       let (openLit, closeLit) = case boxity of
             Boxed   -> (docLit $ Text.pack "(", docLit $ Text.pack ")")
-            Unboxed -> (docParenHashL, docParenHashR)
+            Unboxed -> (docParenHashLSep, docParenHashRSep)
       case splitFirstLast argDocs of
         FirstLastEmpty -> docSeq
           [ openLit

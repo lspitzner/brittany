@@ -650,15 +650,3 @@ jaicyhHumzo btrKpeyiFej mava = do
             )
           Xcde{} -> (s, Pioemav)
       pure imomue
-
-#test unboxed-tuple and vanilla names
-{-# LANGUAGE UnboxedTuples #-}
-spanKey :: (# Int, Int #) -> (# Int, Int #)
-spanKey = case foo of
-  (# bar, baz #) -> (# baz, bar #)
-
-#test unboxed-tuple and hashed name
-{-# LANGUAGE MagicHash, UnboxedTuples #-}
-spanKey :: (# Int#, Int# #) -> (# Int#, Int# #)
-spanKey = case foo of
-  (# bar#, baz# #) -> (# baz# +# bar#, bar# #)

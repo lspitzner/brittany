@@ -52,8 +52,8 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docParenLSep
   , docParenL
   , docParenR
-  , docParenHashL
-  , docParenHashR
+  , docParenHashLSep
+  , docParenHashRSep
   , docBracketL
   , docBracketR
   , docTick
@@ -537,17 +537,23 @@ docCommaSep = appSep $ docLit $ Text.pack ","
 docParenLSep :: ToBriDocM BriDocNumbered
 docParenLSep = appSep docParenL
 
+-- TODO: we don't make consistent use of these (yet). However, I think the
+-- most readable approach overall might be something else: define
+-- `lit = docLit . Text.pack` and `prepSep = docSeq [docSeparator, x]`.
+-- I think those two would make the usage most readable.
+-- lit "("  and  appSep (lit "(")  are understandable and short without
+-- introducing a new top-level binding for all types of parentheses.
 docParenL :: ToBriDocM BriDocNumbered
 docParenL = docLit $ Text.pack "("
 
 docParenR :: ToBriDocM BriDocNumbered
 docParenR = docLit $ Text.pack ")"
 
-docParenHashL :: ToBriDocM BriDocNumbered
-docParenHashL =  docSeq [docLit $ Text.pack "(#", docSeparator]
+docParenHashLSep :: ToBriDocM BriDocNumbered
+docParenHashLSep =  docSeq [docLit $ Text.pack "(#", docSeparator]
 
-docParenHashR :: ToBriDocM BriDocNumbered
-docParenHashR = docSeq [docSeparator, docLit $ Text.pack "#)"]
+docParenHashRSep :: ToBriDocM BriDocNumbered
+docParenHashRSep = docSeq [docSeparator, docLit $ Text.pack "#)"]
 
 docBracketL :: ToBriDocM BriDocNumbered
 docBracketL = docLit $ Text.pack "["

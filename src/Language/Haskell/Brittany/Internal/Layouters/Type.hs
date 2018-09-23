@@ -392,33 +392,32 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     unitL = docLit $ Text.pack "()"
     simpleL = do
       docs <- docSharedWrapper layoutType `mapM` typs
+      let end = docLit $ Text.pack ")"
+          lines = List.tail docs <&> \d ->
+                  docCols ColTyOpPrefix [docCommaSep, d]
       docAlt
         [ docSeq $ [docLit $ Text.pack "("]
                ++ List.intersperse docCommaSep (docForceSingleline <$> docs)
-               ++ [docLit $ Text.pack ")"]
-        , let
-            start = docCols ColTyOpPrefix [docParenLSep, head docs]
-            lines = List.tail docs <&> \d ->
-                    docCols ColTyOpPrefix [docCommaSep, d]
-            end   = docLit $ Text.pack ")"
+               ++ [end]
+        , let line1 = docCols ColTyOpPrefix [docParenLSep, head docs]
           in docPar
-            (docAddBaseY (BrIndentSpecial 2) $ start)
+            (docAddBaseY (BrIndentSpecial 2) $ line1)
             (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
         ]
     unboxedL = do
       docs <- docSharedWrapper layoutType `mapM` typs
-      let start = docParenHashL
-          end   = docParenHashR
+      let start = docParenHashLSep
+          end   = docParenHashRSep
       docAlt
         [ docSeq $ [start]
-               ++ List.intersperse docCommaSep docs
-               ++ [end]
+                ++ List.intersperse docCommaSep docs
+                ++ [end]
         , let
-            start' = docCols ColTyOpPrefix [start, head docs]
+            line1 = docCols ColTyOpPrefix [start, head docs]
             lines  = List.tail docs <&> \d ->
                      docCols ColTyOpPrefix [docCommaSep, d]
           in docPar
-            (docAddBaseY (BrIndentSpecial 2) start')
+            (docAddBaseY (BrIndentSpecial 2) line1)
             (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
         ]
   HsOpTy{} -> -- TODO

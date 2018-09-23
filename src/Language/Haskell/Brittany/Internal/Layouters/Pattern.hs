@@ -141,7 +141,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     -- (#nestedpat1, nestedpat2, nestedpat3#) -> expr
     case boxity of
       Boxed   -> wrapPatListy args "()" docParenL docParenR
-      Unboxed -> wrapPatListy args "(##)" docParenHashL docParenHashR
+      Unboxed -> wrapPatListy args "(##)" docParenHashLSep docParenHashRSep
   AsPat asName asPat -> do
     -- bind@nestedpat -> expr
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
