@@ -335,8 +335,9 @@ test-suite littests
   ghc-options: {
     -Wall
     -fno-warn-unused-imports
+    -threaded
     -rtsopts
-    -with-rtsopts "-M2G"
+    -with-rtsopts "-M2G -N"
   }
 
 test-suite libinterfacetests

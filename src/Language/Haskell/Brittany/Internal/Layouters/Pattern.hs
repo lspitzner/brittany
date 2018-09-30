@@ -140,8 +140,8 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     -- (nestedpat1, nestedpat2, nestedpat3) -> expr
     -- (#nestedpat1, nestedpat2, nestedpat3#) -> expr
     case boxity of
-      Boxed   -> wrapPatListy args "(" ")"
-      Unboxed -> wrapPatListy args "(#" "#)"
+      Boxed   -> wrapPatListy args "()" docParenL docParenR
+      Unboxed -> wrapPatListy args "(##)" docParenHashLSep docParenHashRSep
   AsPat asName asPat -> do
     -- bind@nestedpat -> expr
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
@@ -172,7 +172,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   ListPat elems _ _ ->
     -- [] -> expr1
     -- [nestedpat1, nestedpat2, nestedpat3] -> expr2
-    wrapPatListy elems "[" "]"
+    wrapPatListy elems "[]" docBracketL docBracketR
   BangPat pat1 -> do
     -- !nestedpat -> expr
     wrapPatPrepend pat1 (docLit $ Text.pack "!")
@@ -212,18 +212,18 @@ wrapPatPrepend pat prepElem = do
 wrapPatListy
   :: [Located (Pat GhcPs)]
   -> String
-  -> String
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
   -> ToBriDocM (Seq BriDocNumbered)
-wrapPatListy elems start end = do
+wrapPatListy elems both start end = do
   elemDocs <- Seq.fromList elems `forM` (layoutPat >=> colsWrapPat)
-  sDoc <- docLit $ Text.pack start
-  eDoc <- docLit $ Text.pack end
   case Seq.viewl elemDocs of
-    Seq.EmptyL -> fmap Seq.singleton $ docLit $ Text.pack $ start ++ end
+    Seq.EmptyL -> fmap Seq.singleton $ docLit $ Text.pack both
     x1 Seq.:< rest -> do
-        rest' <- rest `forM` \bd -> docSeq
-          [ docLit $ Text.pack ","
-          , docSeparator
-          , return bd
-          ]
-        return $ (sDoc Seq.<| x1 Seq.<| rest') Seq.|> eDoc
+      sDoc <- start
+      eDoc <- end
+      rest' <- rest `forM` \bd -> docSeq
+        [ docCommaSep
+        , return bd
+        ]
+      return $ (sDoc Seq.<| x1 Seq.<| rest') Seq.|> eDoc

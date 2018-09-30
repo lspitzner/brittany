@@ -292,7 +292,7 @@ script:
     canew)
       better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --disable-tests --disable-benchmarks
       better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --enable-tests --enable-benchmarks
-      cabal new-test --ghc-options="-j1 +RTS -M500M -RTS"
+      cabal new-test -j1 --ghc-options="-j1 +RTS -M500M -RTS"
       ;;
   esac
   set +ex
