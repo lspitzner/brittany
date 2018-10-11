@@ -277,7 +277,7 @@ script:
       if [ -f configure.ac ]; then autoreconf -i; fi
       cabal configure --enable-tests --enable-benchmarks -v  # -v2 provides useful information for debugging
       better_wait cabal build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS -Werror" # this builds all libraries and executables (including tests/benchmarks)
-      cabal test
+      time cabal test --ghc-options="-with-rtsopts -N1"
       ;;
     cabaldist)
       # cabal check
@@ -292,7 +292,7 @@ script:
     canew)
       better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --disable-tests --disable-benchmarks
       better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --enable-tests --enable-benchmarks
-      cabal new-test -j1 --ghc-options="-j1 +RTS -M500M -RTS"
+      time cabal new-test -j1 --ghc-options="-j1 +RTS -M500M -RTS"
       ;;
   esac
   set +ex

@@ -269,6 +269,10 @@ test-suite unittests
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"
+    -threaded
+    -- ^ threaded is not necessary at all, but our CI trusts on being able
+    --   to pass -N1, which is not possible without threaded :-/
+    --   (plus -no-threaded is not a thing, afaict)
   }
 
 test-suite littests
@@ -372,4 +376,8 @@ test-suite libinterfacetests
     -fno-warn-unused-imports
     -rtsopts
     -with-rtsopts "-M2G"
+    -threaded
+    -- ^ threaded is not necessary at all, but our CI trusts on being able
+    --   to pass -N1, which is not possible without threaded :-/
+    --   (plus -no-threaded is not a thing, afaict)
   }

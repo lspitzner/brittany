@@ -23,7 +23,6 @@ import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.Config
 
 import Data.Coerce ( coerce )
-import GHC.Conc    ( getNumCapabilities )
 
 import qualified Data.Text.IO as Text.IO
 import           System.FilePath ( (</>) )
@@ -50,8 +49,7 @@ main = do
   let groups = createChunks =<< inputs
   inputCtxFree <- Text.IO.readFile "src-literatetests/30-tests-context-free.blt"
   let groupsCtxFree = createChunks inputCtxFree
-  jobs <- getNumCapabilities
-  hspecWith (defaultConfig { configConcurrentJobs = Just jobs }) $ do
+  hspec $ do
     groups `forM_` \(groupname, tests) -> do
       describe (Text.unpack groupname) $ tests `forM_` \(name, pend, inp) -> do
         (if pend then before_ pending else id)
