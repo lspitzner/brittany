@@ -668,23 +668,53 @@ layoutClsInst lcid@(L _ cid) = docLines
     BDFExternal ann anns b $ stripWhitespace' t
   stripWhitespace b = b
 
-  -- | We strip the first newline from each @data@/@type@ declaration. If the
-  --   @data@/@type@ is the first declaration in the instance, then we also have
-  --   to strip whitespace from the start of the comments and the first line of
-  --   the declaration. This is brittle and should be replaced by proper
-  --   layouting
-  --   as soon as possible.
+  -- | This fixes two issues of output coming from Exactprinting
+  --   associated (data) type decls. Firstly we place the output into docLines,
+  --   so one newline coming from Exactprint is superfluous, so we drop the
+  --   first (empty) line. The second issue is Exactprint indents the first
+  --   member in a strange fashion:
+  --
+  --   input:
+  --
+  --   > instance MyClass Int where
+  --   >   -- | This data is very important
+  --   >   data MyData = IntData
+  --   >     { intData  :: String
+  --   >     , intData2 :: Int
+  --   >     }
+  --
+  --   output of just exactprinting the associated data type syntax node
+  --
+  --   >
+  --   >   -- | This data is very important
+  --   >   data MyData = IntData
+  --   >   { intData  :: String
+  --   >   , intData2 :: Int
+  --   >   }
+  --
+  --   To fix this, we strip whitespace from the start of the comments and the
+  --   first line of the declaration, stopping when we see "data" or "type" at
+  --   the start of a line. I.e., this function yields
+  --
+  --   > -- | This data is very important
+  --   > data MyData = IntData
+  --   >   { intData  :: String
+  --   >   , intData2 :: Int
+  --   >   }
+  --
+  --   Downside apart from being a hacky and brittle fix is that this removes
+  --   possible additional indentation from comments before the first member.
+  --
+  --   But the whole thing is just a temporary measure until brittany learns
+  --   to layout data/type decls.
   stripWhitespace' :: Text -> Text
   stripWhitespace' t =
-    let
-      isTypeOrData t' =
-        Text.pack "type"
-          `Text.isPrefixOf` t'
-          ||                Text.pack "data"
-          `Text.isPrefixOf` t'
-      (comments, dat : rest) =
-        break (isTypeOrData . Text.stripStart) (Text.lines (Text.tail t))
-    in Text.init
-      $  Text.unlines
-      $  fmap Text.stripStart comments
-      ++ (Text.stripStart dat : rest)
+    Text.intercalate (Text.pack "\n") $ go $ List.drop 1 $ Text.lines t
+   where
+    go []              = []
+    go (line1 : lineR) = case Text.stripStart line1 of
+      st | isTypeOrData st -> st : lineR
+         | otherwise       -> st : go lineR
+    isTypeOrData t' =
+      (Text.pack "type" `Text.isPrefixOf` t')
+        || (Text.pack "data" `Text.isPrefixOf` t')
