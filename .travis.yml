@@ -271,7 +271,7 @@ script:
   set -ex
   case "$BUILD" in
     stack)
-      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror"
+      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror -with-rtsopts -N1"
       ;;
     cabal)
       if [ -f configure.ac ]; then autoreconf -i; fi
@@ -292,7 +292,7 @@ script:
     canew)
       better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --disable-tests --disable-benchmarks
       better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --enable-tests --enable-benchmarks
-      time cabal new-test -j1 --ghc-options="-j1 +RTS -M500M -RTS"
+      time cabal new-test -j1 --ghc-options="-j1 +RTS -M500M -RTS -with-rtsopts -N1"
       ;;
   esac
   set +ex
