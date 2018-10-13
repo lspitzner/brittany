@@ -27,7 +27,7 @@ import           Language.Haskell.Brittany.Internal.ExactPrintUtils
 import           Language.Haskell.Brittany.Internal.Utils
 
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
-import           SrcLoc ( SrcSpan, noSrcSpan )
+import           SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
 import           HsSyn
 import           Name
 import           BasicTypes ( InlinePragma(..)
@@ -42,7 +42,7 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 
-import           Bag ( mapBagM )
+import           Bag ( mapBagM, bagToList, emptyBag )
 
 
 
@@ -65,16 +65,42 @@ layoutDecl d@(L loc decl) = case decl of
                                (foldedAnnKeys d)
                                False
                                (Text.pack str)
+  InstD (ClsInstD inst) -> withTransformedAnns d $ layoutClsInst (L loc inst)
   _ -> briDocByExactNoComment d
 
 
 layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
 #if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
-  TypeSig names (HsWC _ (HsIB _ typ _)) -> docWrapNode lsig $ do
+  TypeSig names (HsWC _ (HsIB _ typ _)) -> layoutNamesAndType names typ
 #else /* ghc-8.0 */
-  TypeSig names (HsIB _ (HsWC _ _ typ)) -> docWrapNode lsig $ do
+  TypeSig names (HsIB _ (HsWC _ _ typ)) -> layoutNamesAndType names typ
 #endif
+  InlineSig name (InlinePragma _ spec _arity phaseAct conlike) ->
+    docWrapNode lsig $ do
+      nameStr <- lrdrNameToTextAnn name
+      specStr <- specStringCompat lsig spec
+      let phaseStr = case phaseAct of
+            NeverActive      -> "" -- not [] - for NOINLINE NeverActive is
+                                   -- in fact the default
+            AlwaysActive     -> ""
+            ActiveBefore _ i -> "[~" ++ show i ++ "] "
+            ActiveAfter  _ i -> "[" ++ show i ++ "] "
+      let conlikeStr = case conlike of
+            FunLike -> ""
+            ConLike -> "CONLIKE "
+      docLit
+        $  Text.pack ("{-# " ++ specStr ++ conlikeStr ++ phaseStr)
+        <> nameStr
+        <> Text.pack " #-}"
+#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+  ClassOpSig False names (HsIB _ typ _) -> layoutNamesAndType names typ
+#else /* ghc-8.0 */
+  ClassOpSig False names (HsIB _ typ) -> layoutNamesAndType names typ
+#endif
+  _ -> briDocByExactNoComment lsig -- TODO
+ where
+  layoutNamesAndType names typ = docWrapNode lsig $ do
     nameStrs <- names `forM` lrdrNameToTextAnn
     let nameStr = Text.intercalate (Text.pack ", ") $ nameStrs
     typeDoc     <- docSharedWrapper layoutType typ
@@ -112,24 +138,7 @@ layoutSig lsig@(L _loc sig) = case sig of
                  ]
                )
              ]
-  InlineSig name (InlinePragma _ spec _arity phaseAct conlike) ->
-    docWrapNode lsig $ do
-      nameStr <- lrdrNameToTextAnn name
-      specStr <- specStringCompat lsig spec
-      let phaseStr = case phaseAct of
-            NeverActive      -> "" -- not [] - for NOINLINE NeverActive is
-                                   -- in fact the default
-            AlwaysActive     -> ""
-            ActiveBefore _ i -> "[~" ++ show i ++ "] "
-            ActiveAfter  _ i -> "[" ++ show i ++ "] "
-      let conlikeStr = case conlike of
-            FunLike -> ""
-            ConLike -> "CONLIKE "
-      docLit
-        $  Text.pack ("{-# " ++ specStr ++ conlikeStr ++ phaseStr)
-        <> nameStr
-        <> Text.pack " #-}"
-  _ -> briDocByExactNoComment lsig -- TODO
+
 
 specStringCompat
   :: MonadMultiWriter [BrittanyError] m => LSig GhcPs -> InlineSpec -> m String
@@ -585,3 +594,127 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                       ]
          ]
       ++ wherePartMultiLine
+
+-- | Layout an @instance@ declaration
+--
+--   Layout signatures and bindings using the corresponding layouters from the
+--   top-level. Layout the instance head, type family instances, and data family
+--   instances using ExactPrint.
+layoutClsInst :: ToBriDoc ClsInstDecl
+layoutClsInst lcid@(L _ cid) = docLines
+  [ layoutInstanceHead
+  , docEnsureIndent BrIndentRegular
+  $  docSortedLines
+  $  fmap layoutAndLocateSig          (cid_sigs cid)
+  ++ fmap layoutAndLocateBind         (bagToList $ cid_binds cid)
+  ++ fmap layoutAndLocateTyFamInsts   (cid_tyfam_insts cid)
+  ++ fmap layoutAndLocateDataFamInsts (cid_datafam_insts cid)
+  ]
+ where
+  layoutInstanceHead :: ToBriDocM BriDocNumbered
+  layoutInstanceHead =
+    briDocByExactNoComment $ InstD . ClsInstD . removeChildren <$> lcid
+
+  removeChildren :: ClsInstDecl p -> ClsInstDecl p
+  removeChildren c = c
+    { cid_binds         = emptyBag
+    , cid_sigs          = []
+    , cid_tyfam_insts   = []
+    , cid_datafam_insts = []
+    }
+
+  -- | Like 'docLines', but sorts the lines based on location
+  docSortedLines
+    :: [ToBriDocM (Located BriDocNumbered)] -> ToBriDocM BriDocNumbered
+  docSortedLines l =
+    allocateNode . BDFLines . fmap unLoc . List.sortOn getLoc =<< sequence l
+
+  layoutAndLocateSig :: ToBriDocC (Sig GhcPs) (Located BriDocNumbered)
+  layoutAndLocateSig lsig@(L loc _) = L loc <$> layoutSig lsig
+
+  layoutAndLocateBind :: ToBriDocC (HsBind GhcPs) (Located BriDocNumbered)
+  layoutAndLocateBind lbind@(L loc _) =
+    L loc <$> (joinBinds =<< layoutBind lbind)
+
+  joinBinds
+    :: Either [BriDocNumbered] BriDocNumbered -> ToBriDocM BriDocNumbered
+  joinBinds = \case
+    Left  ns -> docLines $ return <$> ns
+    Right n  -> return n
+
+  layoutAndLocateTyFamInsts
+    :: ToBriDocC (TyFamInstDecl GhcPs) (Located BriDocNumbered)
+  layoutAndLocateTyFamInsts ltfid@(L loc _) =
+    L loc <$> layoutTyFamInstDecl ltfid
+
+  -- | Send to ExactPrint then remove unecessary whitespace
+  layoutTyFamInstDecl :: ToBriDoc TyFamInstDecl
+  layoutTyFamInstDecl ltfid =
+    fmap stripWhitespace <$> briDocByExactNoComment ltfid
+
+  layoutAndLocateDataFamInsts
+    :: ToBriDocC (DataFamInstDecl GhcPs) (Located BriDocNumbered)
+  layoutAndLocateDataFamInsts ldfid@(L loc _) =
+    L loc <$> layoutDataFamInstDecl ldfid
+
+  -- | Send to ExactPrint then remove unecessary whitespace
+  layoutDataFamInstDecl :: ToBriDoc DataFamInstDecl
+  layoutDataFamInstDecl ldfid =
+    fmap stripWhitespace <$> briDocByExactNoComment ldfid
+
+  -- | ExactPrint adds indentation/newlines to @data@/@type@ declarations
+  stripWhitespace :: BriDocF f -> BriDocF f
+  stripWhitespace (BDFExternal ann anns b t) =
+    BDFExternal ann anns b $ stripWhitespace' t
+  stripWhitespace b = b
+
+  -- | This fixes two issues of output coming from Exactprinting
+  --   associated (data) type decls. Firstly we place the output into docLines,
+  --   so one newline coming from Exactprint is superfluous, so we drop the
+  --   first (empty) line. The second issue is Exactprint indents the first
+  --   member in a strange fashion:
+  --
+  --   input:
+  --
+  --   > instance MyClass Int where
+  --   >   -- | This data is very important
+  --   >   data MyData = IntData
+  --   >     { intData  :: String
+  --   >     , intData2 :: Int
+  --   >     }
+  --
+  --   output of just exactprinting the associated data type syntax node
+  --
+  --   >
+  --   >   -- | This data is very important
+  --   >   data MyData = IntData
+  --   >   { intData  :: String
+  --   >   , intData2 :: Int
+  --   >   }
+  --
+  --   To fix this, we strip whitespace from the start of the comments and the
+  --   first line of the declaration, stopping when we see "data" or "type" at
+  --   the start of a line. I.e., this function yields
+  --
+  --   > -- | This data is very important
+  --   > data MyData = IntData
+  --   >   { intData  :: String
+  --   >   , intData2 :: Int
+  --   >   }
+  --
+  --   Downside apart from being a hacky and brittle fix is that this removes
+  --   possible additional indentation from comments before the first member.
+  --
+  --   But the whole thing is just a temporary measure until brittany learns
+  --   to layout data/type decls.
+  stripWhitespace' :: Text -> Text
+  stripWhitespace' t =
+    Text.intercalate (Text.pack "\n") $ go $ List.drop 1 $ Text.lines t
+   where
+    go []              = []
+    go (line1 : lineR) = case Text.stripStart line1 of
+      st | isTypeOrData st -> st : lineR
+         | otherwise       -> st : go lineR
+    isTypeOrData t' =
+      (Text.pack "type" `Text.isPrefixOf` t')
+        || (Text.pack "data" `Text.isPrefixOf` t')

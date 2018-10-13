@@ -905,3 +905,111 @@ import qualified Data.List                               as L
 
 -- Test
 import           Test                                     ( test )
+
+###############################################################################
+###############################################################################
+###############################################################################
+#group class.instance
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test simple-instance
+
+instance MyClass Int where
+  myMethod x = x + 1
+
+#test simple-method-signature
+
+instance MyClass Int where
+  myMethod :: Int -> Int
+  myMethod x = x + 1
+
+#test simple-long-method-signature
+
+instance MyClass Int where
+  myMethod
+    :: Int
+    -> Int
+    -> AReallyLongType
+    -> AReallyLongType
+    -> AReallyLongType
+    -> Int
+  myMethod x = x + 1
+
+#test simple-two-methods
+
+instance MyClass Int where
+  myMethod x = x + 1
+  myMethod2 x = x + 1
+
+#test simple-two-signatures
+
+instance MyClass Int where
+  myMethod
+    :: Int
+    -> Int
+    -> AReallyLongType
+    -> AReallyLongType
+    -> AReallyLongType
+    -> Int
+  myMethod x = x + 1
+
+  myMethod2 :: Int -> Int
+  myMethod2 x = x + 1
+
+#test simple-instance-comment
+
+-- | This instance should be commented on
+instance MyClass Int where
+
+  -- | This method is also comment-worthy
+  myMethod x = x + 1
+
+#test instance-with-type-family
+
+instance MyClass Int where
+  type MyType = Int
+
+  myMethod :: MyType -> Int
+  myMethod x = x + 1
+
+#test instance-with-type-family-below-method
+
+instance MyClass Int where
+
+  type MyType = String
+
+  myMethod :: MyType -> Int
+  myMethod x = x + 1
+
+  type MyType = Int
+
+#test instance-with-data-family
+
+instance MyClass Int where
+
+  -- | This data is very important
+  data MyData = IntData
+    { intData  :: String
+    , intData2 :: Int
+    }
+
+  myMethod :: MyData -> Int
+  myMethod = intData2
+
+#test instance-with-data-family-below-method
+
+instance MyClass Int where
+  -- | This data is important
+  data MyData = Test Int Int
+
+  myMethod :: MyData -> Int
+  myMethod = intData2
+
+  -- | This data is also important
+  data MyData2 = IntData
+    { intData  :: String
+    -- ^ Interesting field
+    , intData2 :: Int
+    }
