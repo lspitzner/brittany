@@ -906,6 +906,100 @@ import qualified Data.List                               as L
 -- Test
 import           Test                                     ( test )
 
+
+###############################################################################
+###############################################################################
+###############################################################################
+#group type synonyms
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test simple-synonym
+
+type MySynonym = String
+
+#test parameterised-synonym
+
+type MySynonym a = [a]
+
+#test long-function-synonym
+
+-- | Important comment thrown in
+type MySynonym b a
+  = MySynonym a b -> MySynonym a b -> MyParamType a b -> MyParamType a b
+
+#test overflowing-function-synonym
+
+type MySynonym3 b a
+  =  MySynonym a b
+  -> MySynonym a b
+  -- ^ RandomComment
+  -> MyParamType a b
+  -> MyParamType a b
+  -> MySynonym2 b a
+
+#test synonym-with-kind-sig
+
+type MySynonym (a :: * -> *)
+  =  MySynonym a b
+  -> MySynonym a b
+  -> MyParamType a b
+  -> MyParamType a b
+  -> MySynonym2 b a
+
+#test synonym-with-constraint
+
+type MySynonym a = Num a => a -> Int
+
+#test synonym-overflowing-with-constraint
+
+type MySynonym a
+  =  Num a
+  => AReallyLongTypeName
+  -> AnotherReallyLongTypeName
+  -> AThirdTypeNameToOverflow
+
+#test synonym-forall
+
+{-# LANGUAGE RankNTypes #-}
+
+type MySynonym = forall a . [a]
+
+#test synonym-operator
+
+type (:+:) a b = (a, b)
+
+#test synonym-infix
+
+type a `MySynonym` b = a -> b
+
+#test synonym-infix-operator
+
+type a :+: b = (a, b)
+
+#test synonym-infix-parens
+
+type (a `Foo` b) c = (a, b, c)
+
+#test synonym-comments
+#pending
+
+type Foo a -- fancy type comment
+  = -- strange comment
+    Int
+
+#test synonym-type-operators
+#pending
+
+type (a :+: b) = (a, b)
+
+#test synonym-multi-parens
+#pending
+
+type ((a :+: b) c) = (a, c)
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################

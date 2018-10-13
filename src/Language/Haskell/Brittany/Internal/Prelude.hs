@@ -1,3 +1,8 @@
+#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.0, ghc-8.2 */
+{-# LANGUAGE TypeFamilies #-}
+#endif
+
+
 module Language.Haskell.Brittany.Internal.Prelude
   ( module E
   , module Language.Haskell.Brittany.Internal.Prelude
@@ -400,5 +405,8 @@ todo = error "todo"
 
 
 #if !MIN_VERSION_ghc(8,4,0) /* ghc-8.0, ghc-8.2 */
+type family IdP p
+type instance IdP GhcPs = RdrName
+
 type GhcPs = RdrName
 #endif
