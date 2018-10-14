@@ -9,6 +9,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick
   , askIndent
   , extractAllComments
+  , extractRestComments
   , filterAnns
   , docEmpty
   , docLit
@@ -64,6 +65,8 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , hasAnyCommentsBelow
   , hasAnyCommentsConnected
   , hasAnyCommentsPrior
+  , hasAnyRegularCommentsConnected
+  , hasAnyRegularCommentsRest
   , hasAnnKeywordComment
   , hasAnnKeyword
   )
@@ -263,9 +266,13 @@ askIndent = confUnpack . _lconfig_indentAmount . _conf_layout <$> mAsk
 extractAllComments
   :: ExactPrint.Annotation -> [(ExactPrint.Comment, ExactPrint.DeltaPos)]
 extractAllComments ann =
-  ExactPrint.annPriorComments ann
-    ++ ExactPrint.annFollowingComments ann
-    ++ ( ExactPrint.annsDP ann >>= \case
+  ExactPrint.annPriorComments ann ++ extractRestComments ann
+
+extractRestComments
+  :: ExactPrint.Annotation -> [(ExactPrint.Comment, ExactPrint.DeltaPos)]
+extractRestComments ann =
+  ExactPrint.annFollowingComments ann
+    ++ (ExactPrint.annsDP ann >>= \case
          (ExactPrint.AnnComment com, dp) -> [(com, dp)]
          _                               -> []
        )
@@ -278,30 +285,39 @@ filterAnns ast =
 -- a) connected to any node below (in AST sense) the given node AND
 -- b) after (in source code order) the node.
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
-hasAnyCommentsBelow ast@(L l _) = do
-  anns <- filterAnns ast <$> mAsk
-  return
-    $ List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
-    $ (=<<) extractAllComments
-    $ Map.elems
-    $ anns
+hasAnyCommentsBelow ast@(L l _) =
+  List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
+    <$> astConnectedComments ast
 
--- | True if there are any comments that are
--- connected to any node below (in AST sense) the given node
+-- | True if there are any comments that are connected to any node below (in AST
+--   sense) the given node
 hasAnyCommentsConnected :: Data ast => GHC.Located ast -> ToBriDocM Bool
-hasAnyCommentsConnected ast = do
+hasAnyCommentsConnected ast = not . null <$> astConnectedComments ast
+
+-- | True if there are any regular comments connected to any node below (in AST
+--   sense) the given node
+hasAnyRegularCommentsConnected :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyRegularCommentsConnected ast = any isRegular <$> astConnectedComments ast
+  where isRegular = (== Nothing) . ExactPrint.Types.commentOrigin . fst
+
+astConnectedComments
+  :: Data ast
+  => GHC.Located ast
+  -> ToBriDocM [(ExactPrint.Types.Comment, ExactPrint.Types.DeltaPos)]
+astConnectedComments ast = do
   anns <- filterAnns ast <$> mAsk
-  return
-    $ not
-    $ null
-    $ (=<<) extractAllComments
-    $ Map.elems
-    $ anns
+  pure $ extractAllComments =<< Map.elems anns
 
 hasAnyCommentsPrior :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsPrior ast = astAnn ast <&> \case
   Nothing -> False
   Just (ExactPrint.Types.Ann _ priors _ _ _ _) -> not $ null priors
+
+hasAnyRegularCommentsRest :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyRegularCommentsRest ast = astAnn ast <&> \case
+  Nothing -> False
+  Just ann -> any isRegular (extractRestComments ann)
+  where isRegular = (== Nothing) . ExactPrint.Types.commentOrigin . fst
 
 hasAnnKeywordComment
   :: Data ast => GHC.Located ast -> AnnKeywordId -> ToBriDocM Bool
