@@ -633,34 +633,41 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
           Just (c, _) -> not (c == '(' || isUpper c)
     isInfix <- (isInfixTypeOp ||) <$> hasAnnKeyword name AnnBackquote
 #endif
-    docWrapNode ltycl $ layoutSynDecl isInfix name (hsq_explicit vars) typ
+    hasTrailingParen <- hasAnnKeywordComment ltycl AnnCloseP
+    let parenWrapper = if hasTrailingParen
+          then appSep . docWrapNodeRest ltycl
+          else id
+    docWrapNodePrior ltycl
+      $ layoutSynDecl isInfix parenWrapper name (hsq_explicit vars) typ
   _ -> briDocByExactNoComment ltycl
 
 layoutSynDecl
   :: Bool
+  -> (ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered)
   -> Located (IdP GhcPs)
   -> [LHsTyVarBndr GhcPs]
   -> LHsType GhcPs
   -> ToBriDocM BriDocNumbered
-layoutSynDecl isInfix name vars typ = do
+layoutSynDecl isInfix parenWrapper name vars typ = do
   nameStr <- lrdrNameToTextAnn name
   let
     lhs = if isInfix
       then do
         let
           (a : b : rest) = vars
+        hasOwnParens <- hasAnnKeywordComment a AnnOpenP
           -- This isn't quite right, but does give syntactically valid results
-          hasParens = not $ null rest
-        docSeq
+        let needsParens = not $ null rest || hasOwnParens
+        parenWrapper . docSeq
           $  [ appSep $ docLit $ Text.pack "type"
              , appSep
              .  docSeq
-             $  [ docParenL | hasParens ]
+             $  [ docParenL | needsParens ]
              ++ [ appSep $ layoutTyVarBndr a
                 , appSep $ docLit nameStr
                 , layoutTyVarBndr b
                 ]
-             ++ [ docParenR | hasParens ]
+             ++ [ docParenR | needsParens ]
              ]
           ++ fmap (appSep . layoutTyVarBndr) rest
       else
@@ -679,19 +686,22 @@ layoutSynDecl isInfix name vars typ = do
     ]
 
 layoutTyVarBndr :: ToBriDoc HsTyVarBndr
-layoutTyVarBndr (L _ bndr) = case bndr of
-  UserTyVar name -> do
-    nameStr <- lrdrNameToTextAnn name
-    docLit nameStr
-  KindedTyVar name kind -> do
-    nameStr <- lrdrNameToTextAnn name
-    docSeq
-      [ docLit $ Text.pack "("
-      , appSep $ docLit nameStr
-      , appSep . docLit $ Text.pack "::"
-      , docForceSingleline $ layoutType kind
-      , docLit $ Text.pack ")"
-      ]
+layoutTyVarBndr lbndr@(L _ bndr) = do
+  needsPriorSpace <- hasAnnKeywordComment lbndr AnnCloseP
+  docWrapNodePrior lbndr $ case bndr of
+    UserTyVar name -> do
+      nameStr <- lrdrNameToTextAnn name
+      docSeq $ [ docSeparator | needsPriorSpace ] ++ [docLit nameStr]
+    KindedTyVar name kind -> do
+      nameStr <- lrdrNameToTextAnn name
+      docSeq
+        $  [ docSeparator | needsPriorSpace ]
+        ++ [ docLit $ Text.pack "("
+           , appSep $ docLit nameStr
+           , appSep . docLit $ Text.pack "::"
+           , docForceSingleline $ layoutType kind
+           , docLit $ Text.pack ")"
+           ]
 
 
 --------------------------------------------------------------------------------

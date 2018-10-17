@@ -26,6 +26,7 @@ module Language.Haskell.Brittany.Internal.BackendUtils
   , layoutAddSepSpace
   , layoutSetCommentCol
   , layoutMoveToCommentPos
+  , layoutMoveToCommentPosX
   , layoutIndentRestorePostComment
   , moveToExactAnn
   , ppmMoveToExactLoc
@@ -200,6 +201,17 @@ layoutMoveToCommentPos y x = do
         Right{} -> lstate_baseY state
     }
 
+layoutMoveToCommentPosX
+  :: ( MonadMultiWriter Text.Builder.Builder m
+     , MonadMultiState LayoutState m
+     , MonadMultiWriter (Seq String) m
+     )
+  => Int
+  -> m ()
+layoutMoveToCommentPosX x = do
+  traceLocal ("layoutMoveToCommentPosX", x)
+  state <- mGet
+  mSet state { _lstate_addSepSpace = Just $ _lstate_indLevelLinger state + x }
 
 -- | does _not_ add spaces to again reach the current base column.
 layoutWriteNewline

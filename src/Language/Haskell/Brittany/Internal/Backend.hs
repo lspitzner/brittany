@@ -19,6 +19,8 @@ import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import           Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation )
 
+import GHC ( AnnKeywordId (..) )
+
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.BackendUtils
 import           Language.Haskell.Brittany.Internal.Utils
@@ -173,6 +175,8 @@ layoutBriDocM = \case
                       -- evil hack for CPP:
                       case comment of
                         ('#':_) -> layoutMoveToCommentPos y (-999)
+                        "("     -> pure ()
+                        ")"     -> layoutMoveToCommentPosX (x - 1)
                         _       -> layoutMoveToCommentPos y x
                       -- fixedX <- fixMoveToLineByIsNewline x
                       -- replicateM_ fixedX layoutWriteNewline
@@ -244,6 +248,7 @@ layoutBriDocM = \case
       -- evil hack for CPP:
             case comment of
               ('#':_) -> layoutMoveToCommentPos y (-999)
+              ")"     -> layoutMoveToCommentPosX (x - 1)
               _       -> layoutMoveToCommentPos y x
             -- fixedX <- fixMoveToLineByIsNewline x
             -- replicateM_ fixedX layoutWriteNewline

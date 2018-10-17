@@ -63,6 +63,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docSharedWrapper
   , hasAnyCommentsBelow
   , hasAnyCommentsConnected
+  , hasAnnKeywordComment
   , hasAnnKeyword
   )
 where
@@ -295,6 +296,15 @@ hasAnyCommentsConnected ast = do
     $ (=<<) extractAllComments
     $ Map.elems
     $ anns
+
+hasAnnKeywordComment
+  :: Data ast => GHC.Located ast -> AnnKeywordId -> ToBriDocM Bool
+hasAnnKeywordComment ast annKeyword = do
+  anns <- mAsk
+  pure $ case Map.lookup (ExactPrint.Types.mkAnnKey ast) anns of
+    Nothing  -> False
+    Just ann -> any hasK (extractAllComments ann)
+  where hasK = (== Just annKeyword) . ExactPrint.Types.commentOrigin . fst
 
 hasAnnKeyword
   :: (Data a, MonadMultiReader (Map AnnKey Annotation) m)
