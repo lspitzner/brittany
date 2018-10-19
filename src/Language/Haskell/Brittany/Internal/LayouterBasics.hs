@@ -63,6 +63,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docSharedWrapper
   , hasAnyCommentsBelow
   , hasAnyCommentsConnected
+  , hasAnyCommentsPrior
   , hasAnnKeywordComment
   , hasAnnKeyword
   )
@@ -297,13 +298,16 @@ hasAnyCommentsConnected ast = do
     $ Map.elems
     $ anns
 
+hasAnyCommentsPrior :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyCommentsPrior ast = astAnn ast <&> \case
+  Nothing -> False
+  Just (ExactPrint.Types.Ann _ priors _ _ _ _) -> not $ null priors
+
 hasAnnKeywordComment
   :: Data ast => GHC.Located ast -> AnnKeywordId -> ToBriDocM Bool
-hasAnnKeywordComment ast annKeyword = do
-  anns <- mAsk
-  pure $ case Map.lookup (ExactPrint.Types.mkAnnKey ast) anns of
-    Nothing  -> False
-    Just ann -> any hasK (extractAllComments ann)
+hasAnnKeywordComment ast annKeyword = astAnn ast <&> \case
+  Nothing  -> False
+  Just ann -> any hasK (extractAllComments ann)
   where hasK = (== Just annKeyword) . ExactPrint.Types.commentOrigin . fst
 
 hasAnnKeyword
@@ -311,13 +315,18 @@ hasAnnKeyword
   => Located a
   -> AnnKeywordId
   -> m Bool
-hasAnnKeyword ast annKeyword = do
-  anns <- mAsk
-  let hasK (ExactPrint.Types.G x, _) = x == annKeyword
-      hasK _                         = False
-  pure $ case Map.lookup (ExactPrint.Types.mkAnnKey ast) anns of
-    Nothing -> False
-    Just (ExactPrint.Types.Ann _ _ _ aks _ _) -> any hasK aks
+hasAnnKeyword ast annKeyword = astAnn ast <&> \case
+  Nothing -> False
+  Just (ExactPrint.Types.Ann _ _ _ aks _ _) -> any hasK aks
+ where
+  hasK (ExactPrint.Types.G x, _) = x == annKeyword
+  hasK _                         = False
+
+astAnn
+  :: (Data ast, MonadMultiReader (Map AnnKey Annotation) m)
+  => GHC.Located ast
+  -> m (Maybe Annotation)
+astAnn ast = Map.lookup (ExactPrint.Types.mkAnnKey ast) <$> mAsk
 
 -- new BriDoc stuff
 

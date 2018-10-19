@@ -983,7 +983,6 @@ type a :+: b = (a, b)
 type (a `Foo` b) c = (a, b, c)
 
 #test synonym-comments
-#pending
 
 type Foo a -- fancy type comment
   = -- strange comment

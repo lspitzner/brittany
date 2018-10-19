@@ -633,12 +633,13 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
           Just (c, _) -> not (c == '(' || isUpper c)
     isInfix <- (isInfixTypeOp ||) <$> hasAnnKeyword name AnnBackquote
 #endif
-    hasTrailingParen <- hasAnnKeywordComment ltycl AnnCloseP
-    let parenWrapper = if hasTrailingParen
-          then appSep . docWrapNodeRest ltycl
-          else id
+    -- hasTrailingParen <- hasAnnKeywordComment ltycl AnnCloseP
+    -- let parenWrapper = if hasTrailingParen
+    --       then appSep . docWrapNodeRest ltycl
+    --       else id
+    let wrapNodeRest = docWrapNodeRest ltycl
     docWrapNodePrior ltycl
-      $ layoutSynDecl isInfix parenWrapper name (hsq_explicit vars) typ
+      $ layoutSynDecl isInfix wrapNodeRest name (hsq_explicit vars) typ
   _ -> briDocByExactNoComment ltycl
 
 layoutSynDecl
@@ -648,17 +649,16 @@ layoutSynDecl
   -> [LHsTyVarBndr GhcPs]
   -> LHsType GhcPs
   -> ToBriDocM BriDocNumbered
-layoutSynDecl isInfix parenWrapper name vars typ = do
+layoutSynDecl isInfix wrapNodeRest name vars typ = do
   nameStr <- lrdrNameToTextAnn name
   let
-    lhs = if isInfix
+    lhs = appSep . wrapNodeRest $ if isInfix
       then do
-        let
-          (a : b : rest) = vars
+        let (a : b : rest) = vars
         hasOwnParens <- hasAnnKeywordComment a AnnOpenP
-          -- This isn't quite right, but does give syntactically valid results
+        -- This isn't quite right, but does give syntactically valid results
         let needsParens = not $ null rest || hasOwnParens
-        parenWrapper . docSeq
+        docSeq
           $  [ appSep $ docLit $ Text.pack "type"
              , appSep
              .  docSeq
@@ -672,18 +672,21 @@ layoutSynDecl isInfix parenWrapper name vars typ = do
           ++ fmap (appSep . layoutTyVarBndr) rest
       else
         docSeq
-        $  [appSep $ docLit $ Text.pack "type", appSep $ docLit nameStr]
+        $  [ appSep $ docLit $ Text.pack "type"
+           , appSep $ docWrapNode name $ docLit nameStr
+           ]
         ++ fmap (appSep . layoutTyVarBndr) vars
-  typeDoc <- docSharedWrapper layoutType typ
+  typeDoc     <- docSharedWrapper layoutType typ
+  hasComments <- hasAnyCommentsConnected typ
   docAlt
-    [ docSeq [lhs, appSep $ docLit $ Text.pack "=", docForceSingleline typeDoc]
-    , docAddBaseY BrIndentRegular $ docPar
-      lhs
-      (docCols
-        ColTyOpPrefix
-        [docLit $ Text.pack "= ", docAddBaseY (BrIndentSpecial 2) typeDoc]
-      )
-    ]
+    $  [ docSeq
+           [lhs, appSep $ docLit $ Text.pack "=", docForceSingleline typeDoc]
+       | not hasComments
+       ]
+    ++ [ docAddBaseY BrIndentRegular $ docPar
+          lhs
+          (docCols ColTyOpPrefix [appSep $ docLit $ Text.pack "=", typeDoc])
+       ]
 
 layoutTyVarBndr :: ToBriDoc HsTyVarBndr
 layoutTyVarBndr lbndr@(L _ bndr) = do
