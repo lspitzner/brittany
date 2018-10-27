@@ -172,11 +172,13 @@ layoutBriDocM = \case
         priors
           `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
                     do
-                      -- evil hack for CPP:
                       case comment of
                         ('#':_) -> layoutMoveToCommentPos y (-999)
+                                   --  ^ evil hack for CPP
                         "("     -> pure ()
-                        ")"     -> layoutMoveToCommentPosX (x - 1)
+                        ")"     -> pure ()
+                                   --  ^ these two fix the formatting of parens
+                                   -- on the lhs of type alias defs
                         _       -> layoutMoveToCommentPos y x
                       -- fixedX <- fixMoveToLineByIsNewline x
                       -- replicateM_ fixedX layoutWriteNewline
@@ -245,10 +247,12 @@ layoutBriDocM = \case
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           do
-      -- evil hack for CPP:
             case comment of
               ('#':_) -> layoutMoveToCommentPos y (-999)
-              ")"     -> layoutMoveToCommentPosX (x - 1)
+                         --  ^ evil hack for CPP
+              ")"     -> pure ()
+                         --  ^ fixes the formatting of parens
+                         --    on the lhs of type alias defs
               _       -> layoutMoveToCommentPos y x
             -- fixedX <- fixMoveToLineByIsNewline x
             -- replicateM_ fixedX layoutWriteNewline

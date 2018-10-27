@@ -659,46 +659,45 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
         -- This isn't quite right, but does give syntactically valid results
         let needsParens = not $ null rest || hasOwnParens
         docSeq
-          $  [ appSep $ docLit $ Text.pack "type"
-             , appSep
-             .  docSeq
-             $  [ docParenL | needsParens ]
-             ++ [ appSep $ layoutTyVarBndr a
-                , appSep $ docLit nameStr
-                , layoutTyVarBndr b
-                ]
-             ++ [ docParenR | needsParens ]
+          $  [ docLit $ Text.pack "type"
+             , docSeparator
              ]
-          ++ fmap (appSep . layoutTyVarBndr) rest
+          ++ [ docParenL | needsParens ]
+          ++ [ layoutTyVarBndr False a
+             , docSeparator
+             , docLit nameStr
+             , docSeparator
+             , layoutTyVarBndr False b
+             ]
+          ++ [ docParenR | needsParens ]
+          ++ fmap (layoutTyVarBndr True) rest
       else
         docSeq
-        $  [ appSep $ docLit $ Text.pack "type"
-           , appSep $ docWrapNode name $ docLit nameStr
+        $  [ docLit $ Text.pack "type"
+           , docSeparator
+           , docWrapNode name $ docLit nameStr
            ]
-        ++ fmap (appSep . layoutTyVarBndr) vars
+        ++ fmap (layoutTyVarBndr True) vars
+  sharedLhs   <- docSharedWrapper id lhs
   typeDoc     <- docSharedWrapper layoutType typ
   hasComments <- hasAnyCommentsConnected typ
-  docAlt
-    $  [ docSeq
-           [lhs, appSep $ docLit $ Text.pack "=", docForceSingleline typeDoc]
-       | not hasComments
-       ]
-    ++ [ docAddBaseY BrIndentRegular $ docPar
-          lhs
-          (docCols ColTyOpPrefix [appSep $ docLit $ Text.pack "=", typeDoc])
-       ]
+  runFilteredAlternative $ do
+    addAlternativeCond (not hasComments) $ docSeq
+      [sharedLhs, appSep $ docLit $ Text.pack "=", docForceSingleline typeDoc]
+    addAlternative $ docAddBaseY BrIndentRegular $ docPar
+      sharedLhs
+      (docCols ColTyOpPrefix [appSep $ docLit $ Text.pack "=", typeDoc])
 
-layoutTyVarBndr :: ToBriDoc HsTyVarBndr
-layoutTyVarBndr lbndr@(L _ bndr) = do
-  needsPriorSpace <- hasAnnKeywordComment lbndr AnnCloseP
+layoutTyVarBndr :: Bool -> ToBriDoc HsTyVarBndr
+layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
   docWrapNodePrior lbndr $ case bndr of
     UserTyVar name -> do
       nameStr <- lrdrNameToTextAnn name
-      docSeq $ [ docSeparator | needsPriorSpace ] ++ [docLit nameStr]
+      docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]
     KindedTyVar name kind -> do
       nameStr <- lrdrNameToTextAnn name
       docSeq
-        $  [ docSeparator | needsPriorSpace ]
+        $  [ docSeparator | needsSep ]
         ++ [ docLit $ Text.pack "("
            , appSep $ docLit nameStr
            , appSep . docLit $ Text.pack "::"

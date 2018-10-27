@@ -26,7 +26,6 @@ module Language.Haskell.Brittany.Internal.BackendUtils
   , layoutAddSepSpace
   , layoutSetCommentCol
   , layoutMoveToCommentPos
-  , layoutMoveToCommentPosX
   , layoutIndentRestorePostComment
   , moveToExactAnn
   , ppmMoveToExactLoc
@@ -189,29 +188,19 @@ layoutMoveToCommentPos y x = do
     { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
       Left i  -> if y == 0 then Left i else Right y
       Right{} -> Right y
-    , _lstate_addSepSpace      = if Data.Maybe.isJust (_lstate_commentCol state)
-      then Just $ case _lstate_curYOrAddNewline state of
-        Left{}  -> if y == 0 then x else _lstate_indLevelLinger state + x
-        Right{} -> _lstate_indLevelLinger state + x
-      else Just $ if y == 0 then x else _lstate_indLevelLinger state + x
-    , _lstate_commentCol       = Just $ case _lstate_commentCol state of
-      Just existing -> existing
-      Nothing       -> case _lstate_curYOrAddNewline state of
-        Left i  -> i + fromMaybe 0 (_lstate_addSepSpace state)
-        Right{} -> lstate_baseY state
+    , _lstate_addSepSpace      =
+      Just $ if Data.Maybe.isJust (_lstate_commentCol state)
+        then case _lstate_curYOrAddNewline state of
+          Left{}  -> if y == 0 then x else _lstate_indLevelLinger state + x
+          Right{} -> _lstate_indLevelLinger state + x
+        else if y == 0 then x else _lstate_indLevelLinger state + x
+    , _lstate_commentCol       =
+      Just $ case _lstate_commentCol state of
+        Just existing -> existing
+        Nothing -> case _lstate_curYOrAddNewline state of
+          Left i  -> i + fromMaybe 0 (_lstate_addSepSpace state)
+          Right{} -> lstate_baseY state
     }
-
-layoutMoveToCommentPosX
-  :: ( MonadMultiWriter Text.Builder.Builder m
-     , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
-     )
-  => Int
-  -> m ()
-layoutMoveToCommentPosX x = do
-  traceLocal ("layoutMoveToCommentPosX", x)
-  state <- mGet
-  mSet state { _lstate_addSepSpace = Just $ _lstate_indLevelLinger state + x }
 
 -- | does _not_ add spaces to again reach the current base column.
 layoutWriteNewline
