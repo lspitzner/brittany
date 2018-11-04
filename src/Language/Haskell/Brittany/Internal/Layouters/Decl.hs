@@ -26,7 +26,11 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import           Language.Haskell.Brittany.Internal.ExactPrintUtils
 import           Language.Haskell.Brittany.Internal.Utils
 
-import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import           GHC ( runGhc
+                     , GenLocated(L)
+                     , moduleNameString
+                     , AnnKeywordId (..)
+                     )
 import           SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
 import           HsSyn
 import           Name
@@ -34,6 +38,9 @@ import           BasicTypes ( InlinePragma(..)
                             , Activation(..)
                             , InlineSpec(..)
                             , RuleMatchInfo(..)
+#if MIN_VERSION_ghc(8,2,0)
+                            , LexicalFixity(..)
+#endif
                             )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 
@@ -43,6 +50,7 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 
 import           Bag ( mapBagM, bagToList, emptyBag )
+import           Data.Char (isUpper)
 
 
 
@@ -52,6 +60,7 @@ layoutDecl d@(L loc decl) = case decl of
   ValD bind -> withTransformedAnns d $ layoutBind (L loc bind) >>= \case
     Left  ns -> docLines $ return <$> ns
     Right n  -> return n
+  TyClD tycl -> withTransformedAnns d $ layoutTyCl (L loc tycl)
   InstD (TyFamInstD{}) -> do
     -- this is a (temporary (..)) workaround for "type instance" decls
     -- that do not round-trip through exactprint properly.
@@ -68,6 +77,10 @@ layoutDecl d@(L loc decl) = case decl of
   InstD (ClsInstD inst) -> withTransformedAnns d $ layoutClsInst (L loc inst)
   _ -> briDocByExactNoComment d
 
+
+--------------------------------------------------------------------------------
+-- Sig
+--------------------------------------------------------------------------------
 
 layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
@@ -167,6 +180,11 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
             , docSeq [appSep $ docLit $ Text.pack "<-", expDoc]
             ]
   _                        -> unknownNodeError "" lgstmt -- TODO
+
+
+--------------------------------------------------------------------------------
+-- HsBind
+--------------------------------------------------------------------------------
 
 layoutBind
   :: ToBriDocC
@@ -594,6 +612,103 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                       ]
          ]
       ++ wherePartMultiLine
+
+
+--------------------------------------------------------------------------------
+-- TyClDecl
+--------------------------------------------------------------------------------
+
+layoutTyCl :: ToBriDoc TyClDecl
+layoutTyCl ltycl@(L _loc tycl) = case tycl of
+#if MIN_VERSION_ghc(8,2,0)
+  SynDecl name vars fixity typ _ -> do
+    let isInfix = case fixity of
+          Prefix -> False
+          Infix  -> True
+#else
+  SynDecl name vars typ _ -> do
+    nameStr <- lrdrNameToTextAnn name
+    let isInfixTypeOp = case Text.uncons nameStr of
+          Nothing -> False
+          Just (c, _) -> not (c == '(' || isUpper c)
+    isInfix <- (isInfixTypeOp ||) <$> hasAnnKeyword name AnnBackquote
+#endif
+    -- hasTrailingParen <- hasAnnKeywordComment ltycl AnnCloseP
+    -- let parenWrapper = if hasTrailingParen
+    --       then appSep . docWrapNodeRest ltycl
+    --       else id
+    let wrapNodeRest = docWrapNodeRest ltycl
+    docWrapNodePrior ltycl
+      $ layoutSynDecl isInfix wrapNodeRest name (hsq_explicit vars) typ
+  _ -> briDocByExactNoComment ltycl
+
+layoutSynDecl
+  :: Bool
+  -> (ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered)
+  -> Located (IdP GhcPs)
+  -> [LHsTyVarBndr GhcPs]
+  -> LHsType GhcPs
+  -> ToBriDocM BriDocNumbered
+layoutSynDecl isInfix wrapNodeRest name vars typ = do
+  nameStr <- lrdrNameToTextAnn name
+  let
+    lhs = appSep . wrapNodeRest $ if isInfix
+      then do
+        let (a : b : rest) = vars
+        hasOwnParens <- hasAnnKeywordComment a AnnOpenP
+        -- This isn't quite right, but does give syntactically valid results
+        let needsParens = not $ null rest || hasOwnParens
+        docSeq
+          $  [ docLit $ Text.pack "type"
+             , docSeparator
+             ]
+          ++ [ docParenL | needsParens ]
+          ++ [ layoutTyVarBndr False a
+             , docSeparator
+             , docLit nameStr
+             , docSeparator
+             , layoutTyVarBndr False b
+             ]
+          ++ [ docParenR | needsParens ]
+          ++ fmap (layoutTyVarBndr True) rest
+      else
+        docSeq
+        $  [ docLit $ Text.pack "type"
+           , docSeparator
+           , docWrapNode name $ docLit nameStr
+           ]
+        ++ fmap (layoutTyVarBndr True) vars
+  sharedLhs   <- docSharedWrapper id lhs
+  typeDoc     <- docSharedWrapper layoutType typ
+  hasComments <- hasAnyCommentsConnected typ
+  runFilteredAlternative $ do
+    addAlternativeCond (not hasComments) $ docSeq
+      [sharedLhs, appSep $ docLit $ Text.pack "=", docForceSingleline typeDoc]
+    addAlternative $ docAddBaseY BrIndentRegular $ docPar
+      sharedLhs
+      (docCols ColTyOpPrefix [appSep $ docLit $ Text.pack "=", typeDoc])
+
+layoutTyVarBndr :: Bool -> ToBriDoc HsTyVarBndr
+layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
+  docWrapNodePrior lbndr $ case bndr of
+    UserTyVar name -> do
+      nameStr <- lrdrNameToTextAnn name
+      docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]
+    KindedTyVar name kind -> do
+      nameStr <- lrdrNameToTextAnn name
+      docSeq
+        $  [ docSeparator | needsSep ]
+        ++ [ docLit $ Text.pack "("
+           , appSep $ docLit nameStr
+           , appSep . docLit $ Text.pack "::"
+           , docForceSingleline $ layoutType kind
+           , docLit $ Text.pack ")"
+           ]
+
+
+--------------------------------------------------------------------------------
+-- ClsInstDecl
+--------------------------------------------------------------------------------
 
 -- | Layout an @instance@ declaration
 --
