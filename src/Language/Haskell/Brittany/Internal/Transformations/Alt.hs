@@ -296,8 +296,8 @@ transformAlts =
           reWrap . BDFAnnotationRest annKey <$> rec bd
         BDFAnnotationKW annKey kw bd ->
           reWrap . BDFAnnotationKW annKey kw <$> rec bd
-        BDFMoveToKWDP annKey kw bd ->
-          reWrap . BDFMoveToKWDP annKey kw <$> rec bd
+        BDFMoveToKWDP annKey kw b bd ->
+          reWrap . BDFMoveToKWDP annKey kw b <$> rec bd
         BDFLines [] -> return $ reWrap BDFEmpty -- evil transformation. or harmless.
         BDFLines (l:lr) -> do
           ind <- _acp_indent <$> mGet
@@ -457,7 +457,7 @@ getSpacing !bridoc = rec bridoc
       BDFAnnotationPrior _annKey bd -> rec bd
       BDFAnnotationKW _annKey _kw bd -> rec bd
       BDFAnnotationRest  _annKey bd -> rec bd
-      BDFMoveToKWDP _annKey _kw bd -> rec bd
+      BDFMoveToKWDP _annKey _kw _b bd -> rec bd
       BDFLines [] -> return
         $ LineModeValid
         $ VerticalSpacing 0 VerticalSpacingParNone False
@@ -730,7 +730,7 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFAnnotationPrior _annKey bd -> rec bd
         BDFAnnotationKW _annKey _kw bd -> rec bd
         BDFAnnotationRest  _annKey bd -> rec bd
-        BDFMoveToKWDP _annKey _kw bd -> rec bd
+        BDFMoveToKWDP _annKey _kw _b bd -> rec bd
         BDFLines [] -> return $ [VerticalSpacing 0 VerticalSpacingParNone False]
         BDFLines ls@(_:_) -> do
           -- we simply assume that lines is only used "properly", i.e. in

@@ -235,7 +235,10 @@ layoutBriDocM = \case
         { _lstate_comments = Map.adjust
           ( \ann -> ann { ExactPrint.annFollowingComments = []
                         , ExactPrint.annPriorComments     = []
-                        , ExactPrint.annsDP               = []
+                        , ExactPrint.annsDP               =
+                          flip filter (ExactPrint.annsDP ann) $ \case
+                            (ExactPrint.Types.AnnComment{}, _) -> False
+                            _                                  -> True
                         }
           )
           annKey
@@ -259,7 +262,7 @@ layoutBriDocM = \case
             -- layoutMoveToIndentCol y
             layoutWriteAppendMultiline $ Text.pack $ comment
       -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
-  BDMoveToKWDP annKey keyword bd -> do
+  BDMoveToKWDP annKey keyword shouldRestoreIndent bd -> do
     mDP <- do
       state <- mGet
       let m    = _lstate_comments state
@@ -269,12 +272,14 @@ layoutBriDocM = \case
                      , (ExactPrint.Types.G kw1, dp) <- ann
                      , keyword == kw1
                      ]
+      -- mTell $ Seq.fromList ["KWDP: " ++ show annKey ++ " " ++ show mAnn]
       pure $ case relevant of
         [] -> Nothing
         (dp:_) -> Just dp
     case mDP of
-      Nothing                           -> pure ()
-      Just (ExactPrint.Types.DP (y, x)) -> layoutMoveToCommentPos y x
+      Nothing -> pure ()
+      Just (ExactPrint.Types.DP (y, x)) ->
+        layoutMoveToCommentPos y (if shouldRestoreIndent then x else 0)
     layoutBriDocM bd
   BDNonBottomSpacing bd -> layoutBriDocM bd
   BDSetParSpacing    bd -> layoutBriDocM bd
@@ -308,7 +313,7 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDAnnotationPrior _ bd  -> rec bd
     BDAnnotationKW _ _ bd   -> rec bd
     BDAnnotationRest _ bd   -> rec bd
-    BDMoveToKWDP _ _ bd     -> rec bd
+    BDMoveToKWDP _ _ _ bd   -> rec bd
     BDLines ls@(_:_)        -> do
       x <- StateS.get
       return $ maximum $ ls <&> \l -> StateS.evalState (rec l) x
@@ -344,7 +349,7 @@ briDocIsMultiLine briDoc = rec briDoc
     BDAnnotationPrior _ bd  -> rec bd
     BDAnnotationKW _ _ bd   -> rec bd
     BDAnnotationRest _ bd   -> rec bd
-    BDMoveToKWDP _ _ bd     -> rec bd
+    BDMoveToKWDP _ _ _ bd   -> rec bd
     BDLines (_:_:_)         -> True
     BDLines [_    ]         -> False
     BDLines []              -> error "briDocIsMultiLine BDLines []"

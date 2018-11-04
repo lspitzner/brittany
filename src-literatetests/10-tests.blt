@@ -1106,3 +1106,38 @@ instance MyClass Int where
     -- ^ Interesting field
     , intData2 :: Int
     }
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+#group whitespace-newlines
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test module-import-newlines
+
+module Main where
+
+import           Prelude
+
+firstDecl = True
+
+#test function-where-newlines
+
+func = do
+
+  -- complex first step
+  aaa
+
+  -- complex second step
+  bbb
+
+ where
+
+  helper :: Helper
+  helper = helpful
+
+  other :: Other
+  other = True
