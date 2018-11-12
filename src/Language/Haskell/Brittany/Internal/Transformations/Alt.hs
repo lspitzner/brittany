@@ -203,6 +203,7 @@ transformAlts =
                       AltLineModeStateForceSL{} -> p == VerticalSpacingParNone
                       AltLineModeStateForceML{} -> p /= VerticalSpacingParNone
                       AltLineModeStateContradiction -> False
+                  -- TODO: use COMPLETE pragma instead?
                   lineCheck _ = error "ghc exhaustive check is insufficient"
               lconf <- _conf_layout <$> mAsk
 #if INSERTTRACESALT
@@ -462,7 +463,8 @@ getSpacing !bridoc = rec bridoc
         $ LineModeValid
         $ VerticalSpacing 0 VerticalSpacingParNone False
       BDFLines ls@(_:_) -> do
-        lSps@(mVs:_) <- rec `mapM` ls
+        lSps <- rec `mapM` ls
+        let (mVs:_) = lSps -- separated into let to avoid MonadFail
         return $ [ VerticalSpacing lsp (VerticalSpacingParSome $ lineMax) False
                  | VerticalSpacing lsp _ _ <- mVs
                  , lineMax <- getMaxVS $ maxVs $ lSps

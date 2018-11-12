@@ -231,6 +231,7 @@ cmdlineConfigParser = do
 readConfig
   :: MonadIO m => System.IO.FilePath -> MaybeT m (Maybe (CConfig Option))
 readConfig path = do
+  -- TODO: probably should catch IOErrors and then omit the existence check.
   exists <- liftIO $ System.Directory.doesFileExist path
   if exists
     then do

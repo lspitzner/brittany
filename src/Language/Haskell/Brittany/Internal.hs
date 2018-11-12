@@ -487,10 +487,17 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
 
 
 getDeclBindingNames :: LHsDecl GhcPs -> [String]
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+getDeclBindingNames (L _ decl) = case decl of
+  SigD _ (TypeSig _ ns _) -> ns <&> \(L _ n) -> Text.unpack (rdrNameToText n)
+  ValD _ (FunBind _ (L _ n) _ _ _) -> [Text.unpack $ rdrNameToText n]
+  _                              -> []
+#else
 getDeclBindingNames (L _ decl) = case decl of
   SigD (TypeSig ns _) -> ns <&> \(L _ n) -> Text.unpack (rdrNameToText n)
   ValD (FunBind (L _ n) _ _ _ _) -> [Text.unpack $ rdrNameToText n]
   _                              -> []
+#endif
 
 
 -- Prints the information associated with the module annotation
@@ -564,15 +571,26 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
 
 _sigHead :: Sig GhcPs -> String
 _sigHead = \case
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  TypeSig _ names _ ->
+#else
   TypeSig names _ ->
+#endif
     "TypeSig " ++ intercalate "," (Text.unpack . lrdrNameToText <$> names)
   _ -> "unknown sig"
 
 _bindHead :: HsBind GhcPs -> String
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+_bindHead = \case
+  FunBind _ fId _ _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
+  PatBind _ _pat _ ([], []) -> "PatBind smth"
+  _                           -> "unknown bind"
+#else
 _bindHead = \case
   FunBind fId _ _ _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
   PatBind _pat _ _ _ ([], []) -> "PatBind smth"
   _                           -> "unknown bind"
+#endif
 
 
 

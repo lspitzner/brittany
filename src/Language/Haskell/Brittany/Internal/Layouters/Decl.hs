@@ -55,28 +55,43 @@ import           Data.Char (isUpper)
 
 
 layoutDecl :: ToBriDoc HsDecl
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+layoutDecl d@(L loc decl) = case decl of
+  SigD _ sig  -> withTransformedAnns d $ layoutSig (L loc sig)
+  ValD _ bind -> withTransformedAnns d $ layoutBind (L loc bind) >>= \case
+    Left  ns -> docLines $ return <$> ns
+    Right n  -> return n
+  TyClD _ tycl           -> withTransformedAnns d $ layoutTyCl (L loc tycl)
+  InstD _ (TyFamInstD{}) -> layoutTyFamInstDWorkaround d
+  InstD _ (ClsInstD _ inst) ->
+    withTransformedAnns d $ layoutClsInst (L loc inst)
+  _ -> briDocByExactNoComment d
+#else
 layoutDecl d@(L loc decl) = case decl of
   SigD sig  -> withTransformedAnns d $ layoutSig (L loc sig)
   ValD bind -> withTransformedAnns d $ layoutBind (L loc bind) >>= \case
     Left  ns -> docLines $ return <$> ns
     Right n  -> return n
   TyClD tycl -> withTransformedAnns d $ layoutTyCl (L loc tycl)
-  InstD (TyFamInstD{}) -> do
-    -- this is a (temporary (..)) workaround for "type instance" decls
-    -- that do not round-trip through exactprint properly.
-    let fixer s = case List.stripPrefix "type " s of
-          Just rest | not ("instance" `isPrefixOf` rest) ->
-            "type instance " ++ rest
-          _ -> s
-    str <- mAsk <&> \anns ->
-      intercalate "\n" $ fmap fixer $ lines' $ ExactPrint.exactPrint d anns
-    allocateNode $ BDFExternal (ExactPrint.mkAnnKey d)
-                               (foldedAnnKeys d)
-                               False
-                               (Text.pack str)
+  InstD (TyFamInstD{}) -> layoutTyFamInstDWorkaround d
   InstD (ClsInstD inst) -> withTransformedAnns d $ layoutClsInst (L loc inst)
-  _ -> briDocByExactNoComment d
+  _                    -> briDocByExactNoComment d
+#endif
 
+layoutTyFamInstDWorkaround :: ToBriDoc HsDecl
+layoutTyFamInstDWorkaround d = do
+  -- this is a (temporary (..)) workaround for "type instance" decls
+  -- that do not round-trip through exactprint properly.
+  let fixer s = case List.stripPrefix "type " s of
+        Just rest | not ("instance" `isPrefixOf` rest) ->
+          "type instance " ++ rest
+        _ -> s
+  str <- mAsk <&> \anns ->
+    intercalate "\n" $ fmap fixer $ lines' $ ExactPrint.exactPrint d anns
+  allocateNode $ BDFExternal (ExactPrint.mkAnnKey d)
+                             (foldedAnnKeys d)
+                             False
+                             (Text.pack str)
 
 --------------------------------------------------------------------------------
 -- Sig
@@ -84,12 +99,18 @@ layoutDecl d@(L loc decl) = case decl of
 
 layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  TypeSig _ names (HsWC _ (HsIB _ typ)) -> layoutNamesAndType names typ
+#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
   TypeSig names (HsWC _ (HsIB _ typ _)) -> layoutNamesAndType names typ
 #else /* ghc-8.0 */
   TypeSig names (HsIB _ (HsWC _ _ typ)) -> layoutNamesAndType names typ
 #endif
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  InlineSig _ name (InlinePragma _ spec _arity phaseAct conlike) ->
+#else
   InlineSig name (InlinePragma _ spec _arity phaseAct conlike) ->
+#endif
     docWrapNode lsig $ do
       nameStr <- lrdrNameToTextAnn name
       specStr <- specStringCompat lsig spec
@@ -106,7 +127,9 @@ layoutSig lsig@(L _loc sig) = case sig of
         $  Text.pack ("{-# " ++ specStr ++ conlikeStr ++ phaseStr)
         <> nameStr
         <> Text.pack " #-}"
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+#if MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
+  ClassOpSig _ False names (HsIB _ typ) -> layoutNamesAndType names typ
+#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
   ClassOpSig False names (HsIB _ typ _) -> layoutNamesAndType names typ
 #else /* ghc-8.0 */
   ClassOpSig False names (HsIB _ typ) -> layoutNamesAndType names typ
@@ -152,7 +175,6 @@ layoutSig lsig@(L _loc sig) = case sig of
                )
              ]
 
-
 specStringCompat
   :: MonadMultiWriter [BrittanyError] m => LSig GhcPs -> InlineSpec -> m String
 #if MIN_VERSION_ghc(8,4,0)
@@ -171,8 +193,16 @@ specStringCompat _ = \case
 
 layoutGuardLStmt :: ToBriDoc' (Stmt GhcPs (LHsExpr GhcPs))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  BodyStmt _ body _ _      -> layoutExpr body
+#else
   BodyStmt body _ _ _      -> layoutExpr body
+#endif
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  BindStmt _ lPat expr _ _ -> do
+#else
   BindStmt lPat expr _ _ _ -> do
+#endif
     patDoc <- docSharedWrapper layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
     docCols ColBindStmt
@@ -191,7 +221,11 @@ layoutBind
        (HsBindLR GhcPs GhcPs)
        (Either [BriDocNumbered] BriDocNumbered)
 layoutBind lbind@(L _ bind) = case bind of
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  FunBind _ fId (MG _ lmatches@(L _ matches) _) _ [] -> do
+#else
   FunBind fId (MG lmatches@(L _ matches) _ _ _) _ _ [] -> do
+#endif
     idStr       <- lrdrNameToTextAnn fId
     binderDoc   <- docLit $ Text.pack "="
     funcPatDocs <-
@@ -200,7 +234,11 @@ layoutBind lbind@(L _ bind) = case bind of
         $      layoutPatternBind (Just idStr) binderDoc
         `mapM` matches
     return $ Left $ funcPatDocs
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  PatBind _ pat (GRHSs _ grhss whereBinds) ([], []) -> do
+#else
   PatBind pat (GRHSs grhss whereBinds) _ _ ([], []) -> do
+#endif
     patDocs    <- colsWrapPat =<< layoutPat pat
     clauseDocs <- layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
@@ -229,7 +267,11 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
   --   Just . (>>= either id return) . Data.Foldable.toList <$> mapBagM layoutBind lhsBindsLR -- TODO: fix ordering
   -- x@(HsValBinds (ValBindsIn{})) ->
   --   Just . (:[]) <$> unknownNodeError "HsValBinds (ValBindsIn _ (_:_))" x
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  HsValBinds _ (ValBinds _ bindlrs sigs) -> do
+#else
   HsValBinds (ValBindsIn bindlrs sigs) -> do
+#endif
     let unordered =
           [ BagBind b | b <- Data.Foldable.toList bindlrs ]
             ++ [ BagSig s | s <- sigs ]
@@ -238,23 +280,36 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
       BagBind b -> either id return <$> layoutBind b
       BagSig  s -> return <$> layoutSig s
     return $ Just $ docs
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+--  x@(HsValBinds (ValBindsOut _binds _lsigs)) ->
+  HsValBinds _ (XValBindsLR{}) -> error "brittany internal error: XValBindsLR"
+  XHsLocalBindsLR{} -> error "brittany internal error: XHsLocalBindsLR"
+#else
   x@(HsValBinds (ValBindsOut _binds _lsigs)) ->
     -- i _think_ this case never occurs in non-processed ast
     Just . (: []) <$> unknownNodeError "HsValBinds ValBindsOut{}"
                                        (L noSrcSpan x)
-  x@(HsIPBinds _ipBinds) ->
+#endif
+  x@(HsIPBinds{}) ->
     Just . (: []) <$> unknownNodeError "HsIPBinds" (L noSrcSpan x)
-  EmptyLocalBinds -> return $ Nothing
+  EmptyLocalBinds{} -> return $ Nothing
 
 -- TODO: we don't need the `LHsExpr GhcPs` anymore, now that there is
 -- parSpacing stuff.B
 layoutGrhs
   :: LGRHS GhcPs (LHsExpr GhcPs)
   -> ToBriDocM ([BriDocNumbered], BriDocNumbered, LHsExpr GhcPs)
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+layoutGrhs lgrhs@(L _ (GRHS _ guards body)) = do
+#else
 layoutGrhs lgrhs@(L _ (GRHS guards body)) = do
+#endif
   guardDocs <- docWrapNode lgrhs $ layoutStmt `mapM` guards
   bodyDoc   <- layoutExpr body
   return (guardDocs, bodyDoc, body)
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+layoutGrhs (L _ (XGRHS{})) = error "brittany internal error: XGRHS"
+#endif
 
 layoutPatternBind
   :: Maybe Text
@@ -263,7 +318,11 @@ layoutPatternBind
   -> ToBriDocM BriDocNumbered
 layoutPatternBind mIdStr binderDoc lmatch@(L _ match) = do
   let pats                     = m_pats match
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  let (GRHSs _ grhss whereBinds) = m_grhss match
+#else
   let (GRHSs grhss whereBinds) = m_grhss match
+#endif
   patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
   let isInfix = isInfixMatch match
   let mIdStr' = fixPatternBindIdentifier match <$> mIdStr
@@ -629,7 +688,12 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
 
 layoutTyCl :: ToBriDoc TyClDecl
 layoutTyCl ltycl@(L _loc tycl) = case tycl of
-#if MIN_VERSION_ghc(8,2,0)
+#if MIN_VERSION_ghc(8,6,0)
+  SynDecl _ name vars fixity typ -> do
+    let isInfix = case fixity of
+          Prefix -> False
+          Infix  -> True
+#elif MIN_VERSION_ghc(8,2,0)
   SynDecl name vars fixity typ _ -> do
     let isInfix = case fixity of
           Prefix -> False
@@ -700,10 +764,19 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
 layoutTyVarBndr :: Bool -> ToBriDoc HsTyVarBndr
 layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
   docWrapNodePrior lbndr $ case bndr of
+#if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
+    XTyVarBndr{} -> error "brittany internal error: XTyVarBndr"
+    UserTyVar _ name -> do
+#else                         /* 8.0 8.2 8.4 */
     UserTyVar name -> do
+#endif
       nameStr <- lrdrNameToTextAnn name
       docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]
+#if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
+    KindedTyVar _ name kind -> do
+#else                         /* 8.0 8.2 8.4 */
     KindedTyVar name kind -> do
+#endif
       nameStr <- lrdrNameToTextAnn name
       docSeq
         $  [ docSeparator | needsSep ]
@@ -736,8 +809,21 @@ layoutClsInst lcid@(L _ cid) = docLines
   ]
  where
   layoutInstanceHead :: ToBriDocM BriDocNumbered
+#if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
   layoutInstanceHead =
-    briDocByExactNoComment $ InstD . ClsInstD . removeChildren <$> lcid
+    briDocByExactNoComment
+      $   InstD NoExt
+      .   ClsInstD NoExt
+      .   removeChildren
+      <$> lcid
+#else
+  layoutInstanceHead =
+    briDocByExactNoComment
+      $   InstD
+      .   ClsInstD
+      .   removeChildren
+      <$> lcid
+#endif
 
   removeChildren :: ClsInstDecl p -> ClsInstDecl p
   removeChildren c = c
