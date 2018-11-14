@@ -417,13 +417,11 @@ layoutIndentLevelPushCur = do
         (Right{}, Just j ) -> j
         (Right{}, Nothing) -> 0
   layoutIndentLevelPushInternal y
-  layoutBaseYPushInternal y
 
 layoutIndentLevelPop
   :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
 layoutIndentLevelPop = do
   traceLocal ("layoutIndentLevelPop")
-  layoutBaseYPopInternal
   layoutIndentLevelPopInternal
   -- why are comment indentations relative to the previous indentation on
   -- the first node of an additional indentation, and relative to the outer

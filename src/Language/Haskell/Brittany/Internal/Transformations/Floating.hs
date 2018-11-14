@@ -128,6 +128,10 @@ transformSimplifyFloating = stepBO .> stepFull
         Just $ BDBaseYPop (BDAddBaseY ind x)
       BDAddBaseY ind (BDDebug s x) ->
         Just $ BDDebug s (BDAddBaseY ind x)
+      BDAddBaseY ind (BDIndentLevelPop x) ->
+        Just $ BDIndentLevelPop (BDAddBaseY ind x)
+      BDAddBaseY ind (BDIndentLevelPushCur x) ->
+        Just $ BDIndentLevelPushCur (BDAddBaseY ind x)
       _ -> Nothing
     stepBO :: BriDoc -> BriDoc
     stepBO = -- traceFunctionWith "stepBO" (show . briDocToDocWithAnns) (show . briDocToDocWithAnns) $

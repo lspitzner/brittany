@@ -516,6 +516,20 @@ myTupleSection =
 func = (lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
   , lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd)
 
+#test comment-after-then
+foo = if True
+  then
+      -- iiiiii
+    "a                                                                         "
+  else
+    "b                                                                         "
+
+#test comment-after-if-else-do
+func = if cond
+  then pure 42
+  else do
+    -- test
+    abc
 
 
 ###############################################################################

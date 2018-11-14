@@ -563,7 +563,7 @@ layoutExpr lexpr@(L _ expr) = do
               IndentPolicyFree -> BrIndentSpecial 3
       -- TODO: some of the alternatives (especially last and last-but-one)
       -- overlap.
-      runFilteredAlternative $ do
+      docSetIndentLevel $ runFilteredAlternative $ do
         -- if _ then _ else _
         addAlternativeCond (not hasComments)
           $ docSeq
