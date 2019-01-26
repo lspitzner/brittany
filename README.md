@@ -94,6 +94,12 @@ log the size of the input, but _not_ the full input/output of requests.)
     aura -A brittany
     ~~~~
 
+- via `nix`:
+    ~~~.sh
+    nix build  # or 'nix-build'
+    nix-env -i ./result
+    ~~~
+
 # Editor Integration
 
 #### Sublime text
