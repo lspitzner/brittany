@@ -96,7 +96,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 - via `nix`:
     ~~~.sh
-    nix build  # or 'nix-build'
+    nix build -f release.nix     # or 'nix-build -f release.nix'
     nix-env -i ./result
     ~~~
 
