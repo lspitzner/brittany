@@ -172,9 +172,10 @@ layoutExpr lexpr@(L _ expr) = do
             _ -> docSeq
       headDoc <- docSharedWrapper layoutExpr headE
       paramDocs <- docSharedWrapper layoutExpr `mapM` paramEs
+      hasComments <- hasAnyCommentsConnected exp2
       runFilteredAlternative $ do
         -- foo x y
-        addAlternative
+        addAlternativeCond (not hasComments)
           $ colsOrSequence
           $ appSep (docForceSingleline headDoc)
           : spacifyDocs (docForceSingleline <$> paramDocs)
