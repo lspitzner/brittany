@@ -136,6 +136,15 @@ layoutExpr lexpr@(L _ expr) = do
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ XMatchGroup{} ->
       error "brittany internal error: HsLamCase XMatchGroup"
+    HsLamCase _ (MG _ (L _ []) _) -> do
+#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4*/
+    HsLamCase (MG (L _ []) _ _ _) -> do
+#else                        /* ghc-8.0 */
+    HsLamCase _ (MG (L _ []) _ _ _) -> do
+#endif
+      docSetParSpacing $ docAddBaseY BrIndentRegular $
+        (docLit $ Text.pack "\\case {}")
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ (MG _ lmatches@(L _ matches) _) -> do
 #elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4*/
     HsLamCase (MG lmatches@(L _ matches) _ _ _) -> do
@@ -520,6 +529,19 @@ layoutExpr lexpr@(L _ expr) = do
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsCase _ _ XMatchGroup{} ->
       error "brittany internal error: HsCase XMatchGroup"
+    HsCase _ cExp (MG _ (L _ []) _) -> do
+#else
+    HsCase cExp (MG (L _ []) _ _ _) -> do
+#endif
+      cExpDoc <- docSharedWrapper layoutExpr cExp
+      docSetParSpacing
+        $ docAddBaseY BrIndentRegular
+        $ docSeq
+            [ appSep $ docLit $ Text.pack "case"
+            , appSep $ docForceSingleline cExpDoc
+            , docLit $ Text.pack "of {}"
+            ]
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsCase _ cExp (MG _ lmatches@(L _ matches) _) -> do
 #else
     HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
