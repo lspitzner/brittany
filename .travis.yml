@@ -95,6 +95,9 @@ matrix:
   - env: BUILD=stack ARGS="--stack-yaml stack-8.2.2.yaml"
     compiler: ": #stack 8.2.2"
     addons: {apt: {packages: [libgmp-dev]}}
+  - env: BUILD=stack ARGS="--stack-yaml stack-8.6.5.yaml"
+    compiler: ": #stack 8.6.5"
+    addons: {apt: {packages: [libgmp-dev]}}
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
