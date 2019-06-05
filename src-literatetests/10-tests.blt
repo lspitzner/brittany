@@ -531,6 +531,45 @@ func = if cond
     -- test
     abc
 
+#test nonempty-case-short
+func = case x of
+  False -> False
+  True  -> True
+
+#test nonempty-case-long
+func =
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of
+      False -> False
+      True  -> True
+
+#test nonempty-case-long-do
+func = do
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of
+      False -> False
+      True  -> True
+
+#test empty-case-short
+func = case x of {}
+
+#test empty-case-long
+func =
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of {}
+
+#test empty-case-long-do
+func = do
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of {}
 
 ###############################################################################
 ###############################################################################
@@ -1155,3 +1194,44 @@ func = do
 
   other :: Other
   other = True
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+#group typefam.instance
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test simple-typefam-instance
+
+type instance MyFam Bool = String
+
+#test simple-typefam-instance-param-type
+
+type instance MyFam (Maybe a) = a -> Bool
+
+#test simple-typefam-instance-parens
+
+type instance (MyFam (String -> Int)) = String
+
+#test simple-typefam-instance-overflow
+
+type instance MyFam ALongishType
+  =  AMuchLongerTypeThanThat
+  -> AnEvenLongerTypeThanTheLastOne
+  -> ShouldDefinitelyOverflow
+
+#test simple-typefam-instance-comments
+
+-- | A happy family
+type instance MyFam Bool -- This is an odd one
+  = AnotherType -- Here's another
+
+#test simple-typefam-instance-parens-comment
+
+-- | A happy family
+type instance (MyFam Bool) -- This is an odd one
+  = -- Here's another
+    AnotherType

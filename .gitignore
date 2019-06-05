@@ -12,3 +12,4 @@ local/
 cabal.sandbox.config
 cabal.project.local
 .ghc.environment.*
+result
