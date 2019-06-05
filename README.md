@@ -117,6 +117,8 @@ log the size of the input, but _not_ the full input/output of requests.)
   brittany built in.
 #### Atom
   [Atom Beautify](https://atom.io/packages/atom-beautify) supports brittany as a formatter for Haskell. Since the default formatter is set to hindent, you will need to change this setting to brittany, after installing the extension.
+#### Emacs
+  [format-all](https://github.com/lassik/emacs-format-all-the-code) support brittany as the default formatter for Haskell.
 
 # Usage
 
