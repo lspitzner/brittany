@@ -531,6 +531,45 @@ func = if cond
     -- test
     abc
 
+#test nonempty-case-short
+func = case x of
+  False -> False
+  True  -> True
+
+#test nonempty-case-long
+func =
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of
+      False -> False
+      True  -> True
+
+#test nonempty-case-long-do
+func = do
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of
+      False -> False
+      True  -> True
+
+#test empty-case-short
+func = case x of {}
+
+#test empty-case-long
+func =
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of {}
+
+#test empty-case-long-do
+func = do
+  case
+      lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+        lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+    of {}
 
 ###############################################################################
 ###############################################################################
