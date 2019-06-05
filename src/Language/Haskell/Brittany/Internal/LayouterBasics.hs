@@ -297,8 +297,20 @@ hasAnyCommentsConnected ast = not . null <$> astConnectedComments ast
 -- | True if there are any regular comments connected to any node below (in AST
 --   sense) the given node
 hasAnyRegularCommentsConnected :: Data ast => GHC.Located ast -> ToBriDocM Bool
-hasAnyRegularCommentsConnected ast = any isRegular <$> astConnectedComments ast
-  where isRegular = (== Nothing) . ExactPrint.Types.commentOrigin . fst
+hasAnyRegularCommentsConnected ast =
+  any isRegularComment <$> astConnectedComments ast
+
+-- | Regular comments are comments that are actually "source code comments",
+-- i.e. things that start with "--" or "{-". In contrast to comment-annotations
+-- used by ghc-exactprint for capturing symbols (and their exact positioning).
+--
+-- Only the type instance layouter makes use of this filter currently, but
+-- it might make sense to apply it more aggressively or make it the default -
+-- I believe that most of the time we branch on the existence of comments, we
+-- only care about "regular" comments. We simply did not need the distinction
+-- because "irregular" comments are not that common outside of type/data decls.
+isRegularComment :: (ExactPrint.Comment, ExactPrint.DeltaPos) -> Bool
+isRegularComment = (== Nothing) . ExactPrint.Types.commentOrigin . fst
 
 astConnectedComments
   :: Data ast
@@ -316,8 +328,7 @@ hasAnyCommentsPrior ast = astAnn ast <&> \case
 hasAnyRegularCommentsRest :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyRegularCommentsRest ast = astAnn ast <&> \case
   Nothing -> False
-  Just ann -> any isRegular (extractRestComments ann)
-  where isRegular = (== Nothing) . ExactPrint.Types.commentOrigin . fst
+  Just ann -> any isRegularComment (extractRestComments ann)
 
 hasAnnKeywordComment
   :: Data ast => GHC.Located ast -> AnnKeywordId -> ToBriDocM Bool
