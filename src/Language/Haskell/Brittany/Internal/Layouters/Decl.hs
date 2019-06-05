@@ -33,6 +33,9 @@ import           GHC                            ( runGhc
                                                 )
 import           SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
 import           HsSyn
+#if MIN_VERSION_ghc(8,6,0)
+import           HsExtension (NoExt (..))
+#endif
 import           Name
 import           BasicTypes ( InlinePragma(..)
                             , Activation(..)
@@ -62,7 +65,8 @@ layoutDecl d@(L loc decl) = case decl of
     Left  ns -> docLines $ return <$> ns
     Right n  -> return n
   TyClD _ tycl           -> withTransformedAnns d $ layoutTyCl (L loc tycl)
-  InstD _ (TyFamInstD{}) -> layoutTyFamInstDWorkaround d
+  InstD _ (TyFamInstD _ tfid) ->
+    withTransformedAnns d $ layoutTyFamInstDecl False (L loc tfid)
   InstD _ (ClsInstD _ inst) ->
     withTransformedAnns d $ layoutClsInst (L loc inst)
   _ -> briDocByExactNoComment d
@@ -73,25 +77,12 @@ layoutDecl d@(L loc decl) = case decl of
     Left  ns -> docLines $ return <$> ns
     Right n  -> return n
   TyClD tycl -> withTransformedAnns d $ layoutTyCl (L loc tycl)
-  InstD (TyFamInstD{}) -> layoutTyFamInstDWorkaround d
+  InstD (TyFamInstD tfid) ->
+    withTransformedAnns d $ layoutTyFamInstDecl False (L loc tfid)
   InstD (ClsInstD inst) -> withTransformedAnns d $ layoutClsInst (L loc inst)
   _                    -> briDocByExactNoComment d
 #endif
 
-layoutTyFamInstDWorkaround :: ToBriDoc HsDecl
-layoutTyFamInstDWorkaround d = do
-  -- this is a (temporary (..)) workaround for "type instance" decls
-  -- that do not round-trip through exactprint properly.
-  let fixer s = case List.stripPrefix "type " s of
-        Just rest | not ("instance" `isPrefixOf` rest) ->
-          "type instance " ++ rest
-        _ -> s
-  str <- mAsk <&> \anns ->
-    intercalate "\n" $ fmap fixer $ lines' $ ExactPrint.exactPrint d anns
-  allocateNode $ BDFExternal (ExactPrint.mkAnnKey d)
-                             (foldedAnnKeys d)
-                             False
-                             (Text.pack str)
 
 --------------------------------------------------------------------------------
 -- Sig
@@ -156,24 +147,11 @@ layoutSig lsig@(L _loc sig) = case sig of
             ]
           ]
         ]
-      else
-        docAlt
-          $  [ docSeq
-               [ appSep $ docWrapNodeRest lsig $ docLit nameStr
-               , appSep $ docLit $ Text.pack "::"
-               , docForceSingleline typeDoc
-               ]
-             | not hasComments
-             ]
-          ++ [ docAddBaseY BrIndentRegular $ docPar
-               (docWrapNodeRest lsig $ docLit nameStr)
-               ( docCols
-                 ColTyOpPrefix
-                 [ docLit $ Text.pack ":: "
-                 , docAddBaseY (BrIndentSpecial 3) $ typeDoc
-                 ]
-               )
-             ]
+      else layoutLhsAndType
+        hasComments
+        (appSep . docWrapNodeRest lsig $ docLit nameStr)
+        "::"
+        typeDoc
 
 specStringCompat
   :: MonadMultiWriter [BrittanyError] m => LSig GhcPs -> InlineSpec -> m String
@@ -754,12 +732,7 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
   sharedLhs   <- docSharedWrapper id lhs
   typeDoc     <- docSharedWrapper layoutType typ
   hasComments <- hasAnyCommentsConnected typ
-  runFilteredAlternative $ do
-    addAlternativeCond (not hasComments) $ docSeq
-      [sharedLhs, appSep $ docLit $ Text.pack "=", docForceSingleline typeDoc]
-    addAlternative $ docAddBaseY BrIndentRegular $ docPar
-      sharedLhs
-      (docCols ColTyOpPrefix [appSep $ docLit $ Text.pack "=", typeDoc])
+  layoutLhsAndType hasComments sharedLhs "=" typeDoc
 
 layoutTyVarBndr :: Bool -> ToBriDoc HsTyVarBndr
 layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
@@ -786,6 +759,55 @@ layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
            , docForceSingleline $ layoutType kind
            , docLit $ Text.pack ")"
            ]
+
+
+--------------------------------------------------------------------------------
+-- TyFamInstDecl
+--------------------------------------------------------------------------------
+
+layoutTyFamInstDecl :: Bool -> ToBriDoc TyFamInstDecl
+layoutTyFamInstDecl inClass (L loc tfid) = do
+  let
+#if MIN_VERSION_ghc(8,6,0)
+    linst = L loc (TyFamInstD NoExt tfid)
+    feqn@(FamEqn _ name pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    lfeqn = L loc feqn
+#elif MIN_VERSION_ghc(8,4,0)
+    linst = L loc (TyFamInstD tfid)
+    feqn@(FamEqn name pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    lfeqn = L loc feqn
+#elif MIN_VERSION_ghc(8,2,0)
+    linst = L loc (TyFamInstD tfid)
+    lfeqn@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
+    pats = hsib_body boundPats
+#else
+    linst = L loc (TyFamInstD tfid)
+    lfeqn@(L _ (TyFamEqn name boundPats typ)) = tfid_eqn tfid
+    pats = hsib_body boundPats
+#endif
+  docWrapNodePrior linst $ do
+    nameStr   <- lrdrNameToTextAnn name
+    needsParens <- hasAnnKeyword lfeqn AnnOpenP
+    let
+      instanceDoc = if inClass
+        then docLit $ Text.pack "type"
+        else docSeq
+          [appSep . docLit $ Text.pack "type", docLit $ Text.pack "instance"]
+      lhs =
+        docWrapNode lfeqn
+          .  appSep
+          .  docWrapNodeRest linst
+          .  docSeq
+          $  (appSep instanceDoc :)
+          $  [ docParenL | needsParens ]
+          ++ [appSep $ docWrapNode name $ docLit nameStr]
+          ++ intersperse docSeparator (layoutType <$> pats)
+          ++ [ docParenR | needsParens ]
+    hasComments <- (||)
+      <$> hasAnyRegularCommentsConnected lfeqn
+      <*> hasAnyRegularCommentsRest linst
+    typeDoc <- docSharedWrapper layoutType typ
+    layoutLhsAndType hasComments lhs "=" typeDoc
 
 
 --------------------------------------------------------------------------------
@@ -855,12 +877,7 @@ layoutClsInst lcid@(L _ cid) = docLines
   layoutAndLocateTyFamInsts
     :: ToBriDocC (TyFamInstDecl GhcPs) (Located BriDocNumbered)
   layoutAndLocateTyFamInsts ltfid@(L loc _) =
-    L loc <$> layoutTyFamInstDecl ltfid
-
-  -- | Send to ExactPrint then remove unecessary whitespace
-  layoutTyFamInstDecl :: ToBriDoc TyFamInstDecl
-  layoutTyFamInstDecl ltfid =
-    fmap stripWhitespace <$> briDocByExactNoComment ltfid
+    L loc <$> layoutTyFamInstDecl True ltfid
 
   layoutAndLocateDataFamInsts
     :: ToBriDocC (DataFamInstDecl GhcPs) (Located BriDocNumbered)
@@ -928,3 +945,32 @@ layoutClsInst lcid@(L _ cid) = docLines
     isTypeOrData t' =
       (Text.pack "type" `Text.isPrefixOf` t')
         || (Text.pack "data" `Text.isPrefixOf` t')
+
+
+--------------------------------------------------------------------------------
+-- Common Helpers
+--------------------------------------------------------------------------------
+
+layoutLhsAndType
+  :: Bool
+  -> ToBriDocM BriDocNumbered
+  -> String
+  -> ToBriDocM BriDocNumbered
+  -> ToBriDocM BriDocNumbered
+layoutLhsAndType hasComments lhs sep typeDoc = do
+  let sepDoc = appSep . docLit $ Text.pack sep
+  runFilteredAlternative $ do
+    -- (separators probably are "=" or "::")
+    -- lhs = type
+    -- lhs :: type
+    addAlternativeCond (not hasComments)
+      $ docSeq [lhs, sepDoc, docForceSingleline typeDoc]
+    -- lhs
+    --   :: typeA
+    --   -> typeB
+    -- lhs
+    --   =  typeA
+    --   -> typeB
+    addAlternative $ docAddBaseY BrIndentRegular $ docPar lhs $ docCols
+      ColTyOpPrefix
+      [sepDoc, docAddBaseY (BrIndentSpecial (length sep + 1)) typeDoc]
