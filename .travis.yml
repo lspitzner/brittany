@@ -59,9 +59,9 @@ matrix:
   - env: BUILD=cabal GHCVER=8.4.4 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #cabal 8.4.4"
     addons: {apt: {packages: [cabal-install-1.24,ghc-8.4.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.6.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #cabal 8.6.2"
-    addons: {apt: {packages: [cabal-install-1.24,ghc-8.6.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=cabal GHCVER=8.6.5 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #cabal 8.6.5"
+    addons: {apt: {packages: [cabal-install-1.24,ghc-8.6.5,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
@@ -94,6 +94,9 @@ matrix:
     addons: {apt: {packages: [libgmp-dev]}}
   - env: BUILD=stack ARGS="--stack-yaml stack-8.2.2.yaml"
     compiler: ": #stack 8.2.2"
+    addons: {apt: {packages: [libgmp-dev]}}
+  - env: BUILD=stack ARGS="--stack-yaml stack-8.4.3.yaml"
+    compiler: ": #stack 8.4.3"
     addons: {apt: {packages: [libgmp-dev]}}
   - env: BUILD=stack ARGS="--stack-yaml stack-8.6.5.yaml"
     compiler: ": #stack 8.6.5"
