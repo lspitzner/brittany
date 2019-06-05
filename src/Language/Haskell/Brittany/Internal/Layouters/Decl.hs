@@ -960,8 +960,17 @@ layoutLhsAndType
 layoutLhsAndType hasComments lhs sep typeDoc = do
   let sepDoc = appSep . docLit $ Text.pack sep
   runFilteredAlternative $ do
+    -- (separators probably are "=" or "::")
+    -- lhs = type
+    -- lhs :: type
     addAlternativeCond (not hasComments)
       $ docSeq [lhs, sepDoc, docForceSingleline typeDoc]
+    -- lhs
+    --   :: typeA
+    --   -> typeB
+    -- lhs
+    --   =  typeA
+    --   -> typeB
     addAlternative $ docAddBaseY BrIndentRegular $ docPar lhs $ docCols
       ColTyOpPrefix
       [sepDoc, docAddBaseY (BrIndentSpecial (length sep + 1)) typeDoc]
