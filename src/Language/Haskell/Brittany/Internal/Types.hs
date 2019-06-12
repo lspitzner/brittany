@@ -243,6 +243,8 @@ data BriDoc
                             -- to be printed via exactprint
                Bool -- should print extra comment ?
                Text
+  | BDPlain !Text -- used for QuasiQuotes, content can be multi-line
+                  -- (contrast to BDLit)
   | BDAnnotationPrior AnnKey BriDoc
   | BDAnnotationKW AnnKey (Maybe AnnKeywordId) BriDoc
   | BDAnnotationRest  AnnKey BriDoc
@@ -289,6 +291,8 @@ data BriDocF f
                             -- to be printed via exactprint
                Bool -- should print extra comment ?
                Text
+  | BDFPlain !Text -- used for QuasiQuotes, content can be multi-line
+                   -- (contrast to BDLit)
   | BDFAnnotationPrior AnnKey (f (BriDocF f))
   | BDFAnnotationKW AnnKey (Maybe AnnKeywordId) (f (BriDocF f))
   | BDFAnnotationRest  AnnKey (f (BriDocF f))
@@ -323,6 +327,7 @@ instance Uniplate.Uniplate BriDoc where
   uniplate (BDAlt             alts)      = plate BDAlt ||* alts
   uniplate (BDForwardLineMode bd  )      = plate BDForwardLineMode |* bd
   uniplate x@BDExternal{}                = plate x
+  uniplate x@BDPlain{}                = plate x
   uniplate (BDAnnotationPrior annKey bd) = plate BDAnnotationPrior |- annKey |* bd
   uniplate (BDAnnotationKW annKey kw bd) = plate BDAnnotationKW |- annKey |- kw |* bd
   uniplate (BDAnnotationRest annKey bd)  = plate BDAnnotationRest |- annKey |* bd
@@ -355,6 +360,7 @@ unwrapBriDocNumbered tpl = case snd tpl of
   BDFAlt             alts      -> BDAlt $ rec <$> alts -- not that this will happen
   BDFForwardLineMode bd        -> BDForwardLineMode $ rec bd
   BDFExternal k ks c t         -> BDExternal k ks c t
+  BDFPlain t                   -> BDPlain t
   BDFAnnotationPrior annKey bd -> BDAnnotationPrior annKey $ rec bd
   BDFAnnotationKW annKey kw bd -> BDAnnotationKW annKey kw $ rec bd
   BDFAnnotationRest annKey bd  -> BDAnnotationRest annKey $ rec bd
@@ -391,6 +397,7 @@ briDocSeqSpine = \case
   BDAlt             alts         -> foldl' (\(!()) -> briDocSeqSpine) () alts
   BDForwardLineMode bd           -> briDocSeqSpine bd
   BDExternal{}                   -> ()
+  BDPlain{}                      -> ()
   BDAnnotationPrior _annKey bd   -> briDocSeqSpine bd
   BDAnnotationKW _annKey _kw bd  -> briDocSeqSpine bd
   BDAnnotationRest _annKey bd    -> briDocSeqSpine bd

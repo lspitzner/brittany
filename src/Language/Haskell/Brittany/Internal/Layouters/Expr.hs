@@ -15,6 +15,8 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+
 import           GHC ( runGhc, GenLocated(L), SrcSpan, moduleNameString, AnnKeywordId(..), RdrName(..) )
 import           HsSyn
 import           Name
@@ -1109,6 +1111,18 @@ layoutExpr lexpr@(L _ expr) = do
     HsTcBracketOut{} -> do
       -- TODO
       briDocByExactInlineOnly "HsTcBracketOut{}" lexpr
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+    HsSpliceE _ (HsQuasiQuote _ _ quoter _loc content) -> do
+#else
+    HsSpliceE (HsQuasiQuote _ quoter _loc content) -> do
+#endif
+      allocateNode $ BDFPlain
+        (Text.pack
+          $  "["
+          ++ showOutputable quoter
+          ++ "|"
+          ++ showOutputable content
+          ++ "|]")
     HsSpliceE{} -> do
       -- TODO
       briDocByExactInlineOnly "HsSpliceE{}" lexpr

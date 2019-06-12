@@ -95,3 +95,38 @@ spanKey = case foo of
 spanKey :: (# Int#, Int# #) -> (# Int#, Int# #)
 spanKey = case foo of
   (# bar#, baz# #) -> (# baz# +# bar#, bar# #)
+
+
+###############################################################################
+## QuasiQuotes
+#test quasi-quotes simple 1
+{-# LANGUAGE QuasiQuotes #-}
+func = [blub|
+  asd
+  qwe
+  |]
+
+#test quasi-quotes simple 2
+{-# LANGUAGE QuasiQuotes #-}
+func = [blub|
+        asd
+  qwe|]
+
+#test quasi-quotes ignoring layouting
+{-# LANGUAGE QuasiQuotes #-}
+func = do
+  let body = [json|
+  hello
+  |]
+  pure True
+
+#test quasi-quotes ignoring layouting, strict mode
+-- brittany { lconfig_allowHangingQuasiQuotes: False }
+{-# LANGUAGE QuasiQuotes #-}
+func = do
+  let
+    body =
+      [json|
+  hello
+  |]
+  pure True

@@ -125,6 +125,7 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDForceSingleline{} -> Nothing
   BDForwardLineMode{} -> Nothing
   BDExternal{}        -> Nothing
+  BDPlain{}           -> Nothing
   BDLines{}           -> Nothing
   BDAnnotationPrior{} -> Nothing
   BDAnnotationKW{}    -> Nothing

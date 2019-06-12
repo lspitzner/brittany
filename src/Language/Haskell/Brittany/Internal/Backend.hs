@@ -151,6 +151,8 @@ layoutBriDocM = \case
       mSet $ state
         { _lstate_comments = Map.filterWithKey filterF $ _lstate_comments state
         }
+  BDPlain t -> do
+    layoutWriteAppend t
   BDAnnotationPrior annKey bd -> do
     state <- mGet
     let m = _lstate_comments state
@@ -310,6 +312,7 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDForceSingleline bd    -> rec bd
     BDForwardLineMode bd    -> rec bd
     BDExternal _ _ _ t      -> return $ Text.length t
+    BDPlain t               -> return $ Text.length t
     BDAnnotationPrior _ bd  -> rec bd
     BDAnnotationKW _ _ bd   -> rec bd
     BDAnnotationRest _ bd   -> rec bd
@@ -329,35 +332,37 @@ briDocIsMultiLine briDoc = rec briDoc
  where
   rec :: BriDoc -> Bool
   rec = \case
-    BDEmpty                 -> False
-    BDLit _                 -> False
-    BDSeq bds               -> any rec bds
-    BDCols _ bds            -> any rec bds
-    BDSeparator             -> False
-    BDAddBaseY _ bd         -> rec bd
-    BDBaseYPushCur       bd -> rec bd
-    BDBaseYPop           bd -> rec bd
-    BDIndentLevelPushCur bd -> rec bd
-    BDIndentLevelPop     bd -> rec bd
-    BDPar _ _ _             -> True
-    BDAlt{}                 -> error "briDocIsMultiLine BDAlt"
-    BDForceMultiline  _     -> True
-    BDForceSingleline bd    -> rec bd
-    BDForwardLineMode bd    -> rec bd
+    BDEmpty                                  -> False
+    BDLit _                                  -> False
+    BDSeq bds                                -> any rec bds
+    BDCols _ bds                             -> any rec bds
+    BDSeparator                              -> False
+    BDAddBaseY _ bd                          -> rec bd
+    BDBaseYPushCur       bd                  -> rec bd
+    BDBaseYPop           bd                  -> rec bd
+    BDIndentLevelPushCur bd                  -> rec bd
+    BDIndentLevelPop     bd                  -> rec bd
+    BDPar _ _ _                              -> True
+    BDAlt{}                                  -> error "briDocIsMultiLine BDAlt"
+    BDForceMultiline  _                      -> True
+    BDForceSingleline bd                     -> rec bd
+    BDForwardLineMode bd                     -> rec bd
     BDExternal _ _ _ t | [_] <- Text.lines t -> False
-    BDExternal _ _ _ _      -> True
-    BDAnnotationPrior _ bd  -> rec bd
-    BDAnnotationKW _ _ bd   -> rec bd
-    BDAnnotationRest _ bd   -> rec bd
-    BDMoveToKWDP _ _ _ bd   -> rec bd
-    BDLines (_:_:_)         -> True
-    BDLines [_    ]         -> False
-    BDLines []              -> error "briDocIsMultiLine BDLines []"
-    BDEnsureIndent _ bd     -> rec bd
-    BDSetParSpacing    bd   -> rec bd
-    BDForceParSpacing  bd   -> rec bd
-    BDNonBottomSpacing bd   -> rec bd
-    BDDebug _ bd            -> rec bd
+    BDExternal _ _ _ _                       -> True
+    BDPlain t | [_] <- Text.lines t          -> False
+    BDPlain _                                -> True
+    BDAnnotationPrior _ bd                   -> rec bd
+    BDAnnotationKW _ _ bd                    -> rec bd
+    BDAnnotationRest _ bd                    -> rec bd
+    BDMoveToKWDP _ _ _ bd                    -> rec bd
+    BDLines (_ : _ : _)                      -> True
+    BDLines [_        ]                      -> False
+    BDLines [] -> error "briDocIsMultiLine BDLines []"
+    BDEnsureIndent _ bd                      -> rec bd
+    BDSetParSpacing    bd                    -> rec bd
+    BDForceParSpacing  bd                    -> rec bd
+    BDNonBottomSpacing bd                    -> rec bd
+    BDDebug _ bd                             -> rec bd
 
 -- In theory
 -- =========

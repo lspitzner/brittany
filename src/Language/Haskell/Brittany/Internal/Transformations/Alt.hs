@@ -288,6 +288,7 @@ transformAlts =
           mSet $ acp' { _acp_forceMLFlag = _acp_forceMLFlag acp }
           return $ x
         BDFExternal{} -> processSpacingSimple bdX $> bdX
+        BDFPlain{}    -> processSpacingSimple bdX $> bdX
         BDFAnnotationPrior annKey bd -> do
           acp <- mGet
           mSet $ acp { _acp_forceMLFlag = altLineModeDecay $ _acp_forceMLFlag acp }
@@ -337,9 +338,13 @@ transformAlts =
           acp :: AltCurPos <- mGet
           tellDebugMess $ "transformAlts: BDFDEBUG " ++ s ++ " (node-id=" ++ show brDcId ++ "): acp=" ++ show acp
           reWrap . BDFDebug s <$> rec bd
-    processSpacingSimple :: (MonadMultiReader
-                                                     Config m,
-                                                   MonadMultiState AltCurPos m, MonadMultiWriter (Seq String) m) => BriDocNumbered -> m ()
+    processSpacingSimple
+      :: ( MonadMultiReader Config m
+         , MonadMultiState AltCurPos m
+         , MonadMultiWriter (Seq String) m
+         )
+      => BriDocNumbered
+      -> m ()
     processSpacingSimple bd = getSpacing bd >>= \case
       LineModeInvalid                           -> error "processSpacingSimple inv"
       LineModeValid (VerticalSpacing i VerticalSpacingParNone _) -> do
@@ -453,6 +458,9 @@ getSpacing !bridoc = rec bridoc
           _  -> LineModeInvalid
       BDFForwardLineMode bd -> rec bd
       BDFExternal _ _ _ txt -> return $ LineModeValid $ case Text.lines txt of
+        [t] -> VerticalSpacing (Text.length t) VerticalSpacingParNone False
+        _   -> VerticalSpacing 999 VerticalSpacingParNone False
+      BDFPlain txt -> return $ LineModeValid $ case Text.lines txt of
         [t] -> VerticalSpacing (Text.length t) VerticalSpacingParNone False
         _   -> VerticalSpacing 999 VerticalSpacingParNone False
       BDFAnnotationPrior _annKey bd -> rec bd
@@ -584,6 +592,11 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                   if i1 < i2 then Smaller else Bigger
                 (p1, p2) -> if p1 == p2 then Smaller else Unequal
               else Unequal
+      let allowHangingQuasiQuotes =
+            config
+              & _conf_layout
+              & _lconfig_allowHangingQuasiQuotes
+              & confUnpack
       let -- this is like List.nub, with one difference: if two elements
           -- are unequal only in _vs_paragraph, with both ParAlways, we
           -- treat them like equals and replace the first occurence with the
@@ -729,6 +742,19 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFExternal{} ->
           return $ [] -- yes, we just assume that we cannot properly layout
                       -- this.
+        BDFPlain t -> return
+          [ case Text.lines t of
+              []       -> VerticalSpacing 0 VerticalSpacingParNone False
+              [t1    ] -> VerticalSpacing
+                (Text.length t1)
+                VerticalSpacingParNone
+                False
+              (t1 : _) -> VerticalSpacing
+                (Text.length t1)
+                (VerticalSpacingParAlways 0)
+                True
+          | allowHangingQuasiQuotes
+          ]
         BDFAnnotationPrior _annKey bd -> rec bd
         BDFAnnotationKW _annKey _kw bd -> rec bd
         BDFAnnotationRest  _annKey bd -> rec bd

@@ -109,6 +109,24 @@ data CLayoutConfig f = LayoutConfig
     -- >   , def
     -- >   )
     -- > where
+  , _lconfig_allowHangingQuasiQuotes :: f (Last Bool)
+    -- if false, the layouter sees any splices as infinitely big and places
+    -- them accordingly (in newlines, most likely); This also influences
+    -- parent nodes.
+    -- if true, the layouter is free to start a quasi-quotation at the end
+    -- of a line.
+    --
+    -- false:
+    -- > let
+    -- >   body =
+    -- >     [json|
+    -- >     hello
+    -- >     |]
+    --
+    -- true:
+    -- > let body = [json|
+    -- >     hello
+    -- >     |]
   }
   deriving (Generic)
 

@@ -24,6 +24,7 @@ module Language.Haskell.Brittany.Internal.Utils
   , FirstLastView(..)
   , splitFirstLast
   , lines'
+  , showOutputable
   )
 where
 
@@ -69,8 +70,8 @@ parDocW = PP.fsep . fmap PP.text . List.words . List.unwords
 showSDoc_ :: GHC.SDoc -> String
 showSDoc_ = GHC.showSDoc GHC.unsafeGlobalDynFlags
 
-showGhc :: (GHC.Outputable a) => a -> String
-showGhc = GHC.showPpr GHC.unsafeGlobalDynFlags
+showOutputable :: (GHC.Outputable a) => a -> String
+showOutputable = GHC.showPpr GHC.unsafeGlobalDynFlags
 
 fromMaybeIdentity :: Identity a -> Maybe a -> Identity a
 fromMaybeIdentity x y = Data.Coerce.coerce $ fromMaybe (Data.Coerce.coerce x) y
@@ -124,7 +125,7 @@ customLayouterF anns layoutF =
   srcSpan :: GHC.SrcSpan -> NodeLayouter
   srcSpan ss = simpleLayouter
              -- - $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
-                              $ "{" ++ showGhc ss ++ "}"
+                              $ "{" ++ showOutputable ss ++ "}"
   located :: (Data b, Data loc) => GHC.GenLocated loc b -> NodeLayouter
   located (GHC.L ss a) = runDataToLayouter layoutF $ A annStr a
    where
