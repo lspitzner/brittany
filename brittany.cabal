@@ -242,7 +242,7 @@ test-suite unittests
     , cmdargs
     , czipwith
     , ghc-boot-th
-    , hspec >=2.4.1 && <2.7
+    , hspec >=2.4.1 && <2.8
     }
   main-is:          TestMain.hs
   other-modules:    TestUtils
@@ -314,7 +314,7 @@ test-suite littests
     , cmdargs
     , czipwith
     , ghc-boot-th
-    , hspec >=2.4.1 && <2.7
+    , hspec >=2.4.1 && <2.8
     , filepath
     , parsec >=3.1.11 && <3.2
     }
@@ -358,7 +358,7 @@ test-suite libinterfacetests
     , base
     , text
     , transformers
-    , hspec >=2.4.1 && <2.7
+    , hspec >=2.4.1 && <2.8
     }
   main-is:          Main.hs
   other-modules:
