@@ -294,7 +294,7 @@ layoutPatternBind
   -> BriDocNumbered
   -> LMatch GhcPs (LHsExpr GhcPs)
   -> ToBriDocM BriDocNumbered
-layoutPatternBind mIdStr binderDoc lmatch@(L _ match) = do
+layoutPatternBind funId binderDoc lmatch@(L _ match) = do
   let pats                     = m_pats match
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   let (GRHSs _ grhss whereBinds) = m_grhss match
@@ -303,6 +303,17 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match) = do
 #endif
   patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
   let isInfix = isInfixMatch match
+  mIdStr <- case match of
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+    Match _ (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
+#elif MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
+    Match (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
+#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.4 */
+    Match (FunRhs matchId _ _) _ _ _ -> Just <$> lrdrNameToTextAnn matchId
+#else
+    Match (FunBindMatch matchId _) _ _ _ -> Just <$> lrdrNameToTextAnn matchId
+#endif
+    _ -> pure Nothing
   let mIdStr' = fixPatternBindIdentifier match <$> mIdStr
   patDoc <- docWrapNodePrior lmatch $ case (mIdStr', patDocs) of
     (Just idStr, p1 : pr) | isInfix -> docCols
@@ -321,7 +332,7 @@ layoutPatternBind mIdStr binderDoc lmatch@(L _ match) = do
   clauseDocs <- docWrapNodeRest lmatch $ layoutGrhs `mapM` grhss
   mWhereDocs <- layoutLocalBinds whereBinds
   let mWhereArg = mWhereDocs <&> \d -> (mkAnnKey lmatch, d)
-  let alignmentToken = if null pats then Nothing else mIdStr
+  let alignmentToken = if null pats then Nothing else funId
   hasComments <- hasAnyCommentsBelow lmatch
   layoutPatternBindFinal alignmentToken
                          binderDoc

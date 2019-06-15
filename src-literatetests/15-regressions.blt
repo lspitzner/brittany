@@ -660,3 +660,11 @@ foo = bar
   arg4
   arg5 -- this is the fifth argument
   arg6 -- this is the sixth argument
+
+#test issue 234
+
+True `nand` True = False
+nand _ _         = True
+
+nor False False = True
+_ `nor` _       = False
