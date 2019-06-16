@@ -1,5 +1,5 @@
 name:                 brittany
-version:              0.11.0.0
+version:              0.12.0.0
 synopsis:             Haskell source code formatter
 description: {
   See <https://github.com/lspitzner/brittany/blob/master/README.md the README>.
@@ -12,7 +12,8 @@ license:              AGPL-3
 license-file:         LICENSE
 author:               Lennart Spitzner
 maintainer:           Lennart Spitzner <hexagoxel@hexagoxel.de>
-copyright:            Copyright (C) 2016-2018 Lennart Spitzner
+copyright:            Copyright (C) 2016-2019 Lennart Spitzner
+                      Copyright (C) 2019 PRODA LTD
 category:             Language
 build-type:           Simple
 cabal-version:        1.18

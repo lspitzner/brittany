@@ -1,5 +1,44 @@
 # Revision history for brittany
 
+## 0.12.0.0 -- June 2019
+
+* Support for ghc-8.6 (basic support, not necessarily all new syntactic
+  extensions)
+* Support -XExplicitNamespaces and -XPatternSynonyms
+* Allow a --dry-run sort of operation via flag "-c/--check-mode"
+  (thanks to Doug Beardsley @mightybyte)
+* Include file name in errors about unsupported syntax nodes (thanks to @5outh)
+* Partially implement layouting class instances: Layouts children, but
+  falls back on ghc-exactprint for the instance head
+  (thanks to Rupert Horlick @ruhatch)
+* Implement layouting for type synonyms (thanks to Rupert Horlick @ruhatch)
+* Support -XMagicHash, -XUnboxedTuples (thanks to Sergey Vinokurov @sergv)
+* Support -XQuasiQuotes (no formatting applied to the splices; they are simply
+  retained without causing the dreaded "Unknown construct: HsSpliceE{}")
+    - `lconfig_allowHangingQuasiQuotes` controls whether multi-line
+      QuasiQuotes are allowed to start at the end of the current line, or
+      whether they are always placed in new lines.
+* Bugfixes:
+    - Fix rare-case alignment bug with IndentPolicyMultiple (#144)
+    - Make inline layout config apply to module header (#151)
+    - Fix unaligned import-hiding layout (#150)
+    - Fix idempotence violation for comments around if-then-else (#167)
+    - Fix comments having an effect on far-away parent node's layout (#159)
+    - Fix imports of type operators ("symbolic data types")
+      (thanks to Phil Hazelden @ChickenProp)
+    - Work around GHC and cabal-install misfeature ".ghc.environment files"
+      that could break brittany in unexpected and hard-to-understand ways
+    - Stop removing empty lines before `where` keyword in a couple of cases
+    - Fix functions with mixing prefix/infix style causing error (#234)
+* Changes to layout:
+    - Align usage of spaces for record update vs record construction (#126)
+    - More indentation to import-hiding-paragraph (follow-up to #150 fix)
+    - Record construction and update now are layouted in the same way
+      (thanks to Evan Rutledge Borden @eborden)
+    - Stop allowing single-line layout when there are comments between
+      arguments (#214) (thanks to @matt-noonan)
+* Various build-instructions and editor integrations
+
 ## 0.11.0.0 -- May 2018
 
 * Support for ghc-8.4

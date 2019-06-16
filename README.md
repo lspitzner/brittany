@@ -48,7 +48,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Other usage notes
 
-- Supports GHC versions `8.0`, `8.2` and `8.4`.
+- Supports GHC versions `8.0`, `8.2`, `8.4`, `8.6`.
 - included in stackage with lts>=10.0 (or nightlies dating to >=2017-11-15)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
@@ -58,47 +58,54 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Installation
 
-- via `cabal` "old-build"
-
-    ~~~~.sh
-    # optionally:
-    # mkdir brittany
-    # cd brittany
-    # cabal sandbox init
-    cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8_0
-    ~~~~
-
-- via `cabal new-build`
-
-    ~~~~.sh
-    cabal unpack brittany
-    cd brittany-0.11.0.0
-    # cabal new-configure -w $PATH_TO_GHC_8_0
-    cabal new-build exe:brittany
-    # and it should be safe to just copy the executable, e.g.
-    cp `find dist-newstyle/ -name brittany -type f | xargs -x ls -t | head -n1` $HOME/.cabal/bin/
-    ~~~~
-
-- via `stack` using a sufficiently recent stackage snapshot (dated to >= 2017-11-15)
+- via `stack`
 
     ~~~~.sh
     stack install brittany # --resolver lts-10.0
     ~~~~
 
-    (earlier ltss did not include `brittany` yet, but the repo should contain a
-    `stack.yaml` that works with ghc-8.0.)
-
-- on ArchLinux via [the brittany AUR package](https://aur.archlinux.org/packages/brittany/)
-  using `aura`:
-    ~~~~.sh
-    aura -A brittany
-    ~~~~
+    If you use an lts that includes brittany this should just work; otherwise
+    you may want to clone the repo and try again (there are several stack.yamls
+    included).
 
 - via `nix`:
     ~~~.sh
     nix build -f release.nix     # or 'nix-build -f release.nix'
     nix-env -i ./result
     ~~~
+
+- via `cabal v1-build`
+
+    ~~~~.sh
+    # optionally:
+    # mkdir brittany
+    # cd brittany
+    # cabal sandbox init
+    cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8_x
+    ~~~~
+
+- via `cabal v2-install`
+
+    ~~~~.sh
+    cabal v2-install brittany
+    ~~~~
+
+- via `cabal v2-build`, should v2-install not work:
+
+    ~~~~.sh
+    cabal unpack brittany
+    cd brittany-0.11.0.0
+    # cabal new-configure -w $PATH_TO_GHC_8_x
+    cabal new-build exe:brittany
+    # and it should be safe to just copy the executable, e.g.
+    cp `find dist-newstyle/ -name brittany -type f | xargs -x ls -t | head -n1` $HOME/.cabal/bin/
+    ~~~~
+
+- on ArchLinux via [the brittany AUR package](https://aur.archlinux.org/packages/brittany/)
+  using `aura`:
+    ~~~~.sh
+    aura -A brittany
+    ~~~~
 
 # Editor Integration
 
