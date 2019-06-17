@@ -176,7 +176,8 @@ a good amount of high-level documentation at
 
 # License
 
-Copyright (C) 2016-2018 Lennart Spitzner
+Copyright (C) 2016-2019 Lennart Spitzner\
+Copyright (C) 2019      PRODA LTD
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the
