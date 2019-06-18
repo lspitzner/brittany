@@ -162,14 +162,22 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Feature Requests, Contribution, Documentation
 
-This currently is a one-person project in the sense that 90% of the code is
-written by one person. And (unfortunately) it is not my job to keep improving
-this project. Please forgive that as a consequence my time to invest on new
-features is rather limited.
+For a long time this project has had a single maintainer, and as a consequence
+there have been some mildly large delays for reacting to feature requests
+and even PRs.
 
-Nonetheless I consider it "in active development" :)
+Sorry about that.
 
-One way of speeding things up is to make your own contributions. There is
+The good news is that this project is getting sponsored by PRODA LTD, and two
+previous contributors, Evan Borden and Taylor Fausak, have agreed on helping
+with organisational aspects. Thanks!
+
+Still, this project has a long queue of very sensible feature requests, so it
+may take some time until new ones get our attention. But with the help of
+the co-maintainers, at least the reaction-times on PRs and the frequency
+of releases should improve significantly.
+
+If you are interested in making your own contributions, there is
 a good amount of high-level documentation at
 
 [the documentation index](doc/implementation/index.md)
