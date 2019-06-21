@@ -114,7 +114,8 @@ helpDoc = PP.vcat $ List.intersperse
 licenseDoc :: PP.Doc
 licenseDoc = PP.vcat $ List.intersperse
   (PP.text "")
-  [ parDoc $ "Copyright (C) 2016-2017 Lennart Spitzner"
+  [ parDoc $ "Copyright (C) 2016-2019 Lennart Spitzner"
+  , parDoc $ "Copyright (C) 2019 PRODA LTD"
   , parDocW
     [ "This program is free software: you can redistribute it and/or modify"
     , "it under the terms of the GNU Affero General Public License,"
@@ -194,7 +195,8 @@ mainCmdParser helpDesc = do
     when printVersion $ do
       do
         putStrLn $ "brittany version " ++ showVersion version
-        putStrLn $ "Copyright (C) 2016-2018 Lennart Spitzner"
+        putStrLn $ "Copyright (C) 2016-2019 Lennart Spitzner"
+        putStrLn $ "Copyright (C) 2019 PRODA LTD"
         putStrLn $ "There is NO WARRANTY, to the extent permitted by law."
       System.Exit.exitSuccess
     when printHelp $ do
