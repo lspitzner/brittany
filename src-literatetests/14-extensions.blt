@@ -130,3 +130,13 @@ func = do
   hello
   |]
   pure True
+
+###############################################################################
+## OverloadedLabels
+#test bare label
+{-# LANGUAGE OverloadedLabels #-}
+foo = #bar
+
+#test applied and composed label
+{-# LANGUAGE OverloadedLabels #-}
+foo = #bar . #baz $ fmap #foo xs
