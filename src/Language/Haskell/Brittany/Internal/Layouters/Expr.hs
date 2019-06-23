@@ -55,7 +55,7 @@ layoutExpr lexpr@(L _ expr) = do
     HsRecFld{} -> do
       -- TODO
       briDocByExactInlineOnly "HsRecFld" lexpr
-    HsOverLabel NoExt _reboundFromLabel name ->
+    HsOverLabel _ext _reboundFromLabel name ->
       let label = FastString.unpackFS name
       in docLit . Text.pack $ '#' : label
     HsIPVar{} -> do
