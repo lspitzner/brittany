@@ -57,9 +57,9 @@ layoutExpr lexpr@(L _ expr) = do
       briDocByExactInlineOnly "HsRecFld" lexpr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsOverLabel _ext _reboundFromLabel name ->
-#elif MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
+#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
     HsOverLabel _reboundFromLabel name ->
-#else
+#else                        /* ghc-8.0 */
     HsOverLabel name ->
 #endif
       let label = FastString.unpackFS name
