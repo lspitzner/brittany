@@ -57,8 +57,7 @@ data WriteMode = Display | Inplace
 
 instance Read WriteMode where
   readPrec = val "display" Display <|> val "inplace" Inplace
-   where
-    val iden v = ReadPrec.lift $ ReadP.string iden >> return v
+    where val iden v = ReadPrec.lift $ ReadP.string iden >> return v
 
 instance Show WriteMode where
   show Display = "display"
@@ -166,11 +165,11 @@ mainCmdParser helpDesc = do
     "c"
     ["check-mode"]
     (flagHelp
-        (PP.vcat
-          [ PP.text "check for changes but do not write them out"
-          , PP.text "exits with code 0 if no changes necessary, 1 otherwise"
-          ]
-        )
+      (PP.vcat
+        [ PP.text "check for changes but do not write them out"
+        , PP.text "exits with code 0 if no changes necessary, 1 otherwise"
+        ]
+      )
     )
   writeMode <- addFlagReadParam
     ""
@@ -226,17 +225,18 @@ mainCmdParser helpDesc = do
       $ trace (showConfigYaml config)
       $ return ()
 
-    results <- zipWithM (coreIO putStrErrLn config (suppressOutput || checkMode))
-                        inputPaths
-                        outputPaths
+    results <- zipWithM
+      (coreIO putStrErrLn config (suppressOutput || checkMode))
+      inputPaths
+      outputPaths
 
     if checkMode
-      then when (any (==Changes) (Data.Either.rights results)) $
-             System.Exit.exitWith (System.Exit.ExitFailure 1)
+      then when (any (== Changes) (Data.Either.rights results))
+        $ System.Exit.exitWith (System.Exit.ExitFailure 1)
       else case results of
-             xs | all Data.Either.isRight xs -> pure ()
-             [Left x] -> System.Exit.exitWith (System.Exit.ExitFailure x)
-             _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
+        xs | all Data.Either.isRight xs -> pure ()
+        [Left x] -> System.Exit.exitWith (System.Exit.ExitFailure x)
+        _ -> System.Exit.exitWith (System.Exit.ExitFailure 1)
 
 
 data ChangeStatus = Changes | NoChanges
@@ -278,20 +278,19 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
           viaDebug =
             config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
 
-    let
-      cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
-        then case cppMode of
-          CPPModeAbort -> do
-            return $ Left "Encountered -XCPP. Aborting."
-          CPPModeWarn -> do
-            putErrorLnIO
-              $  "Warning: Encountered -XCPP."
-              ++ " Be warned that -XCPP is not supported and that"
-              ++ " brittany cannot check that its output is syntactically"
-              ++ " valid in its presence."
-            return $ Right True
-          CPPModeNowarn -> return $ Right True
-        else return $ Right False
+    let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+          then case cppMode of
+            CPPModeAbort -> do
+              return $ Left "Encountered -XCPP. Aborting."
+            CPPModeWarn -> do
+              putErrorLnIO
+                $  "Warning: Encountered -XCPP."
+                ++ " Be warned that -XCPP is not supported and that"
+                ++ " brittany cannot check that its output is syntactically"
+                ++ " valid in its presence."
+              return $ Right True
+            CPPModeNowarn -> return $ Right True
+          else return $ Right False
     (parseResult, originalContents) <- case inputPathM of
       Nothing -> do
         -- TODO: refactor this hack to not be mixed into parsing logic
@@ -308,7 +307,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
                                                    (hackTransform inputString)
         return (parseRes, Text.pack inputString)
       Just p -> liftIO $ do
-        parseRes <- parseModule ghcOptions p cppCheckFunc
+        parseRes  <- parseModule ghcOptions p cppCheckFunc
         inputText <- Text.IO.readFile p
         -- The above means we read the file twice, but the
         -- GHC API does not really expose the source it
@@ -359,13 +358,12 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               let hackF s = fromMaybe s $ TextL.stripPrefix
                     (TextL.pack "-- BRITANY_INCLUDE_HACK ")
                     s
-              let
-                out = TextL.toStrict $ if hackAroundIncludes
-                  then
-                    TextL.intercalate (TextL.pack "\n")
-                    $ fmap hackF
-                    $ TextL.splitOn (TextL.pack "\n") outRaw
-                  else outRaw
+              let out = TextL.toStrict $ if hackAroundIncludes
+                    then
+                      TextL.intercalate (TextL.pack "\n")
+                      $ fmap hackF
+                      $ TextL.splitOn (TextL.pack "\n") outRaw
+                    else outRaw
               out' <- if moduleConf & _conf_obfuscate & confUnpack
                 then lift $ obfuscate out
                 else pure out
