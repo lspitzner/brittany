@@ -146,6 +146,7 @@ mainCmdParser helpDesc = do
   printHelp    <- addSimpleBoolFlag "h" ["help"] mempty
   printVersion <- addSimpleBoolFlag "" ["version"] mempty
   printLicense <- addSimpleBoolFlag "" ["license"] mempty
+  noUserConfig <- addSimpleBoolFlag "" ["no-user-config"] mempty
   configPaths  <- addFlagStringParams ""
                                       ["config-file"]
                                       "PATH"
@@ -217,7 +218,11 @@ mainCmdParser helpDesc = do
       else pure configPaths
 
     config <-
-      runMaybeT (readConfigsWithUserConfig cmdlineConfig configsToLoad)
+      runMaybeT
+          (if noUserConfig
+            then readConfigs cmdlineConfig configsToLoad
+            else readConfigsWithUserConfig cmdlineConfig configsToLoad
+          )
         >>= \case
               Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
               Just x  -> return x
