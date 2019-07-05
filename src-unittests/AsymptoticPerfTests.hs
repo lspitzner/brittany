@@ -22,7 +22,7 @@ import TestUtils
 asymptoticPerfTest :: Spec
 asymptoticPerfTest = do
   it "1000 do statements"
-    $  roundTripEqualWithTimeout 1000000
+    $  roundTripEqualWithTimeout 1500000
     $  (Text.pack "func = do\n")
     <> Text.replicate 1000 (Text.pack "  statement\n")
   it "1000 do nestings"
