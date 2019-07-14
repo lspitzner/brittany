@@ -64,9 +64,13 @@ layoutExpr lexpr@(L _ expr) = do
 #endif
       let label = FastString.unpackFS name
       in docLit . Text.pack $ '#' : label
-    HsIPVar{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsOverLabel{}" lexpr
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+    HsIPVar _ext (HsIPName name) ->
+#else
+    HsIPVar (HsIPName name) ->
+#endif
+      let label = FastString.unpackFS name
+      in docLit . Text.pack $ '?' : label
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsOverLit _ olit -> do
 #else

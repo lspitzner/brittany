@@ -140,3 +140,19 @@ foo = #bar
 #test applied and composed label
 {-# LANGUAGE OverloadedLabels #-}
 foo = #bar . #baz $ fmap #foo xs
+
+###############################################################################
+## ImplicitParams
+
+#test IP usage
+{-# LANGUAGE ImplicitParams #-}
+foo = ?bar
+
+#test IP binding
+{-# LANGUAGE ImplicitParams #-}
+foo = let ?bar = Foo in value
+
+#test IP type signature
+{-# LANGUAGE ImplicitParams #-}
+foo :: (?bar::Bool) => ()
+foo = ()

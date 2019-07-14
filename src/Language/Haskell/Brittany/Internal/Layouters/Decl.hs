@@ -32,6 +32,7 @@ import           GHC                            ( runGhc
                                                 , AnnKeywordId(..)
                                                 )
 import           SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
+import qualified FastString
 import           HsSyn
 #if MIN_VERSION_ghc(8,6,0)
 import           HsExtension (NoExt (..))
@@ -231,6 +232,23 @@ layoutBind lbind@(L _ bind) = case bind of
                                                             hasComments
   _ -> Right <$> unknownNodeError "" lbind
 
+layoutIPBind :: ToBriDoc IPBind
+layoutIPBind lipbind@(L _ bind) = case bind of
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  XIPBind{} -> unknownNodeError "XIPBind" lipbind
+  IPBind _ (Right _) _ -> error "unreachable"
+  IPBind _ (Left (L _ (HsIPName name))) expr -> do
+#else
+  IPBind (Right _) _ -> error "unreachable"
+  IPBind (Left (L _ (HsIPName name))) expr -> do
+#endif
+    ipName <- docLit $ Text.pack $ '?' : FastString.unpackFS name
+    binderDoc <- docLit $ Text.pack "="
+    exprDoc <- layoutExpr expr
+    hasComments <- hasAnyCommentsBelow lipbind
+    layoutPatternBindFinal Nothing binderDoc (Just ipName) [([], exprDoc, expr)] Nothing hasComments
+
+
 data BagBindOrSig = BagBind (LHsBindLR GhcPs GhcPs)
                   | BagSig (LSig GhcPs)
 
@@ -268,8 +286,14 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
     Just . (: []) <$> unknownNodeError "HsValBinds ValBindsOut{}"
                                        (L noSrcSpan x)
 #endif
-  x@(HsIPBinds{}) ->
-    Just . (: []) <$> unknownNodeError "HsIPBinds" (L noSrcSpan x)
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+  x@(HsIPBinds _ XHsIPBinds{}) ->
+    Just . (: []) <$> unknownNodeError "XHsIPBinds" (L noSrcSpan x)
+  HsIPBinds _ (IPBinds _ bb) ->
+#else
+  HsIPBinds (IPBinds bb _) ->
+#endif
+    Just <$> mapM layoutIPBind bb
   EmptyLocalBinds{} -> return $ Nothing
 
 -- TODO: we don't need the `LHsExpr GhcPs` anymore, now that there is
