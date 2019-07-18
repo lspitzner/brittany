@@ -236,10 +236,10 @@ layoutIPBind :: ToBriDoc IPBind
 layoutIPBind lipbind@(L _ bind) = case bind of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   XIPBind{} -> unknownNodeError "XIPBind" lipbind
-  IPBind _ (Right _) _ -> error "unreachable"
+  IPBind _ (Right _) _ -> error "brittany internal error: IPBind Right"
   IPBind _ (Left (L _ (HsIPName name))) expr -> do
 #else
-  IPBind (Right _) _ -> error "unreachable"
+  IPBind (Right _) _ -> error "brittany internal error: IPBind Right"
   IPBind (Left (L _ (HsIPName name))) expr -> do
 #endif
     ipName <- docLit $ Text.pack $ '?' : FastString.unpackFS name
