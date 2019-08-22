@@ -13,7 +13,7 @@ This project's goals roughly are to:
   (but excluding `-XCPP` which is too hard);
 - Retain newlines and comments unmodified;
 - Be clever about using the available horizontal space while not overflowing
-  the column maximum if it cannot be avoided;
+  the column maximum unless it cannot be avoided;
 - Be clever about aligning things horizontally (this can be turned off
   completely however);
 - Have linear complexity in the size of the input.
