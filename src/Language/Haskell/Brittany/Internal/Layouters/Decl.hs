@@ -858,6 +858,7 @@ layoutClsInst :: ToBriDoc ClsInstDecl
 layoutClsInst lcid@(L _ cid) = docLines
   [ layoutInstanceHead
   , docEnsureIndent BrIndentRegular
+  $  docSetIndentLevel
   $  docSortedLines
   $  fmap layoutAndLocateSig          (cid_sigs cid)
   ++ fmap layoutAndLocateBind         (bagToList $ cid_binds cid)

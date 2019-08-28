@@ -1065,6 +1065,13 @@ type ((a :+: b) c) = (a, c)
 instance MyClass Int where
   myMethod x = x + 1
 
+#test simple-method-comment
+
+instance MyClass Int where
+  myMethod x =
+    -- insightful comment
+    x + 1
+
 #test simple-method-signature
 
 instance MyClass Int where
