@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Pattern
   ( layoutPat
@@ -13,7 +14,13 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 
-import           GHC ( Located, runGhc, GenLocated(L), moduleNameString, ol_val )
+import           GHC                            ( Located
+                                                , runGhc
+                                                , GenLocated(L)
+                                                , moduleNameString
+                                                , ol_val
+                                                )
+import qualified GHC
 import           HsSyn
 import           Name
 import           BasicTypes
@@ -33,8 +40,8 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 --        ^^^^^^^^^^ this part
 -- We will use `case .. of` as the imagined prefix to the examples used in
 -- the different cases below.
-layoutPat :: ToBriDocC (Pat GhcPs) (Seq BriDocNumbered)
-layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
+layoutPat :: LPat GhcPs -> ToBriDocM (Seq BriDocNumbered)
+layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   WildPat _  -> fmap Seq.singleton $ docLit $ Text.pack "_"
     -- _ -> expr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
@@ -51,7 +58,9 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
 #endif
     fmap Seq.singleton $ allocateNode $ litBriDoc lit
     -- 0 -> expr
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.8 */
+  ParPat _ inner -> do
+#elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   ParPat _ inner -> do
 #else                        /* ghc-8.0 8.2 8.4 */
   ParPat inner -> do
@@ -177,7 +186,9 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
 #endif
     -- bind@nestedpat -> expr
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.8 */
+  SigPat _ pat1 (HsWC _ (HsIB _ ty1)) -> do
+#elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   SigPat (HsWC _ (HsIB _ ty1)) pat1 -> do
 #elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
   SigPatIn pat1 (HsWC _ (HsIB _ ty1 _)) -> do
@@ -242,13 +253,13 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
 -- else
 --   VarPat n -> return $ stringLayouter lpat $ rdrNameToText n
 -- endif
-  _ -> return <$> briDocByExactInlineOnly "some unknown pattern" lpat
+  _ -> return <$> briDocByExactInlineOnly "some unknown pattern" (ghcDL lpat)
 
 colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
 colsWrapPat = docCols ColPatterns . fmap return . Foldable.toList
 
 wrapPatPrepend
-  :: Located (Pat GhcPs)
+  :: LPat GhcPs
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM (Seq BriDocNumbered)
 wrapPatPrepend pat prepElem = do
@@ -260,7 +271,7 @@ wrapPatPrepend pat prepElem = do
       return $ x1' Seq.<| xR
 
 wrapPatListy
-  :: [Located (Pat GhcPs)]
+  :: [LPat GhcPs]
   -> String
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM BriDocNumbered

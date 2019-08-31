@@ -278,7 +278,11 @@ layoutExpr lexpr@(L _ expr) = do
           expDoc1
           expDoc2
         ]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.8 */
+    HsAppType _ _ XHsWildCardBndrs{} ->
+      error "brittany internal error: HsAppType XHsWildCardBndrs"
+    HsAppType _ exp1 (HsWC _ ty1) -> do
+#elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
     HsAppType XHsWildCardBndrs{} _ ->
       error "brittany internal error: HsAppType XHsWildCardBndrs"
     HsAppType (HsWC _ ty1) exp1 -> do
@@ -1034,7 +1038,13 @@ layoutExpr lexpr@(L _ expr) = do
             Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
 #endif
       recordExpression indentPolicy lexpr rExprDoc rFs
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.6 */
+    ExprWithTySig _ _ (HsWC _ XHsImplicitBndrs{}) ->
+      error "brittany internal error: ExprWithTySig HsWC XHsImplicitBndrs"
+    ExprWithTySig _ _ XHsWildCardBndrs{} ->
+      error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
+    ExprWithTySig _ exp1 (HsWC _ (HsIB _ typ1)) -> do
+#elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
     ExprWithTySig (HsWC _ XHsImplicitBndrs{}) _ ->
       error "brittany internal error: ExprWithTySig HsWC XHsImplicitBndrs"
     ExprWithTySig XHsWildCardBndrs{} _ ->

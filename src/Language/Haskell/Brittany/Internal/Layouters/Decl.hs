@@ -20,6 +20,7 @@ where
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Layouters.Type
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
@@ -743,7 +744,7 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
         let (a : b : rest) = vars
         hasOwnParens <- hasAnnKeywordComment a AnnOpenP
         -- This isn't quite right, but does give syntactically valid results
-        let needsParens = not $ null rest || hasOwnParens
+        let needsParens = not (null rest) || hasOwnParens
         docSeq
           $  [ docLit $ Text.pack "type"
              , docSeparator
@@ -800,24 +801,36 @@ layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
 -- TyFamInstDecl
 --------------------------------------------------------------------------------
 
+
+
 layoutTyFamInstDecl :: Bool -> ToBriDoc TyFamInstDecl
 layoutTyFamInstDecl inClass (L loc tfid) = do
   let
-#if MIN_VERSION_ghc(8,6,0)
+#if MIN_VERSION_ghc(8,8,0)
+    linst = L loc (TyFamInstD NoExt tfid)
+    feqn@(FamEqn _ name bndrsMay pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    -- bndrsMay isJust e.g. with
+    --   type instance forall a . MyType (Maybe a) = Either () a
+    lfeqn = L loc feqn
+#elif MIN_VERSION_ghc(8,6,0)
     linst = L loc (TyFamInstD NoExt tfid)
     feqn@(FamEqn _ name pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    bndrsMay = Nothing
     lfeqn = L loc feqn
 #elif MIN_VERSION_ghc(8,4,0)
     linst = L loc (TyFamInstD tfid)
     feqn@(FamEqn name pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    bndrsMay = Nothing
     lfeqn = L loc feqn
 #elif MIN_VERSION_ghc(8,2,0)
     linst = L loc (TyFamInstD tfid)
     lfeqn@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
+    bndrsMay = Nothing
     pats = hsib_body boundPats
 #else
     linst = L loc (TyFamInstD tfid)
     lfeqn@(L _ (TyFamEqn name boundPats typ)) = tfid_eqn tfid
+    bndrsMay = Nothing
     pats = hsib_body boundPats
 #endif
   docWrapNodePrior linst $ do
@@ -828,15 +841,23 @@ layoutTyFamInstDecl inClass (L loc tfid) = do
         then docLit $ Text.pack "type"
         else docSeq
           [appSep . docLit $ Text.pack "type", docLit $ Text.pack "instance"]
+      makeForallDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
+      makeForallDoc bndrs = do
+        bndrDocs <- layoutTyVarBndrs bndrs
+        docSeq
+          (  [docLit (Text.pack "forall")]
+          ++ processTyVarBndrsSingleline bndrDocs
+          )
       lhs =
         docWrapNode lfeqn
           .  appSep
           .  docWrapNodeRest linst
           .  docSeq
-          $  (appSep instanceDoc :)
-          $  [ docParenL | needsParens ]
+          $  [appSep instanceDoc]
+          ++ [ makeForallDoc foralls | Just foralls <- [bndrsMay] ]
+          ++ [ docParenL | needsParens ]
           ++ [appSep $ docWrapNode name $ docLit nameStr]
-          ++ intersperse docSeparator (layoutType <$> pats)
+          ++ intersperse docSeparator (layoutHsTyPats pats)
           ++ [ docParenR | needsParens ]
     hasComments <- (||)
       <$> hasAnyRegularCommentsConnected lfeqn
@@ -844,6 +865,20 @@ layoutTyFamInstDecl inClass (L loc tfid) = do
     typeDoc <- docSharedWrapper layoutType typ
     layoutLhsAndType hasComments lhs "=" typeDoc
 
+
+#if MIN_VERSION_ghc(8,8,0)
+layoutHsTyPats :: [HsArg (LHsType GhcPs) (LHsKind GhcPs)] -> [ToBriDocM BriDocNumbered]
+layoutHsTyPats pats = pats <&> \case
+  HsValArg tm     -> layoutType tm
+  HsTypeArg _l ty -> docSeq [docLit $ Text.pack "@", layoutType ty]
+    -- we ignore the SourceLoc here.. this LPat not being (L _ Pat{}) change
+    -- is a bit strange. Hopefully this does not ignore any important
+    -- annotations.
+  HsArgPar _l     -> error "brittany internal error: HsArgPar{}"
+#else
+layoutHsTyPats :: [LHsType GhcPs] -> [ToBriDocM BriDocNumbered]
+layoutHsTyPats pats = layoutType <$> pats
+#endif
 
 --------------------------------------------------------------------------------
 -- ClsInstDecl

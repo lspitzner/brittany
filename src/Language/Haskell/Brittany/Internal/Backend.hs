@@ -173,14 +173,10 @@ layoutBriDocM = \case
         -- layoutResetSepSpace
         priors
           `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-                    do
+                    when (not $ comment == "(" || comment == ")") $ do
                       case comment of
                         ('#':_) -> layoutMoveToCommentPos y (-999)
                                    --  ^ evil hack for CPP
-                        "("     -> pure ()
-                        ")"     -> pure ()
-                                   --  ^ these two fix the formatting of parens
-                                   -- on the lhs of type alias defs
                         _       -> layoutMoveToCommentPos y x
                       -- fixedX <- fixMoveToLineByIsNewline x
                       -- replicateM_ fixedX layoutWriteNewline
@@ -217,7 +213,7 @@ layoutBriDocM = \case
       Nothing -> pure ()
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-          do
+          when (not $ comment == "(" || comment == ")") $ do
             -- evil hack for CPP:
             case comment of
               ('#':_) -> layoutMoveToCommentPos y (-999)
@@ -251,7 +247,7 @@ layoutBriDocM = \case
       Nothing -> pure ()
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-          do
+          when (not $ comment == "(" || comment == ")") $ do
             case comment of
               ('#':_) -> layoutMoveToCommentPos y (-999)
                          --  ^ evil hack for CPP

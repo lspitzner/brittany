@@ -276,7 +276,10 @@ foldedAnnKeys ast = SYB.everything
     Set.singleton
     [ SYB.gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
     | locTyCon == SYB.typeRepTyCon (SYB.typeOf x)
-    , l <- SYB.gmapQi 0 SYB.cast x
+    , l :: SrcSpan <- SYB.gmapQi 0 SYB.cast x
+      -- for some reason, ghc-8.8 has forgotten how to infer the type of l,
+      -- even though it is passed to mkAnnKey above, which only accepts
+      -- SrcSpan.
     ]
   )
   ast

@@ -2,6 +2,8 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Type
   ( layoutType
+  , layoutTyVarBndrs
+  , processTyVarBndrsSingleline
   )
 where
 
@@ -32,21 +34,19 @@ import           DataTreePrint
 layoutType :: ToBriDoc HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
+#if MIN_VERSION_ghc(8,2,0)
 #if MIN_VERSION_ghc(8,6,0)
   HsTyVar _ promoted name -> do
-    t <- lrdrNameToTextAnn name
-    case promoted of
-      Promoted -> docSeq
-        [ docSeparator
-        , docTick
-        , docWrapNode name $ docLit t
-        ]
-      NotPromoted -> docWrapNode name $ docLit t
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+#else   /* ghc-8.2 ghc-8.4 */
   HsTyVar promoted name -> do
+#endif
     t <- lrdrNameToTextAnn name
     case promoted of
+#if MIN_VERSION_ghc(8,8,0)
+      IsPromoted -> docSeq
+#else /* ghc-8.2 8.4 8.6 */
       Promoted -> docSeq
+#endif
         [ docSeparator
         , docTick
         , docWrapNode name $ docLit t
@@ -63,32 +63,13 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts) typ2)) -> do
 #endif
     typeDoc <- docSharedWrapper layoutType typ2
-    tyVarDocs <- bndrs `forM` \case
-#if MIN_VERSION_ghc(8,6,0)
-      (L _ (UserTyVar _ name)) -> return $ (lrdrNameToText name, Nothing)
-      (L _ (KindedTyVar _ lrdrName kind)) -> do
-        d <- docSharedWrapper layoutType kind
-        return $ (lrdrNameToText lrdrName, Just $ d)
-      (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"
-#else
-      (L _ (UserTyVar name)) -> return $ (lrdrNameToText name, Nothing)
-      (L _ (KindedTyVar lrdrName kind)) -> do
-        d <- docSharedWrapper layoutType kind
-        return $ (lrdrNameToText lrdrName, Just $ d)
-#endif
+    tyVarDocs <- layoutTyVarBndrs bndrs
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
     let maybeForceML = case typ2 of
           (L _ HsFunTy{}) -> docForceMultiline
           _               -> id
     let
-      tyVarDocLineList = tyVarDocs >>= \case
-        (tname, Nothing) -> [docLit $ Text.pack " " <> tname]
-        (tname, Just doc) -> [ docLit $ Text.pack " ("
-                                    <> tname
-                                    <> Text.pack " :: "
-                             , docForceSingleline $ doc
-                             , docLit $ Text.pack ")"
-                             ]
+      tyVarDocLineList = processTyVarBndrsSingleline tyVarDocs
       forallDoc = docAlt
         [ let
             open = docLit $ Text.pack "forall"
@@ -142,7 +123,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             else let
               open = docLit $ Text.pack "forall"
               close = docLit $ Text.pack " . "
-              in docSeq ([open]++tyVarDocLineList++[close])
+              in docSeq ([open, docSeparator]++tyVarDocLineList++[close])
         , docForceSingleline contextDoc
         , docLit $ Text.pack " => "
         , docForceSingleline typeDoc
@@ -172,31 +153,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsForAllTy bndrs typ2 -> do
 #endif
     typeDoc <- layoutType typ2
-    tyVarDocs <- bndrs `forM` \case
-#if MIN_VERSION_ghc(8,6,0)
-      (L _ (UserTyVar _ name)) -> return $ (lrdrNameToText name, Nothing)
-      (L _ (KindedTyVar _ lrdrName kind)) -> do
-        d <- layoutType kind
-        return $ (lrdrNameToText lrdrName, Just $ return d)
-      (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"
-#else
-      (L _ (UserTyVar name)) -> return $ (lrdrNameToText name, Nothing)
-      (L _ (KindedTyVar lrdrName kind)) -> do
-        d <- layoutType kind
-        return $ (lrdrNameToText lrdrName, Just $ return d)
-#endif
+    tyVarDocs <- layoutTyVarBndrs bndrs
     let maybeForceML = case typ2 of
           (L _ HsFunTy{}) -> docForceMultiline
           _               -> id
-    let
-      tyVarDocLineList = tyVarDocs >>= \case
-        (tname, Nothing) -> [docLit $ Text.pack " " <> tname]
-        (tname, Just doc) -> [ docLit $ Text.pack " ("
-                                    <> tname
-                                    <> Text.pack " :: "
-                             , docForceSingleline doc
-                             , docLit $ Text.pack ")"
-                             ]
+    let tyVarDocLineList = processTyVarBndrsSingleline tyVarDocs
     docAlt
       -- forall x . x
       [ docSeq
@@ -771,3 +732,46 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       else docLit $ Text.pack "*"
   XHsType{} -> error "brittany internal error: XHsType"
 #endif
+#if MIN_VERSION_ghc(8,8,0)
+  HsAppKindTy _ ty kind -> do
+    t <- docSharedWrapper layoutType ty
+    k <- docSharedWrapper layoutType kind
+    docAlt
+      [ docSeq
+          [ docForceSingleline t
+          , docSeparator
+          , docLit $ Text.pack "@"
+          , docForceSingleline k
+          ]
+      , docPar
+          t
+          (docSeq [docLit $ Text.pack "@", k ])
+      ]
+#endif
+
+layoutTyVarBndrs
+  :: [LHsTyVarBndr GhcPs]
+  -> ToBriDocM [(Text, Maybe (ToBriDocM BriDocNumbered))]
+layoutTyVarBndrs = mapM $ \case
+#if MIN_VERSION_ghc(8,6,0)
+  (L _ (UserTyVar _ name)) -> return $ (lrdrNameToText name, Nothing)
+  (L _ (KindedTyVar _ lrdrName kind)) -> do
+    d <- docSharedWrapper layoutType kind
+    return $ (lrdrNameToText lrdrName, Just $ d)
+  (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"
+#else
+  (L _ (UserTyVar name)) -> return $ (lrdrNameToText name, Nothing)
+  (L _ (KindedTyVar lrdrName kind)) -> do
+    d <- docSharedWrapper layoutType kind
+    return $ (lrdrNameToText lrdrName, Just $ d)
+#endif
+
+processTyVarBndrsSingleline
+  :: [(Text, Maybe (ToBriDocM BriDocNumbered))] -> [ToBriDocM BriDocNumbered]
+processTyVarBndrsSingleline bndrDocs = bndrDocs >>= \case
+  (tname, Nothing) -> [docLit $ Text.pack " " <> tname]
+  (tname, Just doc) ->
+    [ docLit $ Text.pack " (" <> tname <> Text.pack " :: "
+    , docForceSingleline $ doc
+    , docLit $ Text.pack ")"
+    ]

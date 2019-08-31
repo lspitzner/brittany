@@ -1220,6 +1220,7 @@ type instance MyFam Bool = String
 type instance MyFam (Maybe a) = a -> Bool
 
 #test simple-typefam-instance-parens
+#pending the parens cause problems since ghc-8.8
 
 type instance (MyFam (String -> Int)) = String
 
@@ -1237,6 +1238,7 @@ type instance MyFam Bool -- This is an odd one
   = AnotherType -- Here's another
 
 #test simple-typefam-instance-parens-comment
+#pending the parens cause problems since ghc-8.8
 
 -- | A happy family
 type instance (MyFam Bool) -- This is an odd one
