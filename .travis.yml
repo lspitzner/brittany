@@ -80,6 +80,9 @@ matrix:
   - env: BUILD=canew GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #cabal new 8.2.2"
     addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=canew GHCVER=8.8.1 CABALVER=3.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #cabal new 8.8.1"
+    addons: {apt: {packages: [cabal-install-3.0,ghc-8.8.1,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   ##### STACK #####
 
@@ -111,6 +114,7 @@ matrix:
   #- env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
   - env: BUILD=stack ARGS="--resolver nightly"
   - env: BUILD=stack ARGS=""
+  - env: BUILD=canew GHCVER=8.8.1 CABALVER=3.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
