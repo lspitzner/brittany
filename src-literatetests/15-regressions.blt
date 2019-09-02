@@ -672,3 +672,11 @@ _ `nor` _       = False
 #test issue 256 prefix operator match
 
 f ((:) a as) = undefined
+
+#test issue 228 lambda plus lazy or bang pattern
+
+{-# LANGUAGE BangPatterns #-}
+a = \x -> x
+b = \ ~x -> x
+c = \ !x -> x
+d = \(~x) -> x

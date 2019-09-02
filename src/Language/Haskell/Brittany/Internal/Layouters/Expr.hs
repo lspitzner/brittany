@@ -101,7 +101,27 @@ layoutExpr lexpr@(L _ expr) = do
       ,  L _ (GRHS [] body)     <- lgrhs
 #endif
       -> do
-      patDocs <- pats `forM` \p -> fmap return $ colsWrapPat =<< layoutPat p
+      patDocs <- zip (True : repeat False) pats `forM` \(isFirst, p) ->
+        fmap return $ do
+          -- this code could be as simple as `colsWrapPat =<< layoutPat p`
+          -- if it was not for the following two cases:
+          -- \ !x -> x
+          -- \ ~x -> x
+          -- These make it necessary to special-case an additional separator.
+          -- (TODO: we create a BDCols here, but then make it ineffective
+          -- by wrapping it in docSeq below. We _could_ add alignments for
+          -- stuff like lists-of-lambdas. Nothing terribly important..)
+          let shouldPrefixSeparator = case p of
+                (L _ LazyPat{}) -> isFirst
+                (L _ BangPat{}) -> isFirst
+                _               -> False
+          patDocSeq <- layoutPat p
+          fixed <- case Seq.viewl patDocSeq of
+            p1 Seq.:< pr | shouldPrefixSeparator -> do
+              p1' <- docSeq [docSeparator, pure p1]
+              pure (p1' Seq.<| pr)
+            _ -> pure patDocSeq
+          colsWrapPat fixed
       bodyDoc <- docAddBaseY BrIndentRegular <$> docSharedWrapper layoutExpr body
       let funcPatternPartLine =
             docCols ColCasePattern
