@@ -74,32 +74,27 @@ log the size of the input, but _not_ the full input/output of requests.)
     nix-env -i ./result
     ~~~
 
-- via `cabal v1-build`
+- via `cabal`
 
-    ~~~~.sh
-    # optionally:
-    # mkdir brittany
-    # cd brittany
-    # cabal sandbox init
-    cabal install brittany --bindir=$HOME/.cabal/bin # -w $PATH_TO_GHC_8_x
-    ~~~~
+    Due to constant changes to the cabal UI, I have given up on making sure
+    these instructions work before releases. Please do not expect these
+    instructions to be up-to-date; they may produce incomprehensible error
+    messages, they may be broken otherwise, they may work now but break with
+    the next cabal release. Thanks for your understanding, and feel free to
+    open issues for any problems you encounter. -- lennart
 
-- via `cabal v2-install`
+    If you are using cabal-3.0, using
+    `cabal install brittany --installdir=$HOME/.cabal/bin`
+    might work. Keep in mind that cabal merely puts a symlink to the "store"
+    into the installdir, so you have to re-install if you ever clean your
+    store. On cabal-2.4, try `cabal v2-install brittany`. On cabal-2.2 or
+    earlier you might be succesful using
+    ```cabal new-build exe:brittany; cp `find dist-newstyle/ -name brittany -type f | xargs -x ls -t | head -n1` $HOME/.cabal/bin/```.
+    Alternatively, you can also use the v1-approach with sandboxes as
+    `cabal v1-sandbox init; cabal v1-install brittany --bindir=$HOME/.cabal/bin`.
 
-    ~~~~.sh
-    cabal v2-install brittany
-    ~~~~
-
-- via `cabal v2-build`, should v2-install not work:
-
-    ~~~~.sh
-    cabal unpack brittany
-    cd brittany-0.11.0.0
-    # cabal new-configure -w $PATH_TO_GHC_8_x
-    cabal new-build exe:brittany
-    # and it should be safe to just copy the executable, e.g.
-    cp `find dist-newstyle/ -name brittany -type f | xargs -x ls -t | head -n1` $HOME/.cabal/bin/
-    ~~~~
+    (TODO: These instructions are more confusing than helpful. I am inclined
+    to just remove them.)
 
 - on ArchLinux via [the brittany AUR package](https://aur.archlinux.org/packages/brittany/)
   using `aura`:
