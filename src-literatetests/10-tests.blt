@@ -612,6 +612,39 @@ func =
           _ -> True
       ]
 
+###############################################################################
+###############################################################################
+###############################################################################
+#group expression.let
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test single-bind-comment-long
+testMethod foo bar baz qux =
+  let x = undefined foo bar baz qux qux baz bar :: String
+  -- some comment explaining the in expression
+  in  undefined foo x :: String
+
+#test single-bind-comment-short
+testMethod foo bar baz qux =
+  let x = undefined :: String
+  -- some comment explaining the in expression
+  in  undefined :: String
+
+#test single-bind-comment-before
+testMethod foo bar baz qux =
+  -- some comment explaining the in expression
+  let x = undefined :: String in undefined :: String
+
+#test multiple-binds-comment
+foo foo bar baz qux =
+  let a = 1
+      b = 2
+      c = 3
+  -- some comment explaining the in expression
+  in  undefined :: String
+
 
 ###############################################################################
 ###############################################################################

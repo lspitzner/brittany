@@ -725,10 +725,10 @@ layoutExpr lexpr@(L _ expr) = do
 #else
     HsLet binds exp1 -> do
 #endif
-      expDoc1   <- docSharedWrapper layoutExpr exp1
+      expDoc1     <- docSharedWrapper layoutExpr exp1
       -- We jump through some ugly hoops here to ensure proper sharing.
-      mBindDocs <- mapM (fmap (fmap return) . docWrapNodeRest lexpr . return)
-               =<< layoutLocalBinds binds
+      hasComments <- hasAnyCommentsBelow lexpr
+      mBindDocs   <- fmap (fmap (fmap pure)) $ layoutLocalBinds binds
       let
         ifIndentFreeElse :: a -> a -> a
         ifIndentFreeElse x y =
@@ -745,37 +745,38 @@ layoutExpr lexpr@(L _ expr) = do
       -- if "let" is moved horizontally as part of the transformation, as the
       -- comments before the first let item are moved horizontally with it.
       docSetBaseAndIndent $ case mBindDocs of
-        Just [bindDoc] -> docAlt
-          [ docSeq
-              [ appSep $ docLit $ Text.pack "let"
-              , appSep $ docForceSingleline bindDoc
-              , appSep $ docLit $ Text.pack "in"
-              , docForceSingleline expDoc1
-              ]
-          , docLines
-              [ docAlt
-                  [ docSeq
-                      [ appSep $ docLit $ Text.pack "let"
-                      , ifIndentFreeElse docSetBaseAndIndent docForceSingleline
-                      $ bindDoc
-                      ]
-                  , docAddBaseY BrIndentRegular
-                  $ docPar
-                    (docLit $ Text.pack "let")
-                    (docSetBaseAndIndent bindDoc)
-                  ]
-              , docAlt
-                  [ docSeq
-                      [ appSep $ docLit $ Text.pack $ ifIndentFreeElse "in " "in"
-                      , ifIndentFreeElse docSetBaseAndIndent docForceSingleline expDoc1
-                      ]
-                  , docAddBaseY BrIndentRegular
-                  $ docPar
-                    (docLit $ Text.pack "in")
-                    (docSetBaseY expDoc1)
-                  ]
-              ]
-          ]
+        Just [bindDoc] -> runFilteredAlternative $ do
+          addAlternativeCond (not hasComments) $ docSeq
+            [ appSep $ docLit $ Text.pack "let"
+            , docNodeAnnKW lexpr (Just AnnLet)
+            $ appSep $ docForceSingleline bindDoc
+            , appSep $ docLit $ Text.pack "in"
+            , docForceSingleline expDoc1
+            ]
+          addAlternative $ docLines
+            [ docNodeAnnKW lexpr (Just AnnLet)
+            $ docAlt
+                [ docSeq
+                    [ appSep $ docLit $ Text.pack "let"
+                    , ifIndentFreeElse docSetBaseAndIndent docForceSingleline
+                    $ bindDoc
+                    ]
+                , docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "let")
+                  (docSetBaseAndIndent bindDoc)
+                ]
+            , docAlt
+                [ docSeq
+                    [ appSep $ docLit $ Text.pack $ ifIndentFreeElse "in " "in"
+                    , ifIndentFreeElse docSetBaseAndIndent docForceSingleline expDoc1
+                    ]
+                , docAddBaseY BrIndentRegular
+                $ docPar
+                  (docLit $ Text.pack "in")
+                  (docSetBaseY expDoc1)
+                ]
+            ]
         Just bindDocs@(_:_) -> runFilteredAlternative $ do
           --either
           --  let
@@ -805,7 +806,8 @@ layoutExpr lexpr@(L _ expr) = do
             IndentPolicyLeft     -> docLines noHangingBinds
             IndentPolicyMultiple -> docLines noHangingBinds
             IndentPolicyFree     -> docLines
-              [ docSeq
+              [ docNodeAnnKW lexpr (Just AnnLet)
+              $ docSeq
                 [ appSep $ docLit $ Text.pack "let"
                 , docSetBaseAndIndent $ docLines bindDocs
                 ]
@@ -816,7 +818,8 @@ layoutExpr lexpr@(L _ expr) = do
               ]
           addAlternative
             $ docLines
-            [ docAddBaseY BrIndentRegular
+            [ docNodeAnnKW lexpr (Just AnnLet)
+            $ docAddBaseY BrIndentRegular
             $ docPar
               (docLit $ Text.pack "let")
               (docSetBaseAndIndent $ docLines $ bindDocs)
