@@ -86,7 +86,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
     --       return $ (x1' Seq.<| middle) Seq.|> xN'
   ConPatIn lname (PrefixCon args) -> do
     -- Abc a b c -> expr
-    let nameDoc = lrdrNameToText lname
+    nameDoc <- lrdrNameToTextAnn lname
     argDocs <- layoutPat `mapM` args
     if null argDocs
       then return <$> docLit nameDoc

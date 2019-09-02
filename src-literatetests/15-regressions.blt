@@ -668,3 +668,7 @@ nand _ _         = True
 
 nor False False = True
 _ `nor` _       = False
+
+#test issue 256 prefix operator match
+
+f ((:) a as) = undefined
