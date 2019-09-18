@@ -341,11 +341,25 @@ layoutPatternBind funId binderDoc lmatch@(L _ match) = do
     _ -> pure Nothing
   let mIdStr' = fixPatternBindIdentifier match <$> mIdStr
   patDoc <- docWrapNodePrior lmatch $ case (mIdStr', patDocs) of
-    (Just idStr, p1 : pr) | isInfix -> docCols
-      ColPatternsFuncInfix
-      (  [appSep $ docForceSingleline p1, appSep $ docLit idStr]
-      ++ (spacifyDocs $ docForceSingleline <$> pr)
-      )
+    (Just idStr, p1:p2:pr) | isInfix -> if null pr
+      then
+        docCols ColPatternsFuncInfix
+          [ appSep $ docForceSingleline p1
+          , appSep $ docLit $ idStr
+          , docForceSingleline p2
+          ]
+      else
+        docCols ColPatternsFuncInfix
+          (  [docCols ColPatterns
+               [ docParenL
+               , appSep $ docForceSingleline p1
+               , appSep $ docLit $ idStr
+               , docForceSingleline p2
+               , appSep $ docParenR
+               ]
+             ]
+          ++ (spacifyDocs $ docForceSingleline <$> pr)
+          )
     (Just idStr, []) -> docLit idStr
     (Just idStr, ps) ->
       docCols ColPatternsFuncPrefix

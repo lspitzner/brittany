@@ -330,6 +330,15 @@ x *** y = x
 #test symbol prefix
 (***) x y = x
 
+#test infix more args simple
+(f >=> g) k = f k >>= g
+
+#test infix more args alignment
+(Left  a <$$> Left  dd) e f = True
+(Left  a <$$> Right d ) e f = True
+(Right a <$$> Left  d ) e f = False
+(Right a <$$> Right dd) e f = True
+
 
 ###############################################################################
 ###############################################################################
