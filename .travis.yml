@@ -176,7 +176,7 @@ install:
   set -ex
   case "$BUILD" in
     stack)
-      stack -j$JOBS --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      stack -j$JOBS --no-terminal --install-ghc $ARGS test --bench --only-dependencies --flag brittany:brittany-test-perf
       ;;
     cabal*)
       cabal --version
@@ -219,6 +219,7 @@ install:
       echo 'packages: .' > cabal.project
       echo 'package brittany'                          > cabal.project.local
       echo '  ghc-options: -Werror -with-rtsopts=-N1' >> cabal.project.local
+      echo '  flags: +brittany-test-perf'             >> cabal.project.local
       rm -f cabal.project.freeze
       cabal new-build -j$JOBS --enable-test --enable-benchmarks --dep
       cabal new-build -j$JOBS --disable-tests --disable-benchmarks --dep
@@ -231,11 +232,11 @@ script:
   set -ex
   case "$BUILD" in
     stack)
-      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror -with-rtsopts=-N1"
+      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror -with-rtsopts=-N1" --flag brittany:brittany-test-perf
       ;;
     cabal)
       if [ -f configure.ac ]; then autoreconf -i; fi
-      cabal configure --enable-tests --enable-benchmarks -v  # -v2 provides useful information for debugging
+      cabal configure --enable-tests --enable-benchmarks -v --flags="brittany-test-perf" # -v2 provides useful information for debugging
       better_wait cabal build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS -Werror" # this builds all libraries and executables (including tests/benchmarks)
       time cabal test --ghc-options="-with-rtsopts=-N1"
       ;;
