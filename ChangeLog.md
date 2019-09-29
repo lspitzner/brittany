@@ -2,12 +2,11 @@
 
 ## 0.12.1.0 -- September 2019
 
+* Support ghc-8.8
 * Support for OverloadedLabels extension
   (thanks to Evan Rutledge Borden @eborden)
 * Support for Implicit Params extension (thanks to pepe iborra @pepeiborra)
 * Add flag `--no-user-config` to enable only using manually passed config
-* Theoretically support ghc-8.8 (brittany itself now compiles with 8.8, but
-  you need certain patched dependencies)
 * Disable the performance test suite by default to prevent spurious failures
   on certain CI setups. The github/travis brittany CI still has all tests
   enabled. See the `brittany-test-perf` flag in the cabal file.

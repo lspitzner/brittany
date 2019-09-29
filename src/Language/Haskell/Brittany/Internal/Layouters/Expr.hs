@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Expr
   ( layoutExpr
@@ -112,8 +113,8 @@ layoutExpr lexpr@(L _ expr) = do
           -- by wrapping it in docSeq below. We _could_ add alignments for
           -- stuff like lists-of-lambdas. Nothing terribly important..)
           let shouldPrefixSeparator = case p of
-                (L _ LazyPat{}) -> isFirst
-                (L _ BangPat{}) -> isFirst
+                (ghcDL -> L _ LazyPat{}) -> isFirst
+                (ghcDL -> L _ BangPat{}) -> isFirst
                 _               -> False
           patDocSeq <- layoutPat p
           fixed <- case Seq.viewl patDocSeq of
