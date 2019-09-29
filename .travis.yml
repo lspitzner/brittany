@@ -200,7 +200,7 @@ install:
         echo "cabal build-cache MISS";
         rm -rf $HOME/.cabsnap;
         mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
-        cabal install -j$JOBS --only-dependencies --enable-tests --enable-benchmarks --ghc-options="-j1 +RTS -M500M -RTS";
+        cabal install -j$JOBS --only-dependencies --enable-tests --enable-benchmarks --ghc-options="-j1 +RTS -M700M -RTS";
       fi
       
       # snapshot package-db on cache miss
@@ -216,9 +216,9 @@ install:
       cabal --version
       travis_retry cabal update -v
       echo 'packages: .' > cabal.project
-      echo 'package brittany'                          > cabal.project.local
-      echo '  ghc-options: -Werror -with-rtsopts=-N1' >> cabal.project.local
-      echo '  flags: +brittany-test-perf'             >> cabal.project.local
+      echo 'package brittany'                                               > cabal.project.local
+      echo '  ghc-options: -Werror -with-rtsopts=-N1 -j1 +RTS -M700M -RTS' >> cabal.project.local
+      echo '  flags: +brittany-test-perf'                                  >> cabal.project.local
       rm -f cabal.project.freeze
       cabal new-build -j$JOBS --enable-test --enable-benchmarks --dep
       cabal new-build -j$JOBS --disable-tests --disable-benchmarks --dep
@@ -231,12 +231,12 @@ script:
   set -ex
   case "$BUILD" in
     stack)
-      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M500M -RTS -Werror -with-rtsopts=-N1" --flag brittany:brittany-test-perf
+      better_wait stack -j$JOBS --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps --ghc-options="-j1 +RTS -M700M -RTS -Werror -with-rtsopts=-N1" --flag brittany:brittany-test-perf
       ;;
     cabal)
       if [ -f configure.ac ]; then autoreconf -i; fi
       cabal configure --enable-tests --enable-benchmarks -v --flags="brittany-test-perf" # -v2 provides useful information for debugging
-      better_wait cabal build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS -Werror" # this builds all libraries and executables (including tests/benchmarks)
+      better_wait cabal build -j$JOBS --ghc-options="-j1 +RTS -M700M -RTS -Werror" # this builds all libraries and executables (including tests/benchmarks)
       time cabal test --ghc-options="-with-rtsopts=-N1"
       ;;
     cabaldist)
@@ -247,12 +247,12 @@ script:
       # If there are no other `.tar.gz` files in `dist`, this can be even simpler:
       # `cabal install --force-reinstalls dist/*-*.tar.gz`
       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
-      (cd dist && better_wait cabal install -j$JOBS --force-reinstalls "$SRC_TGZ" --ghc-options="-j1 +RTS -M500M -RTS")
+      (cd dist && better_wait cabal install -j$JOBS --force-reinstalls "$SRC_TGZ" --ghc-options="-j1 +RTS -M700M -RTS")
       ;;
     canew)
-      better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --disable-tests --disable-benchmarks
-      better_wait cabal new-build -j$JOBS --ghc-options="-j1 +RTS -M500M -RTS" --enable-tests --enable-benchmarks
-      time cabal new-test -j1 --ghc-options="-j1 +RTS -M500M -RTS"
+      better_wait cabal new-build -j$JOBS --disable-tests --disable-benchmarks
+      better_wait cabal new-build -j$JOBS --enable-tests --enable-benchmarks
+      time cabal new-test -j1
       ;;
   esac
   set +ex
