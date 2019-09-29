@@ -1,5 +1,26 @@
 # Revision history for brittany
 
+## 0.12.1.0 -- September 2019
+
+* Support for OverloadedLabels extension
+  (thanks to Evan Rutledge Borden @eborden)
+* Support for Implicit Params extension (thanks to pepe iborra @pepeiborra)
+* Add flag `--no-user-config` to enable only using manually passed config
+* Theoretically support ghc-8.8 (brittany itself now compiles with 8.8, but
+  you need certain patched dependencies)
+* Disable the performance test suite by default to prevent spurious failures
+  on certain CI setups. The github/travis brittany CI still has all tests
+  enabled. See the `brittany-test-perf` flag in the cabal file.
+* Bugfixes:
+    - Fix one wandering-comment bug for let-in expressions
+    - Fix invalid result for prefix operator pattern matches
+    - Fix lambda expression with laziness/strictness annotation
+    - Fix parenthesis handling for infix pattern matches with 3+ arguments
+* Changes to layouting behaviour:
+    - For pattern matching and data/instance definitions, the usage of
+      parenthesis is now "normalized", i.e. superfluous parens are removed by
+      brittany.
+
 ## 0.12.0.0 -- June 2019
 
 * Support for ghc-8.6 (basic support, not necessarily all new syntactic
