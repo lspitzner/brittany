@@ -741,7 +741,11 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
     let wrapNodeRest = docWrapNodeRest ltycl
     docWrapNodePrior ltycl
       $ layoutSynDecl isInfix wrapNodeRest name (hsq_explicit vars) typ
+#if MIN_VERSION_ghc(8,6,0)
   DataDecl _ext name tyVars _ dataDefn ->
+#else
+  DataDecl name tyVars _ dataDefn _ _ ->
+#endif
     docWrapNodePrior ltycl $
       layoutDataDecl ltycl name tyVars dataDefn
   _ -> briDocByExactNoComment ltycl

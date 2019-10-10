@@ -58,7 +58,7 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Data.Generics.Uniplate.Direct as Uniplate
-import           HsExtension (NoExt)
+import qualified HsExtension
 
 
 
@@ -296,6 +296,11 @@ lines' s = case break (== '\n') s of
   (s1, [_]) -> [s1, ""]
   (s1, (_:r)) -> s1 : lines' r
 
+#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
 -- | A method to dismiss NoExt patterns for total matches
-absurdExt :: NoExt -> a
+absurdExt :: HsExtension.NoExt -> a
 absurdExt = error "cannot construct NoExt"
+#else
+absurdExt :: ()
+absurdExt = ()
+#endif
