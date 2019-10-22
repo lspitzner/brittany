@@ -379,6 +379,46 @@ data Foo = forall a b . (Show a, Eq b) => Bar
   , bars :: b
   }
 
+#test record comments simple
+data Foo = Bar -- a
+  { foo  :: Baz -- b
+  , bars :: Bizzz -- c
+  } -- d
+  deriving (Show, Eq, Monad, Functor, Traversable, Foldable) -- e
+
+#test record comments strange inline
+data Foo = Bar
+  {  -- a
+    foo  -- b
+        :: -- c
+           Baz -- d
+  , -- e
+    bars :: Bizzz
+  }
+  deriving (Show, Eq, Monad, Functor, Traversable, Foldable)
+
+#test record comments in deriving
+## maybe we want to switch to a differnt layout when there are such comments.
+## Don't hesitate to modify this testcase, it clearly is not the ideal layout
+## for this.
+
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  -- a
+  deriving --b
+           ( -- c
+            ToJSON -- d
+                  , -- e
+                    FromJSON --f
+                            ) -- g
+                              via  -- h
+                                  ( -- i
+                                   SomeType --j
+                                           , -- k
+                                             ABC --l
+                                                )
 
 ###############################################################################
 ###############################################################################

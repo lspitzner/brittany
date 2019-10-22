@@ -176,6 +176,7 @@ createDerivingPar derivs mainDoc = do
       docPar mainDoc
         $   docEnsureIndent BrIndentRegular
         $   docLines
+        $   docWrapNode derivs
         $   derivingClauseDoc
         <$> types
 
@@ -196,10 +197,13 @@ derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
     in
       docSeq
         [ docDeriving
-        , lhsStrategy
+        , docWrapNodePrior types $ lhsStrategy
         , docSeparator
         , whenMoreThan1Type "("
-        , docSeq $ List.intersperse docCommaSep $ ts <&> \case
+        , docWrapNodeRest types
+          $ docSeq
+          $ List.intersperse docCommaSep
+          $ ts <&> \case
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             HsIB _ t -> layoutType t
             XHsImplicitBndrs x -> absurdExt x
@@ -215,11 +219,12 @@ derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
     (L _ AnyclassStrategy       ) -> (docLit $ Text.pack " anyclass", docEmpty)
     (L _ NewtypeStrategy        ) -> (docLit $ Text.pack " newtype", docEmpty)
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-    (L _ (ViaStrategy viaTypes) ) ->
+    lVia@(L _ (ViaStrategy viaTypes) ) ->
       ( docEmpty
       , case viaTypes of
           HsIB _ext t -> docSeq
-            [ docLit $ Text.pack " via "
+            [ docWrapNode lVia $ docLit $ Text.pack " via"
+            , docSeparator
             , layoutType t
             ]
           XHsImplicitBndrs ext -> absurdExt ext
@@ -239,26 +244,28 @@ createDetailsDoc consNameStr details = case details of
     ]
   RecCon (L _ []) -> docEmpty
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-  RecCon (L _ [L _ (ConDeclField _ext names t _)]) -> docSeq
+  RecCon lRec@(L _ [lField@(L _ (ConDeclField _ext names t _))]) -> docSeq
 #else
-  RecCon (L _ [L _ (ConDeclField names t _)]) -> docSeq
+  RecCon lRec@(L _ [lField@(L _ (ConDeclField names t _))]) -> docSeq
 #endif
     [ docLit consNameStr
     , docSeparator
-    , appSep $ docLit $ Text.pack "{"
-    , docSeq $ createNamesAndTypeDoc names t
+    , docWrapNodePrior lRec $ docLit $ Text.pack "{"
+    , docSeparator
+    , docWrapNodeRest lRec $ docSeq $ createNamesAndTypeDoc lField names t
     , docSeparator
     , docLit $ Text.pack "}"
     ]
-  RecCon (L _ fields@(_:_)) -> do
+  RecCon lRec@(L _ fields@(_:_)) -> do
     let (fDoc1 : fDocR) = mkFieldDocs fields
     docAddBaseY BrIndentRegular $ docPar
       (docLit consNameStr)
-      (docLines
+      (docWrapNodePrior lRec $ docLines
         [ docCols ColRecDecl
-          $ docLit (Text.pack "{ ")
+          $ appSep (docLit (Text.pack "{"))
           : fDoc1
-        , docLines $ fDocR <&> \f -> docCols ColRecDecl $ docCommaSep : f
+        , docWrapNodeRest lRec $ docLines $ fDocR <&> \f ->
+            docCols ColRecDecl $ docCommaSep : f
         , docLit $ Text.pack "}"
         ]
       )
@@ -270,12 +277,13 @@ createDetailsDoc consNameStr details = case details of
     , layoutType arg2
     ]
  where
-  mkFieldDocs = fmap $ \case
+  mkFieldDocs :: [LConDeclField GhcPs] -> [[ToBriDocM BriDocNumbered]]
+  mkFieldDocs = fmap $ \lField -> case lField of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-    L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc names t
+    L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc lField names t
     L _ (XConDeclField x) -> absurdExt x
 #else
-    L _ (ConDeclField names t _) -> createNamesAndTypeDoc names t
+    L _ (ConDeclField names t _) -> createNamesAndTypeDoc lField names t
 #endif
 
 createForallDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
@@ -288,11 +296,13 @@ createForallDoc lhsTyVarBndrs =  docSeq
   ]
 
 createNamesAndTypeDoc
-  :: [GenLocated t (FieldOcc GhcPs)]
+  :: Data.Data.Data ast
+  => Located ast
+  -> [GenLocated t (FieldOcc GhcPs)]
   -> Located (HsType GhcPs)
   -> [ToBriDocM BriDocNumbered]
-createNamesAndTypeDoc names t =
-  [ docSeq
+createNamesAndTypeDoc lField names t =
+  [ docNodeAnnKW lField Nothing $ docWrapNodePrior lField $ docSeq
     [ docSeq
       $   List.intersperse docCommaSep
       $   names
@@ -306,7 +316,7 @@ createNamesAndTypeDoc names t =
             docLit =<< lrdrNameToTextAnn fieldName
     , docSeparator
     ]
-  , docSeq
+  , docWrapNodeRest lField $ docSeq
     [ docLit $ Text.pack "::"
     , docSeparator
     , layoutType t
