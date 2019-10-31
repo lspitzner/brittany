@@ -748,8 +748,7 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
 #else
   DataDecl name tyVars dataDefn _ _ ->
 #endif
-    docWrapNodePrior ltycl $
-      layoutDataDecl ltycl name tyVars dataDefn
+    layoutDataDecl ltycl name tyVars dataDefn
   _ -> briDocByExactNoComment ltycl
 
 layoutSynDecl

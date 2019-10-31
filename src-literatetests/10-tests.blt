@@ -385,6 +385,11 @@ data Foo = forall a b . (Show a, Eq b) => Bar
   , bars :: b
   }
 
+#test plain comment simple
+-- before
+data MyData = MyData Int
+-- after
+
 #test record comments simple
 data Foo = Bar -- a
   { foo  :: Baz -- b

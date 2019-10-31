@@ -46,6 +46,7 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 #else
 layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
 #endif
+  -- newtype MyType a b = MyType ..
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsDataDefn _ext NewType (L _ []) _ctype Nothing [cons] mDerivs -> case cons of
     (L _ (ConDeclH98 _ext consName (L _ False) _qvars (Just (L _ [])) details _conDoc)) ->
@@ -74,6 +75,9 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
           ]
     _ -> briDocByExactNoComment ltycl
 
+
+  -- data MyData a b
+  -- (zero constructors)
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [] mDerivs ->
 #else
@@ -90,6 +94,8 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
         , appSep tyVarLine
         ]
 
+  -- data MyData = MyData ..
+  -- data MyData = MyData { .. }
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
 #else
