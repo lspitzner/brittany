@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
@@ -58,7 +59,9 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Data.Generics.Uniplate.Direct as Uniplate
+#if MIN_VERSION_ghc(8,4,0)   /* ghc-8.4 */
 import qualified HsExtension
+#endif
 
 
 
