@@ -365,6 +365,7 @@ data Foo = Bar
   deriving newtype (Traversable, Foldable)
 
 #test record deriving via
+#min-ghc 8.6
 data Foo = Bar
   { foo  :: Baz
   , bars :: Bizzz
@@ -424,12 +425,27 @@ data Foo = Bar
                   , -- e
                     FromJSON --f
                             ) -- g
-                              via  -- h
-                                  ( -- i
-                                   SomeType --j
-                                           , -- k
-                                             ABC --l
-                                                )
+
+#test record comments in deriving via
+## maybe we want to switch to a differnt layout when there are such comments.
+## Don't hesitate to modify this testcase, it clearly is not the ideal layout
+## for this.
+#min-ghc 8.6
+
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  -- a
+  deriving --a
+           ToJSON --b
+                  via  -- c
+                      ( -- d
+                       SomeType --e
+                               , -- f
+                                 ABC --g
+                                    )
+
 
 ###############################################################################
 ###############################################################################

@@ -1,42 +1,56 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE CPP #-}
 
-module Main (main) where
+module Main
+  ( main
+  )
+where
 
 
 
 #include "prelude.inc"
 
-import Test.Hspec
-import Test.Hspec.Runner ( hspecWith, defaultConfig, configConcurrentJobs )
+import           Test.Hspec
+import           Test.Hspec.Runner              ( hspecWith
+                                                , defaultConfig
+                                                , configConcurrentJobs
+                                                )
 
-import NeatInterpolation
+import           NeatInterpolation
 
-import qualified Text.Parsec as Parsec
-import Text.Parsec.Text ( Parser )
+import qualified Text.Parsec                   as Parsec
+import           Text.Parsec.Text               ( Parser )
 
-import Data.Char ( isSpace )
-import Data.List ( groupBy )
+import           Data.Char                      ( isSpace )
+import           Data.List                      ( groupBy )
 
-import Language.Haskell.Brittany.Internal
+import           Language.Haskell.Brittany.Internal
 
-import Language.Haskell.Brittany.Internal.Config.Types
-import Language.Haskell.Brittany.Internal.Config
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Config
 
-import Data.Coerce ( coerce )
+import           Data.Coerce                    ( coerce )
 
-import qualified Data.Text.IO as Text.IO
-import           System.FilePath ( (</>) )
+import qualified Data.Text.IO                  as Text.IO
+import           System.FilePath                ( (</>) )
 
 
 
 data InputLine
   = GroupLine Text
   | HeaderLine Text
+  | GhcVersionGuardLine Text
   | PendingLine
   | NormalLine Text
   | CommentLine
   deriving Show
 
+data TestCase = TestCase
+  { testName :: Text
+  , isPending :: Bool
+  , minGHCVersion :: Maybe Text
+  , content :: Text
+  }
 
 main :: IO ()
 main = do
@@ -44,28 +58,39 @@ main = do
   let blts =
         List.sort
           $ filter (\x -> not ("tests-context-free.blt" `isSuffixOf` x))
-          $ filter (".blt"`isSuffixOf`) files
+          $ filter (".blt" `isSuffixOf`) files
   inputs <- blts `forM` \blt -> Text.IO.readFile ("src-literatetests" </> blt)
   let groups = createChunks =<< inputs
   inputCtxFree <- Text.IO.readFile "src-literatetests/30-tests-context-free.blt"
   let groupsCtxFree = createChunks inputCtxFree
+  let parseVersion :: Text -> Maybe [Int]
+      parseVersion =
+        mapM (readMaybe . Text.unpack) . Text.splitOn (Text.pack ".")
+  let ghcVersion = Data.Maybe.fromJust $ parseVersion $ Text.pack VERSION_ghc
+  let checkVersion = \case
+        Nothing -> True -- no version constraint
+        Just s  -> case parseVersion s of
+          Nothing -> error $ "could not parse version " ++ Text.unpack s
+          Just v  -> v <= ghcVersion
   hspec $ do
     groups `forM_` \(groupname, tests) -> do
-      describe (Text.unpack groupname) $ tests `forM_` \(name, pend, inp) -> do
-        (if pend then before_ pending else id)
-          $ it (Text.unpack name)
-          $ roundTripEqual defaultTestConfig inp
+      describe (Text.unpack groupname) $ do
+        tests `forM_` \test -> when (checkVersion $ minGHCVersion test) $ do
+          (if isPending test then before_ pending else id)
+            $ it (Text.unpack $ testName test)
+            $ roundTripEqual defaultTestConfig
+            $ content test
     groupsCtxFree `forM_` \(groupname, tests) -> do
-      describe ("context free: " ++ Text.unpack groupname)
-        $       tests
-        `forM_` \(name, pend, inp) -> do
-                  (if pend then before_ pending else id)
-                    $ it (Text.unpack name)
-                    $ roundTripEqual contextFreeTestConfig inp
+      describe ("context free: " ++ Text.unpack groupname) $ do
+        tests `forM_` \test -> when (checkVersion $ minGHCVersion test) $ do
+          (if isPending test then before_ pending else id)
+            $ it (Text.unpack $ testName test)
+            $ roundTripEqual contextFreeTestConfig
+            $ content test
  where
   -- this function might be implemented in a weirdly complex fashion; the
   -- reason being that it was copied from a somewhat more complex variant.
-  createChunks :: Text -> [(Text, [(Text, Bool, Text)])]
+  createChunks :: Text -> [(Text, [TestCase])]
   createChunks input =
 --    fmap (\case
 --        HeaderLine n:PendingLine:rest | Just rlines <- mapM extractNormal rest -> (n, True, Text.unlines rlines)
@@ -73,35 +98,39 @@ main = do
 --        l -> error $ "first non-empty line must start with #test footest\n" ++ show l
 --      )
 --      $   fmap (groupBy grouperT)
-    fmap
-        ( \case
-          GroupLine g:grouprest ->
-            (,) g
-              $ fmap
-                  ( \case
-                    HeaderLine n:PendingLine:rest | Just rlines <- mapM
-                      extractNormal
-                      rest ->
-                      (n, True, Text.unlines rlines)
-                    HeaderLine n:rest | Just rlines <- mapM extractNormal rest ->
-                      (n, False, Text.unlines rlines)
-                    l ->
-                      error
-                        $ "first non-empty line must start with #test footest\n"
-                        ++ show l
-                  )
-              $ groupBy grouperT
-              $ filter (not . lineIsSpace)
-              $ grouprest
-          l -> error $ "first non-empty line must be a #group\n" ++ show l
-        )
-      $   groupBy grouperG
-      $   filter (not . lineIsSpace)
-      $   lineMapper
-      <$> Text.lines input
+    fmap groupProcessor
+      $ groupBy grouperG
+      $ filter (not . lineIsSpace)
+      $ fmap lineMapper
+      $ Text.lines input
    where
+    groupProcessor :: [InputLine] -> (Text, [TestCase])
+    groupProcessor = \case
+      GroupLine g : grouprest ->
+        (,) g
+          $ fmap testProcessor
+          $ groupBy grouperT
+          $ filter (not . lineIsSpace)
+          $ grouprest
+      l -> error $ "first non-empty line must be a #group\n" ++ show l
+    testProcessor :: [InputLine] -> TestCase
+    testProcessor = \case
+      HeaderLine n : rest ->
+        let normalLines = Data.Maybe.mapMaybe extractNormal rest
+        in  TestCase
+              { testName      = n
+              , isPending     = any isPendingLine rest
+              , minGHCVersion = Data.List.Extra.firstJust extractMinGhc rest
+              , content       = Text.unlines normalLines
+              }
+      l ->
+        error $ "first non-empty line must start with #test footest\n" ++ show l
     extractNormal (NormalLine l) = Just l
     extractNormal _              = Nothing
+    extractMinGhc (GhcVersionGuardLine v) = Just v
+    extractMinGhc _                       = Nothing
+    isPendingLine PendingLine{} = True
+    isPendingLine _             = False
     specialLineParser :: Parser InputLine
     specialLineParser = Parsec.choice
       [ [ GroupLine $ Text.pack name
@@ -116,6 +145,11 @@ main = do
         , name <- Parsec.many1 $ Parsec.noneOf "\r\n:"
         , _    <- Parsec.eof
         ]
+      , [ GhcVersionGuardLine $ Text.pack version
+        | _       <- Parsec.try $ Parsec.string "#min-ghc"
+        , _       <- Parsec.many1 $ Parsec.oneOf " \t"
+        , version <- Parsec.many1 $ Parsec.noneOf "\r\n:"
+        ]
       , [ PendingLine
         | _ <- Parsec.try $ Parsec.string "#pending"
         , _ <- Parsec.optional $ many (Parsec.noneOf "\r\n")
@@ -123,8 +157,8 @@ main = do
         ]
       , [ CommentLine
         | _ <- Parsec.many $ Parsec.oneOf " \t"
-        , _ <-
-          Parsec.optional $ Parsec.string "##" <* many (Parsec.noneOf "\r\n")
+        , _ <- Parsec.optional $ Parsec.string "##" <* many
+          (Parsec.noneOf "\r\n")
         , _ <- Parsec.eof
         ]
       ]
@@ -148,8 +182,7 @@ main = do
 --------------------
 roundTripEqual :: Config -> Text -> Expectation
 roundTripEqual c t =
-  fmap (fmap PPTextWrapper)
-       (parsePrintModuleTests c "TestFakeFileName.hs" t)
+  fmap (fmap PPTextWrapper) (parsePrintModuleTests c "TestFakeFileName.hs" t)
     `shouldReturn` Right (PPTextWrapper t)
 
 newtype PPTextWrapper = PPTextWrapper Text
@@ -158,7 +191,8 @@ newtype PPTextWrapper = PPTextWrapper Text
 instance Show PPTextWrapper where
   show (PPTextWrapper t) = "\n" ++ Text.unpack t
 
-
+-- brittany-next-binding --columns 160
+-- brittany-next-binding { lconfig_indentPolicy: IndentPolicyLeft }
 defaultTestConfig :: Config
 defaultTestConfig = Config
   { _conf_version                   = _conf_version staticDefaultConfig
@@ -181,21 +215,18 @@ defaultTestConfig = Config
     , _lconfig_allowHangingQuasiQuotes   = coerce True
     , _lconfig_experimentalSemicolonNewlines = coerce False
     }
-  , _conf_errorHandling             = (_conf_errorHandling staticDefaultConfig)
-    { _econf_omit_output_valid_check = coerce True
-    }
+  , _conf_errorHandling = (_conf_errorHandling staticDefaultConfig) { _econf_omit_output_valid_check = coerce True }
   , _conf_preprocessor              = _conf_preprocessor staticDefaultConfig
-  , _conf_forward = ForwardOptions {_options_ghc = Identity []}
+  , _conf_forward                   = ForwardOptions { _options_ghc = Identity [] }
   , _conf_roundtrip_exactprint_only = coerce False
-  , _conf_obfuscate = coerce False
+  , _conf_obfuscate                 = coerce False
   }
 
 contextFreeTestConfig :: Config
-contextFreeTestConfig =
-  defaultTestConfig
+contextFreeTestConfig = defaultTestConfig
   { _conf_layout = (_conf_layout defaultTestConfig)
-    {_lconfig_indentPolicy = coerce IndentPolicyLeft
-    ,_lconfig_alignmentLimit = coerce (1 :: Int)
-    ,_lconfig_columnAlignMode = coerce ColumnAlignModeDisabled
-    }
+                     { _lconfig_indentPolicy    = coerce IndentPolicyLeft
+                     , _lconfig_alignmentLimit  = coerce (1 :: Int)
+                     , _lconfig_columnAlignMode = coerce ColumnAlignModeDisabled
+                     }
   }
