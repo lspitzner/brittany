@@ -351,6 +351,7 @@ data Foo = Bar
   deriving (Show, Eq, Monad, Functor, Traversable, Foldable)
 
 #test record multiple deriving strategies
+#min-ghc 8.2
 data Foo = Bar
   { foo  :: Baz
   , bars :: Bizzz
