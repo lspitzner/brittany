@@ -447,6 +447,24 @@ data Foo = Bar
                                  ABC --g
                                     )
 
+#test normal records on multi line indent policy left
+-- brittany {lconfig_indentPolicy: IndentPolicyLeft }
+data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
+  Types.Company
+  [EnterpriseGrantResponse]
+
+#test normal records on multi line indent policy free
+-- brittany {lconfig_indentPolicy: IndentPolicyFree }
+data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
+                                          Types.Company
+                                          [EnterpriseGrantResponse]
+
+#test normal records on multi line indent policy multiple
+-- brittany {lconfig_indentPolicy: IndentPolicyMultiple }
+data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
+                                          Types.Company
+                                          [EnterpriseGrantResponse]
+
 
 ###############################################################################
 ###############################################################################

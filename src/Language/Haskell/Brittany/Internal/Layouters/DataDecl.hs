@@ -266,11 +266,29 @@ docDeriving = docLit $ Text.pack "deriving"
 createDetailsDoc
   :: Text -> HsConDeclDetails GhcPs -> (ToBriDocM BriDocNumbered)
 createDetailsDoc consNameStr details = case details of
-  PrefixCon args -> docSeq
-    [ docLit consNameStr
-    , docSeparator
-    , docSeq $ List.intersperse docSeparator $ args <&> layoutType
-    ]
+  PrefixCon args -> do
+    indentPolicy <- mAsk <&> _conf_layout .>  _lconfig_indentPolicy .>  confUnpack
+    let
+      singleLine = docSeq
+        [ docLit consNameStr
+        , docSeparator
+        , docSeq $ List.intersperse docSeparator $ args <&> layoutType
+        ]
+      leftIndented = docSetParSpacing
+        . docAddBaseY BrIndentRegular
+        . docPar (docLit consNameStr)
+        . docLines
+        $ layoutType <$> args
+      multiIndented = docSetParSpacing
+        . docSetBaseAndIndent
+        . docPar (docLit consNameStr)
+        . docLines
+        $ layoutType
+        <$> args
+    case indentPolicy of
+      IndentPolicyLeft     -> docAlt [singleLine, leftIndented]
+      IndentPolicyMultiple -> docAlt [singleLine, multiIndented]
+      IndentPolicyFree     -> docAlt [singleLine, multiIndented]
   RecCon (L _ []) -> docEmpty
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   RecCon lRec@(L _ [lField@(L _ (ConDeclField _ext names t _))]) -> docSeq
