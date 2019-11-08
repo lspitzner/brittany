@@ -392,6 +392,13 @@ data Foo = forall a b . (Show a, Eq b) => Bar
 data MyData = MyData Int
 -- after
 
+#test record newline comment
+data MyRecord = MyRecord
+  { a :: Int
+    -- comment
+  , b :: Int
+  }
+
 #test record comments simple
 data Foo = Bar -- a
   { foo  :: Baz -- b

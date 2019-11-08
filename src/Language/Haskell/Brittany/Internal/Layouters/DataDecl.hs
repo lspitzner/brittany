@@ -291,21 +291,22 @@ createDetailsDoc consNameStr details = case details of
       IndentPolicyFree     -> docAlt [singleLine, multiIndented]
   RecCon (L _ []) -> docEmpty
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-  RecCon lRec@(L _ [lField@(L _ (ConDeclField _ext names t _))]) -> docSeq
+  RecCon lRec@(L _ [lField@(L _ (ConDeclField _ext names t _))]) ->
 #else
-  RecCon lRec@(L _ [lField@(L _ (ConDeclField names t _))]) -> docSeq
+  RecCon lRec@(L _ [lField@(L _ (ConDeclField names t _))]) ->
 #endif
-    [ docLit consNameStr
-    , docSeparator
-    , docWrapNodePrior lRec $ docLit $ Text.pack "{"
-    , docSeparator
-    , docWrapNodeRest lRec $ docSeq $ createNamesAndTypeDoc lField names t
-    , docSeparator
-    , docLit $ Text.pack "}"
-    ]
+    docSetIndentLevel $ docSeq
+      [ docLit consNameStr
+      , docSeparator
+      , docWrapNodePrior lRec $ docLit $ Text.pack "{"
+      , docSeparator
+      , docWrapNodeRest lRec $ docSeq $ fmap docForceSingleline $ createNamesAndTypeDoc lField names t
+      , docSeparator
+      , docLit $ Text.pack "}"
+      ]
   RecCon lRec@(L _ fields@(_:_)) -> do
     let (fDoc1 : fDocR) = mkFieldDocs fields
-    docAddBaseY BrIndentRegular $ docPar
+    docAddBaseY BrIndentRegular $ docSetIndentLevel $ docPar
       (docLit consNameStr)
       (docWrapNodePrior lRec $ docLines
         [ docCols ColRecDecl
