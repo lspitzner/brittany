@@ -680,3 +680,7 @@ a = \x -> x
 b = \ ~x -> x
 c = \ !x -> x
 d = \(~x) -> x
+
+#test type signature with forall and constraint
+{-# LANGUAGE RankNTypes #-}
+func :: forall b . Show b => b -> String

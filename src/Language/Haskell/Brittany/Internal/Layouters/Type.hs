@@ -766,12 +766,15 @@ layoutTyVarBndrs = mapM $ \case
     return $ (lrdrNameToText lrdrName, Just $ d)
 #endif
 
+-- there is no specific reason this returns a list instead of a single
+-- BriDoc node.
 processTyVarBndrsSingleline
   :: [(Text, Maybe (ToBriDocM BriDocNumbered))] -> [ToBriDocM BriDocNumbered]
 processTyVarBndrsSingleline bndrDocs = bndrDocs >>= \case
-  (tname, Nothing) -> [docLit $ Text.pack " " <> tname]
+  (tname, Nothing) -> [docSeparator, docLit tname]
   (tname, Just doc) ->
-    [ docLit $ Text.pack " (" <> tname <> Text.pack " :: "
+    [ docSeparator
+    , docLit $ Text.pack "(" <> tname <> Text.pack " :: "
     , docForceSingleline $ doc
     , docLit $ Text.pack ")"
     ]
