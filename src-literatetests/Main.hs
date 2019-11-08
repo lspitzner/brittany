@@ -215,7 +215,7 @@ defaultTestConfig = Config
     , _lconfig_allowHangingQuasiQuotes   = coerce True
     , _lconfig_experimentalSemicolonNewlines = coerce False
     }
-  , _conf_errorHandling = (_conf_errorHandling staticDefaultConfig) { _econf_omit_output_valid_check = coerce True }
+  , _conf_errorHandling             = (_conf_errorHandling staticDefaultConfig) { _econf_omit_output_valid_check = coerce True }
   , _conf_preprocessor              = _conf_preprocessor staticDefaultConfig
   , _conf_forward                   = ForwardOptions { _options_ghc = Identity [] }
   , _conf_roundtrip_exactprint_only = coerce False
