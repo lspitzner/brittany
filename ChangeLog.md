@@ -84,7 +84,7 @@
     CONFIG is either:
     
     1) one or more flags in the form of what brittany accepts
-       on the commandline, e.g. "-- columns 50", or
+       on the commandline, e.g. "--columns 50", or
     2) one or more specifications in the form of what brittany
        accepts in its config files for the layouting config
        (a one-line yaml document), e.g. "{ lconfig_cols: 50 }"
