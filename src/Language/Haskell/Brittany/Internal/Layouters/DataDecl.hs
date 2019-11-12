@@ -289,7 +289,7 @@ createDetailsDoc consNameStr details = case details of
       IndentPolicyLeft     -> docAlt [singleLine, leftIndented]
       IndentPolicyMultiple -> docAlt [singleLine, multiIndented]
       IndentPolicyFree     -> docAlt [singleLine, multiIndented]
-  RecCon (L _ []) -> docEmpty
+  RecCon (L _ []) -> docSeq [docLit consNameStr, docSeparator, docLit $ Text.pack "{}"]
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   RecCon lRec@(L _ [lField@(L _ (ConDeclField _ext names t _))]) ->
 #else
