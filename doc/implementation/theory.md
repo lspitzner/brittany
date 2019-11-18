@@ -18,7 +18,7 @@ will first consider
 
 Every haskell module can be written in a single line - of course, in most
 cases, an unwieldly long one. We humans prefer our lines limitted to some
-laughingly small limit like 80 or 160 or whatever. Further, we generally
+laughingly small limit like 80 or 160. Further, we generally
 prefer the indentation of our expressions(, statements etc.) line up with
 its syntactic structure. This preferences (and the layouting rule which
 already enforces it partially) still leaves a good amount of choice for
@@ -39,8 +39,9 @@ myList =
 ~~~~
 
 While consistency has the first priority, we also prefer short code: If it
-fits, we prefer the version/layout with less lines of code. So we wish to trade
-more lines for less columns, but only until things fit.
+fits, we prefer the version/layout with less lines of code. So coming from the
+everything-in-one-line version, we wish to trade more lines to achieve less
+columns, but stop immediately when everything fits into 80 columns.
 
 For simple cases we can give a trivial rule: If there is space
 for the one-line layout, use it; otherwise use the indented-multiline
@@ -108,15 +109,19 @@ not help at all in pruning the alternatives on a given layer. In the above
 `nestedCaseExpr` example, we might obtain a better solution by looking not
 at just the first, but the first n possible layouts, but against an exponential
 search-space, this does not scale: Just consider the possibility that there
-are exponentially many sub-solutions for layout 2) (replace "good" with some
-slightly more complex expression). You basically always end up with either
+are exponentially many sub-solutions for layout 2) (replace the literal "good"
+in the above example with some slightly more complex expression).
+You basically always end up with either
 "the current line is not yet full, try to fill it up" or
 "more than n columns used, abort".
 
 But a (pure) bottom-up approach does not work either: If we have no clue about
 the "current" indentation while layouting some node of our syntax tree,
 information about the (potential) size of (the layout of) child-nodes does
-not allow us to make good decisions.
+not allow us to make good decisions - if we have a choice between a layout
+that takes 40 and a layout that takes 60 columns, we _need_ to know whether
+the current indentation is bigger or smaller than 20, otherwise our result
+will be non-optimal in general.
 
 So we need information to flow bottom-to-top to allow for pruning whole trees
 of possible layouts, and top-to-bottom for making the actual decisions.. well,
@@ -140,6 +145,11 @@ if func x
 -- => 3 lines, 13 columns used
 ~~~~
 
+So internally, to the syntax node of this if-then-else expression we connect
+a label containing these two choices, and including the spacing information:
+`[(1, 32, someDoc1), (3, 13, someDoc2)]`. where the `someDoc`s are document
+representations that can reproduce the above two source code layouts.
+
 This is heavily simplified; in Brittany spacing information is (as usual) a
 bit more complex.
 
@@ -147,7 +157,8 @@ We restrict the size of these sets. Given the sets of spacings for the
 child-nodes in the syntax-tree, we generate a limited number of possible
 spacings in the current node. We then prune nodes that already violate desired
 properties, e.g. any spacing that already uses more columns locally than
-globally available.
+globally available - we would not have something like `(_, 90, _)` in the
+above list when our limit is 80 columns.
 
 The second pass is top-down and uses the spacing-information to decide on one
 of the possible layouts for the current node. It passes the current

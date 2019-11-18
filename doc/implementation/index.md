@@ -18,6 +18,11 @@
   Specifying the semantics of the different (smart) constructors of the
   `BriDoc` type.
 
+- [exactprinting](exactprinting.md)
+
+  A closer look at how we achieve exactprinting, i.e. keeping comments and
+  certain whitespace (empty lines) as they appear in the input source code.
+
 - Brittany uses the following (randomly deemed noteworthy) libraries:
 
   - [`ghc-exactprint`](https://hackage.haskell.org/package/ghc-exactprint)
