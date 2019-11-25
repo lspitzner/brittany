@@ -13,6 +13,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , filterAnns
   , docEmpty
   , docLit
+  , docLitS
   , docAlt
   , CollectAltM
   , addAlternativeCond
@@ -480,6 +481,9 @@ docEmpty = allocateNode BDFEmpty
 
 docLit :: Text -> ToBriDocM BriDocNumbered
 docLit t = allocateNode $ BDFLit t
+
+docLitS :: String -> ToBriDocM BriDocNumbered
+docLitS s = allocateNode $ BDFLit $ Text.pack s
 
 docExt
   :: (ExactPrint.Annotate.Annotate ast)

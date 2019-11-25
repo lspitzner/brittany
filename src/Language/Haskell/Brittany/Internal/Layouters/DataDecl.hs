@@ -59,17 +59,17 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
         consNameStr <- lrdrNameToTextAnn consName
         tyVarLine   <- fmap return $ createBndrDoc bndrs
         -- headDoc     <- fmap return $ docSeq
-        --   [ appSep $ docLit (Text.pack "newtype")
+        --   [ appSep $ docLitS "newtype")
         --   , appSep $ docLit nameStr
         --   , appSep tyVarLine
         --   ]
         rhsDoc      <- fmap return $ createDetailsDoc consNameStr details
         createDerivingPar mDerivs $ docSeq
-          [ appSep $ docLit (Text.pack "newtype")
+          [ appSep $ docLitS "newtype"
           , appSep $ docLit nameStr
           , appSep tyVarLine
           , docSeparator
-          , docLit (Text.pack "=")
+          , docLitS "="
           , docSeparator
           , rhsDoc
           ]
@@ -88,7 +88,7 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
       nameStr       <- lrdrNameToTextAnn name
       tyVarLine     <- fmap return $ createBndrDoc bndrs
       createDerivingPar mDerivs $ docSeq
-        [ appSep $ docLit (Text.pack "data")
+        [ appSep $ docLitS "data"
         , lhsContextDoc
         , appSep $ docLit nameStr
         , appSep tyVarLine
@@ -112,22 +112,115 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
           nameStr       <- lrdrNameToTextAnn name
           consNameStr   <- lrdrNameToTextAnn consName
           tyVarLine     <- fmap return $ createBndrDoc bndrs
-          forallDoc     <- docSharedWrapper createForallDoc qvars
-          rhsContextDoc <- case mRhsContext of
-            Nothing         -> return docEmpty
-            Just (L _ ctxt) -> docSharedWrapper createContextDoc ctxt
+          forallDocMay  <- case createForallDoc qvars of
+            Nothing -> pure Nothing
+            Just x -> Just . pure <$> x
+          rhsContextDocMay <- case mRhsContext of
+            Nothing         -> pure Nothing
+            Just (L _ ctxt) -> Just . pure <$> createContextDoc ctxt
           rhsDoc        <- fmap return $ createDetailsDoc consNameStr details
-          createDerivingPar mDerivs $ docSeq
-            [ appSep $ docLit (Text.pack "data")
-            , lhsContextDoc
-            , appSep $ docLit nameStr
-            , appSep tyVarLine
-            , docSeparator
-            , docLit (Text.pack "=")
-            , docSeparator
-            , forallDoc
-            , rhsContextDoc
-            , rhsDoc
+          consDoc <- fmap pure
+            $ docNonBottomSpacing
+            $ case (forallDocMay, rhsContextDocMay) of
+                (Just forallDoc, Just rhsContextDoc) -> docLines
+                  [ docSeq [docLitS "=", docSeparator, docForceSingleline forallDoc]
+                  , docSeq
+                    [ docLitS "."
+                    , docSeparator
+                    , docSetBaseY $ docLines [rhsContextDoc, docSetBaseY rhsDoc]
+                    ]
+                  ]
+                (Just forallDoc, Nothing) -> docLines
+                  [ docSeq [docLitS "=", docSeparator, docForceSingleline forallDoc]
+                  , docSeq [docLitS ".", docSeparator, rhsDoc]
+                  ]
+                (Nothing, Just rhsContextDoc) -> docSeq
+                  [ docLitS "="
+                  , docSeparator
+                  , docSetBaseY $ docLines [rhsContextDoc, docSetBaseY rhsDoc]
+                  ]
+                (Nothing, Nothing) -> docSeq [docLitS "=", docSeparator, rhsDoc]
+          createDerivingPar mDerivs $ docAlt
+            [ -- data D = forall a . Show a => D a
+              docSeq
+              [ appSep $ docLitS "data"
+              , docForceSingleline $ lhsContextDoc
+              , appSep $ docLit nameStr
+              , appSep tyVarLine
+              , docSeparator
+              , docLitS "="
+              , docSeparator
+              , case forallDocMay of
+                Nothing -> docEmpty
+                Just forallDoc -> docSeq
+                  [ docForceSingleline forallDoc
+                  , docSeparator
+                  , docLitS "."
+                  , docSeparator
+                  ]
+              , maybe docEmpty docForceSingleline rhsContextDocMay
+              , rhsDoc
+              ]
+            , -- data D
+              --   = forall a . Show a => D a
+              docAddBaseY BrIndentRegular $ docPar
+              ( docSeq
+                [ appSep $ docLitS "data"
+                , docForceSingleline lhsContextDoc
+                , appSep $ docLit nameStr
+                , tyVarLine
+                ]
+              )
+              ( docSeq
+                [ docLitS "="
+                , docSeparator
+                , case forallDocMay of
+                  Nothing -> docEmpty
+                  Just forallDoc -> docSeq
+                    [ docForceSingleline forallDoc
+                    , docSeparator
+                    , docLitS "."
+                    , docSeparator
+                    ]
+                , maybe docEmpty docForceSingleline rhsContextDocMay
+                , rhsDoc
+                ]
+              )
+            , -- data D
+              --   = forall a
+              --   . Show a =>
+              --     D a
+              docAddBaseY BrIndentRegular $ docPar
+              ( docSeq
+                [ appSep $ docLitS "data"
+                , docForceSingleline lhsContextDoc
+                , appSep $ docLit nameStr
+                , tyVarLine
+                ]
+              )
+              consDoc
+            , -- data
+              --   Show a =>
+              --   D
+              --   = forall a
+              --   . Show a =>
+              --     D a
+              -- This alternative is only for -XDatatypeContexts.
+              -- But I think it is rather unlikely this will trigger without
+              -- -XDataTypeContexts, especially with the `docNonBottomSpacing`
+              -- above, so while not strictly necessary, this should not
+              -- hurt.
+              docAddBaseY BrIndentRegular $ docPar
+              (docLitS "data")
+              ( docLines
+                [ lhsContextDoc
+                , docSeq
+                  [ appSep $ docLit nameStr
+                  , tyVarLine
+                  ]
+                , consDoc
+                ]
+              )
             ]
       _ -> briDocByExactNoComment ltycl
 
@@ -136,13 +229,25 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
 createContextDoc :: HsContext GhcPs -> ToBriDocM BriDocNumbered
 createContextDoc [] = docEmpty
 createContextDoc [t] =
-  docSeq [layoutType t, docSeparator, docLit (Text.pack "=>"), docSeparator]
-createContextDoc ts = docSeq
-  [ docLit (Text.pack "(")
-  , docSeq $ List.intersperse docCommaSep (layoutType <$> ts)
-  , docLit (Text.pack ") =>")
-  , docSeparator
-  ]
+  docSeq [layoutType t, docSeparator, docLitS "=>", docSeparator]
+createContextDoc (t1 : tR) = do
+  t1Doc  <- docSharedWrapper layoutType t1
+  tRDocs <- tR `forM` docSharedWrapper layoutType
+  docAlt
+    [ docSeq
+      [ docLitS "("
+      , docForceSingleline $ docSeq $ List.intersperse docCommaSep
+                                                       (t1Doc : tRDocs)
+      , docLitS ") =>"
+      , docSeparator
+      ]
+    , docLines $ join
+      [ [docSeq [docLitS "(", docSeparator, t1Doc]]
+      , tRDocs
+        <&> \tRDoc -> docSeq [docLitS ",", docSeparator, tRDoc]
+      , [docLitS ") =>", docSeparator]
+      ]
+    ]
 
 createBndrDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
 createBndrDoc bs = do
@@ -165,13 +270,13 @@ createBndrDoc bs = do
     <&> \(vname, mKind) -> case mKind of
           Nothing   -> docLit vname
           Just kind -> docSeq
-            [ docLit (Text.pack "(")
+            [ docLitS "("
             , docLit vname
             , docSeparator
-            , docLit (Text.pack "::")
+            , docLitS "::"
             , docSeparator
             , kind
-            , docLit (Text.pack ")")
+            , docLitS ")"
             ]
 
 createDerivingPar
@@ -179,7 +284,7 @@ createDerivingPar
 createDerivingPar derivs mainDoc = do
   case derivs of
 #if MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
-    (L _ []) -> docLines [mainDoc]
+    (L _ []) -> mainDoc
     (L _ types) ->
       docPar mainDoc
         $   docEnsureIndent BrIndentRegular
@@ -188,7 +293,7 @@ createDerivingPar derivs mainDoc = do
         $   derivingClauseDoc
         <$> types
 #else
-    Nothing -> docLines [mainDoc]
+    Nothing -> mainDoc
     Just types ->
       docPar mainDoc
         $ docEnsureIndent BrIndentRegular
@@ -213,7 +318,7 @@ derivingClauseDoc types = case types of
     let
       tsLength = length ts
       whenMoreThan1Type val =
-        if tsLength > 1 then docLit (Text.pack val) else docLit (Text.pack "")
+        if tsLength > 1 then docLitS val else docLitS ""
 #if MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
       (lhsStrategy, rhsStrategy) = maybe (docEmpty, docEmpty) strategyLeftRight mStrategy
 #else
@@ -243,15 +348,15 @@ derivingClauseDoc types = case types of
 #if MIN_VERSION_ghc(8,2,0)   /* ghc-8.6 */
  where
   strategyLeftRight = \case
-    (L _ StockStrategy          ) -> (docLit $ Text.pack " stock", docEmpty)
-    (L _ AnyclassStrategy       ) -> (docLit $ Text.pack " anyclass", docEmpty)
-    (L _ NewtypeStrategy        ) -> (docLit $ Text.pack " newtype", docEmpty)
+    (L _ StockStrategy          ) -> (docLitS " stock", docEmpty)
+    (L _ AnyclassStrategy       ) -> (docLitS " anyclass", docEmpty)
+    (L _ NewtypeStrategy        ) -> (docLitS " newtype", docEmpty)
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     lVia@(L _ (ViaStrategy viaTypes) ) ->
       ( docEmpty
       , case viaTypes of
           HsIB _ext t -> docSeq
-            [ docWrapNode lVia $ docLit $ Text.pack " via"
+            [ docWrapNode lVia $ docLitS " via"
             , docSeparator
             , layoutType t
             ]
@@ -261,62 +366,109 @@ derivingClauseDoc types = case types of
 #endif
 
 docDeriving :: ToBriDocM BriDocNumbered
-docDeriving = docLit $ Text.pack "deriving"
+docDeriving = docLitS "deriving"
 
 createDetailsDoc
   :: Text -> HsConDeclDetails GhcPs -> (ToBriDocM BriDocNumbered)
 createDetailsDoc consNameStr details = case details of
   PrefixCon args -> do
-    indentPolicy <- mAsk <&> _conf_layout .>  _lconfig_indentPolicy .>  confUnpack
+    indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .>  confUnpack
     let
       singleLine = docSeq
         [ docLit consNameStr
         , docSeparator
-        , docSeq $ List.intersperse docSeparator $ args <&> layoutType
+        , docForceSingleline
+          $ docSeq
+          $ List.intersperse docSeparator
+          $ args <&> layoutType
         ]
       leftIndented = docSetParSpacing
         . docAddBaseY BrIndentRegular
         . docPar (docLit consNameStr)
         . docLines
         $ layoutType <$> args
-      multiIndented = docSetParSpacing
-        . docSetBaseAndIndent
-        . docPar (docLit consNameStr)
-        . docLines
-        $ layoutType
-        <$> args
+      multiAppended = docSeq
+        [ docLit consNameStr
+        , docSeparator
+        , docSetBaseY $ docLines $ layoutType <$> args
+        ]
+      multiIndented = docSetBaseY $ docAddBaseY BrIndentRegular $ docPar
+        (docLit consNameStr)
+        (docLines $ layoutType <$> args)
     case indentPolicy of
       IndentPolicyLeft     -> docAlt [singleLine, leftIndented]
-      IndentPolicyMultiple -> docAlt [singleLine, multiIndented]
-      IndentPolicyFree     -> docAlt [singleLine, multiIndented]
+      IndentPolicyMultiple -> docAlt [singleLine, multiAppended, leftIndented]
+      IndentPolicyFree ->
+        docAlt [singleLine, multiAppended, multiIndented, leftIndented]
   RecCon (L _ []) -> docSeq [docLit consNameStr, docSeparator, docLit $ Text.pack "{}"]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-  RecCon lRec@(L _ [lField@(L _ (ConDeclField _ext names t _))]) ->
-#else
-  RecCon lRec@(L _ [lField@(L _ (ConDeclField names t _))]) ->
-#endif
-    docSetIndentLevel $ docSeq
-      [ docLit consNameStr
-      , docSeparator
-      , docWrapNodePrior lRec $ docLit $ Text.pack "{"
-      , docSeparator
-      , docWrapNodeRest lRec $ docSeq $ fmap docForceSingleline $ createNamesAndTypeDoc lField names t
-      , docSeparator
-      , docLit $ Text.pack "}"
-      ]
   RecCon lRec@(L _ fields@(_:_)) -> do
-    let (fDoc1 : fDocR) = mkFieldDocs fields
-    docAddBaseY BrIndentRegular $ docSetIndentLevel $ docPar
-      (docLit consNameStr)
-      (docWrapNodePrior lRec $ docLines
-        [ docCols ColRecDecl
-          $ appSep (docLit (Text.pack "{"))
-          : fDoc1
-        , docWrapNodeRest lRec $ docLines $ fDocR <&> \f ->
-            docCols ColRecDecl $ docCommaSep : f
-        , docLit $ Text.pack "}"
-        ]
-      )
+    let ((fName1, fType1) : fDocR) = mkFieldDocs fields
+    allowSingleline <- mAsk <&> _conf_layout .> _lconfig_allowSinglelineRecord .> confUnpack
+    docAddBaseY BrIndentRegular
+      $ docSetIndentLevel
+      $ runFilteredAlternative
+      $ do
+        -- single-line: { i :: Int, b :: Bool }
+        addAlternativeCond allowSingleline $ docSeq
+          [ docLit consNameStr
+          , docSeparator
+          , docWrapNodePrior lRec $ docLitS "{"
+          , docSeparator
+          , docWrapNodeRest lRec
+            $ docForceSingleline
+            $ docSeq
+            $ join
+            $ [fName1, docSeparator, docLitS "::", docSeparator, fType1]
+              : [ [ docLitS ","
+                  , docSeparator
+                  , fName
+                  , docSeparator
+                  , docLitS "::"
+                  , docSeparator
+                  , fType
+                  ]
+                | (fName, fType) <- fDocR
+                ]
+          , docSeparator
+          , docLitS "}"
+          ]
+        addAlternative $ docPar
+          (docLit consNameStr)
+          (docWrapNodePrior lRec $ docLines
+            [ docAlt
+              [ docCols ColRecDecl
+                [ appSep (docLitS "{")
+                , appSep $ docForceSingleline fName1
+                , docSeq [docLitS "::", docSeparator]
+                , docForceSingleline $ fType1
+                ]
+              , docSeq
+                [ docLitS "{"
+                , docSeparator
+                , docSetBaseY $ docAddBaseY BrIndentRegular $ docPar
+                    fName1
+                    (docSeq [docLitS "::", docSeparator, fType1])
+                ]
+              ]
+            , docWrapNodeRest lRec $ docLines $ fDocR <&> \(fName, fType) ->
+                docAlt
+                [ docCols ColRecDecl
+                  [ docCommaSep
+                  , appSep $ docForceSingleline fName
+                  , docSeq [docLitS "::", docSeparator]
+                  , docForceSingleline fType
+                  ]
+                , docSeq
+                  [ docLitS ","
+                  , docSeparator
+                  , docSetBaseY $ docAddBaseY BrIndentRegular $ docPar
+                      fName
+                      (docSeq [docLitS "::", docSeparator, fType])
+                  ]
+                ]
+            , docLitS "}"
+            ]
+          )
   InfixCon arg1 arg2 -> docSeq
     [ layoutType arg1
     , docSeparator
@@ -325,7 +477,9 @@ createDetailsDoc consNameStr details = case details of
     , layoutType arg2
     ]
  where
-  mkFieldDocs :: [LConDeclField GhcPs] -> [[ToBriDocM BriDocNumbered]]
+  mkFieldDocs
+    :: [LConDeclField GhcPs]
+    -> [(ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)]
   mkFieldDocs = fmap $ \lField -> case lField of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc lField names t
@@ -334,23 +488,19 @@ createDetailsDoc consNameStr details = case details of
     L _ (ConDeclField names t _) -> createNamesAndTypeDoc lField names t
 #endif
 
-createForallDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
-createForallDoc []            = docEmpty
-createForallDoc lhsTyVarBndrs =  docSeq
-  [ docLit (Text.pack "forall ")
-  , createBndrDoc lhsTyVarBndrs
-  , docLit (Text.pack " .")
-  , docSeparator
-  ]
+createForallDoc :: [LHsTyVarBndr GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
+createForallDoc []            = Nothing
+createForallDoc lhsTyVarBndrs = Just $ docSeq
+  [docLitS "forall ", createBndrDoc lhsTyVarBndrs]
 
 createNamesAndTypeDoc
   :: Data.Data.Data ast
   => Located ast
   -> [GenLocated t (FieldOcc GhcPs)]
   -> Located (HsType GhcPs)
-  -> [ToBriDocM BriDocNumbered]
+  -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
 createNamesAndTypeDoc lField names t =
-  [ docNodeAnnKW lField Nothing $ docWrapNodePrior lField $ docSeq
+  ( docNodeAnnKW lField Nothing $ docWrapNodePrior lField $ docSeq
     [ docSeq
       $   List.intersperse docCommaSep
       $   names
@@ -362,11 +512,6 @@ createNamesAndTypeDoc lField names t =
         L _ (FieldOcc fieldName _) ->
 #endif
             docLit =<< lrdrNameToTextAnn fieldName
-    , docSeparator
     ]
-  , docWrapNodeRest lField $ docSeq
-    [ docLit $ Text.pack "::"
-    , docSeparator
-    , layoutType t
-    ]
-  ]
+  , docWrapNodeRest lField $ layoutType t
+  )

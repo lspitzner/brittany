@@ -245,9 +245,10 @@ layoutWriteEnsureAbsoluteN
   -> m ()
 layoutWriteEnsureAbsoluteN n = do
   state <- mGet
-  let diff = case _lstate_curYOrAddNewline state of
-        Left i  -> n - i
-        Right{} -> n
+  let diff = case (_lstate_commentCol state, _lstate_curYOrAddNewline state) of
+        (Just c , _      ) -> n - c
+        (Nothing, Left i ) -> n - i
+        (Nothing, Right{}) -> n
   traceLocal ("layoutWriteEnsureAbsoluteN", n, diff)
   when (diff > 0) $ do
     mSet $ state { _lstate_addSepSpace = Just diff -- this always sets to
@@ -557,6 +558,7 @@ layoutWritePostComments ast = do
                       ) -> do
         replicateM_ x layoutWriteNewline
         layoutWriteAppend $ Text.pack $ replicate y ' '
+        mModify $ \s -> s { _lstate_addSepSpace = Nothing }
         layoutWriteAppendMultiline $ Text.pack $ comment
 
 layoutIndentRestorePostComment

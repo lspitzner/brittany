@@ -321,10 +321,14 @@ func = f
 ###############################################################################
 
 #test single record
-data Foo = Bar { foo :: Baz }
+data Foo = Bar
+  { foo :: Baz
+  }
 
 #test record multiple names
-data Foo = Bar { foo, bar :: Baz }
+data Foo = Bar
+  { foo, bar :: Baz
+  }
 
 #test record multiple types
 data Foo = Bar

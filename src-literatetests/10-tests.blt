@@ -324,10 +324,14 @@ data Foo = Bar {}
 data Biz = Baz
 
 #test single record
-data Foo = Bar { foo :: Baz }
+data Foo = Bar
+  { foo :: Baz
+  }
 
 #test record multiple names
-data Foo = Bar { foo, bar :: Baz }
+data Foo = Bar
+  { foo, bar :: Baz
+  }
 
 #test record multiple types
 data Foo = Bar
@@ -346,6 +350,91 @@ data Foo = Bar
   { fooz :: Baz
   , bar  :: Bizzz
   }
+  deriving Show
+
+#test record long field names
+data MyRecord = MyConstructor
+  { bar1, bar2
+      :: Loooooooooooooooooooooooooooooooong
+      -> Loooooooooooooooooooooooooooooooong
+  , foo1, foo2
+      :: Loooooooooooooooooooooooooooooooonger
+      -> Loooooooooooooooooooooooooooooooonger
+  }
+
+#test record with DataTypeContexts
+{-# LANGUAGE DatatypeContexts #-}
+data
+  ( LooooooooooooooooooooongConstraint a
+  , LooooooooooooooooooooongConstraint b
+  ) =>
+  MyRecord a b
+  = MyConstructor
+    { foo1, foo2
+        :: loooooooooooooooooooooooooooooooong
+        -> loooooooooooooooooooooooooooooooong
+    , bar  :: a
+    , bazz :: b
+    }
+
+#test record single line layout
+{-# LANGUAGE ScopedTypeVariables #-}
+-- brittany { lconfig_allowSinglelineRecord: true }
+data MyRecord = forall a . Show a => MyCons { foo :: a -> a, i :: Int }
+
+#test record no matching single line layout
+{-# LANGUAGE ScopedTypeVariables #-}
+-- brittany { lconfig_allowSinglelineRecord: true }
+data MyRecord = forall a . Show a => Bar
+  { foo :: abittoolongbutnotvery -> abittoolongbutnotvery
+  }
+
+#test record forall constraint multiline
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyRecord
+  = forall a
+  . LooooooooooooooooooooongConstraint a =>
+    LoooooooooooongConstructor
+      { foo :: abittoolongbutnotvery -> abittoolongbutnotvery
+      }
+
+#test record forall constraint multiline more
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyRecord
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor
+      { a :: a
+      , b :: b
+      }
+
+#test plain with forall and constraint
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyStruct
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor (ToBriDocM BriDocNumbered)
+                  (ToBriDocM BriDocNumbered)
+                  (ToBriDocM BriDocNumbered)
+
+#test record with many features
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyRecord
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor
+      { foo, foo2
+          :: loooooooooooooooooooooooooooooooong
+          -> loooooooooooooooooooooooooooooooong
+      , bar  :: a
+      , bazz :: b
+      }
   deriving Show
 
 #test record multiple types deriving
@@ -382,7 +471,9 @@ data Foo = Bar
 #test single record existential
 {-# LANGUAGE ExistentialQuantification #-}
 
-data Foo = forall a . Show a => Bar { foo :: a }
+data Foo = forall a . Show a => Bar
+  { foo :: a
+  }
 
 #test record multiple types existential
 {-# LANGUAGE ExistentialQuantification #-}
@@ -415,8 +506,8 @@ data Foo = Bar -- a
 data Foo = Bar
   {  -- a
     foo  -- b
-        :: -- c
-           Baz -- d
+         :: -- c
+            Baz -- d
   , -- e
     bars :: Bizzz
   }
@@ -467,16 +558,19 @@ data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
 
 #test normal records on multi line indent policy free
 -- brittany {lconfig_indentPolicy: IndentPolicyFree }
+data GrantsForCompanyResp = GrantsForCompanyResp Types.Company
+                                                 [EnterpriseGrantResponse]
+
+#test normal records on multi line indent policy free 2
+-- brittany {lconfig_indentPolicy: IndentPolicyFree }
 data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
-                                          Types.Company
-                                          [EnterpriseGrantResponse]
+                                            Types.Company
+                                            [EnterpriseGrantResponse]
 
 #test normal records on multi line indent policy multiple
 -- brittany {lconfig_indentPolicy: IndentPolicyMultiple }
-data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
-                                          Types.Company
-                                          [EnterpriseGrantResponse]
-
+data GrantsForCompanyResp = GrantsForCompanyResp Types.Company
+                                                 [EnterpriseGrantResponse]
 
 ###############################################################################
 ###############################################################################
