@@ -551,6 +551,16 @@ data Foo = Bar
                                  ABC --g
                                     )
 
+#test comment before equal sign
+{-# LANGUAGE ExistentialQuantification #-}
+data MyRecord
+  -- test comment
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor a b
+
 #test normal records on multi line indent policy left
 -- brittany {lconfig_indentPolicy: IndentPolicyLeft }
 data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
