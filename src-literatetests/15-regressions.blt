@@ -684,3 +684,9 @@ d = \(~x) -> x
 #test type signature with forall and constraint
 {-# LANGUAGE RankNTypes #-}
 func :: forall b . Show b => b -> String
+
+#test issue 267
+
+{-# LANGUAGE TypeFamilies #-}
+f :: ((~) a b) => a -> b
+f = id

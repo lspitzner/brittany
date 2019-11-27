@@ -206,13 +206,14 @@ rdrNameToText (Exact name) = Text.pack $ getOccString name
 lrdrNameToText :: GenLocated l RdrName -> Text
 lrdrNameToText (L _ n) = rdrNameToText n
 
-lrdrNameToTextAnn
+lrdrNameToTextAnnGen
   :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
-  => Located RdrName
+  => (Text -> Text)
+  -> Located RdrName
   -> m Text
-lrdrNameToTextAnn ast@(L _ n) = do
+lrdrNameToTextAnnGen f ast@(L _ n) = do
   anns <- mAsk
-  let t = rdrNameToText n
+  let t = f $ rdrNameToText n
   let hasUni x (ExactPrint.Types.G y, _) = x == y
       hasUni _ _                         = False
   -- TODO: in general: we should _always_ process all annotaiton stuff here.
@@ -228,15 +229,21 @@ lrdrNameToTextAnn ast@(L _ n) = do
       _ | any (hasUni AnnOpenP) aks      -> Text.pack "(" <> t <> Text.pack ")"
       _ | otherwise                      -> t
 
+lrdrNameToTextAnn
+  :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
+  => Located RdrName
+  -> m Text
+lrdrNameToTextAnn = lrdrNameToTextAnnGen id
+
 lrdrNameToTextAnnTypeEqualityIsSpecial
   :: (MonadMultiReader Config m, MonadMultiReader (Map AnnKey Annotation) m)
   => Located RdrName
   -> m Text
 lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
-  x <- lrdrNameToTextAnn ast
-  return $ if x == Text.pack "Data.Type.Equality~"
-    then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
-    else x
+  let f x = if x == Text.pack "Data.Type.Equality~"
+        then Text.pack "~" -- rraaaahhh special casing rraaahhhhhh
+        else x
+  lrdrNameToTextAnnGen f ast
 
 -- | Same as lrdrNameToTextAnnTypeEqualityIsSpecial, but also inspects
 -- the annotations for a (parent) node for a tick to be added to the

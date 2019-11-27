@@ -40,7 +40,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
 #else   /* ghc-8.2 ghc-8.4 */
   HsTyVar promoted name -> do
 #endif
-    t <- lrdrNameToTextAnn name
+    t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     case promoted of
 #if MIN_VERSION_ghc(8,8,0)
       IsPromoted -> docSeq
@@ -54,7 +54,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       NotPromoted -> docWrapNode name $ docLit t
 #else /* ghc-8.0 */
   HsTyVar name -> do
-    t <- lrdrNameToTextAnn name
+    t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     docWrapNode name $ docLit t
 #endif
 #if MIN_VERSION_ghc(8,6,0)
