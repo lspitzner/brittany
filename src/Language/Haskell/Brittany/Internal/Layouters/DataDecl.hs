@@ -143,11 +143,14 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
           createDerivingPar mDerivs $ docAlt
             [ -- data D = forall a . Show a => D a
               docSeq
-              [ appSep $ docLitS "data"
-              , docForceSingleline $ lhsContextDoc
-              , appSep $ docLit nameStr
-              , appSep tyVarLine
-              , docSeparator
+              [ docNodeAnnKW ltycl (Just GHC.AnnData)
+              $ docSeq
+                [ appSep $ docLitS "data"
+                , docForceSingleline $ lhsContextDoc
+                , appSep $ docLit nameStr
+                , appSep tyVarLine
+                , docSeparator
+                ]
               , docLitS "="
               , docSeparator
               , case forallDocMay of
@@ -164,7 +167,8 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
             , -- data D
               --   = forall a . Show a => D a
               docAddBaseY BrIndentRegular $ docPar
-              ( docSeq
+              ( docNodeAnnKW ltycl (Just GHC.AnnData)
+              $ docSeq
                 [ appSep $ docLitS "data"
                 , docForceSingleline lhsContextDoc
                 , appSep $ docLit nameStr
@@ -191,7 +195,8 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
               --   . Show a =>
               --     D a
               docAddBaseY BrIndentRegular $ docPar
-              ( docSeq
+              ( docNodeAnnKW ltycl (Just GHC.AnnData)
+              $ docSeq
                 [ appSep $ docLitS "data"
                 , docForceSingleline lhsContextDoc
                 , appSep $ docLit nameStr
@@ -214,7 +219,8 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
               (docLitS "data")
               ( docLines
                 [ lhsContextDoc
-                , docSeq
+                , docNodeAnnKW ltycl (Just GHC.AnnData)
+                $ docSeq
                   [ appSep $ docLit nameStr
                   , tyVarLine
                   ]
