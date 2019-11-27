@@ -142,14 +142,14 @@ data CLayoutConfig f = LayoutConfig
     -- The implementation for this is a bit hacky and not tested; it might
     -- break output syntax or not work properly for every kind of brace. So
     -- far I have considered `do` and `case-of`.
-  , _lconfig_allowSinglelineRecord :: f (Last Bool)
-    -- if true, layouts record data decls as a single line when possible, e.g.
-    -- > MyPoint { x :: Double, y :: Double }
-    -- if false, always use the multi-line layout
-    -- > MyPoint
-    -- >   { x :: Double
-    -- >   , y :: Double
-    -- >   }
+  -- , _lconfig_allowSinglelineRecord :: f (Last Bool)
+  --   -- if true, layouts record data decls as a single line when possible, e.g.
+  --   -- > MyPoint { x :: Double, y :: Double }
+  --   -- if false, always use the multi-line layout
+  --   -- > MyPoint
+  --   -- >   { x :: Double
+  --   -- >   , y :: Double
+  --   -- >   }
   }
   deriving (Generic)
 

@@ -378,6 +378,7 @@ data
     }
 
 #test record single line layout
+#pending config flag is disabled for now
 {-# LANGUAGE ScopedTypeVariables #-}
 -- brittany { lconfig_allowSinglelineRecord: true }
 data MyRecord = forall a . Show a => MyCons { foo :: a -> a, i :: Int }

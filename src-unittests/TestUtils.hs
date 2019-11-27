@@ -61,7 +61,7 @@ defaultTestConfig = Config
     , _lconfig_allowSingleLineExportList = coerce True
     , _lconfig_allowHangingQuasiQuotes   = coerce True
     , _lconfig_experimentalSemicolonNewlines = coerce False
-    , _lconfig_allowSinglelineRecord     = coerce False
+    -- , _lconfig_allowSinglelineRecord     = coerce False
     }
   , _conf_errorHandling             = (_conf_errorHandling staticDefaultConfig)
     { _econf_ExactPrintFallback = coerce ExactPrintFallbackModeNever

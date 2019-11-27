@@ -403,7 +403,8 @@ createDetailsDoc consNameStr details = case details of
   RecCon (L _ []) -> docSeq [docLit consNameStr, docSeparator, docLit $ Text.pack "{}"]
   RecCon lRec@(L _ fields@(_:_)) -> do
     let ((fName1, fType1) : fDocR) = mkFieldDocs fields
-    allowSingleline <- mAsk <&> _conf_layout .> _lconfig_allowSinglelineRecord .> confUnpack
+    -- allowSingleline <- mAsk <&> _conf_layout .> _lconfig_allowSinglelineRecord .> confUnpack
+    let allowSingleline = False
     docAddBaseY BrIndentRegular
       $ docSetIndentLevel
       $ runFilteredAlternative
