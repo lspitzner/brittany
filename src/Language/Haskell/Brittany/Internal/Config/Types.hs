@@ -127,6 +127,21 @@ data CLayoutConfig f = LayoutConfig
     -- > let body = [json|
     -- >     hello
     -- >     |]
+  , _lconfig_experimentalSemicolonNewlines :: f (Last Bool)
+    -- enables an experimental feature to turn semicolons in brace notation
+    -- into newlines when using layout:
+    --
+    -- > do { a ;; b }
+    --
+    -- turns into
+    -- > do
+    -- >   a
+    -- >
+    -- >   b
+    --
+    -- The implementation for this is a bit hacky and not tested; it might
+    -- break output syntax or not work properly for every kind of brace. So
+    -- far I have considered `do` and `case-of`.
   }
   deriving (Generic)
 

@@ -225,26 +225,34 @@ layoutBriDocM = \case
       -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDAnnotationRest annKey bd -> do
     layoutBriDocM bd
-    mComments <- do
+    annMay <- do
       state <- mGet
-      let m    = _lstate_comments state
-      let mComments = nonEmpty =<< extractAllComments <$> Map.lookup annKey m
-      mSet $ state
-        { _lstate_comments = Map.adjust
-          ( \ann -> ann { ExactPrint.annFollowingComments = []
-                        , ExactPrint.annPriorComments     = []
-                        , ExactPrint.annsDP               =
-                          flip filter (ExactPrint.annsDP ann) $ \case
-                            (ExactPrint.Types.AnnComment{}, _) -> False
-                            _                                  -> True
-                        }
-          )
-          annKey
-          m
-        }
-      return mComments
+      let m = _lstate_comments state
+      pure $ Map.lookup annKey m
+    let mComments = nonEmpty =<< extractAllComments <$> annMay
+    let semiCount = length [ ()
+                | Just ann <- [ annMay ]
+                , (ExactPrint.Types.AnnSemiSep, _) <- ExactPrint.Types.annsDP ann
+                ]
+    shouldAddSemicolonNewlines <- mAsk <&>
+      _conf_layout .> _lconfig_experimentalSemicolonNewlines .> confUnpack
+    mModify $ \state -> state
+      { _lstate_comments = Map.adjust
+        ( \ann -> ann { ExactPrint.annFollowingComments = []
+                      , ExactPrint.annPriorComments     = []
+                      , ExactPrint.annsDP               =
+                        flip filter (ExactPrint.annsDP ann) $ \case
+                          (ExactPrint.Types.AnnComment{}, _) -> False
+                          _                                  -> True
+                      }
+        )
+        annKey
+        (_lstate_comments state)
+      }
     case mComments of
-      Nothing -> pure ()
+      Nothing -> do
+        when shouldAddSemicolonNewlines $ do
+          [1..semiCount] `forM_` \_ -> layoutWriteNewline
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           when (not $ comment == "(" || comment == ")") $ do
