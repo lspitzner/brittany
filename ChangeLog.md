@@ -1,5 +1,17 @@
 # Revision history for brittany
 
+## 0.12.1.1 -- December 2019
+
+* Bugfixes:
+    - Fix layouting regression of record update for many/large fields
+    - Fix whitespace regression on ExplicitForall notation
+      (`foo :: forall  a . Show a => a -> a`, note the double space)
+      introduced in 0.12. (#264)
+    - Fix roundtripping of type equality constraint
+      `f :: ((~) a b) => a -> b` (#267)
+* One experimental feature addition: Turning brace notation semicolons into
+  newlines when formatting (see #270)
+
 ## 0.12.1.0 -- September 2019
 
 * Support ghc-8.8
