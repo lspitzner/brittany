@@ -153,16 +153,18 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
                 ]
               , docLitS "="
               , docSeparator
-              , case forallDocMay of
-                Nothing -> docEmpty
-                Just forallDoc -> docSeq
-                  [ docForceSingleline forallDoc
-                  , docSeparator
-                  , docLitS "."
-                  , docSeparator
-                  ]
-              , maybe docEmpty docForceSingleline rhsContextDocMay
-              , rhsDoc
+              , docSetIndentLevel $ docSeq
+                [ case forallDocMay of
+                  Nothing -> docEmpty
+                  Just forallDoc -> docSeq
+                    [ docForceSingleline forallDoc
+                    , docSeparator
+                    , docLitS "."
+                    , docSeparator
+                    ]
+                , maybe docEmpty docForceSingleline rhsContextDocMay
+                , rhsDoc
+                ]
               ]
             , -- data D
               --   = forall a . Show a => D a
@@ -178,16 +180,18 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
               ( docSeq
                 [ docLitS "="
                 , docSeparator
-                , case forallDocMay of
-                  Nothing -> docEmpty
-                  Just forallDoc -> docSeq
-                    [ docForceSingleline forallDoc
-                    , docSeparator
-                    , docLitS "."
-                    , docSeparator
-                    ]
-                , maybe docEmpty docForceSingleline rhsContextDocMay
-                , rhsDoc
+                , docSetIndentLevel $ docSeq
+                  [ case forallDocMay of
+                    Nothing -> docEmpty
+                    Just forallDoc -> docSeq
+                      [ docForceSingleline forallDoc
+                      , docSeparator
+                      , docLitS "."
+                      , docSeparator
+                      ]
+                  , maybe docEmpty docForceSingleline rhsContextDocMay
+                  , rhsDoc
+                  ]
                 ]
               )
             , -- data D
@@ -412,7 +416,6 @@ createDetailsDoc consNameStr details = case details of
     -- allowSingleline <- mAsk <&> _conf_layout .> _lconfig_allowSinglelineRecord .> confUnpack
     let allowSingleline = False
     docAddBaseY BrIndentRegular
-      $ docSetIndentLevel
       $ runFilteredAlternative
       $ do
         -- single-line: { i :: Int, b :: Bool }
@@ -441,7 +444,7 @@ createDetailsDoc consNameStr details = case details of
           ]
         addAlternative $ docPar
           (docLit consNameStr)
-          (docWrapNodePrior lRec $ docLines
+          (docWrapNodePrior lRec $ docNonBottomSpacingS $ docLines
             [ docAlt
               [ docCols ColRecDecl
                 [ appSep (docLitS "{")

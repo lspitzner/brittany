@@ -287,7 +287,7 @@ layoutBriDocM = \case
       Just (ExactPrint.Types.DP (y, x)) ->
         layoutMoveToCommentPos y (if shouldRestoreIndent then x else 0)
     layoutBriDocM bd
-  BDNonBottomSpacing bd -> layoutBriDocM bd
+  BDNonBottomSpacing _ bd -> layoutBriDocM bd
   BDSetParSpacing    bd -> layoutBriDocM bd
   BDForceParSpacing  bd -> layoutBriDocM bd
   BDDebug s bd -> do
@@ -321,15 +321,15 @@ briDocLineLength briDoc = flip StateS.evalState False $ rec briDoc
     BDAnnotationKW _ _ bd   -> rec bd
     BDAnnotationRest _ bd   -> rec bd
     BDMoveToKWDP _ _ _ bd   -> rec bd
-    BDLines ls@(_:_)        -> do
+    BDLines ls@(_ : _)      -> do
       x <- StateS.get
       return $ maximum $ ls <&> \l -> StateS.evalState (rec l) x
-    BDLines []            -> error "briDocLineLength BDLines []"
-    BDEnsureIndent _ bd   -> rec bd
-    BDSetParSpacing    bd -> rec bd
-    BDForceParSpacing  bd -> rec bd
-    BDNonBottomSpacing bd -> rec bd
-    BDDebug _ bd          -> rec bd
+    BDLines []              -> error "briDocLineLength BDLines []"
+    BDEnsureIndent _ bd     -> rec bd
+    BDSetParSpacing   bd    -> rec bd
+    BDForceParSpacing bd    -> rec bd
+    BDNonBottomSpacing _ bd -> rec bd
+    BDDebug            _ bd -> rec bd
 
 briDocIsMultiLine :: BriDoc -> Bool
 briDocIsMultiLine briDoc = rec briDoc
@@ -363,9 +363,9 @@ briDocIsMultiLine briDoc = rec briDoc
     BDLines [_        ]                      -> False
     BDLines [] -> error "briDocIsMultiLine BDLines []"
     BDEnsureIndent _ bd                      -> rec bd
-    BDSetParSpacing    bd                    -> rec bd
-    BDForceParSpacing  bd                    -> rec bd
-    BDNonBottomSpacing bd                    -> rec bd
+    BDSetParSpacing   bd                     -> rec bd
+    BDForceParSpacing bd                     -> rec bd
+    BDNonBottomSpacing _ bd                  -> rec bd
     BDDebug _ bd                             -> rec bd
 
 -- In theory

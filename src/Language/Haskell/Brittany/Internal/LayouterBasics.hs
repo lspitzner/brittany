@@ -40,6 +40,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docAnnotationRest
   , docMoveToKWDP
   , docNonBottomSpacing
+  , docNonBottomSpacingS
   , docSetParSpacing
   , docForceParSpacing
   , docDebug
@@ -576,7 +577,10 @@ docAnnotationRest
 docAnnotationRest annKey bdm = allocateNode . BDFAnnotationRest annKey =<< bdm
 
 docNonBottomSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
-docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing =<< bdm
+docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing False =<< bdm
+
+docNonBottomSpacingS :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docNonBottomSpacingS bdm = allocateNode . BDFNonBottomSpacing True =<< bdm
 
 docSetParSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docSetParSpacing bdm = allocateNode . BDFSetParSpacing =<< bdm

@@ -135,4 +135,4 @@ transformSimplifyColumns = Uniplate.rewrite $ \case
   BDSetParSpacing{}   -> Nothing
   BDForceParSpacing{} -> Nothing
   BDDebug{}           -> Nothing
-  BDNonBottomSpacing x -> Just x
+  BDNonBottomSpacing _ x -> Just x
