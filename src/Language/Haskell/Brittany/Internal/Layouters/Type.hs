@@ -444,15 +444,17 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       docs <- docSharedWrapper layoutType `mapM` typs
       let end = docLit $ Text.pack ")"
           lines = List.tail docs <&> \d ->
-                  docCols ColTyOpPrefix [docCommaSep, d]
+            docAddBaseY (BrIndentSpecial 2)
+              $ docCols ColTyOpPrefix [docCommaSep, d]
+          commaDocs = List.intersperse docCommaSep (docForceSingleline <$> docs)
       docAlt
         [ docSeq $ [docLit $ Text.pack "("]
-               ++ List.intersperse docCommaSep (docForceSingleline <$> docs)
+               ++ docWrapNodeRest ltype commaDocs
                ++ [end]
         , let line1 = docCols ColTyOpPrefix [docParenLSep, head docs]
           in docPar
             (docAddBaseY (BrIndentSpecial 2) $ line1)
-            (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
+            (docLines $ docWrapNodeRest ltype lines ++ [end])
         ]
     unboxedL = do
       docs <- docSharedWrapper layoutType `mapM` typs
@@ -460,15 +462,16 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           end   = docParenHashRSep
       docAlt
         [ docSeq $ [start]
-                ++ List.intersperse docCommaSep docs
+                ++ docWrapNodeRest ltype (List.intersperse docCommaSep docs)
                 ++ [end]
         , let
             line1 = docCols ColTyOpPrefix [start, head docs]
             lines  = List.tail docs <&> \d ->
-                     docCols ColTyOpPrefix [docCommaSep, d]
+              docAddBaseY (BrIndentSpecial 2)
+                $ docCols ColTyOpPrefix [docCommaSep, d]
           in docPar
             (docAddBaseY (BrIndentSpecial 2) line1)
-            (docLines $ (docAddBaseY (BrIndentSpecial 2) <$> lines) ++ [end])
+            (docLines $ lines ++ [end])
         ]
   HsOpTy{} -> -- TODO
     briDocByExactInlineOnly "HsOpTy{}" ltype

@@ -13,6 +13,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , filterAnns
   , docEmpty
   , docLit
+  , docLitS
   , docAlt
   , CollectAltM
   , addAlternativeCond
@@ -39,6 +40,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docAnnotationRest
   , docMoveToKWDP
   , docNonBottomSpacing
+  , docNonBottomSpacingS
   , docSetParSpacing
   , docForceParSpacing
   , docDebug
@@ -481,6 +483,9 @@ docEmpty = allocateNode BDFEmpty
 docLit :: Text -> ToBriDocM BriDocNumbered
 docLit t = allocateNode $ BDFLit t
 
+docLitS :: String -> ToBriDocM BriDocNumbered
+docLitS s = allocateNode $ BDFLit $ Text.pack s
+
 docExt
   :: (ExactPrint.Annotate.Annotate ast)
   => Located ast
@@ -572,7 +577,10 @@ docAnnotationRest
 docAnnotationRest annKey bdm = allocateNode . BDFAnnotationRest annKey =<< bdm
 
 docNonBottomSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
-docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing =<< bdm
+docNonBottomSpacing bdm = allocateNode . BDFNonBottomSpacing False =<< bdm
+
+docNonBottomSpacingS :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
+docNonBottomSpacingS bdm = allocateNode . BDFNonBottomSpacing True =<< bdm
 
 docSetParSpacing :: ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 docSetParSpacing bdm = allocateNode . BDFSetParSpacing =<< bdm
@@ -642,18 +650,18 @@ docNodeMoveToKWDP ast kw shouldRestoreIndent bdm =
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)
               => Located ast
-              -> ToBriDocM a
-              -> ToBriDocM a
+              -> a
+              -> a
   docWrapNodePrior :: ( Data.Data.Data ast)
                    => Located ast
-                   -> ToBriDocM a
-                   -> ToBriDocM a
+                   -> a
+                   -> a
   docWrapNodeRest  :: ( Data.Data.Data ast)
                    => Located ast
-                   -> ToBriDocM a
-                   -> ToBriDocM a
+                   -> a
+                   -> a
 
-instance DocWrapable BriDocNumbered where
+instance DocWrapable (ToBriDocM BriDocNumbered) where
   docWrapNode ast bdm = do
     bd <- bdm
     i1 <- allocNodeIndex
@@ -679,7 +687,22 @@ instance DocWrapable BriDocNumbered where
       $ BDFAnnotationRest (ExactPrint.Types.mkAnnKey ast)
       $ bd
 
-instance DocWrapable a => DocWrapable [a] where
+instance DocWrapable (ToBriDocM a) => DocWrapable [ToBriDocM a] where
+  docWrapNode ast bdms = case bdms of
+    [] -> []
+    [bd] -> [docWrapNode ast bd]
+    (bd1:bdR) | (bdN:bdM) <- reverse bdR ->
+      [docWrapNodePrior ast bd1] ++ reverse bdM ++ [docWrapNodeRest ast bdN]
+    _ -> error "cannot happen (TM)"
+  docWrapNodePrior ast bdms = case bdms of
+    [] -> []
+    [bd] -> [docWrapNodePrior ast bd]
+    (bd1:bdR) -> docWrapNodePrior ast bd1 : bdR
+  docWrapNodeRest ast bdms = case reverse bdms of
+      [] -> []
+      (bdN:bdR) -> reverse $ docWrapNodeRest ast bdN : bdR
+
+instance DocWrapable (ToBriDocM a) => DocWrapable (ToBriDocM [a]) where
   docWrapNode ast bdsm = do
     bds <- bdsm
     case bds of
@@ -707,7 +730,7 @@ instance DocWrapable a => DocWrapable [a] where
         bdN' <- docWrapNodeRest ast (return bdN)
         return $ reverse (bdN':bdR)
 
-instance DocWrapable a => DocWrapable (Seq a) where
+instance DocWrapable (ToBriDocM a) => DocWrapable (ToBriDocM (Seq a)) where
   docWrapNode ast bdsm = do
     bds <- bdsm
     case Seq.viewl bds of
@@ -735,7 +758,7 @@ instance DocWrapable a => DocWrapable (Seq a) where
         bdN' <- docWrapNodeRest ast (return bdN)
         return $ bdR Seq.|> bdN'
 
-instance DocWrapable ([BriDocNumbered], BriDocNumbered, a) where
+instance DocWrapable (ToBriDocM ([BriDocNumbered], BriDocNumbered, a)) where
   docWrapNode ast stuffM = do
     (bds, bd, x) <- stuffM
     if null bds

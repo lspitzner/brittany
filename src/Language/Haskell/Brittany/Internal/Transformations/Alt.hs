@@ -331,7 +331,7 @@ transformAlts =
             BrIndentNone -> r
             BrIndentRegular ->   reWrap $ BDFEnsureIndent (BrIndentSpecial indAdd) r
             BrIndentSpecial i -> reWrap $ BDFEnsureIndent (BrIndentSpecial i) r
-        BDFNonBottomSpacing bd -> rec bd
+        BDFNonBottomSpacing _ bd -> rec bd
         BDFSetParSpacing bd -> rec bd
         BDFForceParSpacing bd -> rec bd
         BDFDebug s bd -> do
@@ -488,13 +488,18 @@ getSpacing !bridoc = rec bridoc
               BrIndentSpecial i -> i
         return $ mVs <&> \(VerticalSpacing lsp psp pf) ->
           VerticalSpacing (lsp + addInd) psp pf
-      BDFNonBottomSpacing bd -> do
+      BDFNonBottomSpacing b bd -> do
         mVs <- rec bd
         return
           $   mVs
-          <|> LineModeValid (VerticalSpacing 0
-                                             (VerticalSpacingParAlways colMax)
-                                             False)
+          <|> LineModeValid
+                (VerticalSpacing
+                  0
+                  (if b then VerticalSpacingParSome 0
+                        else VerticalSpacingParAlways colMax
+                  )
+                  False
+                )
       BDFSetParSpacing bd -> do
         mVs <- rec bd
         return $ mVs <&> \vs -> vs { _vs_parFlag = True }
@@ -799,16 +804,30 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
                 BrIndentSpecial i -> i
           return $ mVs <&> \(VerticalSpacing lsp psp parFlag) ->
             VerticalSpacing (lsp + addInd) psp parFlag
-        BDFNonBottomSpacing bd -> do
+        BDFNonBottomSpacing b bd -> do
+          -- TODO: the `b` flag is an ugly hack, but I was not able to make
+          -- all tests work without it. It should be possible to have
+          -- `spMakePar` map VSPAlways{} to VSPSome x1, which fixes this
+          -- problem but breaks certain other cases.
           mVs <- rec bd
           return $ if null mVs
-            then [VerticalSpacing 0 (VerticalSpacingParAlways colMax) False]
+            then [VerticalSpacing
+                    0
+                    (if b then VerticalSpacingParSome 0
+                          else VerticalSpacingParAlways colMax
+                    )
+                    False
+                 ]
             else mVs <&> \vs -> vs
               { _vs_sameLine = min colMax (_vs_sameLine vs)
               , _vs_paragraph = case _vs_paragraph vs of
                   VerticalSpacingParNone -> VerticalSpacingParNone
-                  VerticalSpacingParAlways i -> VerticalSpacingParAlways i
-                  VerticalSpacingParSome i -> VerticalSpacingParAlways i
+                  VerticalSpacingParAlways i
+                    | b         -> VerticalSpacingParSome 0
+                    | otherwise -> VerticalSpacingParAlways i
+                  VerticalSpacingParSome i
+                    | b         -> VerticalSpacingParSome 0
+                    | otherwise -> VerticalSpacingParAlways i
               }
             -- the version below is an alternative idea: fold the input
             -- spacings into a single spacing. This was hoped to improve in

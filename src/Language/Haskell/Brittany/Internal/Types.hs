@@ -185,6 +185,8 @@ data ColSig
   | ColBindStmt
   | ColDoLet -- the non-indented variant
   | ColRec
+  | ColRecUpdate -- used for both RecCon and RecUpd. TODO: refactor to reflect?
+  | ColRecDecl
   | ColListComp
   | ColList
   | ColApp Text
@@ -256,7 +258,7 @@ data BriDoc
   -- after the alt transformation.
   | BDForceMultiline BriDoc
   | BDForceSingleline BriDoc
-  | BDNonBottomSpacing BriDoc
+  | BDNonBottomSpacing Bool BriDoc
   | BDSetParSpacing BriDoc
   | BDForceParSpacing BriDoc
   -- pseudo-deprecated
@@ -301,7 +303,7 @@ data BriDocF f
   | BDFEnsureIndent BrIndent (f (BriDocF f))
   | BDFForceMultiline (f (BriDocF f))
   | BDFForceSingleline (f (BriDocF f))
-  | BDFNonBottomSpacing (f (BriDocF f))
+  | BDFNonBottomSpacing Bool (f (BriDocF f))
   | BDFSetParSpacing (f (BriDocF f))
   | BDFForceParSpacing (f (BriDocF f))
   | BDFDebug String (f (BriDocF f))
@@ -313,33 +315,37 @@ type BriDocFInt = BriDocF ((,) Int)
 type BriDocNumbered = (Int, BriDocFInt)
 
 instance Uniplate.Uniplate BriDoc where
-  uniplate x@BDEmpty{}                   = plate x
-  uniplate x@BDLit{}                     = plate x
-  uniplate (BDSeq list)                  = plate BDSeq ||* list
-  uniplate (BDCols sig list)             = plate BDCols |- sig ||* list
-  uniplate x@BDSeparator                 = plate x
-  uniplate (BDAddBaseY ind bd)           = plate BDAddBaseY |- ind |* bd
-  uniplate (BDBaseYPushCur       bd)     = plate BDBaseYPushCur |* bd
-  uniplate (BDBaseYPop           bd)     = plate BDBaseYPop |* bd
-  uniplate (BDIndentLevelPushCur bd)     = plate BDIndentLevelPushCur |* bd
-  uniplate (BDIndentLevelPop     bd)     = plate BDIndentLevelPop |* bd
-  uniplate (BDPar ind line indented)     = plate BDPar |- ind |* line |* indented
-  uniplate (BDAlt             alts)      = plate BDAlt ||* alts
-  uniplate (BDForwardLineMode bd  )      = plate BDForwardLineMode |* bd
-  uniplate x@BDExternal{}                = plate x
-  uniplate x@BDPlain{}                = plate x
-  uniplate (BDAnnotationPrior annKey bd) = plate BDAnnotationPrior |- annKey |* bd
-  uniplate (BDAnnotationKW annKey kw bd) = plate BDAnnotationKW |- annKey |- kw |* bd
-  uniplate (BDAnnotationRest annKey bd)  = plate BDAnnotationRest |- annKey |* bd
-  uniplate (BDMoveToKWDP annKey kw b bd) = plate BDMoveToKWDP |- annKey |- kw |- b |* bd
-  uniplate (BDLines lines)               = plate BDLines ||* lines
-  uniplate (BDEnsureIndent ind bd)       = plate BDEnsureIndent |- ind |* bd
-  uniplate (BDForceMultiline   bd)       = plate BDForceMultiline |* bd
-  uniplate (BDForceSingleline  bd)       = plate BDForceSingleline |* bd
-  uniplate (BDNonBottomSpacing bd)       = plate BDNonBottomSpacing |* bd
-  uniplate (BDSetParSpacing    bd)       = plate BDSetParSpacing |* bd
-  uniplate (BDForceParSpacing  bd)       = plate BDForceParSpacing |* bd
-  uniplate (BDDebug s bd)                = plate BDDebug |- s |* bd
+  uniplate x@BDEmpty{}               = plate x
+  uniplate x@BDLit{}                 = plate x
+  uniplate (BDSeq list     )         = plate BDSeq ||* list
+  uniplate (BDCols sig list)         = plate BDCols |- sig ||* list
+  uniplate x@BDSeparator             = plate x
+  uniplate (BDAddBaseY ind bd      ) = plate BDAddBaseY |- ind |* bd
+  uniplate (BDBaseYPushCur       bd) = plate BDBaseYPushCur |* bd
+  uniplate (BDBaseYPop           bd) = plate BDBaseYPop |* bd
+  uniplate (BDIndentLevelPushCur bd) = plate BDIndentLevelPushCur |* bd
+  uniplate (BDIndentLevelPop     bd) = plate BDIndentLevelPop |* bd
+  uniplate (BDPar ind line indented) = plate BDPar |- ind |* line |* indented
+  uniplate (BDAlt             alts ) = plate BDAlt ||* alts
+  uniplate (BDForwardLineMode bd   ) = plate BDForwardLineMode |* bd
+  uniplate x@BDExternal{}            = plate x
+  uniplate x@BDPlain{}               = plate x
+  uniplate (BDAnnotationPrior annKey bd) =
+    plate BDAnnotationPrior |- annKey |* bd
+  uniplate (BDAnnotationKW annKey kw bd) =
+    plate BDAnnotationKW |- annKey |- kw |* bd
+  uniplate (BDAnnotationRest annKey bd) =
+    plate BDAnnotationRest |- annKey |* bd
+  uniplate (BDMoveToKWDP annKey kw b bd) =
+    plate BDMoveToKWDP |- annKey |- kw |- b |* bd
+  uniplate (BDLines lines          ) = plate BDLines ||* lines
+  uniplate (BDEnsureIndent ind bd  ) = plate BDEnsureIndent |- ind |* bd
+  uniplate (BDForceMultiline  bd   ) = plate BDForceMultiline |* bd
+  uniplate (BDForceSingleline bd   ) = plate BDForceSingleline |* bd
+  uniplate (BDNonBottomSpacing b bd) = plate BDNonBottomSpacing |- b |* bd
+  uniplate (BDSetParSpacing   bd   ) = plate BDSetParSpacing |* bd
+  uniplate (BDForceParSpacing bd   ) = plate BDForceParSpacing |* bd
+  uniplate (BDDebug s bd           ) = plate BDDebug |- s |* bd
 
 newtype NodeAllocIndex = NodeAllocIndex Int
 
@@ -367,14 +373,13 @@ unwrapBriDocNumbered tpl = case snd tpl of
   BDFMoveToKWDP annKey kw b bd -> BDMoveToKWDP annKey kw b $ rec bd
   BDFLines lines               -> BDLines $ rec <$> lines
   BDFEnsureIndent ind bd       -> BDEnsureIndent ind $ rec bd
-  BDFForceMultiline   bd       -> BDForceMultiline $ rec bd
-  BDFForceSingleline  bd       -> BDForceSingleline $ rec bd
-  BDFNonBottomSpacing bd       -> BDNonBottomSpacing $ rec bd
-  BDFSetParSpacing    bd       -> BDSetParSpacing $ rec bd
-  BDFForceParSpacing  bd       -> BDForceParSpacing $ rec bd
+  BDFForceMultiline  bd        -> BDForceMultiline $ rec bd
+  BDFForceSingleline bd        -> BDForceSingleline $ rec bd
+  BDFNonBottomSpacing b bd     -> BDNonBottomSpacing b $ rec bd
+  BDFSetParSpacing   bd        -> BDSetParSpacing $ rec bd
+  BDFForceParSpacing bd        -> BDForceParSpacing $ rec bd
   BDFDebug s bd                -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
- where
-  rec = unwrapBriDocNumbered
+  where rec = unwrapBriDocNumbered
 
 isNotEmpty :: BriDoc -> Bool
 isNotEmpty BDEmpty = False
@@ -404,11 +409,11 @@ briDocSeqSpine = \case
   BDMoveToKWDP _annKey _kw _b bd -> briDocSeqSpine bd
   BDLines lines                  -> foldl' (\(!()) -> briDocSeqSpine) () lines
   BDEnsureIndent _ind bd         -> briDocSeqSpine bd
-  BDForceMultiline   bd          -> briDocSeqSpine bd
-  BDForceSingleline  bd          -> briDocSeqSpine bd
-  BDNonBottomSpacing bd          -> briDocSeqSpine bd
-  BDSetParSpacing    bd          -> briDocSeqSpine bd
-  BDForceParSpacing  bd          -> briDocSeqSpine bd
+  BDForceMultiline  bd           -> briDocSeqSpine bd
+  BDForceSingleline bd           -> briDocSeqSpine bd
+  BDNonBottomSpacing _ bd        -> briDocSeqSpine bd
+  BDSetParSpacing   bd           -> briDocSeqSpine bd
+  BDForceParSpacing bd           -> briDocSeqSpine bd
   BDDebug _s bd                  -> briDocSeqSpine bd
 
 briDocForceSpine :: BriDoc -> BriDoc

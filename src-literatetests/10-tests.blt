@@ -313,6 +313,303 @@ func = f
 ###############################################################################
 ###############################################################################
 ###############################################################################
+#group data type declarations
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test nullary data type
+data Foo = Bar {}
+
+data Biz = Baz
+
+#test single record
+data Foo = Bar
+  { foo :: Baz
+  }
+
+#test record multiple names
+data Foo = Bar
+  { foo, bar :: Baz
+  }
+
+#test record multiple types
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+
+#test record multiple types and names
+data Foo = Bar
+  { foo, biz :: Baz
+  , bar      :: Bizzz
+  }
+
+#test record multiple types deriving
+data Foo = Bar
+  { fooz :: Baz
+  , bar  :: Bizzz
+  }
+  deriving Show
+
+#test record long field names
+data MyRecord = MyConstructor
+  { bar1, bar2
+      :: Loooooooooooooooooooooooooooooooong
+      -> Loooooooooooooooooooooooooooooooong
+  , foo1, foo2
+      :: Loooooooooooooooooooooooooooooooonger
+      -> Loooooooooooooooooooooooooooooooonger
+  }
+
+#test record with DataTypeContexts
+{-# LANGUAGE DatatypeContexts #-}
+data
+  ( LooooooooooooooooooooongConstraint a
+  , LooooooooooooooooooooongConstraint b
+  ) =>
+  MyRecord a b
+  = MyConstructor
+    { foo1, foo2
+        :: loooooooooooooooooooooooooooooooong
+        -> loooooooooooooooooooooooooooooooong
+    , bar  :: a
+    , bazz :: b
+    }
+
+#test record single line layout
+#pending config flag is disabled for now
+{-# LANGUAGE ScopedTypeVariables #-}
+-- brittany { lconfig_allowSinglelineRecord: true }
+data MyRecord = forall a . Show a => MyCons { foo :: a -> a, i :: Int }
+
+#test record no matching single line layout
+{-# LANGUAGE ScopedTypeVariables #-}
+-- brittany { lconfig_allowSinglelineRecord: true }
+data MyRecord = forall a . Show a => Bar
+  { foo :: abittoolongbutnotvery -> abittoolongbutnotvery
+  }
+
+#test record forall constraint multiline
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyRecord
+  = forall a
+  . LooooooooooooooooooooongConstraint a =>
+    LoooooooooooongConstructor
+      { foo :: abittoolongbutnotvery -> abittoolongbutnotvery
+      }
+
+#test record forall constraint multiline more
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyRecord
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor
+      { a :: a
+      , b :: b
+      }
+
+#test plain with forall and constraint
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyStruct
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor (ToBriDocM BriDocNumbered)
+                  (ToBriDocM BriDocNumbered)
+                  (ToBriDocM BriDocNumbered)
+
+#test record with many features
+{-# LANGUAGE ScopedTypeVariables #-}
+data MyRecord
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor
+      { foo, foo2
+          :: loooooooooooooooooooooooooooooooong
+          -> loooooooooooooooooooooooooooooooong
+      , bar  :: a
+      , bazz :: b
+      }
+  deriving Show
+
+#test record multiple types deriving
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  deriving (Show, Eq, Monad, Functor, Traversable, Foldable)
+
+#test record multiple deriving strategies
+#min-ghc 8.2
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  deriving Show
+  deriving (Eq, Ord)
+  deriving stock Show
+  deriving stock (Eq, Ord)
+  deriving anyclass Show
+  deriving anyclass (Show, Eq, Monad, Functor)
+  deriving newtype Show
+  deriving newtype (Traversable, Foldable)
+
+#test record deriving via
+#min-ghc 8.6
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  deriving ToJSON via (SomeType)
+  deriving (ToJSON, FromJSON) via (SomeType)
+
+#test single record existential
+{-# LANGUAGE ExistentialQuantification #-}
+
+data Foo = forall a . Show a => Bar
+  { foo :: a
+  }
+
+#test record multiple types existential
+{-# LANGUAGE ExistentialQuantification #-}
+
+data Foo = forall a b . (Show a, Eq b) => Bar
+  { foo  :: a
+  , bars :: b
+  }
+
+#test plain comment simple
+-- before
+data MyData = MyData Int
+-- after
+
+#test record newline comment
+data MyRecord = MyRecord
+  { a :: Int
+    -- comment
+  , b :: Int
+  }
+
+#test record comments simple
+data Foo = Bar -- a
+  { foo  :: Baz -- b
+  , bars :: Bizzz -- c
+  } -- d
+  deriving (Show, Eq, Monad, Functor, Traversable, Foldable) -- e
+
+#test record comments strange inline
+data Foo = Bar
+  {  -- a
+    foo  -- b
+         :: -- c
+            Baz -- d
+  , -- e
+    bars :: Bizzz
+  }
+  deriving (Show, Eq, Monad, Functor, Traversable, Foldable)
+
+#test record comments in deriving
+## maybe we want to switch to a differnt layout when there are such comments.
+## Don't hesitate to modify this testcase, it clearly is not the ideal layout
+## for this.
+
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  -- a
+  deriving --b
+           ( -- c
+            ToJSON -- d
+                  , -- e
+                    FromJSON --f
+                            ) -- g
+
+#test record comments in deriving via
+## maybe we want to switch to a differnt layout when there are such comments.
+## Don't hesitate to modify this testcase, it clearly is not the ideal layout
+## for this.
+#min-ghc 8.6
+
+data Foo = Bar
+  { foo  :: Baz
+  , bars :: Bizzz
+  }
+  -- a
+  deriving --a
+           ToJSON --b
+                  via  -- c
+                      ( -- d
+                       SomeType --e
+                               , -- f
+                                 ABC --g
+                                    )
+
+#test comment before equal sign
+{-# LANGUAGE ExistentialQuantification #-}
+data MyRecord
+  -- test comment
+  = forall a b
+  . ( Loooooooooooooooooooooooooooooooong a
+    , Loooooooooooooooooooooooooooooooong b
+    ) =>
+    MyConstructor a b
+
+#test normal records on multi line indent policy left
+-- brittany {lconfig_indentPolicy: IndentPolicyLeft }
+data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
+  Types.Company
+  [EnterpriseGrantResponse]
+
+#test normal records on multi line indent policy free
+-- brittany {lconfig_indentPolicy: IndentPolicyFree }
+data GrantsForCompanyResp = GrantsForCompanyResp Types.Company
+                                                 [EnterpriseGrantResponse]
+
+#test normal records on multi line indent policy free 2
+-- brittany {lconfig_indentPolicy: IndentPolicyFree }
+data EnterpriseGrantsForCompanyResponse = EnterpriseGrantsForCompanyResponse
+                                            Types.Company
+                                            [EnterpriseGrantResponse]
+
+#test normal records on multi line indent policy multiple
+-- brittany {lconfig_indentPolicy: IndentPolicyMultiple }
+data GrantsForCompanyResp = GrantsForCompanyResp Types.Company
+                                                 [EnterpriseGrantResponse]
+
+#test large record with a comment
+data XIILqcacwiuNiu = XIILqcacwiuNiu
+  { oyyFtvbepgbOge_pebzVmuftEijwuj     :: Jgtoyuh HessJvNlo
+  , wloQsiskdoxJop_xatiKrwedOxtu       :: Jgtoyuh [Inotg]
+  , mmmJjcqtemyIyo_ovosDoreKeeoyamvove :: Jgtoyuh Eujo
+  , mbiIatelofxOzr_uluxNngiiMjah       :: Jgtoyuh HessJvNlo
+  , obxIskfcxpkIkb_uuviTuevcSkrgo      :: Jgtoyuh Int
+  , wqrAtuvuecoHwr_ilotNxbuPleo        :: Jgtoyuh Ufaxdeq
+  , lofAfuebdhpLuv_cnekPoyFxmg         :: Jgtoyuh Ufaxdeq
+  , ouoFugtawzvUpk_oupiLzptugy         :: Jgtoyuh Eujo
+  , iqiXjtziwogNsa_uiyvSunaTtgUsf3     :: Jgtoyuh Oaivn
+  , odbIriaqnojUlz_onotoWuunehIpuy     :: Jgtoyuh Eujo
+  , opjUxtkxzkiKse_luqjuZazt
+      :: Jgtoyuh [(Eujo, Int, Int, Int, Int, Int, NELUxro)]
+  -- , jcqRaqznxfhIpa_ywevMezmoYkutuwa        :: Jgtoyuh ()
+  , vayOmuasyphOfd_bcsVljmvt               :: Jgtoyuh Eujo
+  , rifArahilooRax_ufikecqdImsv            :: Jgtoyuh Oaivn
+  , raqKtopcpszDwb_oqocubasZuqjcryoDojGkw  :: Jgtoyuh Oaivn
+  , mluJiilpcijUtt_gaisklifVekfeyagRmfbyzz :: Jgtoyuh Oaivn
+  , oqhPaahjupaSmi_gamwwoovKyxznecvEayluc  :: Jgtoyuh Oaivn
+  , mazFubimwebZpa_itidehDodiDlboz         :: Jgtoyuh Vrep
+  , jeyOcuesexaYoy_vpqn                    :: Jgtoyuh ()
+  }
+
+###############################################################################
+###############################################################################
+###############################################################################
 #group equation.basic
 ###############################################################################
 ###############################################################################
@@ -1093,6 +1390,14 @@ type (a :+: b) = (a, b)
 
 type ((a :+: b) c) = (a, c)
 
+#test synonym-tuple-type-many-comments
+
+type Foo
+  = ( -- t1
+     A -- t2
+      , -- t3
+        B -- t4
+         ) -- t5
 
 ###############################################################################
 ###############################################################################
