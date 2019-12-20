@@ -173,6 +173,8 @@ layoutSetCommentCol = do
   unless (Data.Maybe.isJust $ _lstate_commentCol state)
     $ mSet state { _lstate_commentCol = Just col }
 
+-- This is also used to move to non-comments in a couple of places. Seems
+-- to be harmless so far..
 layoutMoveToCommentPos
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m

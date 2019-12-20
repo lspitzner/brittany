@@ -88,7 +88,13 @@ data LayoutState = LayoutState
                                    -- move-to-DP at a start of a comment.
                                    -- Necessary because some keyword DPs
                                    -- are relative to the last non-comment
-                                   -- entity (for some reason)
+                                   -- entity (for some reason).
+                                   -- This is not very strictly reset to 0,
+                                   -- so we might in some cases get "artifacts"
+                                   -- from previous document elements.
+                                   -- But the worst effect at the moment would
+                                   -- be that we introduce less newlines on
+                                   -- moveToKWDP, which seems harmless enough.
   }
 
 lstate_baseY :: LayoutState -> Int

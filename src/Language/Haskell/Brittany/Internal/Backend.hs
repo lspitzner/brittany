@@ -287,6 +287,8 @@ layoutBriDocM = \case
     case mDP of
       Nothing -> pure ()
       Just (y, x) ->
+        -- we abuse this, as we probably will print the KW next, which is
+        -- _not_ a comment..
         layoutMoveToCommentPos y (if shouldRestoreIndent then x else 0)
     layoutBriDocM bd
   BDNonBottomSpacing _ bd -> layoutBriDocM bd
