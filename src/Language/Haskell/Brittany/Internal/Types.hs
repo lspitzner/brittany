@@ -84,6 +84,11 @@ data LayoutState = LayoutState
   --     -- captures if the layouter currently is in a new line, i.e. if the
   --     -- current line only contains (indentation) spaces.
   -- this is mostly superseeded by curYOrAddNewline, iirc.
+  , _lstate_commentNewlines :: Int -- number of newlines inserted due to
+                                   -- move-to-DP at a start of a comment.
+                                   -- Necessary because some keyword DPs
+                                   -- are relative to the last non-comment
+                                   -- entity (for some reason)
   }
 
 lstate_baseY :: LayoutState -> Int
@@ -102,6 +107,7 @@ instance Show LayoutState where
     ++ ",indLevelLinger=" ++ show (_lstate_indLevelLinger state)
     ++ ",commentCol=" ++ show (_lstate_commentCol state)
     ++ ",addSepSpace=" ++ show (_lstate_addSepSpace state)
+    ++ ",commentNewlines=" ++ show (_lstate_commentNewlines state)
     ++ "}"
 
 -- data NewLineState = NewLineStateInit -- initial state. we do not know if in a

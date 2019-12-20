@@ -200,6 +200,7 @@ layoutMoveToCommentPos y x = do
         Nothing -> case _lstate_curYOrAddNewline state of
           Left i  -> i + fromMaybe 0 (_lstate_addSepSpace state)
           Right{} -> lstate_baseY state
+    , _lstate_commentNewlines = _lstate_commentNewlines state + y
     }
 
 -- | does _not_ add spaces to again reach the current base column.
@@ -217,6 +218,7 @@ layoutWriteNewline = do
       Left{}  -> Right 1
       Right i -> Right (i + 1)
     , _lstate_addSepSpace      = Nothing
+    , _lstate_commentNewlines  = 0
     }
 
 layoutWriteEnsureNewlineBlock
@@ -574,7 +576,9 @@ layoutIndentRestorePostComment = do
 #if INSERTTRACES
   tellDebugMessShow ("layoutIndentRestorePostComment", mCommentCol)
 #endif
-  mModify $ \s -> s { _lstate_commentCol = Nothing }
+  mModify $ \s -> s { _lstate_commentCol = Nothing
+                    , _lstate_commentNewlines = 0
+                    }
   case (mCommentCol, eCurYAddNL) of
     (Just commentCol, Left{}) -> do
       layoutWriteEnsureNewlineBlock

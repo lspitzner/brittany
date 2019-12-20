@@ -279,12 +279,14 @@ layoutBriDocM = \case
                      , keyword == kw1
                      ]
       -- mTell $ Seq.fromList ["KWDP: " ++ show annKey ++ " " ++ show mAnn]
-      pure $ case relevant of
-        [] -> Nothing
-        (dp:_) -> Just dp
+      case relevant of
+        [] -> pure Nothing
+        (ExactPrint.Types.DP (y, x):_) -> do
+          mSet state { _lstate_commentNewlines = 0 }
+          pure $ Just (y - _lstate_commentNewlines state, x)
     case mDP of
       Nothing -> pure ()
-      Just (ExactPrint.Types.DP (y, x)) ->
+      Just (y, x) ->
         layoutMoveToCommentPos y (if shouldRestoreIndent then x else 0)
     layoutBriDocM bd
   BDNonBottomSpacing _ bd -> layoutBriDocM bd
