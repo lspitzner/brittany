@@ -123,7 +123,7 @@ parseModuleFromString args fp dynCheck str =
     dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
     let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
     case res of
-      Left  (span, err) -> ExceptT.throwE $ show span ++ ": " ++ err
+      Left  (span, err) -> ExceptT.throwE $ showOutputable span ++ ": " ++ err
       Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
 

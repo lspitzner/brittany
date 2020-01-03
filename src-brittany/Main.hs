@@ -325,7 +325,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
     case parseResult of
       Left left -> do
         putErrorLn "parse error:"
-        putErrorLn $ show left
+        putErrorLn left
         ExceptT.throwE 60
       Right (anns, parsedSource, hasCPP) -> do
         (inlineConf, perItemConf) <-
