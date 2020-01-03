@@ -460,9 +460,15 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
 
     let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
     toLocal config' filteredAnns $ do
-      bd <- briDocMToPPM $ if exactprintOnly
-        then briDocByExactNoComment decl
-        else layoutDecl decl
+      bd <- if exactprintOnly
+        then briDocMToPPM $ briDocByExactNoComment decl
+        else do
+          (r, errs, debugs) <- briDocMToPPMInner $ layoutDecl decl
+          mTell debugs
+          mTell errs
+          if null errs
+            then pure r
+            else briDocMToPPM $ briDocByExactNoComment decl
       layoutBriDoc bd
 
   let finalComments = filter

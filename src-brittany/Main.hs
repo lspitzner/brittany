@@ -374,10 +374,10 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
                 else pure out
               pure $ (ews, out')
         let customErrOrder ErrorInput{}         = 4
-            customErrOrder LayoutWarning{}      = 0 :: Int
+            customErrOrder LayoutWarning{}      = -1 :: Int
             customErrOrder ErrorOutputCheck{}   = 1
             customErrOrder ErrorUnusedComment{} = 2
-            customErrOrder ErrorUnknownNode{}   = 3
+            customErrOrder ErrorUnknownNode{}   = -2 :: Int
             customErrOrder ErrorMacroConfig{}   = 5
         when (not $ null errsWarns) $ do
           let groupedErrsWarns =
@@ -392,10 +392,10 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             (ErrorInput str : _) -> do
               putErrorLn $ "ERROR: parse error: " ++ str
             uns@(ErrorUnknownNode{} : _) -> do
-              putErrorLn $ "ERROR: encountered unknown syntactical constructs:"
+              putErrorLn $ "WARNING: encountered unknown syntactical constructs:"
               uns `forM_` \case
                 ErrorUnknownNode str ast@(L loc _) -> do
-                  putErrorLn $ str <> " at " <> showSDocUnsafe (ppr loc)
+                  putErrorLn $ "  " <> str <> " at " <> showSDocUnsafe (ppr loc)
                   when
                       ( config
                       & _conf_debug
@@ -405,6 +405,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
                     $ do
                         putErrorLn $ "  " ++ show (astToDoc ast)
                 _ -> error "cannot happen (TM)"
+              putErrorLn "  -> falling back on exactprint for this element of the module"
             warns@(LayoutWarning{} : _) -> do
               putErrorLn $ "WARNINGS:"
               warns `forM_` \case

@@ -62,6 +62,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , docTick
   , spacifyDocs
   , briDocMToPPM
+  , briDocMToPPMInner
   , allocateNode
   , docSharedWrapper
   , hasAnyCommentsBelow
@@ -814,6 +815,13 @@ spacifyDocs ds = fmap appSep (List.init ds) ++ [List.last ds]
 
 briDocMToPPM :: ToBriDocM a -> PPMLocal a
 briDocMToPPM m = do
+  (x, errs, debugs) <- briDocMToPPMInner m
+  mTell debugs
+  mTell errs
+  return x
+
+briDocMToPPMInner :: ToBriDocM a -> PPMLocal (a, [BrittanyError], Seq String)
+briDocMToPPMInner m = do
   readers <- MultiRWSS.mGetRawR
   let ((x, errs), debugs) =
         runIdentity
@@ -823,9 +831,7 @@ briDocMToPPM m = do
           $ MultiRWSS.withMultiWriterAW
           $ MultiRWSS.withMultiWriterAW
           $ m
-  mTell debugs
-  mTell errs
-  return x
+  pure (x, errs, debugs)
 
 docSharedWrapper :: Monad m => (x -> m y) -> x -> m (m y)
 docSharedWrapper f x = return <$> f x
