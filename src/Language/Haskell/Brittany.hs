@@ -2,6 +2,7 @@
 
 module Language.Haskell.Brittany
   ( parsePrintModule
+  , pPrintModule
   , staticDefaultConfig
   , forwardOptionsSyntaxExtsEnabled
   , userConfigPath

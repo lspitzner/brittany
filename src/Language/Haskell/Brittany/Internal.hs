@@ -263,20 +263,16 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
     case parseResult of
       Left  err -> throwE [ErrorInput err]
       Right x   -> pure x
-  (inlineConf, perItemConf) <-
-    either (throwE . (: []) . uncurry ErrorMacroConfig) pure
-      $ extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource)
-  let moduleConfig = cZipWith fromOptionIdentity config inlineConf
   (errsWarns, outputTextL) <- do
     let omitCheck =
-          moduleConfig
+          config
             & _conf_errorHandling
             & _econf_omit_output_valid_check
             & confUnpack
     (ews, outRaw) <- if hasCPP || omitCheck
-      then return $ pPrintModule moduleConfig perItemConf anns parsedSource
+      then return $ pPrintModule config anns parsedSource
       else lift
-        $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
+        $ pPrintModuleAndCheck config anns parsedSource
     let hackF s = fromMaybe s
           $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
     pure $ if hackAroundIncludes
@@ -294,7 +290,7 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
       customErrOrder ErrorUnknownNode{}   = 3
       customErrOrder ErrorMacroConfig{}   = 5
   let hasErrors =
-        case moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack of
+        case config & _conf_errorHandling & _econf_Werror & confUnpack of
           False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
           True  -> not $ null errsWarns
   if hasErrors then throwE $ errsWarns else pure $ TextL.toStrict outputTextL
@@ -307,31 +303,37 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
 -- can occur.
 pPrintModule
   :: Config
-  -> PerItemConfig
   -> ExactPrint.Anns
   -> GHC.ParsedSource
   -> ([BrittanyError], TextL.Text)
-pPrintModule conf inlineConf anns parsedModule =
-  let ((out, errs), debugStrings) =
-        runIdentity
-          $ MultiRWSS.runMultiRWSTNil
-          $ MultiRWSS.withMultiWriterAW
-          $ MultiRWSS.withMultiWriterAW
-          $ MultiRWSS.withMultiWriterW
-          $ MultiRWSS.withMultiReader anns
-          $ MultiRWSS.withMultiReader conf
-          $ MultiRWSS.withMultiReader inlineConf
-          $ MultiRWSS.withMultiReader (extractToplevelAnns parsedModule anns)
-          $ do
-              traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
-                $ annsDoc anns
-              ppModule parsedModule
-      tracer = if Seq.null debugStrings
-        then id
-        else
-          trace ("---- DEBUGMESSAGES ---- ")
-            . foldr (seq . join trace) id debugStrings
-  in  tracer $ (errs, Text.Builder.toLazyText out)
+pPrintModule conf anns parsedModule =
+  case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
+    Left (eErr, eInp) -> ([ErrorMacroConfig eErr eInp], TextL.empty)
+    Right (inlineConf, perItemConf) ->
+      let moduleConfig = cZipWith fromOptionIdentity conf inlineConf
+          ((out, errs), debugStrings) =
+            runIdentity
+              $ MultiRWSS.runMultiRWSTNil
+              $ MultiRWSS.withMultiWriterAW
+              $ MultiRWSS.withMultiWriterAW
+              $ MultiRWSS.withMultiWriterW
+              $ MultiRWSS.withMultiReader anns
+              $ MultiRWSS.withMultiReader moduleConfig
+              $ MultiRWSS.withMultiReader perItemConf
+              $ MultiRWSS.withMultiReader
+                  (extractToplevelAnns parsedModule anns)
+              $ do
+                  traceIfDumpConf "bridoc annotations raw"
+                                  _dconf_dump_annotations
+                    $ annsDoc anns
+                  ppModule parsedModule
+          tracer = if Seq.null debugStrings
+            then id
+            else
+              trace ("---- DEBUGMESSAGES ---- ")
+                . foldr (seq . join trace) id debugStrings
+      in  tracer $ (errs, Text.Builder.toLazyText out)
+
   -- unless () $ do
   --
   --   debugStrings `forM_` \s ->
@@ -341,13 +343,12 @@ pPrintModule conf inlineConf anns parsedModule =
 -- if it does not.
 pPrintModuleAndCheck
   :: Config
-  -> PerItemConfig
   -> ExactPrint.Anns
   -> GHC.ParsedSource
   -> IO ([BrittanyError], TextL.Text)
-pPrintModuleAndCheck conf inlineConf anns parsedModule = do
+pPrintModuleAndCheck conf anns parsedModule = do
+  let (errs, output) = pPrintModule conf anns parsedModule
   let ghcOptions     = conf & _conf_forward & _options_ghc & runIdentity
-  let (errs, output) = pPrintModule conf inlineConf anns parsedModule
   parseResult <- parseModuleFromString ghcOptions
                                        "output"
                                        (\_ -> return $ Right ())
@@ -367,20 +368,15 @@ parsePrintModuleTests conf filename input = do
   case parseResult of
     Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
     Right (anns, parsedModule) -> runExceptT $ do
-      (inlineConf, perItemConf) <-
-        case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
-          Left  err -> throwE $ "error in inline config: " ++ show err
-          Right x   -> pure x
-      let moduleConf = cZipWith fromOptionIdentity conf inlineConf
       let omitCheck =
             conf
               &  _conf_errorHandling
               .> _econf_omit_output_valid_check
               .> confUnpack
       (errs, ltext) <- if omitCheck
-        then return $ pPrintModule moduleConf perItemConf anns parsedModule
+        then return $ pPrintModule conf anns parsedModule
         else lift
-          $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
+          $ pPrintModuleAndCheck conf anns parsedModule
       if null errs
         then pure $ TextL.toStrict $ ltext
         else
