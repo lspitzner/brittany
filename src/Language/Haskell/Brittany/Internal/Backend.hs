@@ -174,14 +174,15 @@ layoutBriDocM = \case
         priors
           `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
                     when (not $ comment == "(" || comment == ")") $ do
+                      let commentLines = Text.lines $ Text.pack $ comment
                       case comment of
-                        ('#':_) -> layoutMoveToCommentPos y (-999)
+                        ('#':_) -> layoutMoveToCommentPos y (-999) (length commentLines)
                                    --  ^ evil hack for CPP
-                        _       -> layoutMoveToCommentPos y x
+                        _       -> layoutMoveToCommentPos y x (length commentLines)
                       -- fixedX <- fixMoveToLineByIsNewline x
                       -- replicateM_ fixedX layoutWriteNewline
                       -- layoutMoveToIndentCol y
-                      layoutWriteAppendMultiline $ Text.pack $ comment
+                      layoutWriteAppendMultiline commentLines
           -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
         when allowMTEL $ moveToExactAnn annKey
     layoutBriDocM bd
@@ -214,14 +215,15 @@ layoutBriDocM = \case
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           when (not $ comment == "(" || comment == ")") $ do
+            let commentLines = Text.lines $ Text.pack $ comment
             -- evil hack for CPP:
             case comment of
-              ('#':_) -> layoutMoveToCommentPos y (-999)
-              _       -> layoutMoveToCommentPos y x
+              ('#':_) -> layoutMoveToCommentPos y (-999) (length commentLines)
+              _       -> layoutMoveToCommentPos y x (length commentLines)
             -- fixedX <- fixMoveToLineByIsNewline x
             -- replicateM_ fixedX layoutWriteNewline
             -- layoutMoveToIndentCol y
-            layoutWriteAppendMultiline $ Text.pack $ comment
+            layoutWriteAppendMultiline commentLines
       -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDAnnotationRest annKey bd -> do
     layoutBriDocM bd
@@ -256,17 +258,18 @@ layoutBriDocM = \case
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
           when (not $ comment == "(" || comment == ")") $ do
+            let commentLines = Text.lines $ Text.pack comment
             case comment of
-              ('#':_) -> layoutMoveToCommentPos y (-999)
+              ('#':_) -> layoutMoveToCommentPos y (-999) 1
                          --  ^ evil hack for CPP
               ")"     -> pure ()
                          --  ^ fixes the formatting of parens
                          --    on the lhs of type alias defs
-              _       -> layoutMoveToCommentPos y x
+              _       -> layoutMoveToCommentPos y x (length commentLines)
             -- fixedX <- fixMoveToLineByIsNewline x
             -- replicateM_ fixedX layoutWriteNewline
             -- layoutMoveToIndentCol y
-            layoutWriteAppendMultiline $ Text.pack $ comment
+            layoutWriteAppendMultiline commentLines
       -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDMoveToKWDP annKey keyword shouldRestoreIndent bd -> do
     mDP <- do
@@ -278,7 +281,7 @@ layoutBriDocM = \case
                      , (ExactPrint.Types.G kw1, dp) <- ann
                      , keyword == kw1
                      ]
-      -- mTell $ Seq.fromList ["KWDP: " ++ show annKey ++ " " ++ show mAnn]
+      -- mTell $ Seq.fromList [show keyword, "KWDP: " ++ show annKey ++ " " ++ show mAnn, show relevant]
       case relevant of
         [] -> pure Nothing
         (ExactPrint.Types.DP (y, x):_) -> do
@@ -289,7 +292,7 @@ layoutBriDocM = \case
       Just (y, x) ->
         -- we abuse this, as we probably will print the KW next, which is
         -- _not_ a comment..
-        layoutMoveToCommentPos y (if shouldRestoreIndent then x else 0)
+        layoutMoveToCommentPos y (if shouldRestoreIndent then x else 0) 1
     layoutBriDocM bd
   BDNonBottomSpacing _ bd -> layoutBriDocM bd
   BDSetParSpacing    bd -> layoutBriDocM bd

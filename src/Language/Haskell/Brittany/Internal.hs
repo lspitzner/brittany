@@ -520,7 +520,7 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
 
   let
     (filteredAnns', post) =
-      case (ExactPrint.mkAnnKey lmod) `Map.lookup` filteredAnns of
+      case Map.lookup (ExactPrint.mkAnnKey lmod) filteredAnns of
         Nothing -> (filteredAnns, [])
         Just mAnn ->
           let
@@ -536,23 +536,7 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
               (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
               (Nothing, Just _i) -> ([], modAnnsDp)
               (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
-            findInitialCommentSize = \case
-              ((ExactPrint.AnnComment cm, ExactPrint.DP (y, _)) : rest) ->
-                let GHC.RealSrcSpan span = ExactPrint.commentIdentifier cm
-                in  y
-                    + GHC.srcSpanEndLine span
-                    - GHC.srcSpanStartLine span
-                    + findInitialCommentSize rest
-              _ -> 0
-            initialCommentSize  = findInitialCommentSize pre
-            fixAbsoluteModuleDP = \case
-              (g@(ExactPrint.G AnnModule), ExactPrint.DP (y, x)) ->
-                (g, ExactPrint.DP (y - initialCommentSize, x))
-              x -> x
-            pre' = if shouldReformatPreamble
-              then map fixAbsoluteModuleDP pre
-              else pre
-            mAnn' = mAnn { ExactPrint.annsDP = pre' }
+            mAnn' = mAnn { ExactPrint.annsDP = pre }
             filteredAnns'' =
               Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
           in
