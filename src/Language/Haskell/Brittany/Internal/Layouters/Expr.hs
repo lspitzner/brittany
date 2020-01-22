@@ -770,7 +770,7 @@ layoutExpr lexpr@(L _ expr) = do
           addAlternativeCond (not hasComments) $ docSeq
             [ appSep $ docLit $ Text.pack "let"
             , docNodeAnnKW lexpr (Just AnnLet)
-            $ appSep $ docForceSingleline bindDoc
+              $ appSep $ docForceSingleline bindDoc
             , appSep $ docLit $ Text.pack "in"
             , docForceSingleline expDoc1
             ]

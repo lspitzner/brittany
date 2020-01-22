@@ -122,12 +122,12 @@ layoutWriteAppendMultiline
      , MonadMultiState LayoutState m
      , MonadMultiWriter (Seq String) m
      )
-  => Text
+  => [Text]
   -> m ()
-layoutWriteAppendMultiline t = do
-  traceLocal ("layoutWriteAppendMultiline", t)
-  case Text.lines t of
-    []     -> layoutWriteAppend t -- need to write empty, too.
+layoutWriteAppendMultiline ts = do
+  traceLocal ("layoutWriteAppendMultiline", ts)
+  case ts of
+    []     -> layoutWriteAppend (Text.pack "") -- need to write empty, too.
     (l:lr) -> do
       layoutWriteAppend l
       lr `forM_` \x -> do
@@ -182,9 +182,10 @@ layoutMoveToCommentPos
      )
   => Int
   -> Int
+  -> Int
   -> m ()
-layoutMoveToCommentPos y x = do
-  traceLocal ("layoutMoveToCommentPos", y, x)
+layoutMoveToCommentPos y x commentLines = do
+  traceLocal ("layoutMoveToCommentPos", y, x, commentLines)
   state <- mGet
   mSet state
     { _lstate_curYOrAddNewline = case _lstate_curYOrAddNewline state of
@@ -202,7 +203,8 @@ layoutMoveToCommentPos y x = do
         Nothing -> case _lstate_curYOrAddNewline state of
           Left i  -> i + fromMaybe 0 (_lstate_addSepSpace state)
           Right{} -> lstate_baseY state
-    , _lstate_commentNewlines = _lstate_commentNewlines state + y
+    , _lstate_commentNewlines =
+        _lstate_commentNewlines state + y + commentLines - 1
     }
 
 -- | does _not_ add spaces to again reach the current base column.
@@ -220,8 +222,11 @@ layoutWriteNewline = do
       Left{}  -> Right 1
       Right i -> Right (i + 1)
     , _lstate_addSepSpace      = Nothing
-    , _lstate_commentNewlines  = 0
     }
+
+_layoutResetCommentNewlines :: MonadMultiState LayoutState m => m ()
+_layoutResetCommentNewlines = do
+  mModify $ \state -> state { _lstate_commentNewlines = 0 }
 
 layoutWriteEnsureNewlineBlock
   :: ( MonadMultiWriter Text.Builder.Builder m
@@ -526,7 +531,7 @@ layoutWritePriorComments ast = do
                       ) -> do
         replicateM_ x layoutWriteNewline
         layoutWriteAppendSpaces y
-        layoutWriteAppendMultiline $ Text.pack $ comment
+        layoutWriteAppendMultiline $ Text.lines $ Text.pack comment
 
 -- TODO: update and use, or clean up. Currently dead code.
 -- this currently only extracs from the `annsDP` field of Annotations.
@@ -563,7 +568,7 @@ layoutWritePostComments ast = do
         replicateM_ x layoutWriteNewline
         layoutWriteAppend $ Text.pack $ replicate y ' '
         mModify $ \s -> s { _lstate_addSepSpace = Nothing }
-        layoutWriteAppendMultiline $ Text.pack $ comment
+        layoutWriteAppendMultiline $ Text.lines $ Text.pack $ comment
 
 layoutIndentRestorePostComment
   :: ( MonadMultiState LayoutState m
