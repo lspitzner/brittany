@@ -120,6 +120,7 @@ instance FromJSON (CConfig Maybe) where
     <*> v .:?= Text.pack "conf_forward"
     <*> v .:?= Text.pack "conf_preprocessor"
     <*> v .:?  Text.pack "conf_roundtrip_exactprint_only"
+    <*> v .:?  Text.pack "conf_disable_formatting"
     <*> v .:?  Text.pack "conf_obfuscate"
   parseJSON invalid    = Aeson.typeMismatch "Config" invalid
 

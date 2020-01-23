@@ -220,6 +220,7 @@ defaultTestConfig = Config
   , _conf_preprocessor              = _conf_preprocessor staticDefaultConfig
   , _conf_forward                   = ForwardOptions { _options_ghc = Identity [] }
   , _conf_roundtrip_exactprint_only = coerce False
+  , _conf_disable_formatting        = coerce False
   , _conf_obfuscate                 = coerce False
   }
 

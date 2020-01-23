@@ -93,6 +93,7 @@ staticDefaultConfig = Config
     { _options_ghc = Identity []
     }
   , _conf_roundtrip_exactprint_only  = coerce False
+  , _conf_disable_formatting         = coerce False
   , _conf_obfuscate                  = coerce False
   }
 
@@ -147,6 +148,7 @@ cmdlineConfigParser = do
                                            ["ghc-options"]
                                            "STRING"
                                            (flagHelp $ parDoc "allows to define default language extensions. The parameter is forwarded to ghc.")
+  disableFormatting <- addSimpleBoolFlag "" ["disable-formatting"] (flagHelp $ parDoc "parse, but don't transform the input at all. Useful for inline config for specific modules.")
   obfuscate <- addSimpleBoolFlag "" ["obfuscate"] (flagHelp $ parDoc "apply obfuscator to the output.")
 
   return $ Config
@@ -198,6 +200,7 @@ cmdlineConfigParser = do
       { _options_ghc = [ optionsGhc & List.unwords & CmdArgs.splitArgs | not $ null optionsGhc ]
       }
     , _conf_roundtrip_exactprint_only  = wrapLast $ falseToNothing roundtripOnly
+    , _conf_disable_formatting         = wrapLast $ falseToNothing disableFormatting
     , _conf_obfuscate                  = wrapLast $ falseToNothing obfuscate
     }
  where

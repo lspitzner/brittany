@@ -160,6 +160,12 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
       Butcher.addCmd "-disable-next-declaration" disableNextDecl
       Butcher.addCmd "-Disable-Next-Declaration" disableNextDecl
       Butcher.addCmd "-DISABLE-NEXT-DECLARATION" disableNextDecl
+      let disableFormatting = do
+            Butcher.addCmdImpl
+              ( InlineConfigTargetModule
+              , mempty { _conf_disable_formatting = pure $ pure True }
+              )
+      Butcher.addCmd "-disable" disableFormatting
       Butcher.addCmd "@" $ do
         -- Butcher.addCmd "module" $ do
         --   conf <- configParser
@@ -266,38 +272,47 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
   (inlineConf, perItemConf) <-
     either (throwE . (: []) . uncurry ErrorMacroConfig) pure
       $ extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource)
-  let moduleConfig = cZipWith fromOptionIdentity config inlineConf
-  (errsWarns, outputTextL) <- do
-    let omitCheck =
-          moduleConfig
-            & _conf_errorHandling
-            & _econf_omit_output_valid_check
-            & confUnpack
-    (ews, outRaw) <- if hasCPP || omitCheck
-      then return $ pPrintModule moduleConfig perItemConf anns parsedSource
-      else lift
-        $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
-    let hackF s = fromMaybe s
-          $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
-    pure $ if hackAroundIncludes
-      then
-        ( ews
-        , TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn
-          (TextL.pack "\n")
-          outRaw
-        )
-      else (ews, outRaw)
-  let customErrOrder ErrorInput{}         = 4
-      customErrOrder LayoutWarning{}      = 0 :: Int
-      customErrOrder ErrorOutputCheck{}   = 1
-      customErrOrder ErrorUnusedComment{} = 2
-      customErrOrder ErrorUnknownNode{}   = 3
-      customErrOrder ErrorMacroConfig{}   = 5
-  let hasErrors =
-        case moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack of
-          False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
-          True  -> not $ null errsWarns
-  if hasErrors then throwE $ errsWarns else pure $ TextL.toStrict outputTextL
+  let moduleConfig      = cZipWith fromOptionIdentity config inlineConf
+  let disableFormatting = moduleConfig & _conf_disable_formatting & confUnpack
+  if disableFormatting
+    then do
+      return inputText
+    else do
+      (errsWarns, outputTextL) <- do
+        let omitCheck =
+              moduleConfig
+                & _conf_errorHandling
+                & _econf_omit_output_valid_check
+                & confUnpack
+        (ews, outRaw) <- if hasCPP || omitCheck
+          then return $ pPrintModule moduleConfig perItemConf anns parsedSource
+          else lift
+            $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
+        let hackF s = fromMaybe s
+              $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
+        pure $ if hackAroundIncludes
+          then
+            ( ews
+            , TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn
+              (TextL.pack "\n")
+              outRaw
+            )
+          else (ews, outRaw)
+      let customErrOrder ErrorInput{}         = 4
+          customErrOrder LayoutWarning{}      = 0 :: Int
+          customErrOrder ErrorOutputCheck{}   = 1
+          customErrOrder ErrorUnusedComment{} = 2
+          customErrOrder ErrorUnknownNode{}   = 3
+          customErrOrder ErrorMacroConfig{}   = 5
+      let hasErrors =
+            case
+                moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack
+              of
+                False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
+                True  -> not $ null errsWarns
+      if hasErrors
+        then throwE $ errsWarns
+        else pure $ TextL.toStrict outputTextL
 
 
 
@@ -459,6 +474,7 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
           $ mconcat (catMaybes (mBindingConfs ++ [mDeclConf]))
 
     let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
+    when exactprintOnly $ mTell $ Text.Builder.fromText $ Text.pack "abc"
     toLocal config' filteredAnns $ do
       bd <- if exactprintOnly
         then briDocMToPPM $ briDocByExactNoComment decl

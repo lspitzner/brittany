@@ -343,11 +343,16 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
         when (config & _conf_debug & _dconf_dump_ast_full & confUnpack) $ do
           let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
           trace ("---- ast ----\n" ++ show val) $ return ()
-        (errsWarns, outSText) <- do
-          if exactprintOnly
-            then do
-              pure ([], Text.pack $ ExactPrint.exactPrint parsedSource anns)
-            else do
+        let disableFormatting =
+              moduleConf & _conf_disable_formatting & confUnpack
+        (errsWarns, outSText, hasChanges) <- do
+          if
+            | disableFormatting -> do
+              pure ([], originalContents, False)
+            | exactprintOnly -> do
+              let r = Text.pack $ ExactPrint.exactPrint parsedSource anns
+              pure ([], r, r /= originalContents)
+            | otherwise -> do
               let omitCheck =
                     moduleConf
                       &  _conf_errorHandling
@@ -372,7 +377,7 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               out' <- if moduleConf & _conf_obfuscate & confUnpack
                 then lift $ obfuscate out
                 else pure out
-              pure $ (ews, out')
+              pure $ (ews, out', out' /= originalContents)
         let customErrOrder ErrorInput{}         = 4
             customErrOrder LayoutWarning{}      = -1 :: Int
             customErrOrder ErrorOutputCheck{}   = 1
@@ -440,7 +445,6 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               & confUnpack
           shouldOutput = not suppressOutput && (not hasErrors || outputOnErrs)
 
-        let noChanges = outSText == originalContents
         when shouldOutput
           $ addTraceSep (_conf_debug config)
           $ case outputPathM of
@@ -448,11 +452,11 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               Just p  -> liftIO $ do
                 let isIdentical = case inputPathM of
                       Nothing -> False
-                      Just _  -> noChanges
+                      Just _  -> not hasChanges
                 unless isIdentical $ Text.IO.writeFile p $ outSText
 
         when hasErrors $ ExceptT.throwE 70
-        return (if noChanges then NoChanges else Changes)
+        return (if hasChanges then Changes else NoChanges)
  where
   addTraceSep conf =
     if or
