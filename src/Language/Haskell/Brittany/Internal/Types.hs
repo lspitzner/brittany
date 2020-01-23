@@ -215,7 +215,10 @@ data BrIndent = BrIndentNone
               | BrIndentSpecial Int
   deriving (Eq, Ord, Typeable, Data.Data.Data, Show)
 
-type ToBriDocM = MultiRWSS.MultiRWS '[Config, Anns] '[[BrittanyError], Seq String] '[NodeAllocIndex]
+type ToBriDocM = MultiRWSS.MultiRWS
+                   '[Config, Anns] -- reader
+                   '[[BrittanyError], Seq String] -- writer
+                   '[NodeAllocIndex] -- state
 
 type ToBriDoc (sym :: * -> *) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
 type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
