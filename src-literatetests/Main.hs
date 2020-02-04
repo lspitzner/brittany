@@ -16,8 +16,6 @@ import           Test.Hspec.Runner              ( hspecWith
                                                 , configConcurrentJobs
                                                 )
 
-import           NeatInterpolation
-
 import qualified Text.Parsec                   as Parsec
 import           Text.Parsec.Text               ( Parser )
 

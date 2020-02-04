@@ -8,7 +8,7 @@ module TestUtils where
 
 import Test.Hspec
 
-import NeatInterpolation
+-- import NeatInterpolation
 
 import Language.Haskell.Brittany.Internal
 
