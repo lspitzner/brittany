@@ -474,7 +474,6 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
           $ mconcat (catMaybes (mBindingConfs ++ [mDeclConf]))
 
     let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
-    when exactprintOnly $ mTell $ Text.Builder.fromText $ Text.pack "abc"
     toLocal config' filteredAnns $ do
       bd <- if exactprintOnly
         then briDocMToPPM $ briDocByExactNoComment decl
