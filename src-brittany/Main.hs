@@ -169,6 +169,7 @@ mainCmdParser helpDesc = do
       (PP.vcat
         [ PP.text "check for changes but do not write them out"
         , PP.text "exits with code 0 if no changes necessary, 1 otherwise"
+        , PP.text "and print file path(s) of files that have changes to stdout"
         ]
       )
     )
@@ -230,10 +231,9 @@ mainCmdParser helpDesc = do
       $ trace (showConfigYaml config)
       $ return ()
 
-    results <- zipWithM
-      (coreIO putStrErrLn config (suppressOutput || checkMode))
-      inputPaths
-      outputPaths
+    results <- zipWithM (coreIO putStrErrLn config suppressOutput checkMode)
+                        inputPaths
+                        outputPaths
 
     if checkMode
       then when (any (== Changes) (Data.Either.rights results))
@@ -256,10 +256,11 @@ coreIO
   -> Config -- ^ global program config.
   -> Bool   -- ^ whether to supress output (to stdout). Purely IO flag, so
             -- currently not part of program config.
+  -> Bool   -- ^ whether we are (just) in check mode.
   -> Maybe FilePath.FilePath -- ^ input filepath; stdin if Nothing.
   -> Maybe FilePath.FilePath -- ^ output filepath; stdout if Nothing.
   -> IO (Either Int ChangeStatus)      -- ^ Either an errorNo, or the change status.
-coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
+coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
   ExceptT.runExceptT $ do
     let putErrorLn = liftIO . putErrorLnIO :: String -> ExceptT.ExceptT e IO ()
     let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
@@ -397,7 +398,8 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
             (ErrorInput str : _) -> do
               putErrorLn $ "ERROR: parse error: " ++ str
             uns@(ErrorUnknownNode{} : _) -> do
-              putErrorLn $ "WARNING: encountered unknown syntactical constructs:"
+              putErrorLn
+                $ "WARNING: encountered unknown syntactical constructs:"
               uns `forM_` \case
                 ErrorUnknownNode str ast@(L loc _) -> do
                   putErrorLn $ "  " <> str <> " at " <> showSDocUnsafe (ppr loc)
@@ -410,7 +412,8 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
                     $ do
                         putErrorLn $ "  " ++ show (astToDoc ast)
                 _ -> error "cannot happen (TM)"
-              putErrorLn "  -> falling back on exactprint for this element of the module"
+              putErrorLn
+                "  -> falling back on exactprint for this element of the module"
             warns@(LayoutWarning{} : _) -> do
               putErrorLn $ "WARNINGS:"
               warns `forM_` \case
@@ -443,7 +446,10 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
               & _conf_errorHandling
               & _econf_produceOutputOnErrors
               & confUnpack
-          shouldOutput = not suppressOutput && (not hasErrors || outputOnErrs)
+          shouldOutput =
+            not suppressOutput
+              && not checkMode
+              && (not hasErrors || outputOnErrs)
 
         when shouldOutput
           $ addTraceSep (_conf_debug config)
@@ -454,6 +460,10 @@ coreIO putErrorLnIO config suppressOutput inputPathM outputPathM =
                       Nothing -> False
                       Just _  -> not hasChanges
                 unless isIdentical $ Text.IO.writeFile p $ outSText
+
+        when (checkMode && hasChanges) $ case inputPathM of
+          Nothing -> pure ()
+          Just p -> liftIO $ putStrLn $ "formatting would modify: " ++ p
 
         when hasErrors $ ExceptT.throwE 70
         return (if hasChanges then Changes else NoChanges)
