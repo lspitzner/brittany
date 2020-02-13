@@ -824,3 +824,13 @@ foo =
   , ("xx", "xxxxx")
   , ("xx", "xx")
   ]
+
+#test issue 281
+
+module Main
+  ( DataTypeI
+  , DataTypeII(DataConstructor)
+    -- * Haddock heading
+  , name
+  )
+where

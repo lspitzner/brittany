@@ -65,29 +65,36 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
 #else
   IEThingWith x _ ns _ -> do
 #endif
-    hasComments <- hasAnyCommentsBelow lie
+    hasComments <- orM
+      ( hasCommentsBetween lie AnnOpenP AnnCloseP
+      : hasAnyCommentsBelow x
+      : map hasAnyCommentsBelow ns
+      )
     runFilteredAlternative $ do
       addAlternativeCond (not hasComments)
         $  docSeq
         $  [layoutWrapped lie x, docLit $ Text.pack "("]
         ++ intersperse docCommaSep (map nameDoc ns)
         ++ [docParenR]
-      addAlternative $ docAddBaseY BrIndentRegular $ docPar
-        (layoutWrapped lie x)
-        (layoutItems (splitFirstLast ns))
+      addAlternative
+        $ docWrapNodeRest lie
+        $ docAddBaseY BrIndentRegular
+        $ docPar
+            (layoutWrapped lie x)
+            (layoutItems (splitFirstLast ns))
    where
     nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
     layoutItem n = docSeq [docCommaSep, docWrapNode n $ nameDoc n]
     layoutItems FirstLastEmpty = docSetBaseY $ docLines
-      [docSeq [docParenLSep, docWrapNodeRest lie docEmpty], docParenR]
+      [docSeq [docParenLSep, docNodeAnnKW lie (Just AnnOpenP) docEmpty], docParenR]
     layoutItems (FirstLastSingleton n) = docSetBaseY $ docLines
-      [docSeq [docParenLSep, docWrapNodeRest lie $ nameDoc n], docParenR]
+      [docSeq [docParenLSep, docNodeAnnKW lie (Just AnnOpenP) $ nameDoc n], docParenR]
     layoutItems (FirstLast n1 nMs nN) =
       docSetBaseY
         $  docLines
         $  [docSeq [docParenLSep, docWrapNode n1 $ nameDoc n1]]
         ++ map layoutItem nMs
-        ++ [docSeq [docCommaSep, docWrapNodeRest lie $ nameDoc nN], docParenR]
+        ++ [docSeq [docCommaSep, docNodeAnnKW lie (Just AnnOpenP) $ nameDoc nN], docParenR]
 #if MIN_VERSION_ghc(8,6,0)
   IEModuleContents _ n -> docSeq
 #else
