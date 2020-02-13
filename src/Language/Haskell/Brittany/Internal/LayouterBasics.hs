@@ -66,6 +66,7 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , allocateNode
   , docSharedWrapper
   , hasAnyCommentsBelow
+  , hasCommentsBetween
   , hasAnyCommentsConnected
   , hasAnyCommentsPrior
   , hasAnyRegularCommentsConnected
@@ -298,6 +299,25 @@ hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) =
   List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
     <$> astConnectedComments ast
+
+hasCommentsBetween
+  :: Data ast
+  => GHC.Located ast
+  -> AnnKeywordId
+  -> AnnKeywordId
+  -> ToBriDocM Bool
+hasCommentsBetween ast leftKey rightKey = do
+  mAnn <- astAnn ast
+  let go1 []         = False
+      go1 ((ExactPrint.G kw, _dp) : rest) | kw == leftKey = go2 rest
+      go1 (_ : rest) = go1 rest
+      go2 []         = False
+      go2 ((ExactPrint.AnnComment _, _dp) : _rest) = True
+      go2 ((ExactPrint.G kw, _dp) : _rest) | kw == rightKey = False
+      go2 (_ : rest) = go2 rest
+  case mAnn of
+    Nothing  -> pure False
+    Just ann -> pure $ go1 $ ExactPrint.annsDP ann
 
 -- | True if there are any comments that are connected to any node below (in AST
 --   sense) the given node

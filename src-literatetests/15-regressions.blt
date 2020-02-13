@@ -802,3 +802,25 @@ zItazySunefp twgq nlyo lwojjoBiecao =
 #test module initial comment
 -- test
 module MyModule where
+
+#test issue 231
+
+foo =
+  [ ("xxx", "xx")
+  , --
+    ("xx" , "xx")
+    --
+  , ("xx" , "xxxxx")
+  , ("xx" , "xx")
+  ]
+
+#test issue 231 not
+
+foo =
+  [ ("xx", "xx")
+  , ( "xx" --
+    , "xx"
+    )
+  , ("xx", "xxxxx")
+  , ("xx", "xx")
+  ]

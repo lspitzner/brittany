@@ -528,7 +528,10 @@ layoutExpr lexpr@(L _ expr) = do
       argDocs <- forM argExprs
         $ docSharedWrapper
         $ \(arg, exprM) -> docWrapNode arg $ maybe docEmpty layoutExpr exprM
-      hasComments <- hasAnyCommentsBelow lexpr
+      hasComments <- orM
+        ( hasCommentsBetween lexpr  AnnOpenP AnnCloseP
+        : map hasAnyCommentsBelow args
+        )
       let (openLit, closeLit) = case boxity of
             Boxed   -> (docLit $ Text.pack "(", docLit $ Text.pack ")")
             Unboxed -> (docParenHashLSep, docParenHashRSep)
