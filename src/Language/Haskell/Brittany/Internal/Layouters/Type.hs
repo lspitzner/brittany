@@ -14,6 +14,10 @@ where
 import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Utils
+                                                ( splitFirstLast
+                                                , FirstLastView(..)
+                                                )
 
 import           GHC ( runGhc
                      , GenLocated(L)
@@ -693,12 +697,48 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsExplicitListTy _ typs -> do
 #endif
     typDocs <- docSharedWrapper layoutType `mapM` typs
+    hasComments <- hasAnyCommentsBelow ltype
+    let specialCommaSep = appSep $ docLit $ Text.pack " ,"
     docAlt
       [ docSeq
       $  [docLit $ Text.pack "'["]
-      ++ List.intersperse docCommaSep typDocs
+      ++ List.intersperse specialCommaSep (docForceSingleline <$> typDocs)
       ++ [docLit $ Text.pack "]"]
-      -- TODO
+      , case splitFirstLast typDocs of
+        FirstLastEmpty -> docSeq
+          [ docLit $ Text.pack "'["
+          , docNodeAnnKW ltype (Just AnnOpenS) $ docLit $ Text.pack "]"
+          ]
+        FirstLastSingleton e -> docAlt
+          [ docSeq
+            [ docLit $ Text.pack "'["
+            , docNodeAnnKW ltype (Just AnnOpenS) $ docForceSingleline e
+            , docLit $ Text.pack "]"
+            ]
+          , docSetBaseY $ docLines
+            [ docSeq
+              [ docLit $ Text.pack "'["
+              , docSeparator
+              , docSetBaseY $ docNodeAnnKW ltype (Just AnnOpenS) e
+              ]
+            , docLit $ Text.pack " ]"
+            ]
+          ]
+        FirstLast e1 ems eN -> runFilteredAlternative $ do
+          addAlternativeCond (not hasComments)
+            $  docSeq
+            $  [docLit $ Text.pack "'["]
+            ++ List.intersperse specialCommaSep (docForceSingleline <$> (e1:ems ++ [docNodeAnnKW ltype (Just AnnOpenS) eN]))
+            ++ [docLit $ Text.pack " ]"]
+          addAlternative $
+            let
+              start = docCols ColList
+                        [appSep $ docLit $ Text.pack "'[", e1]
+              linesM = ems <&> \d ->
+                      docCols ColList [specialCommaSep, d]
+              lineN = docCols ColList [specialCommaSep, docNodeAnnKW ltype (Just AnnOpenS) eN]
+              end   = docLit $ Text.pack " ]"
+            in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
       ]
   HsExplicitTupleTy{} -> -- TODO
     briDocByExactInlineOnly "HsExplicitTupleTy{}" ltype
