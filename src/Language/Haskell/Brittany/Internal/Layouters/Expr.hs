@@ -1226,7 +1226,7 @@ recordExpression dotdot indentPolicy lexpr nameDoc rFs@(rF1:rFr) = do
     --           }
     addAlternativeCond (indentPolicy == IndentPolicyFree)
       $ docSeq
-      [ docNodeAnnKW lexpr Nothing $ appSep nameDoc
+      [ docNodeAnnKW lexpr Nothing $ docForceSingleline $ appSep nameDoc
       , docSetBaseY $ docLines $ let
           line1 = docCols ColRec
             [ appSep $ docLit $ Text.pack "{"
