@@ -1037,6 +1037,7 @@ layoutClsInst lcid@(L _ cid) = docLines
          | otherwise       -> st : go lineR
     isTypeOrData t' =
       (Text.pack "type" `Text.isPrefixOf` t')
+        || (Text.pack "newtype" `Text.isPrefixOf` t')
         || (Text.pack "data" `Text.isPrefixOf` t')
 
 
