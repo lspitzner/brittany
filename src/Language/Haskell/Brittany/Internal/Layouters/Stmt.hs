@@ -51,7 +51,10 @@ layoutStmt lstmt@(L _ stmt) = do
         [ docCols
           ColBindStmt
           [ appSep patDoc
-          , docSeq [appSep $ docLit $ Text.pack "<-", docForceParSpacing expDoc]
+          , docSeq
+            [ appSep $ docLit $ Text.pack "<-"
+            , docAddBaseY BrIndentRegular $ docForceParSpacing expDoc
+            ]
           ]
         , docCols
           ColBindStmt

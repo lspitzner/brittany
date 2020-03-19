@@ -534,7 +534,9 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
                (ColBindingLine alignmentToken)
                [ docSeq (patPartInline ++ [guardPart])
                , docSeq
-                 [appSep $ return binderDoc, docForceParSpacing $ return body]
+                 [ appSep $ return binderDoc
+                 , docForceParSpacing $ docAddBaseY BrIndentRegular $ return body
+                 ]
                ]
              ]
           ++ wherePartMultiLine
