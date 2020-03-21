@@ -753,16 +753,16 @@ layoutPatSynBind name patSynDetails patDir rpat = do
       --   ..
       --   ..
       docAddBaseY BrIndentRegular $ docSeq $
-          [ patDoc
-          , docSeparator
-          , layoutLPatSyn name patSynDetails
-          , docSeparator
-          , binderDoc
-          , docSeparator
-          , body
-          ] ++ case mWhereDocs of
-              Just ds -> [docSeparator, docPar whereDoc (docSeq ds)]
-              Nothing -> []
+        [ patDoc
+        , docSeparator
+        , layoutLPatSyn name patSynDetails
+        , docSeparator
+        , binderDoc
+        , docSeparator
+        , body
+        ] ++ case mWhereDocs of
+            Just ds -> [docSeparator, docPar whereDoc (docLines ds)]
+            Nothing -> []
 
     addAlternative $
       -- pattern .. =
@@ -774,12 +774,10 @@ layoutPatSynBind name patSynDetails patDir rpat = do
       docAddBaseY BrIndentRegular $ docPar
         (docSeq $ appSep <$> [ patDoc, layoutLPatSyn name patSynDetails, binderDoc])
         (docLines $
-          [ docSeq $ body : case mWhereDocs of
-            Just _ -> [docSeparator, whereDoc]
-            Nothing -> []
-          ] <> case mWhereDocs of
-              Just x -> [docSeq x]
-              Nothing -> []
+          case mWhereDocs of
+            Nothing -> [body]
+            Just ds ->
+              [ docSeq [body, docSeparator, whereDoc] ] ++ ds
         )
 
 -- | Helper method for the left hand side of a pattern synonym
