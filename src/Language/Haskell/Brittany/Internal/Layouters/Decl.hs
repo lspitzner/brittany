@@ -1,5 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Decl
   ( layoutDecl
@@ -746,28 +749,38 @@ layoutPatSynBind name patSynDetails patDir rpat = do
   mWhereDocs <- layoutPatSynWhere patDir
   runFilteredAlternative $ do
     addAlternative $
-      docLines $
-        [ docSeq $ fmap appSep
+      -- pattern .. where
+      --   ..
+      --   ..
+      docAddBaseY BrIndentRegular $ docSeq $
           [ patDoc
+          , docSeparator
           , layoutLPatSyn name patSynDetails
-          , binderDoc, body]
-          <> case mWhereDocs of
-              Just _ -> [whereDoc]
+          , docSeparator
+          , binderDoc
+          , docSeparator
+          , body
+          ] ++ case mWhereDocs of
+              Just ds -> [docSeparator, docPar whereDoc (docSeq ds)]
               Nothing -> []
-        ] <> case mWhereDocs of
-             Just x -> [docEnsureIndent BrIndentRegular . docSeq $ fmap pure x]
-             Nothing -> []
 
     addAlternative $
-      docLines $
-        [ docSeq $ appSep <$> [ patDoc, layoutLPatSyn name patSynDetails, binderDoc]
-        , docEnsureIndent BrIndentRegular . docSeq
-          $ appSep body : case mWhereDocs of
-            Just _ -> [whereDoc]
+      -- pattern .. =
+      --   ..
+      -- pattern .. <-
+      --   .. where
+      --   ..
+      --   ..
+      docAddBaseY BrIndentRegular $ docPar
+        (docSeq $ appSep <$> [ patDoc, layoutLPatSyn name patSynDetails, binderDoc])
+        (docLines $
+          [ docSeq $ body : case mWhereDocs of
+            Just _ -> [docSeparator, whereDoc]
             Nothing -> []
-        ] <> case mWhereDocs of
-            Just x -> [docEnsureIndent BrIndentRegular . docSeq $ fmap pure x]
-            Nothing -> []
+          ] <> case mWhereDocs of
+              Just x -> [docSeq x]
+              Nothing -> []
+        )
 
 -- | Helper method for the left hand side of a pattern synonym
 layoutLPatSyn
@@ -805,7 +818,7 @@ layoutLPatSyn name (RecordPatSyn recArgs) = do
 
 -- | Helper method to get the where clause from of explicitly bidirectional
 -- pattern synonyms
-layoutPatSynWhere :: HsPatSynDir GhcPs -> ToBriDocM (Maybe [BriDocNumbered])
+layoutPatSynWhere :: HsPatSynDir GhcPs -> ToBriDocM (Maybe [ToBriDocM BriDocNumbered])
 layoutPatSynWhere hs = case hs of
 #if MIN_VERSION_ghc(8,6,0)
   ExplicitBidirectional (MG _ (L _ lbinds) _) -> do
@@ -813,7 +826,7 @@ layoutPatSynWhere hs = case hs of
   ExplicitBidirectional (MG (L _ lbinds) _ _ _) -> do
 #endif
     binderDoc <- docLit $ Text.pack "="
-    Just <$> mapM (layoutPatternBind Nothing binderDoc) lbinds
+    Just <$> mapM (docSharedWrapper $ layoutPatternBind Nothing binderDoc) lbinds
   _ -> pure Nothing
 
 --------------------------------------------------------------------------------
