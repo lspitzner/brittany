@@ -747,23 +747,24 @@ layoutPatSynBind name patSynDetails patDir rpat = do
       body = colsWrapPat =<< layoutPat rpat
       whereDoc = docLit $ Text.pack "where"
   mWhereDocs <- layoutPatSynWhere patDir
+  headDoc <- fmap pure $ docSeq $
+    [ patDoc
+    , docSeparator
+    , layoutLPatSyn name patSynDetails
+    , docSeparator
+    , binderDoc
+    ]
   runFilteredAlternative $ do
     addAlternative $
       -- pattern .. where
       --   ..
       --   ..
-      docAddBaseY BrIndentRegular $ docSeq $
-        [ patDoc
-        , docSeparator
-        , layoutLPatSyn name patSynDetails
-        , docSeparator
-        , binderDoc
-        , docSeparator
-        , body
-        ] ++ case mWhereDocs of
+      docAddBaseY BrIndentRegular $ docSeq
+        (  [headDoc, docSeparator, body]
+        ++ case mWhereDocs of
             Just ds -> [docSeparator, docPar whereDoc (docLines ds)]
             Nothing -> []
-
+        )
     addAlternative $
       -- pattern .. =
       --   ..
@@ -772,12 +773,10 @@ layoutPatSynBind name patSynDetails patDir rpat = do
       --   ..
       --   ..
       docAddBaseY BrIndentRegular $ docPar
-        (docSeq $ appSep <$> [ patDoc, layoutLPatSyn name patSynDetails, binderDoc])
-        (docLines $
-          case mWhereDocs of
-            Nothing -> [body]
-            Just ds ->
-              [ docSeq [body, docSeparator, whereDoc] ] ++ ds
+        headDoc
+        (case mWhereDocs of
+          Nothing -> body
+          Just ds -> docLines ([ docSeq [body, docSeparator, whereDoc] ] ++ ds)
         )
 
 -- | Helper method for the left hand side of a pattern synonym
