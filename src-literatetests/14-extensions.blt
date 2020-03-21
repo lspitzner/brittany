@@ -126,7 +126,7 @@ pattern myLeftVariableName `MyInfixPatternMatcher` myRightVariableName <-
 pattern J :: a -> Maybe a
 pattern J x = Just x
 
-#test pattern synonym multiple cases
+#test pattern synonym bidirectional multiple cases
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 pattern Signed x <- (asSigned -> x) where
@@ -134,7 +134,16 @@ pattern Signed x <- (asSigned -> x) where
   Signed Zero    = 0
   Signed (Pos x) = x
 
-#test pattern synonym multiple cases with comments
+#test pattern synonym bidirectional multiple cases long
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+pattern Signed xxxxxxxxxxxxxxxxxxxxxxxx <-
+  (asSigned -> xxxxxxxxxxxxxxxxxxxxxxxx) where
+  Signed (Neg x) = -x
+  Signed Zero    = 0
+  Signed (Pos x) = x
+
+#test pattern synonym bidirectional multiple cases with comments
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 pattern Signed x <- (asSigned -> x) where
