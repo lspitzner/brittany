@@ -152,6 +152,7 @@ pattern Signed x <- (asSigned -> x) where
   Signed (Pos x) = x  -- positive comment
 
 #test Pattern synonym types multiple names
+#min-ghc 8.2
 {-# LANGUAGE PatternSynonyms #-}
 pattern J, K :: a -> Maybe a
 
