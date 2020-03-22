@@ -831,8 +831,7 @@ module Main
   , DataTypeII(DataConstructor)
     -- * Haddock heading
   , name
-  )
-where
+  ) where
 
 #test type level list
 

@@ -675,8 +675,7 @@ module Main
   , test7
   , test8
   , test9
-  )
-where
+  ) where
 
 #test exports-with-comments
 module Main
@@ -690,8 +689,7 @@ module Main
   -- Test 5
   , test5
   -- Test 6
-  )
-where
+  ) where
 
 #test simple-export-with-things
 module Main (Test(..)) where
@@ -913,8 +911,7 @@ module Test
   , test8
   , test9
   , test10
-  )
-where
+  ) where
 
 -- Test
 import Data.List (nub) -- Test
