@@ -1,5 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Decl
   ( layoutDecl
@@ -93,11 +96,11 @@ layoutDecl d@(L loc decl) = case decl of
 layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-  TypeSig _ names (HsWC _ (HsIB _ typ)) -> layoutNamesAndType names typ
+  TypeSig _ names (HsWC _ (HsIB _ typ)) -> layoutNamesAndType Nothing names typ
 #elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
-  TypeSig names (HsWC _ (HsIB _ typ _)) -> layoutNamesAndType names typ
+  TypeSig names (HsWC _ (HsIB _ typ _)) -> layoutNamesAndType Nothing names typ
 #else /* ghc-8.0 */
-  TypeSig names (HsIB _ (HsWC _ _ typ)) -> layoutNamesAndType names typ
+  TypeSig names (HsIB _ (HsWC _ _ typ)) -> layoutNamesAndType Nothing names typ
 #endif
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   InlineSig _ name (InlinePragma _ spec _arity phaseAct conlike) ->
@@ -121,15 +124,25 @@ layoutSig lsig@(L _loc sig) = case sig of
         <> nameStr
         <> Text.pack " #-}"
 #if MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
-  ClassOpSig _ False names (HsIB _ typ) -> layoutNamesAndType names typ
+  ClassOpSig _ False names (HsIB _ typ) -> layoutNamesAndType Nothing names typ
 #elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
-  ClassOpSig False names (HsIB _ typ _) -> layoutNamesAndType names typ
+  ClassOpSig False names (HsIB _ typ _) -> layoutNamesAndType Nothing names typ
 #else /* ghc-8.0 */
-  ClassOpSig False names (HsIB _ typ) -> layoutNamesAndType names typ
+  ClassOpSig False names (HsIB _ typ) -> layoutNamesAndType Nothing names typ
+#endif
+#if MIN_VERSION_ghc(8,6,0)
+  PatSynSig _ names (HsIB _ typ) -> layoutNamesAndType (Just "pattern") names typ
+#elif MIN_VERSION_ghc(8,2,0)
+  PatSynSig names (HsIB _ typ _) -> layoutNamesAndType (Just "pattern") names typ
+#else
+  PatSynSig name (HsIB _ typ) -> layoutNamesAndType (Just "pattern") [name] typ
 #endif
   _ -> briDocByExactNoComment lsig -- TODO
  where
-  layoutNamesAndType names typ = docWrapNode lsig $ do
+  layoutNamesAndType mKeyword names typ = docWrapNode lsig $ do
+    let keyDoc = case mKeyword of
+          Just key -> [appSep . docLit $ Text.pack key]
+          Nothing -> []
     nameStrs <- names `forM` lrdrNameToTextAnn
     let nameStr = Text.intercalate (Text.pack ", ") $ nameStrs
     typeDoc     <- docSharedWrapper layoutType typ
@@ -139,8 +152,8 @@ layoutSig lsig@(L _loc sig) = case sig of
       .>  _lconfig_hangingTypeSignature
       .>  confUnpack
     if shouldBeHanging
-      then docSeq
-        [ appSep $ docWrapNodeRest lsig $ docLit nameStr
+      then docSeq $
+        [ appSep $ docWrapNodeRest lsig $ docSeq $ keyDoc <> [docLit nameStr]
         , docSetBaseY $ docLines
           [ docCols
             ColTyOpPrefix
@@ -151,7 +164,7 @@ layoutSig lsig@(L _loc sig) = case sig of
         ]
       else layoutLhsAndType
         hasComments
-        (appSep . docWrapNodeRest lsig $ docLit nameStr)
+        (appSep . docWrapNodeRest lsig . docSeq $ keyDoc <> [docLit nameStr])
         "::"
         typeDoc
 
@@ -231,8 +244,18 @@ layoutBind lbind@(L _ bind) = case bind of
                                                             clauseDocs
                                                             mWhereArg
                                                             hasComments
+#if MIN_VERSION_ghc(8,8,0)
+  PatSynBind _ (PSB _ patID lpat rpat dir) -> do
+#elif MIN_VERSION_ghc(8,6,0)
+  PatSynBind _ (PSB _ patID lpat rpat dir) -> do
+#else
+  PatSynBind (PSB patID _ lpat rpat dir) -> do
+#endif
+    fmap Right $ docWrapNode lbind $ layoutPatSynBind patID
+                                                      lpat
+                                                      dir
+                                                      rpat
   _ -> Right <$> unknownNodeError "" lbind
-
 layoutIPBind :: ToBriDoc IPBind
 layoutIPBind lipbind@(L _ bind) = case bind of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
@@ -709,6 +732,99 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
          ]
       ++ wherePartMultiLine
 
+-- | Layout a pattern synonym binding
+layoutPatSynBind
+  :: Located (IdP GhcPs)
+  -> HsPatSynDetails (Located (IdP GhcPs))
+  -> HsPatSynDir GhcPs
+  -> LPat GhcPs
+  -> ToBriDocM BriDocNumbered
+layoutPatSynBind name patSynDetails patDir rpat = do
+  let patDoc = docLit $ Text.pack "pattern"
+      binderDoc = case patDir of
+        ImplicitBidirectional -> docLit $ Text.pack "="
+        _ -> docLit $ Text.pack "<-"
+      body = colsWrapPat =<< layoutPat rpat
+      whereDoc = docLit $ Text.pack "where"
+  mWhereDocs <- layoutPatSynWhere patDir
+  headDoc <- fmap pure $ docSeq $
+    [ patDoc
+    , docSeparator
+    , layoutLPatSyn name patSynDetails
+    , docSeparator
+    , binderDoc
+    ]
+  runFilteredAlternative $ do
+    addAlternative $
+      -- pattern .. where
+      --   ..
+      --   ..
+      docAddBaseY BrIndentRegular $ docSeq
+        (  [headDoc, docSeparator, body]
+        ++ case mWhereDocs of
+            Just ds -> [docSeparator, docPar whereDoc (docLines ds)]
+            Nothing -> []
+        )
+    addAlternative $
+      -- pattern .. =
+      --   ..
+      -- pattern .. <-
+      --   .. where
+      --   ..
+      --   ..
+      docAddBaseY BrIndentRegular $ docPar
+        headDoc
+        (case mWhereDocs of
+          Nothing -> body
+          Just ds -> docLines ([ docSeq [body, docSeparator, whereDoc] ] ++ ds)
+        )
+
+-- | Helper method for the left hand side of a pattern synonym
+layoutLPatSyn
+  :: Located (IdP GhcPs)
+  -> HsPatSynDetails (Located (IdP GhcPs))
+  -> ToBriDocM BriDocNumbered
+#if MIN_VERSION_ghc(8,4,0)
+layoutLPatSyn name (PrefixCon vars) = do
+#else
+layoutLPatSyn name (PrefixPatSyn vars) = do
+#endif
+  docName <- lrdrNameToTextAnn name
+  names <- mapM lrdrNameToTextAnn vars
+  docSeq . fmap appSep $ docLit docName : (docLit <$> names)
+#if MIN_VERSION_ghc(8,4,0)
+layoutLPatSyn name (InfixCon left right) = do
+#else
+layoutLPatSyn name (InfixPatSyn left right) = do
+#endif
+  leftDoc <- lrdrNameToTextAnn left
+  docName <- lrdrNameToTextAnn name
+  rightDoc <- lrdrNameToTextAnn right
+  docSeq . fmap (appSep . docLit) $ [leftDoc, docName, rightDoc]
+#if MIN_VERSION_ghc(8,4,0)
+layoutLPatSyn name (RecCon recArgs) = do
+#else
+layoutLPatSyn name (RecordPatSyn recArgs) = do
+#endif
+  docName <- lrdrNameToTextAnn name
+  args <- mapM (lrdrNameToTextAnn . recordPatSynSelectorId) recArgs
+  docSeq . fmap docLit
+    $  [docName, Text.pack " { " ]
+    <> intersperse (Text.pack ", ") args
+    <> [Text.pack " }"]
+
+-- | Helper method to get the where clause from of explicitly bidirectional
+-- pattern synonyms
+layoutPatSynWhere :: HsPatSynDir GhcPs -> ToBriDocM (Maybe [ToBriDocM BriDocNumbered])
+layoutPatSynWhere hs = case hs of
+#if MIN_VERSION_ghc(8,6,0)
+  ExplicitBidirectional (MG _ (L _ lbinds) _) -> do
+#else
+  ExplicitBidirectional (MG (L _ lbinds) _ _ _) -> do
+#endif
+    binderDoc <- docLit $ Text.pack "="
+    Just <$> mapM (docSharedWrapper $ layoutPatternBind Nothing binderDoc) lbinds
+  _ -> pure Nothing
 
 --------------------------------------------------------------------------------
 -- TyClDecl

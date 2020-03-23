@@ -83,6 +83,90 @@ import           Test                                     ( type (++)
                                                           )
 
 ###############################################################################
+## PatternSynonyms
+#test bidirectional pattern
+{-# LANGUAGE PatternSynonyms #-}
+pattern J x = Just x
+
+#test unidirection pattern
+{-# LANGUAGE PatternSynonyms #-}
+pattern F x <- (x, _)
+
+#test explicitly bidirectional pattern
+{-# LANGUAGE PatternSynonyms #-}
+pattern HeadC x <- x : xs where
+  HeadC x = [x]
+
+#test Multiple arguments
+{-# LANGUAGE PatternSynonyms #-}
+pattern Head2 x y <- x : y : xs where
+  Head2 x y = [x, y]
+
+#test Infix argument
+{-# LANGUAGE PatternSynonyms #-}
+pattern x :> y = [x, y]
+
+#test Record argument
+{-# LANGUAGE PatternSynonyms #-}
+pattern MyData { a, b, c } = [a, b, c]
+
+#test long pattern match
+{-# LANGUAGE PatternSynonyms #-}
+pattern myLongLeftVariableName `MyLongInfixPatternMatcher` myLongRightVariableName =
+  [myLongLeftVariableName, myLongRightVariableName]
+
+#test long explicitly bidirectional match
+{-# LANGUAGE PatternSynonyms #-}
+pattern myLeftVariableName `MyInfixPatternMatcher` myRightVariableName <-
+  [myLongLeftVariableName, myLongRightVariableName] where
+  MyInfixPatternMatcher x y = [x, x, y]
+
+#test Pattern synonym types 
+{-# LANGUAGE PatternSynonyms #-}
+pattern J :: a -> Maybe a
+pattern J x = Just x
+
+#test pattern synonym bidirectional multiple cases
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+pattern Signed x <- (asSigned -> x) where
+  Signed (Neg x) = -x
+  Signed Zero    = 0
+  Signed (Pos x) = x
+
+#test pattern synonym bidirectional multiple cases long
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+pattern Signed xxxxxxxxxxxxxxxxxxxxxxxx <-
+  (asSigned -> xxxxxxxxxxxxxxxxxxxxxxxx) where
+  Signed (Neg x) = -x
+  Signed Zero    = 0
+  Signed (Pos x) = x
+
+#test pattern synonym bidirectional multiple cases with comments
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+pattern Signed x <- (asSigned -> x) where
+  Signed (Neg x) = -x -- negative comment
+  Signed Zero    = 0  -- zero comment
+  Signed (Pos x) = x  -- positive comment
+
+#test Pattern synonym types multiple names
+#min-ghc 8.2
+{-# LANGUAGE PatternSynonyms #-}
+pattern J, K :: a -> Maybe a
+
+#test Pattern synonym type sig wrapped
+{-# LANGUAGE PatternSynonyms #-}
+pattern LongMatcher
+  :: longlongtypevar
+  -> longlongtypevar
+  -> longlongtypevar
+  -> Maybe [longlongtypevar]
+pattern LongMatcher x y z = Just [x, y, z]
+
+
+###############################################################################
 ## UnboxedTuples + MagicHash
 #test unboxed-tuple and vanilla names
 {-# LANGUAGE UnboxedTuples #-}
