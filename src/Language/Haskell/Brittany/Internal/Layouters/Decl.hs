@@ -72,7 +72,7 @@ layoutDecl d@(L loc decl) = case decl of
     Right n  -> return n
   TyClD _ tycl           -> withTransformedAnns d $ layoutTyCl (L loc tycl)
   InstD _ (TyFamInstD _ tfid) ->
-    withTransformedAnns d $ layoutTyFamInstDecl False (L loc tfid)
+    withTransformedAnns d $ layoutTyFamInstDecl False d tfid
   InstD _ (ClsInstD _ inst) ->
     withTransformedAnns d $ layoutClsInst (L loc inst)
   _ -> briDocByExactNoComment d
@@ -84,7 +84,7 @@ layoutDecl d@(L loc decl) = case decl of
     Right n  -> return n
   TyClD tycl -> withTransformedAnns d $ layoutTyCl (L loc tycl)
   InstD (TyFamInstD tfid) ->
-    withTransformedAnns d $ layoutTyFamInstDecl False (L loc tfid)
+    withTransformedAnns d $ layoutTyFamInstDecl False d tfid
   InstD (ClsInstD inst) -> withTransformedAnns d $ layoutClsInst (L loc inst)
   _                    -> briDocByExactNoComment d
 #endif
@@ -943,39 +943,39 @@ layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
 
 
 
-layoutTyFamInstDecl :: Bool -> ToBriDoc TyFamInstDecl
-layoutTyFamInstDecl inClass (L loc tfid) = do
+layoutTyFamInstDecl
+  :: Data.Data.Data a
+  => Bool
+  -> Located a
+  -> TyFamInstDecl GhcPs
+  -> ToBriDocM BriDocNumbered
+layoutTyFamInstDecl inClass outerNode tfid = do
   let
 #if MIN_VERSION_ghc(8,8,0)
-    linst = L loc (TyFamInstD NoExt tfid)
-    feqn@(FamEqn _ name bndrsMay pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    FamEqn _ name bndrsMay pats _fixity typ = hsib_body $ tfid_eqn tfid
     -- bndrsMay isJust e.g. with
     --   type instance forall a . MyType (Maybe a) = Either () a
-    lfeqn = L loc feqn
+    innerNode = outerNode
 #elif MIN_VERSION_ghc(8,6,0)
-    linst = L loc (TyFamInstD NoExt tfid)
-    feqn@(FamEqn _ name pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    FamEqn _ name pats _fixity typ = hsib_body $ tfid_eqn tfid
     bndrsMay = Nothing
-    lfeqn = L loc feqn
+    innerNode = outerNode
 #elif MIN_VERSION_ghc(8,4,0)
-    linst = L loc (TyFamInstD tfid)
-    feqn@(FamEqn name pats _fixity typ) = hsib_body $ tfid_eqn tfid
+    FamEqn name pats _fixity typ = hsib_body $ tfid_eqn tfid
     bndrsMay = Nothing
-    lfeqn = L loc feqn
+    innerNode = outerNode
 #elif MIN_VERSION_ghc(8,2,0)
-    linst = L loc (TyFamInstD tfid)
-    lfeqn@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
+    innerNode@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
     bndrsMay = Nothing
     pats = hsib_body boundPats
 #else
-    linst = L loc (TyFamInstD tfid)
-    lfeqn@(L _ (TyFamEqn name boundPats typ)) = tfid_eqn tfid
+    innerNode@(L _ (TyFamEqn name boundPats typ)) = tfid_eqn tfid
     bndrsMay = Nothing
     pats = hsib_body boundPats
 #endif
-  docWrapNodePrior linst $ do
+  docWrapNodePrior outerNode $ do
     nameStr   <- lrdrNameToTextAnn name
-    needsParens <- hasAnnKeyword lfeqn AnnOpenP
+    needsParens <- hasAnnKeyword outerNode AnnOpenP
     let
       instanceDoc = if inClass
         then docLit $ Text.pack "type"
@@ -989,9 +989,7 @@ layoutTyFamInstDecl inClass (L loc tfid) = do
           ++ processTyVarBndrsSingleline bndrDocs
           )
       lhs =
-        docWrapNode lfeqn
-          .  appSep
-          .  docWrapNodeRest linst
+        docWrapNode innerNode
           .  docSeq
           $  [appSep instanceDoc]
           ++ [ makeForallDoc foralls | Just foralls <- [bndrsMay] ]
@@ -1000,8 +998,8 @@ layoutTyFamInstDecl inClass (L loc tfid) = do
           ++ intersperse docSeparator (layoutHsTyPats pats)
           ++ [ docParenR | needsParens ]
     hasComments <- (||)
-      <$> hasAnyRegularCommentsConnected lfeqn
-      <*> hasAnyRegularCommentsRest linst
+      <$> hasAnyRegularCommentsConnected outerNode
+      <*> hasAnyRegularCommentsRest innerNode
     typeDoc <- docSharedWrapper layoutType typ
     layoutLhsAndType hasComments lhs "=" typeDoc
 
@@ -1087,8 +1085,8 @@ layoutClsInst lcid@(L _ cid) = docLines
 
   layoutAndLocateTyFamInsts
     :: ToBriDocC (TyFamInstDecl GhcPs) (Located BriDocNumbered)
-  layoutAndLocateTyFamInsts ltfid@(L loc _) =
-    L loc <$> layoutTyFamInstDecl True ltfid
+  layoutAndLocateTyFamInsts ltfid@(L loc tfid) =
+    L loc <$> layoutTyFamInstDecl True ltfid tfid
 
   layoutAndLocateDataFamInsts
     :: ToBriDocC (DataFamInstDecl GhcPs) (Located BriDocNumbered)
@@ -1170,13 +1168,12 @@ layoutLhsAndType
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM BriDocNumbered
 layoutLhsAndType hasComments lhs sep typeDoc = do
-  let sepDoc = appSep . docLit $ Text.pack sep
   runFilteredAlternative $ do
     -- (separators probably are "=" or "::")
     -- lhs = type
     -- lhs :: type
-    addAlternativeCond (not hasComments)
-      $ docSeq [lhs, sepDoc, docForceSingleline typeDoc]
+    addAlternativeCond (not hasComments) $ docSeq
+      [lhs, docSeparator, docLitS sep, docSeparator, docForceSingleline typeDoc]
     -- lhs
     --   :: typeA
     --   -> typeB
@@ -1185,4 +1182,6 @@ layoutLhsAndType hasComments lhs sep typeDoc = do
     --   -> typeB
     addAlternative $ docAddBaseY BrIndentRegular $ docPar lhs $ docCols
       ColTyOpPrefix
-      [sepDoc, docAddBaseY (BrIndentSpecial (length sep + 1)) typeDoc]
+      [ appSep $ docLitS sep
+      , docAddBaseY (BrIndentSpecial (length sep + 1)) typeDoc
+      ]
