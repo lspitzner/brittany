@@ -3,7 +3,6 @@
 module Language.Haskell.Brittany.Internal.ExactPrintUtils
   ( parseModule
   , parseModuleFromString
-  , commentAnnFixTransform
   , commentAnnFixTransformGlob
   , extractToplevelAnns
   , foldedAnnKeys
@@ -189,54 +188,56 @@ commentAnnFixTransformGlob ast = do
       ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
   
 
+-- TODO: this is unused by now, but it contains one detail that
+--       commentAnnFixTransformGlob does not include: Moving of comments for
+--       "RecordUpd"s.
+-- commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
+-- commentAnnFixTransform modul = SYB.everything (>>) genF modul
+--  where
+--   genF :: Data.Data.Data a => a -> ExactPrint.Transform ()
+--   genF = (\_ -> return ()) `SYB.extQ` exprF
+--   exprF :: Located (HsExpr GhcPs) -> ExactPrint.Transform ()
+--   exprF lexpr@(L _ expr) = case expr of
+-- #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+--     RecordCon _ _ (HsRecFields fs@(_:_) Nothing) ->
+-- #else
+--     RecordCon _ _ _ (HsRecFields fs@(_:_) Nothing) ->
+-- #endif
+--       moveTrailingComments lexpr (List.last fs)
+-- #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+--     RecordUpd _ _e fs@(_:_) ->
+-- #else
+--     RecordUpd _e fs@(_:_) _cons _ _ _ ->
+-- #endif
+--       moveTrailingComments lexpr (List.last fs)
+--     _ -> return ()
 
-commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
-commentAnnFixTransform modul = SYB.everything (>>) genF modul
- where
-  genF :: Data.Data.Data a => a -> ExactPrint.Transform ()
-  genF = (\_ -> return ()) `SYB.extQ` exprF
-  exprF :: Located (HsExpr GhcPs) -> ExactPrint.Transform ()
-  exprF lexpr@(L _ expr) = case expr of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-    RecordCon _ _ (HsRecFields fs@(_:_) Nothing) ->
-#else
-    RecordCon _ _ _ (HsRecFields fs@(_:_) Nothing) ->
-#endif
-      moveTrailingComments lexpr (List.last fs)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-    RecordUpd _ _e fs@(_:_) ->
-#else
-    RecordUpd _e fs@(_:_) _cons _ _ _ ->
-#endif
-      moveTrailingComments lexpr (List.last fs)
-    _ -> return ()
-
-moveTrailingComments :: (Data.Data.Data a,Data.Data.Data b)
-                     => GHC.Located a -> GHC.Located b -> ExactPrint.Transform ()
-moveTrailingComments astFrom astTo = do
-  let
-    k1 = ExactPrint.mkAnnKey astFrom
-    k2 = ExactPrint.mkAnnKey astTo
-    moveComments ans = ans'
-      where
-        an1 = Data.Maybe.fromJust $ Map.lookup k1 ans
-        an2 = Data.Maybe.fromJust $ Map.lookup k2 ans
-        cs1f = ExactPrint.annFollowingComments an1
-        cs2f = ExactPrint.annFollowingComments an2
-        (comments, nonComments) = flip breakEither (ExactPrint.annsDP an1)
-             $ \case
-               (ExactPrint.AnnComment com, dp) -> Left (com, dp)
-               x -> Right x
-        an1' = an1
-          { ExactPrint.annsDP               = nonComments
-          , ExactPrint.annFollowingComments = []
-          }
-        an2' = an2
-          { ExactPrint.annFollowingComments = cs1f ++ cs2f ++ comments
-          }
-        ans' = Map.insert k1 an1' $ Map.insert k2 an2' ans
-
-  ExactPrint.modifyAnnsT moveComments
+-- moveTrailingComments :: (Data.Data.Data a,Data.Data.Data b)
+--                      => GHC.Located a -> GHC.Located b -> ExactPrint.Transform ()
+-- moveTrailingComments astFrom astTo = do
+--   let
+--     k1 = ExactPrint.mkAnnKey astFrom
+--     k2 = ExactPrint.mkAnnKey astTo
+--     moveComments ans = ans'
+--       where
+--         an1 = Data.Maybe.fromJust $ Map.lookup k1 ans
+--         an2 = Data.Maybe.fromJust $ Map.lookup k2 ans
+--         cs1f = ExactPrint.annFollowingComments an1
+--         cs2f = ExactPrint.annFollowingComments an2
+--         (comments, nonComments) = flip breakEither (ExactPrint.annsDP an1)
+--              $ \case
+--                (ExactPrint.AnnComment com, dp) -> Left (com, dp)
+--                x -> Right x
+--         an1' = an1
+--           { ExactPrint.annsDP               = nonComments
+--           , ExactPrint.annFollowingComments = []
+--           }
+--         an2' = an2
+--           { ExactPrint.annFollowingComments = cs1f ++ cs2f ++ comments
+--           }
+--         ans' = Map.insert k1 an1' $ Map.insert k2 an2' ans
+--
+--   ExactPrint.modifyAnnsT moveComments
 
 -- | split a set of annotations in a module into a map from top-level module
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
