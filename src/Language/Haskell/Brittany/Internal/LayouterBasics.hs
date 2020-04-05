@@ -73,6 +73,8 @@ module Language.Haskell.Brittany.Internal.LayouterBasics
   , hasAnyRegularCommentsRest
   , hasAnnKeywordComment
   , hasAnnKeyword
+  , astAnn
+  , allocNodeIndex
   )
 where
 
@@ -575,7 +577,8 @@ docSeparator = allocateNode BDFSeparator
 
 docAnnotationPrior
   :: AnnKey -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
-docAnnotationPrior annKey bdm = allocateNode . BDFAnnotationPrior annKey =<< bdm
+docAnnotationPrior annKey bdm =
+  allocateNode . BDFAnnotationPrior annKey =<< bdm
 
 docAnnotationKW
   :: AnnKey

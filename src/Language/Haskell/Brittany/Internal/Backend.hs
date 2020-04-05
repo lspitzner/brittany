@@ -156,7 +156,9 @@ layoutBriDocM = \case
   BDAnnotationPrior annKey bd -> do
     state <- mGet
     let m = _lstate_comments state
-    let allowMTEL = Data.Either.isRight (_lstate_curYOrAddNewline state)
+    let moveToExactLocationAction = case _lstate_curYOrAddNewline state of
+          Left{} -> pure ()
+          Right{} -> moveToExactAnn annKey
     mAnn <- do
       let mAnn = ExactPrint.annPriorComments <$> Map.lookup annKey m
       mSet $ state
@@ -167,8 +169,8 @@ layoutBriDocM = \case
         }
       return mAnn
     case mAnn of
-      Nothing     -> when allowMTEL $ moveToExactAnn annKey
-      Just []     -> when allowMTEL $ moveToExactAnn annKey
+      Nothing     -> moveToExactLocationAction
+      Just []     -> moveToExactLocationAction
       Just priors -> do
         -- layoutResetSepSpace
         priors
@@ -184,7 +186,7 @@ layoutBriDocM = \case
                       -- layoutMoveToIndentCol y
                       layoutWriteAppendMultiline commentLines
           -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
-        when allowMTEL $ moveToExactAnn annKey
+        moveToExactLocationAction
     layoutBriDocM bd
   BDAnnotationKW annKey keyword bd -> do
     layoutBriDocM bd
@@ -373,7 +375,7 @@ briDocIsMultiLine briDoc = rec briDoc
     BDSetParSpacing   bd                     -> rec bd
     BDForceParSpacing bd                     -> rec bd
     BDNonBottomSpacing _ bd                  -> rec bd
-    BDDebug _ bd                             -> rec bd
+    BDDebug            _ bd                  -> rec bd
 
 -- In theory
 -- =========
