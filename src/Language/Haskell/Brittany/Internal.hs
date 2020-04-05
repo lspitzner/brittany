@@ -645,24 +645,32 @@ layoutBriDoc briDoc = do
 
   anns :: ExactPrint.Anns <- mAsk
 
-  let state = LayoutState
-        { _lstate_baseYs           = [0]
-        , _lstate_curYOrAddNewline = Right 0 -- important that we dont use left
+  let state = LayoutState { _lstate_baseYs           = [0]
+                          , _lstate_curYOrAddNewline = Right 0 -- important that we dont use left
                                              -- here because moveToAnn stuff
                                              -- of the first node needs to do
                                              -- its thing properly.
-        , _lstate_indLevels        = [0]
-        , _lstate_indLevelLinger   = 0
-        , _lstate_comments         = anns
-        , _lstate_commentCol       = Nothing
-        , _lstate_addSepSpace      = Nothing
-        , _lstate_commentNewlines  = 0
-        }
+                          , _lstate_indLevels        = [0]
+                          , _lstate_indLevelLinger   = 0
+                          , _lstate_comments         = anns
+                          , _lstate_commentCol       = Nothing
+                          , _lstate_addSepSpace      = Nothing
+                          , _lstate_commentNewlines  = 0
+                          }
 
   state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'
 
   let remainingComments =
-        extractAllComments =<< Map.elems (_lstate_comments state')
+        [ c
+        | (ExactPrint.AnnKey _ con, elemAnns) <- Map.toList
+          (_lstate_comments state')
+          -- With the new import layouter, we manually process comments
+          -- without relying on the backend to consume the comments out of
+          -- the state/map. So they will end up here, and we need to ignore
+          -- them.
+        , ExactPrint.unConName con /= "ImportDecl"
+        , c <- extractAllComments elemAnns
+        ]
   remainingComments
     `forM_` (fst .> show .> ErrorUnusedComment .> (: []) .> mTell)
 
