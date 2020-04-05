@@ -647,10 +647,10 @@ layoutBriDoc briDoc = do
 
   let state = LayoutState
         { _lstate_baseYs           = [0]
-        , _lstate_curYOrAddNewline = Right 0 -- important that we use left here
-                                             -- because moveToAnn stuff of the
-                                             -- first node needs to do its
-                                             -- thing properly.
+        , _lstate_curYOrAddNewline = Right 0 -- important that we dont use left
+                                             -- here because moveToAnn stuff
+                                             -- of the first node needs to do
+                                             -- its thing properly.
         , _lstate_indLevels        = [0]
         , _lstate_indLevelLinger   = 0
         , _lstate_comments         = anns
