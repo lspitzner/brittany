@@ -1090,38 +1090,38 @@ import qualified Data.List                                ( )
 import           Data.List                                ( nub )
 
 #test several-elements
-import           Data.List                                ( nub
-                                                          , foldl'
+import           Data.List                                ( foldl'
                                                           , indexElem
+                                                          , nub
                                                           )
 
 #test a-ridiculous-amount-of-elements
 import           Test                                     ( Long
-                                                          , list
-                                                          , with
+                                                          , anymore
+                                                          , fit
                                                           , items
+                                                          , line
+                                                          , list
+                                                          , not
+                                                          , onA
+                                                          , quite
+                                                          , single
                                                           , that
                                                           , will
-                                                          , not
-                                                          , quite
-                                                          , fit
-                                                          , onA
-                                                          , single
-                                                          , line
-                                                          , anymore
+                                                          , with
                                                           )
 
 #test with-things
-import           Test                                     ( T
+import           Test                                     ( (+)
+                                                          , (:!)(..)
+                                                          , (:*)((:.), T7, t7)
+                                                          , (:.)
+                                                          , T
                                                           , T2()
                                                           , T3(..)
                                                           , T4(T4)
                                                           , T5(T5, t5)
                                                           , T6((<|>))
-                                                          , (+)
-                                                          , (:.)
-                                                          , (:.)(..)
-                                                          , (:.)(T7, (:.), t7)
                                                           )
 
 #test hiding
@@ -1145,56 +1145,55 @@ import           Prelude                                 as X
                                                           )
 
 #test long-module-name-simple
-import           TestJustShortEnoughModuleNameLikeThisOne ( )
 import           TestJustAbitToLongModuleNameLikeThisOneIs
                                                           ( )
+import           TestJustShortEnoughModuleNameLikeThisOne ( )
 
 #test long-module-name-as
-import           TestJustShortEnoughModuleNameLikeThisOn as T
 import           TestJustAbitToLongModuleNameLikeThisOneI
                                                          as T
+import           TestJustShortEnoughModuleNameLikeThisOn as T
 
 #test long-module-name-hiding
-import           TestJustShortEnoughModuleNameLike hiding ( )
 import           TestJustAbitToLongModuleNameLikeTh
                                                    hiding ( )
+import           TestJustShortEnoughModuleNameLike hiding ( )
 
 #test long-module-name-simple-items
 import           MoreThanSufficientlyLongModuleNameWithSome
-                                                          ( items
-                                                          , that
-                                                          , will
-                                                          , not
+                                                          ( compact
                                                           , fit
                                                           , inA
-                                                          , compact
+                                                          , items
                                                           , layout
+                                                          , not
+                                                          , that
+                                                          , will
                                                           )
 
 #test long-module-name-hiding-items
-import           TestJustShortEnoughModuleNameLike hiding ( abc
-                                                          , def
-                                                          , ghci
-                                                          , jklm
-                                                          )
 import           TestJustAbitToLongModuleNameLikeTh
                                                    hiding ( abc
                                                           , def
                                                           , ghci
                                                           , jklm
                                                           )
+import           TestJustShortEnoughModuleNameLike hiding ( abc
+                                                          , def
+                                                          , ghci
+                                                          , jklm
+                                                          )
 
 #test long-module-name-other
-import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff ( )
-import {-# SOURCE #-} safe qualified "qualifiers" AlsoAffe
-                                                          ( )
-
-import {-# SOURCE #-} safe qualified "qualifiers" AlsoAf as T
-import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff
-                                                         as T
 import {-# SOURCE #-} safe qualified "qualifier" A hiding ( )
 import {-# SOURCE #-} safe qualified "qualifiers" A
                                                    hiding ( )
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAf as T
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff ( )
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAff
+                                                         as T
+import {-# SOURCE #-} safe qualified "qualifiers" AlsoAffe
+                                                          ( )
 
 #test import-with-comments
 -- Test

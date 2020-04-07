@@ -755,27 +755,27 @@ import qualified Data.List ()
 import Data.List (nub)
 
 #test several-elements
-import Data.List (nub, foldl', indexElem)
+import Data.List (foldl', indexElem, nub)
 
 #test a-ridiculous-amount-of-elements
 import Test
   ( Long
-  , list
-  , with
+  , anymore
+  , fit
   , items
+  , line
+  , list
+  , not
+  , onA
+  , quite
+  , single
   , that
   , will
-  , not
-  , quite
-  , fit
-  , onA
-  , single
-  , line
-  , anymore
+  , with
   )
 
 #test with-things
-import Test (T, T2(), T3(..), T4(T4), T5(T5, t5), T6((<|>)), (+))
+import Test ((+), T, T2(), T3(..), T4(T4), T5(T5, t5), T6((<|>)))
 
 #test hiding
 import Test hiding ()
@@ -798,22 +798,22 @@ import Prelude as X
     )
 
 #test long-module-name-simple
-import TestJustShortEnoughModuleNameLikeThisOne ()
-import TestJustAbitToLongModuleNameLikeThisOneIs ()
 import MoreThanSufficientlyLongModuleNameWithSome
-  (items, that, will, not, fit, inA, compact, layout)
+  (compact, fit, inA, items, layout, not, that, will)
+import TestJustAbitToLongModuleNameLikeThisOneIs ()
+import TestJustShortEnoughModuleNameLikeThisOne ()
 
 #test long-module-name-as
-import TestJustShortEnoughModuleNameLikeThisOn as T
 import TestJustAbitToLongModuleNameLikeThisOneI as T
+import TestJustShortEnoughModuleNameLikeThisOn as T
 
 #test long-module-name-hiding
-import TestJustShortEnoughModuleNameLike hiding ()
 import TestJustAbitToLongModuleNameLikeTh hiding ()
+import TestJustShortEnoughModuleNameLike hiding ()
 
 #test long-module-name-simple-items
 import MoreThanSufficientlyLongModuleNameWithSome
-  (items, that, will, not, fit, inA, compact, layout)
+  (compact, fit, inA, items, layout, not, that, will)
 
 #test long-module-name-hiding-items
 import TestJustShortEnoughModuleNameLike hiding (abc, def, ghci, jklm)
