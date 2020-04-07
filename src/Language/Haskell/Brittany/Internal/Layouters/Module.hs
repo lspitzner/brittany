@@ -18,7 +18,12 @@ import           FieldLabel
 import qualified FastString
 import           BasicTypes
 import           Language.Haskell.GHC.ExactPrint as ExactPrint
-import           Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+import           Language.Haskell.GHC.ExactPrint.Types
+                                                ( DeltaPos(..)
+                                                , deltaRow
+                                                , commentContents
+                                                )
 
 import           Language.Haskell.Brittany.Internal.Utils
 
@@ -95,7 +100,7 @@ instance Show CommentedImport where
 data ImportStatementRecord = ImportStatementRecord
   { commentsBefore :: [(Comment, DeltaPos)]
   , commentsAfter :: [(Comment, DeltaPos)]
-  , importStatement :: ImportDecl HsSyn.GhcPs
+  , importStatement :: ImportDecl GhcPs
   }
 
 instance Show ImportStatementRecord where
@@ -103,7 +108,7 @@ instance Show ImportStatementRecord where
         (length $ commentsAfter r)
 
 transformToCommentedImport
-  :: [LImportDecl HsSyn.GhcPs] -> ToBriDocM [CommentedImport]
+  :: [LImportDecl GhcPs] -> ToBriDocM [CommentedImport]
 transformToCommentedImport is = do
   nodeWithAnnotations <- is `forM` \i@(L _ rawImport) -> do
     annotionMay <- astAnn i
@@ -113,7 +118,7 @@ transformToCommentedImport is = do
       replicate (y - 1) EmptyLine ++ [IndependentComment (c, DP (1, x))]
     accumF
       :: [(Comment, DeltaPos)]
-      -> (Maybe Annotation, ImportDecl HsSyn.GhcPs)
+      -> (Maybe Annotation, ImportDecl GhcPs)
       -> ([(Comment, DeltaPos)], [CommentedImport])
     accumF accConnectedComm (annMay, decl) = case annMay of
       Nothing ->

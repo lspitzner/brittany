@@ -168,11 +168,19 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
   -- (because I don't know what a wildcard means if it is not already a
   -- IEThingAll).
   isProperIEThing :: LIE GhcPs -> Bool
+#if MIN_VERSION_ghc(8,6,0) /* 8.6+ */
   isProperIEThing = \case
     L _ (IEThingAbs _ _wn) -> True
     L _ (IEThingAll _ _wn) -> True
     L _ (IEThingWith _ _wn NoIEWildcard _ _) -> True
     _ -> False
+#else                      /* 8.0 8.2 8.4 */
+  isProperIEThing = \case
+    L _ (IEThingAbs _wn) -> True
+    L _ (IEThingAll _wn) -> True
+    L _ (IEThingWith _wn NoIEWildcard _ _) -> True
+    _ -> False
+#endif
   isIEVar :: LIE GhcPs -> Bool
   isIEVar = \case
     L _ IEVar{} -> True
@@ -183,6 +191,7 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
   thingFolder _                     l2@(L _ IEThingAll{}) = l2
   thingFolder l1                    (   L _ IEThingAbs{}) = l1
   thingFolder (L _ IEThingAbs{})    l2                    = l2
+#if MIN_VERSION_ghc(8,6,0) /* 8.6+ */
   thingFolder (L l (IEThingWith x wn _ consItems1 fieldLbls1)) (L _ (IEThingWith _ _ _ consItems2 fieldLbls2))
     = L
       l
@@ -192,6 +201,16 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
                    (consItems1 ++ consItems2)
                    (fieldLbls1 ++ fieldLbls2)
       )
+#else                      /* 8.0 8.2 8.4 */
+  thingFolder (L l (IEThingWith wn _ consItems1 fieldLbls1)) (L _ (IEThingWith _ _ consItems2 fieldLbls2))
+    = L
+      l
+      (IEThingWith wn
+                   NoIEWildcard
+                   (consItems1 ++ consItems2)
+                   (fieldLbls1 ++ fieldLbls2)
+      )
+#endif
   thingFolder _ _ =
     error "thingFolder should be exhaustive because we have a guard above"
 
@@ -234,15 +253,21 @@ layoutLLIEs enableSingleline shouldSort llies = do
 -- | Returns a "fingerprint string", not a full text representation, nor even
 -- a source code representation of this syntax node.
 -- Used for sorting, not for printing the formatter's output source code.
+#if MIN_VERSION_ghc(8,2,0)
 wrappedNameToText :: LIEWrappedName RdrName -> Text
 wrappedNameToText = \case
   L _ (IEName    n) -> lrdrNameToText n
   L _ (IEPattern n) -> lrdrNameToText n
   L _ (IEType    n) -> lrdrNameToText n
+#else
+wrappedNameToText :: Located RdrName -> Text
+wrappedNameToText = lrdrNameToText
+#endif
 -- | Returns a "fingerprint string", not a full text representation, nor even
 -- a source code representation of this syntax node.
 -- Used for sorting, not for printing the formatter's output source code.
 lieToText :: LIE GhcPs -> Text
+#if MIN_VERSION_ghc(8,6,0) /* 8.6+ */
 lieToText = \case
   L _ (IEVar      _ wn       ) -> wrappedNameToText wn
   L _ (IEThingAbs _ wn       ) -> wrappedNameToText wn
@@ -256,6 +281,20 @@ lieToText = \case
   L _ (IEDoc      _ _        ) -> Text.pack "@IEDoc"
   L _ (IEDocNamed _ _        ) -> Text.pack "@IEDocNamed"
   L _ (XIE _                 ) -> Text.pack "@XIE"
+#else                      /* 8.0 8.2 8.4 */                    
+lieToText = \case
+  L _ (IEVar      wn       ) -> wrappedNameToText wn
+  L _ (IEThingAbs wn       ) -> wrappedNameToText wn
+  L _ (IEThingAll wn       ) -> wrappedNameToText wn
+  L _ (IEThingWith wn _ _ _) -> wrappedNameToText wn
+  -- TODO: These _may_ appear in exports!
+  -- Need to check, and either put them at the top (for module) or do some
+  -- other clever thing.
+  L _ (IEModuleContents n  ) -> moduleNameToText n
+  L _ (IEGroup _ _         ) -> Text.pack "@IEGroup"
+  L _ (IEDoc      _        ) -> Text.pack "@IEDoc"
+  L _ (IEDocNamed _        ) -> Text.pack "@IEDocNamed"
+#endif
  where
   moduleNameToText :: Located ModuleName -> Text
   moduleNameToText (L _ name) = Text.pack ("@IEModuleContents" ++ moduleNameString name)
