@@ -78,8 +78,8 @@ module Test (type (++), (++), pattern Foo) where
 {-# LANGUAGE PatternSynonyms #-}
 import           Test                                     ( type (++)
                                                           , (++)
-                                                          , pattern Foo
                                                           , pattern (:.)
+                                                          , pattern Foo
                                                           )
 
 ###############################################################################
