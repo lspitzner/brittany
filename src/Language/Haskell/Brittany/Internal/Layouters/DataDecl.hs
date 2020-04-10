@@ -23,6 +23,7 @@ import           HsSyn
 import           Name
 import           BasicTypes
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
+import           Data.Traversable (for)
 
 import           Language.Haskell.Brittany.Internal.Layouters.Type
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
@@ -97,21 +98,21 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
   -- data MyData = MyData ..
   -- data MyData = MyData { .. }
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-  HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
+  HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing conss mDerivs ->
 #else
-  HsDataDefn DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
+  HsDataDefn DataType (L _ lhsContext) _ctype Nothing conss mDerivs ->
 #endif
-    case cons of
+    docWrapNode ltycl $ do
+      lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
+      nameStr       <- lrdrNameToTextAnn name
+      tyVarLine     <- fmap return $ createBndrDoc bndrs
+      consDocs <- for (filter (not . isGadt) conss) $ \case
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
-      (L _ (ConDeclH98 _ext consName (L _ _hasExt) qvars mRhsContext details _conDoc)) ->
+        (L _ (ConDeclH98 _ext consName (L _ _hasExt) qvars mRhsContext details _conDoc)) -> do
 #else
-      (L _ (ConDeclH98 consName (Just (HsQTvs _ qvars _)) mRhsContext details _conDoc)) ->
+        (L _ (ConDeclH98 consName (Just (HsQTvs _ qvars _)) mRhsContext details _conDoc)) -> do
 #endif
-        docWrapNode ltycl $ do
-          lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
-          nameStr       <- lrdrNameToTextAnn name
           consNameStr   <- lrdrNameToTextAnn consName
-          tyVarLine     <- fmap return $ createBndrDoc bndrs
           forallDocMay  <- case createForallDoc qvars of
             Nothing -> pure Nothing
             Just x -> Just . pure <$> x
@@ -119,122 +120,116 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
             Nothing         -> pure Nothing
             Just (L _ ctxt) -> Just . pure <$> createContextDoc ctxt
           rhsDoc        <- fmap return $ createDetailsDoc consNameStr details
-          consDoc <- fmap pure
+          fmap pure
             $ docNonBottomSpacing
             $ case (forallDocMay, rhsContextDocMay) of
-                (Just forallDoc, Just rhsContextDoc) -> docLines
-                  [ docSeq [docLitS "=", docSeparator, docForceSingleline forallDoc]
-                  , docSeq
-                    [ docLitS "."
-                    , docSeparator
-                    , docSetBaseY $ docLines [rhsContextDoc, docSetBaseY rhsDoc]
+                (Just forallDoc, Just rhsContextDoc) -> docAlt
+                  [ docLines
+                    [ docSeq [docForceSingleline forallDoc]
+                    , docSeq
+                      [ docLitS "."
+                      , docSeparator
+                      , docSetBaseY $ docLines [rhsContextDoc, docSetBaseY rhsDoc]
+                      ]
                     ]
-                  ]
-                (Just forallDoc, Nothing) -> docLines
-                  [ docSeq [docLitS "=", docSeparator, docForceSingleline forallDoc]
-                  , docSeq [docLitS ".", docSeparator, rhsDoc]
-                  ]
-                (Nothing, Just rhsContextDoc) -> docSeq
-                  [ docLitS "="
-                  , docSeparator
-                  , docSetBaseY $ docLines [rhsContextDoc, docSetBaseY rhsDoc]
-                  ]
-                (Nothing, Nothing) -> docSeq [docLitS "=", docSeparator, rhsDoc]
-          createDerivingPar mDerivs $ docAlt
-            [ -- data D = forall a . Show a => D a
-              docSeq
-              [ docNodeAnnKW ltycl (Just GHC.AnnData)
-              $ docSeq
-                [ appSep $ docLitS "data"
-                , docForceSingleline $ lhsContextDoc
-                , appSep $ docLit nameStr
-                , appSep tyVarLine
-                , docSeparator
-                ]
-              , docLitS "="
-              , docSeparator
-              , docSetIndentLevel $ docSeq
-                [ case forallDocMay of
-                  Nothing -> docEmpty
-                  Just forallDoc -> docSeq
-                    [ docForceSingleline forallDoc
+                  , docSeq
+                    [ forallDoc
                     , docSeparator
                     , docLitS "."
                     , docSeparator
+                    , rhsContextDoc
+                    , rhsDoc
                     ]
-                , maybe docEmpty docForceSingleline rhsContextDocMay
-                , rhsDoc
+                  ]
+                (Just forallDoc, Nothing) -> docLines
+                  [ docSeq [docForceSingleline forallDoc]
+                  , docSeq [docLitS ".", docSeparator, rhsDoc]
+                  ]
+                (Nothing, Just rhsContextDoc) -> docSeq
+                  [ docSetBaseY $ docLines [rhsContextDoc, docSetBaseY rhsDoc]
+                  ]
+                (Nothing, Nothing) -> docSeq [rhsDoc]
+      createDerivingPar mDerivs $ docAlt
+        [ -- data D = forall a . Show a => D a
+          docAddBaseY BrIndentRegular
+            $ docSeq
+              [ docNodeAnnKW ltycl (Just GHC.AnnData) $ docSeq
+                [ appSep $ docLitS "data"
+                , docForceSingleline lhsContextDoc
+                , appSep $ docLit nameStr
+                , tyVarLine
                 ]
+              , parConstructors consDocs
               ]
-            , -- data D
-              --   = forall a . Show a => D a
-              docAddBaseY BrIndentRegular $ docPar
-              ( docNodeAnnKW ltycl (Just GHC.AnnData)
-              $ docSeq
-                [ appSep $ docLitS "data"
-                , docForceSingleline lhsContextDoc
-                , appSep $ docLit nameStr
-                , tyVarLine
-                ]
-              )
-              ( docSeq
-                [ docLitS "="
-                , docSeparator
-                , docSetIndentLevel $ docSeq
-                  [ case forallDocMay of
-                    Nothing -> docEmpty
-                    Just forallDoc -> docSeq
-                      [ docForceSingleline forallDoc
-                      , docSeparator
-                      , docLitS "."
-                      , docSeparator
-                      ]
-                  , maybe docEmpty docForceSingleline rhsContextDocMay
-                  , rhsDoc
-                  ]
-                ]
-              )
-            , -- data D
-              --   = forall a
-              --   . Show a =>
-              --     D a
-              docAddBaseY BrIndentRegular $ docPar
-              ( docNodeAnnKW ltycl (Just GHC.AnnData)
-              $ docSeq
-                [ appSep $ docLitS "data"
-                , docForceSingleline lhsContextDoc
-                , appSep $ docLit nameStr
-                , tyVarLine
-                ]
-              )
-              consDoc
-            , -- data
-              --   Show a =>
-              --   D
-              --   = forall a
-              --   . Show a =>
-              --     D a
-              -- This alternative is only for -XDatatypeContexts.
-              -- But I think it is rather unlikely this will trigger without
-              -- -XDataTypeContexts, especially with the `docNonBottomSpacing`
-              -- above, so while not strictly necessary, this should not
-              -- hurt.
-              docAddBaseY BrIndentRegular $ docPar
-              (docLitS "data")
-              ( docLines
-                [ lhsContextDoc
-                , docNodeAnnKW ltycl (Just GHC.AnnData)
-                $ docSeq
-                  [ appSep $ docLit nameStr
-                  , tyVarLine
-                  ]
-                , consDoc
-                ]
-              )
+        , -- data D
+          --   = forall a
+          --   . Show a =>
+          --     D a
+          docAddBaseY BrIndentRegular
+            $ docPar ( docNodeAnnKW ltycl (Just GHC.AnnData)
+            $ docSeq
+              [ appSep $ docLitS "data"
+              , docForceSingleline lhsContextDoc
+              , appSep $ docLit nameStr
+              , tyVarLine
+              ]
+            )
+            (parConstructors consDocs)
+        , -- data
+          --   Show a =>
+          --   D
+          --   = forall a
+          --   . Show a =>
+          --     D a
+          -- This alternative is only for -XDatatypeContexts.
+          -- But I think it is rather unlikely this will trigger without
+          -- -XDataTypeContexts, especially with the `docNonBottomSpacing`
+          -- above, so while not strictly necessary, this should not
+          -- hurt.
+          docAddBaseY BrIndentRegular $ docPar
+          (docLitS "data")
+          ( docLines
+            [ lhsContextDoc
+            , docNodeAnnKW ltycl (Just GHC.AnnData)
+            $ docSeq
+              [ appSep $ docLit nameStr
+              , tyVarLine
+              ]
+            , parConstructors consDocs
             ]
-      _ -> briDocByExactNoComment ltycl
+          )
+        ]
 
   _ -> briDocByExactNoComment ltycl
+
+isGadt :: Located (ConDecl pass) -> Bool
+isGadt (L _ ConDeclGADT{}) = True
+isGadt (L _ ConDeclH98{}) = False
+isGadt (L _ XConDecl{}) = False
+
+parConstructors :: [ToBriDocM BriDocNumbered] -> ToBriDocM BriDocNumbered
+parConstructors [] = docEmpty
+parConstructors [cons] = docAlt
+  [ docSeq
+    [ docSeparator
+    , docLit (Text.pack "=")
+    , docSeparator
+    , cons
+    ]
+  , docPar docEmpty
+      $ docSeq
+        [ docLit (Text.pack "=")
+        , docSeparator
+        , cons
+        ]
+  ]
+parConstructors (cons:additional) =
+  docPar docEmpty
+    $ docLines
+    $ docSeq [docLit (Text.pack "=") , docSeparator , cons]
+    : toSum additional
+ where
+  toSum = map (\x -> docSeq [docLit (Text.pack "|"), docSeparator, x])
 
 createContextDoc :: HsContext GhcPs -> ToBriDocM BriDocNumbered
 createContextDoc [] = docEmpty
