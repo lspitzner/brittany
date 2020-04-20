@@ -426,6 +426,9 @@ layoutExpr lexpr@(L _ expr) = do
             (_, L _ (HsApp _ (L _ HsVar{}))) -> False
             _ -> True
 #endif
+      let leftIsDoBlock = case expLeft of
+            L _ HsDo{} -> True
+            _          -> False
       runFilteredAlternative $ do
         -- one-line
         addAlternative
@@ -442,16 +445,17 @@ layoutExpr lexpr@(L _ expr) = do
         --   , docSetBaseY $ docAddBaseY BrIndentRegular expDocRight
         --   ]
         -- two-line
-        addAlternative
-          $ docAddBaseY BrIndentRegular
-          $ docPar
-              expDocLeft -- TODO: this is not forced to single-line, which has
-                         -- certain.. interesting consequences.
-                         -- At least, the "two-line" label is not entirely
-                         -- accurate.
-              ( docForceSingleline
+        addAlternative $ do
+          let
+            expDocOpAndRight = docForceSingleline
               $ docCols ColOpPrefix [appSep $ expDocOp, docSetBaseY expDocRight]
-              )
+          if leftIsDoBlock
+            then docLines [expDocLeft, expDocOpAndRight]
+            else docAddBaseY BrIndentRegular $ docPar expDocLeft expDocOpAndRight
+              -- TODO: in both cases, we don't force expDocLeft to be
+              -- single-line, which has certain.. interesting consequences.
+              -- At least, the "two-line" label is not entirely
+              -- accurate.
         -- one-line + par
         addAlternativeCond allowPar
           $ docSeq
@@ -460,11 +464,13 @@ layoutExpr lexpr@(L _ expr) = do
           , docForceParSpacing expDocRight
           ]
         -- more lines
-        addAlternative
-          $ docAddBaseY BrIndentRegular
-          $ docPar
-              expDocLeft
-              (docCols ColOpPrefix [appSep expDocOp, docSetBaseY expDocRight])
+        addAlternative $ do
+          let expDocOpAndRight =
+                docCols ColOpPrefix [appSep expDocOp, docSetBaseY expDocRight]
+          if leftIsDoBlock
+            then docLines [expDocLeft, expDocOpAndRight]
+            else docAddBaseY BrIndentRegular
+                   $ docPar expDocLeft expDocOpAndRight
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     NegApp _ op _ -> do
 #else

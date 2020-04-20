@@ -877,3 +877,10 @@ instance HasDependencies SomeDataModel where
   -- between these data models or whatever.
   type Dependencies SomeDataModel
     = (SomeOtherDataModelId, SomeOtherOtherDataModelId)
+
+#test stupid-do-operator-combination
+
+func =
+  do
+    y
+  >>= x
