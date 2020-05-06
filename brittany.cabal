@@ -53,6 +53,7 @@ library {
     srcinc
   exposed-modules: {
     Language.Haskell.Brittany
+    Language.Haskell.Brittany.Main
     Language.Haskell.Brittany.Internal
     Language.Haskell.Brittany.Internal.Prelude
     Language.Haskell.Brittany.Internal.PreludeUtils
@@ -145,60 +146,12 @@ executable brittany
     buildable: True
   }
   main-is:             Main.hs
-  other-modules: {
-    Paths_brittany
-  }
-  -- other-extensions:
-  build-depends:
-    { brittany
-    , base
-    , ghc
-    , ghc-paths
-    , ghc-exactprint
-    , transformers
-    , containers
-    , mtl
-    , text
-    , multistate
-    , syb
-    , data-tree-print
-    , pretty
-    , bytestring
-    , directory
-    , butcher
-    , yaml
-    , aeson
-    , extra
-    , uniplate
-    , strict
-    , monad-memo
-    , unsafe
-    , safe
-    , deepseq
-    , semigroups
-    , cmdargs
-    , czipwith
-    , ghc-boot-th
-    , filepath >=1.4.1.0 && <1.5
-    }
   hs-source-dirs:      src-brittany
-  include-dirs:        srcinc
+  build-depends:
+    { base
+    , brittany
+    }
   default-language:    Haskell2010
-  default-extensions: {
-    CPP
-
-    NoImplicitPrelude
-
-    GADTs
-
-    FlexibleContexts
-    FlexibleInstances
-    ScopedTypeVariables
-    MonadComprehensions
-    LambdaCase
-    MultiWayIf
-    KindSignatures
-  }
   ghc-options: {
     -Wall
     -fno-spec-constr
