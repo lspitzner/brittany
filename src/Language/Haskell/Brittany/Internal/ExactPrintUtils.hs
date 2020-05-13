@@ -33,7 +33,13 @@ import qualified Lexer         as GHC
 import qualified StringBuffer  as GHC
 import qualified Outputable    as GHC
 import qualified CmdLineParser as GHC
+
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
+
 import           SrcLoc ( SrcSpan, Located )
 
 
