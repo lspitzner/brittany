@@ -13,9 +13,13 @@ where
 
 -- rather project-specific stuff:
 ---------------------------------
-#if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
+#if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
+import GHC.Hs.Extension               as E ( GhcPs )
+#else
+#  if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 import HsExtension                    as E ( GhcPs )
-#endif
+#  endif /* ghc-8.4 */
+#endif /* ghc-8.10.1 */
 
 import RdrName                        as E ( RdrName )
 #if MIN_VERSION_ghc(8,8,0)
