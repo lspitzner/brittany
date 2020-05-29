@@ -37,8 +37,10 @@ import           GHC                            ( runGhc
                                                 )
 import           SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
 import qualified FastString
-import           HsSyn
-#if MIN_VERSION_ghc(8,6,0)
+#if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
+import           GHC.Hs
+import           GHC.Hs.Extension (NoExtField (..))
+#elif MIN_VERSION_ghc(8,6,0)
 import           HsExtension (NoExt (..))
 #endif
 import           Name
@@ -1040,7 +1042,14 @@ layoutClsInst lcid@(L _ cid) = docLines
   ]
  where
   layoutInstanceHead :: ToBriDocM BriDocNumbered
-#if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+  layoutInstanceHead =
+    briDocByExactNoComment
+      $   InstD NoExtField
+      .   ClsInstD NoExtField
+      .   removeChildren
+      <$> lcid
+#elif MIN_VERSION_ghc(8,6,0)    /* 8.6 */
   layoutInstanceHead =
     briDocByExactNoComment
       $   InstD NoExt

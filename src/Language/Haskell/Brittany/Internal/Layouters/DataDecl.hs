@@ -19,7 +19,11 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import qualified GHC
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
 import           Name
 import           BasicTypes
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )

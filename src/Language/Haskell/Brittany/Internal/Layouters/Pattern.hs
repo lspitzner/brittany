@@ -21,7 +21,11 @@ import           GHC                            ( Located
                                                 , ol_val
                                                 )
 import qualified GHC
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
 import           Name
 import           BasicTypes
 
@@ -136,14 +140,22 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
       , docSeparator
       , docLit $ Text.pack "}"
       ]
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+  ConPatIn lname (RecCon (HsRecFields [] (Just (L _ 0)))) -> do
+#else
   ConPatIn lname (RecCon (HsRecFields [] (Just 0))) -> do
+#endif
     -- Abc { .. } -> expr
     let t = lrdrNameToText lname
     Seq.singleton <$> docSeq
       [ appSep $ docLit t
       , docLit $ Text.pack "{..}"
       ]
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+  ConPatIn lname (RecCon (HsRecFields fs@(_:_) (Just (L _ dotdoti)))) | dotdoti == length fs -> do
+#else
   ConPatIn lname (RecCon (HsRecFields fs@(_:_) (Just dotdoti))) | dotdoti == length fs -> do
+#endif
     -- Abc { a = locA, .. }
     let t = lrdrNameToText lname
     fds <- fs `forM` \(L _ (HsRecField (L _ fieldOcc) fPat pun)) -> do

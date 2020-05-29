@@ -61,7 +61,12 @@ import           GHC                                      ( Located
                                                           )
 import           RdrName                                  ( RdrName(..) )
 import           SrcLoc                                   ( SrcSpan )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+import           Bag
+#else
 import           HsSyn
+#endif
 import qualified DynFlags                                as GHC
 import qualified GHC.LanguageExtensions.Type             as GHC
 
@@ -380,7 +385,11 @@ parsePrintModuleTests conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
   case parseResult of
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+    Left  err                  -> return $ Left $ "parsing error: " ++ show (bagToList (show <$> err))
+#else
     Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
+#endif
     Right (anns, parsedModule) -> runExceptT $ do
       (inlineConf, perItemConf) <-
         case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
