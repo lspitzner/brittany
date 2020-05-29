@@ -19,7 +19,11 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 
 import           GHC ( runGhc, GenLocated(L), SrcSpan, moduleNameString, AnnKeywordId(..), RdrName(..) )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
 import           Name
 import qualified FastString
 import           BasicTypes
@@ -521,7 +525,12 @@ layoutExpr lexpr@(L _ expr) = do
 #else
     ExplicitTuple args boxity -> do
 #endif
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+      let argExprs = args <&> \arg -> case arg of
+            (L _ (Present _ e)) -> (arg, Just e);
+            (L _ (Missing NoExtField)) -> (arg, Nothing)
+            (L _ XTupArg{}) -> error "brittany internal error: XTupArg"
+#elif MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
       let argExprs = args <&> \arg -> case arg of
             (L _ (Present _ e)) -> (arg, Just e);
             (L _ (Missing NoExt)) -> (arg, Nothing)
@@ -984,10 +993,18 @@ layoutExpr lexpr@(L _ expr) = do
                 else Just <$> docSharedWrapper layoutExpr rFExpr
               return $ (lfield, lrdrNameToText lnameF, rFExpDoc)
           recordExpression False indentPolicy lexpr nameDoc rFs
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+        HsRecFields [] (Just (L _ 0)) -> do
+#else
         HsRecFields [] (Just 0) -> do
+#endif
           let t = lrdrNameToText lname
           docWrapNode lname $ docLit $ t <> Text.pack " { .. }"
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+        HsRecFields fs@(_:_) (Just (L _ dotdoti)) | dotdoti == length fs -> do
+#else
         HsRecFields fs@(_:_) (Just dotdoti) | dotdoti == length fs -> do
+#endif
           let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
           fieldDocs <- fs `forM` \fieldl@(L _ (HsRecField (L _ fieldOcc) fExpr pun)) -> do
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
@@ -1137,12 +1154,15 @@ layoutExpr lexpr@(L _ expr) = do
     HsStatic{} -> do
       -- TODO
       briDocByExactInlineOnly "HsStatic{}" lexpr
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+#else
     HsArrApp{} -> do
       -- TODO
       briDocByExactInlineOnly "HsArrApp{}" lexpr
     HsArrForm{} -> do
       -- TODO
       briDocByExactInlineOnly "HsArrForm{}" lexpr
+#endif
     HsTick{} -> do
       -- TODO
       briDocByExactInlineOnly "HsTick{}" lexpr
@@ -1152,6 +1172,8 @@ layoutExpr lexpr@(L _ expr) = do
     HsTickPragma{} -> do
       -- TODO
       briDocByExactInlineOnly "HsTickPragma{}" lexpr
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+#else
     EWildPat{} -> do
       docLit $ Text.pack "_"
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
@@ -1169,6 +1191,7 @@ layoutExpr lexpr@(L _ expr) = do
     ELazyPat{} -> do
       -- TODO
       briDocByExactInlineOnly "ELazyPat{}" lexpr
+#endif
     HsWrap{} -> do
       -- TODO
       briDocByExactInlineOnly "HsWrap{}" lexpr

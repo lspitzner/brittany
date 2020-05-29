@@ -25,7 +25,11 @@ import           GHC ( runGhc
                      , AnnKeywordId (..)
                      )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
 import           Name
 import           Outputable ( ftext, showSDocUnsafe )
 import           BasicTypes
@@ -61,7 +65,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     docWrapNode name $ docLit t
 #endif
-#if MIN_VERSION_ghc(8,6,0)
+#if MIN_VERSION_ghc(8,10,1)
+  HsForAllTy _ _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
+#elif MIN_VERSION_ghc(8,6,0)
   HsForAllTy _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
 #else
   HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts) typ2)) -> do
@@ -151,7 +157,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-#if MIN_VERSION_ghc(8,6,0)
+#if MIN_VERSION_ghc(8,10,1)
+  HsForAllTy _ _ bndrs typ2 -> do
+#elif MIN_VERSION_ghc(8,6,0)
   HsForAllTy _ bndrs typ2 -> do
 #else
   HsForAllTy bndrs typ2 -> do

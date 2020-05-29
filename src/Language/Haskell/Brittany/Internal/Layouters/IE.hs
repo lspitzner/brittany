@@ -18,9 +18,14 @@ import           GHC     ( unLoc
                          , AnnKeywordId(..)
                          , Located
                          )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+import           GHC.Hs.ImpExp
+#else
 import           HsSyn
-import           Name
 import           HsImpExp
+#endif
+import           Name
 import           FieldLabel
 import qualified FastString
 import           BasicTypes
