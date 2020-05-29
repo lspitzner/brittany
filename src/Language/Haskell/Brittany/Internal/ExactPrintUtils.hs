@@ -36,6 +36,7 @@ import qualified CmdLineParser as GHC
 
 #if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
+import           Bag
 #else
 import           HsSyn
 #endif
@@ -96,7 +97,11 @@ parseModuleWithCpp cpp opts args fp dynCheck =
       ++ show (warnings <&> warnExtractorCompat)
     x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+    either (\err -> ExceptT.throwE $ "transform error: " ++ show (bagToList (show <$> err)))
+#else
     either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
+#endif
            (\(a, m) -> pure (a, m, x))
       $ ExactPrint.postParseTransform res opts
 
@@ -129,7 +134,11 @@ parseModuleFromString args fp dynCheck str =
     dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
     let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
     case res of
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+      Left  err -> ExceptT.throwE $ "parse error: " ++ show (bagToList (show <$> err))
+#else
       Left  (span, err) -> ExceptT.throwE $ showOutputable span ++ ": " ++ err
+#endif
       Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
 
@@ -193,7 +202,7 @@ commentAnnFixTransformGlob ast = do
                        , ExactPrint.annsDP               = assocs'
                        }
       ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
-  
+
 
 
 commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
