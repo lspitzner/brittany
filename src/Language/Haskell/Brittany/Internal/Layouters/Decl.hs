@@ -41,6 +41,7 @@ import qualified FastString
 import           GHC.Hs
 import           GHC.Hs.Extension (NoExtField (..))
 #elif MIN_VERSION_ghc(8,6,0)
+import           HsSyn
 import           HsExtension (NoExt (..))
 #endif
 import           Name
