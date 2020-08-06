@@ -1,7 +1,3 @@
 packages: .
 
-allow-newer: multistate:base,
-             data-tree-print:base,
-             czipwith:base,
-             czipwith:template-haskell,
-             butcher:base
+allow-newer: data-tree-print:base
