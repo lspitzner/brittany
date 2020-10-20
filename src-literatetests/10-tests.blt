@@ -1001,8 +1001,7 @@ module Main
   , test7
   , test8
   , test9
-  )
-where
+  ) where
 
 #test exports-with-comments
 module Main
@@ -1016,8 +1015,7 @@ module Main
   -- Test 5
   , test5
   -- Test 6
-  )
-where
+  ) where
 
 #test simple-export-with-things
 module Main (Test(..)) where
@@ -1035,7 +1033,7 @@ module Main
   ( Test(Test, a, b)
   , foo -- comment2
   ) -- comment3
-where
+    where
 
 #test export-with-empty-thing
 module Main (Test()) where
@@ -1286,8 +1284,7 @@ module Test
   , test9
   , test10
   -- Test 10
-  )
-where
+  ) where
 
 -- Test
 import           Data.List                                ( nub ) -- Test

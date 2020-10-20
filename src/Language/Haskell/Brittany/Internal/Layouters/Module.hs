@@ -49,6 +49,7 @@ layoutModule lmod@(L _ mod') = case mod' of
                 , docWrapNode lmod $ appSep $ case les of
                   Nothing -> docEmpty
                   Just x  -> layoutLLIEs True x
+                , docSeparator
                 , docLit $ Text.pack "where"
                 ]
             addAlternative
@@ -56,11 +57,13 @@ layoutModule lmod@(L _ mod') = case mod' of
               [ docAddBaseY BrIndentRegular $ docPar
                 (docSeq [appSep $ docLit $ Text.pack "module", docLit tn]
                 )
-                (docWrapNode lmod $ case les of
-                  Nothing -> docEmpty
-                  Just x  -> layoutLLIEs False x
+                (docSeq [ docWrapNode lmod $ case les of
+                            Nothing -> docEmpty
+                            Just x  -> layoutLLIEs False x
+                        , docSeparator
+                        , docLit $ Text.pack "where"
+                        ]
                 )
-              , docLit $ Text.pack "where"
               ]
           ]
       : map layoutImport imports
