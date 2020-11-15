@@ -33,12 +33,12 @@ packages:
   original:
     hackage: strict-list-0.1.4
 - completed:
-    hackage: ghc-exactprint-0.5.8.2@sha256:b078e02ce263db6214f8418c8b6f6be1c8a7ca1499bb2f8936b91b5ed210faa5,7901
+    hackage: ghc-exactprint-0.6.2@sha256:d822f64351e9a8e03d9bad35c8fdf558d30dc396801b396c52b5d5bffaee9108,8368
     pantry-tree:
-      size: 83871
-      sha256: 1dc1dc7f036dfb8e7642deaeb2845c62731085abc29a1494c22cd6b1b5a18d16
+      size: 85384
+      sha256: d904de9c01e58bfa091d7caa09e0423e9d2932b7b3490c4d83140731f4473877
   original:
-    hackage: ghc-exactprint-0.5.8.2
+    hackage: ghc-exactprint-0.6.2
 snapshots:
 - completed:
     size: 499461
