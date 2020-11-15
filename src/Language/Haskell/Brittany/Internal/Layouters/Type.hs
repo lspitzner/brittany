@@ -42,7 +42,6 @@ import           DataTreePrint
 layoutType :: ToBriDoc HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
-#if MIN_VERSION_ghc(8,2,0)
 #if MIN_VERSION_ghc(8,6,0)
   HsTyVar _ promoted name -> do
 #else   /* ghc-8.2 ghc-8.4 */
@@ -60,11 +59,6 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         , docWrapNode name $ docLit t
         ]
       NotPromoted -> docWrapNode name $ docLit t
-#else /* ghc-8.0 */
-  HsTyVar name -> do
-    t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
-    docWrapNode name $ docLit t
-#endif
 #if MIN_VERSION_ghc(8,10,1)
   HsForAllTy _ _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
 #elif MIN_VERSION_ghc(8,6,0)
@@ -547,10 +541,8 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --     }
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsIParamTy _ (L _ (HsIPName ipName)) typ1 -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
+#else                        /* ghc-8.2 */
   HsIParamTy (L _ (HsIPName ipName)) typ1 -> do
-#else                        /* ghc-8.0 */
-  HsIParamTy (HsIPName ipName) typ1 -> do
 #endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
@@ -699,11 +691,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     briDocByExactInlineOnly "HsDocTy{}" ltype
   HsRecTy{} -> -- TODO
     briDocByExactInlineOnly "HsRecTy{}" ltype
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
   HsExplicitListTy _ _ typs -> do
-#else /* ghc-8.0 */
-  HsExplicitListTy _ typs -> do
-#endif
     typDocs <- docSharedWrapper layoutType `mapM` typs
     hasComments <- hasAnyCommentsBelow ltype
     let specialCommaSep = appSep $ docLit $ Text.pack " ,"
@@ -755,27 +743,20 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
 #else
   HsTyLit lit -> case lit of
 #endif
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
     HsNumTy (SourceText srctext) _ -> docLit $ Text.pack srctext
     HsNumTy NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
     HsStrTy (SourceText srctext) _ -> docLit $ Text.pack srctext
     HsStrTy NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
-#else /* ghc-8.0 */
-    HsNumTy srctext _ -> docLit $ Text.pack srctext
-    HsStrTy srctext _ -> docLit $ Text.pack srctext
-#endif
 #if !MIN_VERSION_ghc(8,6,0)
   HsCoreTy{} -> -- TODO
     briDocByExactInlineOnly "HsCoreTy{}" ltype
 #endif
   HsWildCardTy _ ->
     docLit $ Text.pack "_"
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
   HsSumTy{} -> -- TODO
     briDocByExactInlineOnly "HsSumTy{}" ltype
-#endif
 #if MIN_VERSION_ghc(8,6,0)
   HsStarTy _ isUnicode -> do
     if isUnicode

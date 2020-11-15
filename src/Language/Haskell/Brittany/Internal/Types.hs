@@ -32,9 +32,7 @@ data PerItemConfig = PerItemConfig
   { _icd_perBinding :: Map String (CConfig Option)
   , _icd_perKey :: Map ExactPrint.Types.AnnKey (CConfig Option)
   }
-#if MIN_VERSION_ghc(8,2,0)
   deriving Data.Data.Data
-#endif
 
 type PPM = MultiRWSS.MultiRWS
   '[Map ExactPrint.AnnKey ExactPrint.Anns, PerItemConfig, Config, ExactPrint.Anns]

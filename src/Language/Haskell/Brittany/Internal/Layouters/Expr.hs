@@ -62,10 +62,8 @@ layoutExpr lexpr@(L _ expr) = do
       briDocByExactInlineOnly "HsRecFld" lexpr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsOverLabel _ext _reboundFromLabel name ->
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
+#else                        /* ghc-8.2 */
     HsOverLabel _reboundFromLabel name ->
-#else                        /* ghc-8.0 */
-    HsOverLabel name ->
 #endif
       let label = FastString.unpackFS name
       in docLit . Text.pack $ '#' : label
@@ -176,19 +174,15 @@ layoutExpr lexpr@(L _ expr) = do
 #endif
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ (MG _ (L _ []) _) -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4*/
+#else                        /* ghc-8.2 */
     HsLamCase (MG (L _ []) _ _ _) -> do
-#else                        /* ghc-8.0 */
-    HsLamCase _ (MG (L _ []) _ _ _) -> do
 #endif
       docSetParSpacing $ docAddBaseY BrIndentRegular $
         (docLit $ Text.pack "\\case {}")
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ (MG _ lmatches@(L _ matches) _) -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4*/
+#else                        /* ghc-8.2 */
     HsLamCase (MG lmatches@(L _ matches) _ _ _) -> do
-#else                        /* ghc-8.0 */
-    HsLamCase _ (MG lmatches@(L _ matches) _ _ _) -> do
 #endif
       binderDoc   <- docLit $ Text.pack "->"
       funcPatDocs <- docWrapNode lmatches
@@ -311,10 +305,8 @@ layoutExpr lexpr@(L _ expr) = do
     HsAppType XHsWildCardBndrs{} _ ->
       error "brittany internal error: HsAppType XHsWildCardBndrs"
     HsAppType (HsWC _ ty1) exp1 -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
+#else                        /* ghc-8.2 */
     HsAppType exp1 (HsWC _ ty1) -> do
-#else                        /* ghc-8.0 */
-    HsAppType exp1 (HsWC _ _ ty1) -> do
 #endif
       t <- docSharedWrapper layoutType ty1
       e <- docSharedWrapper layoutExpr exp1
@@ -329,7 +321,7 @@ layoutExpr lexpr@(L _ expr) = do
             e
             (docSeq [docLit $ Text.pack "@", t ])
         ]
-#if !MIN_VERSION_ghc(8,6,0)   /* ghc-8.0 8.2 8.4 */
+#if !MIN_VERSION_ghc(8,6,0)   /* ghc-8.2 8.4 */
     HsAppTypeOut{} -> do
       -- TODO
       briDocByExactInlineOnly "HsAppTypeOut{}" lexpr
@@ -968,7 +960,7 @@ layoutExpr lexpr@(L _ expr) = do
             in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
     ExplicitList _ _ [] ->
       docLit $ Text.pack "[]"
-#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.0 8.2 8.4 */
+#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.2 8.4 */
     ExplicitPArr{} -> do
       -- TODO
       briDocByExactInlineOnly "ExplicitPArr{}" lexpr
@@ -1052,10 +1044,8 @@ layoutExpr lexpr@(L _ expr) = do
     ExprWithTySig XHsWildCardBndrs{} _ ->
       error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
     ExprWithTySig (HsWC _ (HsIB _ typ1)) exp1 -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8,4 */
+#else /* ghc-8.2 */
     ExprWithTySig exp1 (HsWC _ (HsIB _ typ1 _)) -> do
-#else /* ghc-8.0 */
-    ExprWithTySig exp1 (HsIB _ (HsWC _ _ typ1)) -> do
 #endif
       expDoc <- docSharedWrapper layoutExpr exp1
       typDoc <- docSharedWrapper layoutType typ1
@@ -1064,7 +1054,7 @@ layoutExpr lexpr@(L _ expr) = do
         , appSep $ docLit $ Text.pack "::"
         , typDoc
         ]
-#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.0 8.2 8.4 */
+#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.2 8.4 */
     ExprWithTySigOut{} -> do
       -- TODO
       briDocByExactInlineOnly "ExprWithTySigOut{}" lexpr
@@ -1113,7 +1103,7 @@ layoutExpr lexpr@(L _ expr) = do
             ]
     ArithSeq{} ->
       briDocByExactInlineOnly "ArithSeq" lexpr
-#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.0 8.2 8.4 */
+#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.2 8.4 */
     PArrSeq{} -> do
       -- TODO
       briDocByExactInlineOnly "PArrSeq{}" lexpr
@@ -1195,14 +1185,12 @@ layoutExpr lexpr@(L _ expr) = do
     HsWrap{} -> do
       -- TODO
       briDocByExactInlineOnly "HsWrap{}" lexpr
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
     HsConLikeOut{} -> do
       -- TODO
       briDocByExactInlineOnly "HsWrap{}" lexpr
     ExplicitSum{} -> do
       -- TODO
       briDocByExactInlineOnly "ExplicitSum{}" lexpr
-#endif
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     XExpr{} -> error "brittany internal error: XExpr"
 #endif
@@ -1367,7 +1355,7 @@ overLitValBriDoc = \case
   HsFractional (FL (SourceText t) _ _) -> BDFLit $ Text.pack t
   HsIsString (SourceText t) _ -> BDFLit $ Text.pack t
   _ -> error "overLitValBriDoc: literal with no SourceText"
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
+#else                        /* ghc-8.2 */
 litBriDoc :: HsLit -> BriDocFInt
 litBriDoc = \case
   HsChar       (SourceText t) _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
@@ -1391,26 +1379,4 @@ overLitValBriDoc = \case
   HsFractional (FL t _) -> BDFLit $ Text.pack t
   HsIsString (SourceText t) _        -> BDFLit $ Text.pack t
   _ -> error "overLitValBriDoc: literal with no SourceText"
-#else                        /* ghc-8.0 */
-litBriDoc :: HsLit -> BriDocFInt
-litBriDoc = \case
-  HsChar       t _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
-  HsCharPrim   t _c          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ ['\'', c, '\'']
-  HsString     t _fastString -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ FastString.unpackFS fastString
-  HsStringPrim t _byteString -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ Data.ByteString.Char8.unpack byteString
-  HsInt        t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsIntPrim    t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsWordPrim   t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsInt64Prim  t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsWord64Prim t _i          -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsInteger t _i _type       -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsRat (FL t _) _type       -> BDFLit $ Text.pack t
-  HsFloatPrim  (FL t _)      -> BDFLit $ Text.pack t
-  HsDoublePrim (FL t _)      -> BDFLit $ Text.pack t
-
-overLitValBriDoc :: OverLitVal -> BriDocFInt
-overLitValBriDoc = \case
-  HsIntegral t _        -> BDFLit $ Text.pack t
-  HsFractional (FL t _) -> BDFLit $ Text.pack t
-  HsIsString t _        -> BDFLit $ Text.pack t
 #endif

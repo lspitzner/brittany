@@ -50,14 +50,14 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
     -- _ -> expr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   VarPat _ n ->
-#else                        /* ghc-8.0 8.2 8.4 */
+#else                        /* ghc-8.2 8.4 */
   VarPat   n ->
 #endif
     fmap Seq.singleton $ docLit $ lrdrNameToText n
     -- abc -> expr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   LitPat _ lit ->
-#else                        /* ghc-8.0 8.2 8.4 */
+#else                        /* ghc-8.2 8.4 */
   LitPat lit ->
 #endif
     fmap Seq.singleton $ allocateNode $ litBriDoc lit
@@ -66,7 +66,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   ParPat _ inner -> do
 #elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   ParPat _ inner -> do
-#else                        /* ghc-8.0 8.2 8.4 */
+#else                        /* ghc-8.2 8.4 */
   ParPat inner -> do
 #endif
     -- (nestedpat) -> expr
@@ -202,10 +202,8 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   SigPat _ pat1 (HsWC _ (HsIB _ ty1)) -> do
 #elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   SigPat (HsWC _ (HsIB _ ty1)) pat1 -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
+#else                        /* ghc-8.2 */
   SigPatIn pat1 (HsWC _ (HsIB _ ty1 _)) -> do
-#else                        /* ghc-8.0 */
-  SigPatIn pat1 (HsIB _ (HsWC _ _ ty1)) -> do
 #endif
     -- i :: Int -> expr
     patDocs <- layoutPat pat1
@@ -260,11 +258,6 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
       Just{}  -> Seq.fromList [negDoc, litDoc]
       Nothing -> Seq.singleton litDoc
 
--- if MIN_VERSION_ghc(8,0,0)
---   VarPat n -> return $ stringLayouter lpat $ lrdrNameToText n
--- else
---   VarPat n -> return $ stringLayouter lpat $ rdrNameToText n
--- endif
   _ -> return <$> briDocByExactInlineOnly "some unknown pattern" (ghcDL lpat)
 
 colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered

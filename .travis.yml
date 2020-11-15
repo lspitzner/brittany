@@ -40,7 +40,7 @@ before_cache:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
-  
+
   ##### OSX test via stack #####
 
   # Build on macOS in addition to Linux
@@ -49,10 +49,7 @@ matrix:
     os: osx
 
   ##### CABAL #####
-  
-  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #cabal 8.0.2"
-    addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+
   - env: BUILD=cabal GHCVER=8.2.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #cabal 8.2.2"
     addons: {apt: {packages: [cabal-install-1.24,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
@@ -92,9 +89,6 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-8.0.2.yaml"
-    compiler: ": #stack 8.0.2"
-    addons: {apt: {packages: [libgmp-dev]}}
   - env: BUILD=stack ARGS="--stack-yaml stack-8.2.2.yaml"
     compiler: ": #stack 8.2.2"
     addons: {apt: {packages: [libgmp-dev]}}
@@ -202,7 +196,7 @@ install:
         mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
         cabal install -j$JOBS --only-dependencies --enable-tests --enable-benchmarks --ghc-options="-j1 +RTS -M700M -RTS";
       fi
-      
+
       # snapshot package-db on cache miss
       if [ ! -d $HOME/.cabsnap ];
       then

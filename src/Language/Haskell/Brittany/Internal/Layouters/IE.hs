@@ -34,13 +34,8 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 
-#if MIN_VERSION_ghc(8,2,0)
 prepareName :: LIEWrappedName name -> Located name
 prepareName = ieLWrappedName
-#else
-prepareName :: Located name -> Located name
-prepareName = id
-#endif
 
 layoutIE :: ToBriDoc IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
@@ -111,7 +106,6 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     ]
   _ -> docEmpty
  where
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2, 8.4, .. */
   layoutWrapped _ = \case
     L _ (IEName    n) -> docLit =<< lrdrNameToTextAnn n
     L _ (IEPattern n) -> do
@@ -120,16 +114,6 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     L _ (IEType n) -> do
       name <- lrdrNameToTextAnn n
       docLit $ Text.pack "type " <> name
-#else                      /* ghc-8.0 */
-  layoutWrapped outer n = do
-    name <- lrdrNameToTextAnn n
-    hasType <- hasAnnKeyword n AnnType
-    hasPattern <- hasAnnKeyword outer AnnPattern
-    docLit $ if
-      | hasType    -> Text.pack "type (" <> name <> Text.pack ")"
-      | hasPattern -> Text.pack "pattern " <> name
-      | otherwise  -> name
-#endif
 
 -- Helper function to deal with Located lists of LIEs.
 -- In particular this will also associate documentation

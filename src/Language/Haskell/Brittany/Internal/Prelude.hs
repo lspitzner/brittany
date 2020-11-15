@@ -1,4 +1,4 @@
-#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.0, ghc-8.2 */
+#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.2 */
 {-# LANGUAGE TypeFamilies #-}
 #endif
 
@@ -411,7 +411,7 @@ todo :: a
 todo = error "todo"
 
 
-#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.0, ghc-8.2 */
+#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.2 */
 type family IdP p
 type instance IdP GhcPs = RdrName
 
@@ -422,7 +422,7 @@ type GhcPs = RdrName
 #if MIN_VERSION_ghc(8,8,0)
 ghcDL :: GHC.HasSrcSpan a => a -> GHC.Located (GHC.SrcSpanLess a)
 ghcDL = GHC.dL
-#else              /* ghc-8.0 8.2 8.4 8.6 */
+#else              /* ghc-8.2 8.4 8.6 */
 ghcDL :: GHC.Located a -> GHC.Located a
 ghcDL x = x
 #endif

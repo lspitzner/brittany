@@ -26,24 +26,14 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 
-#if MIN_VERSION_ghc(8,2,0)
 prepPkg :: SourceText -> String
 prepPkg rawN = case rawN of
   SourceText n -> n
   -- This would be odd to encounter and the
   -- result will most certainly be wrong
   NoSourceText -> ""
-#else
-prepPkg :: String -> String
-prepPkg = id
-#endif
-#if MIN_VERSION_ghc(8,2,0)
 prepModName :: Located e -> e
 prepModName = unLoc
-#else
-prepModName :: e -> e
-prepModName = id
-#endif
 
 layoutImport :: ToBriDoc ImportDecl
 layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of

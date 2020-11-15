@@ -323,7 +323,7 @@ withTransformedAnns ast m = MultiRWSS.mGetRawR >>= \case
 #if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 warnExtractorCompat :: GHC.Warn -> String
 warnExtractorCompat (GHC.Warn _ (L _ s)) = s
-#else /* ghc-8.0 && ghc-8.2 */
+#else /* ghc-8.2 */
 warnExtractorCompat :: GenLocated l String -> String
 warnExtractorCompat (L _ s) = s
 #endif

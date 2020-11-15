@@ -30,7 +30,7 @@ layoutExpr :: ToBriDoc HsExpr
 
 #if   MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 litBriDoc :: HsLit GhcPs -> BriDocFInt
-#else /* ghc-8.0 && ghc-8.2 */
+#else /* ghc-8.2 */
 litBriDoc :: HsLit -> BriDocFInt
 #endif
 

@@ -49,9 +49,7 @@ import           BasicTypes ( InlinePragma(..)
                             , Activation(..)
                             , InlineSpec(..)
                             , RuleMatchInfo(..)
-#if MIN_VERSION_ghc(8,2,0)
                             , LexicalFixity(..)
-#endif
                             )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 
@@ -100,10 +98,8 @@ layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   TypeSig _ names (HsWC _ (HsIB _ typ)) -> layoutNamesAndType Nothing names typ
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
+#else /* ghc-8.2 */
   TypeSig names (HsWC _ (HsIB _ typ _)) -> layoutNamesAndType Nothing names typ
-#else /* ghc-8.0 */
-  TypeSig names (HsIB _ (HsWC _ _ typ)) -> layoutNamesAndType Nothing names typ
 #endif
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   InlineSig _ name (InlinePragma _ spec _arity phaseAct conlike) ->
@@ -128,17 +124,13 @@ layoutSig lsig@(L _loc sig) = case sig of
         <> Text.pack " #-}"
 #if MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   ClassOpSig _ False names (HsIB _ typ) -> layoutNamesAndType Nothing names typ
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
+#else /* ghc-8.2 */
   ClassOpSig False names (HsIB _ typ _) -> layoutNamesAndType Nothing names typ
-#else /* ghc-8.0 */
-  ClassOpSig False names (HsIB _ typ) -> layoutNamesAndType Nothing names typ
 #endif
 #if MIN_VERSION_ghc(8,6,0)
   PatSynSig _ names (HsIB _ typ) -> layoutNamesAndType (Just "pattern") names typ
-#elif MIN_VERSION_ghc(8,2,0)
-  PatSynSig names (HsIB _ typ _) -> layoutNamesAndType (Just "pattern") names typ
 #else
-  PatSynSig name (HsIB _ typ) -> layoutNamesAndType (Just "pattern") [name] typ
+  PatSynSig names (HsIB _ typ _) -> layoutNamesAndType (Just "pattern") names typ
 #endif
   _ -> briDocByExactNoComment lsig -- TODO
  where
@@ -359,10 +351,8 @@ layoutPatternBind funId binderDoc lmatch@(L _ match) = do
     Match _ (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
 #elif MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
     Match (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.4 */
-    Match (FunRhs matchId _ _) _ _ _ -> Just <$> lrdrNameToTextAnn matchId
 #else
-    Match (FunBindMatch matchId _) _ _ _ -> Just <$> lrdrNameToTextAnn matchId
+    Match (FunRhs matchId _ _) _ _ _ -> Just <$> lrdrNameToTextAnn matchId
 #endif
     _ -> pure Nothing
   let mIdStr' = fixPatternBindIdentifier match <$> mIdStr
@@ -406,7 +396,6 @@ layoutPatternBind funId binderDoc lmatch@(L _ match) = do
                          mWhereArg
                          hasComments
 
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 && ghc-8.4 */
 fixPatternBindIdentifier
   :: Match GhcPs (LHsExpr GhcPs) -> Text -> Text
 fixPatternBindIdentifier match idStr = go $ m_ctxt match
@@ -424,10 +413,6 @@ fixPatternBindIdentifier match idStr = go $ m_ctxt match
     (ParStmtCtxt   ctx1) -> goInner ctx1
     (TransStmtCtxt ctx1) -> goInner ctx1
     _                    -> idStr
-#else                       /* ghc-8.0 */
-fixPatternBindIdentifier :: Match GhcPs (LHsExpr GhcPs) -> Text -> Text
-fixPatternBindIdentifier _ x = x
-#endif
 
 layoutPatternBindFinal
   :: Maybe Text
@@ -842,18 +827,11 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
     let isInfix = case fixity of
           Prefix -> False
           Infix  -> True
-#elif MIN_VERSION_ghc(8,2,0)
+#else
   SynDecl name vars fixity typ _ -> do
     let isInfix = case fixity of
           Prefix -> False
           Infix  -> True
-#else
-  SynDecl name vars typ _ -> do
-    nameStr <- lrdrNameToTextAnn name
-    let isInfixTypeOp = case Text.uncons nameStr of
-          Nothing -> False
-          Just (c, _) -> not (c == '(' || isUpper c)
-    isInfix <- (isInfixTypeOp ||) <$> hasAnnKeyword name AnnBackquote
 #endif
     -- hasTrailingParen <- hasAnnKeywordComment ltycl AnnCloseP
     -- let parenWrapper = if hasTrailingParen
@@ -864,10 +842,8 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
       $ layoutSynDecl isInfix wrapNodeRest name (hsq_explicit vars) typ
 #if MIN_VERSION_ghc(8,6,0)
   DataDecl _ext name tyVars _ dataDefn ->
-#elif MIN_VERSION_ghc(8,2,0)
-  DataDecl name tyVars _ dataDefn _ _ ->
 #else
-  DataDecl name tyVars dataDefn _ _ ->
+  DataDecl name tyVars _ dataDefn _ _ ->
 #endif
     layoutDataDecl ltycl name tyVars dataDefn
   _ -> briDocByExactNoComment ltycl
@@ -919,14 +895,14 @@ layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
 #if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
     XTyVarBndr{} -> error "brittany internal error: XTyVarBndr"
     UserTyVar _ name -> do
-#else                         /* 8.0 8.2 8.4 */
+#else                         /* 8.2 8.4 */
     UserTyVar name -> do
 #endif
       nameStr <- lrdrNameToTextAnn name
       docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]
 #if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
     KindedTyVar _ name kind -> do
-#else                         /* 8.0 8.2 8.4 */
+#else                         /* 8.2 8.4 */
     KindedTyVar name kind -> do
 #endif
       nameStr <- lrdrNameToTextAnn name
@@ -967,12 +943,8 @@ layoutTyFamInstDecl inClass outerNode tfid = do
     FamEqn name pats _fixity typ = hsib_body $ tfid_eqn tfid
     bndrsMay = Nothing
     innerNode = outerNode
-#elif MIN_VERSION_ghc(8,2,0)
-    innerNode@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
-    bndrsMay = Nothing
-    pats = hsib_body boundPats
 #else
-    innerNode@(L _ (TyFamEqn name boundPats typ)) = tfid_eqn tfid
+    innerNode@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
     bndrsMay = Nothing
     pats = hsib_body boundPats
 #endif

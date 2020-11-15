@@ -297,7 +297,6 @@ createDerivingPar
   :: HsDeriving GhcPs -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 createDerivingPar derivs mainDoc = do
   case derivs of
-#if MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
     (L _ []) -> mainDoc
     (L _ types) ->
       docPar mainDoc
@@ -306,26 +305,13 @@ createDerivingPar derivs mainDoc = do
         $   docWrapNode derivs
         $   derivingClauseDoc
         <$> types
-#else
-    Nothing -> mainDoc
-    Just types ->
-      docPar mainDoc
-        $ docEnsureIndent BrIndentRegular
-        $ derivingClauseDoc types
-#endif
 
-#if MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
 derivingClauseDoc :: LHsDerivingClause GhcPs -> ToBriDocM BriDocNumbered
-#else
-derivingClauseDoc :: Located [LHsSigType GhcPs] -> ToBriDocM BriDocNumbered
-#endif
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
 derivingClauseDoc (L _ (XHsDerivingClause ext)) = absurdExt ext
 derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
-#elif MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
-derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
 #else
-derivingClauseDoc types = case types of
+derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
 #endif
   (L _ []) -> docSeq []
   (L _ ts) ->
@@ -333,11 +319,7 @@ derivingClauseDoc types = case types of
       tsLength = length ts
       whenMoreThan1Type val =
         if tsLength > 1 then docLitS val else docLitS ""
-#if MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
       (lhsStrategy, rhsStrategy) = maybe (docEmpty, docEmpty) strategyLeftRight mStrategy
-#else
-      (lhsStrategy, rhsStrategy) = (docEmpty, docEmpty)
-#endif
     in
       docSeq
         [ docDeriving
@@ -351,15 +333,12 @@ derivingClauseDoc types = case types of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             HsIB _ t -> layoutType t
             XHsImplicitBndrs x -> absurdExt x
-#elif MIN_VERSION_ghc(8,2,0)   /* ghc-8.2 */
-            HsIB _ t _ -> layoutType t
 #else
-            HsIB _ t -> layoutType t
+            HsIB _ t _ -> layoutType t
 #endif
         , whenMoreThan1Type ")"
         , rhsStrategy
         ]
-#if MIN_VERSION_ghc(8,2,0)   /* ghc-8.6 */
  where
   strategyLeftRight = \case
     (L _ StockStrategy          ) -> (docLitS " stock", docEmpty)
@@ -376,7 +355,6 @@ derivingClauseDoc types = case types of
             ]
           XHsImplicitBndrs ext -> absurdExt ext
       )
-#endif
 #endif
 
 docDeriving :: ToBriDocM BriDocNumbered
