@@ -1,5 +1,20 @@
 # Revision history for brittany
 
+## 0.12.2.0 -- November 2020
+
+* #207: Fix newtype indent in associated type family.
+* #231: Improve comments-affecting-layout behaviour for tuples.
+* #259: Data declaration for newtype and records. Thanks @eborden!
+* #263: Fix non-idempotent newlines with comment + where.
+* #273: Error handling.
+* #281: Fix moving comment in export list (haddock header).
+* #286: Fix comments in instance/type instances.
+* #287: Add support for pattern synonyms. Thanks @RaoulHC!
+* #293: Expose main function as a module. Thanks @soareschen!
+* #303: Readme: Supports 8.8. Thanks @andys8!
+* #311: Allows aeson-1.5.*. Thanks @jkachmar!
+* #313: Nondecreasing export list formatting. Thanks @expipiplus1!
+
 ## 0.12.1.1 -- December 2019
 
 * Bugfixes:
@@ -90,11 +105,11 @@
 
     multiline-comments are supported too, although
     the specification must still be a single line. E.g.
-    
+
     > "{- brittany --columns 50 -}"
-    
+
     CONFIG is either:
-    
+
     1) one or more flags in the form of what brittany accepts
        on the commandline, e.g. "--columns 50", or
     2) one or more specifications in the form of what brittany
