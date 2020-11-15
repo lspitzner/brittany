@@ -1,0 +1,42 @@
+name: CI
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-18.04
+        ghc:
+          - 8.8.4
+        cabal:
+          - 3.2.0.0
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: setup-haskell
+        uses: actions/setup-haskell@v1
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+      - run: cabal freeze
+      - run: cat cabal.project.freeze
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: ${{ matrix.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}-${{ hashFiles('cabal.project.freeze') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}-
+            ${{ matrix.os }}-${{ matrix.ghc }}-
+      - run: cabal test --test-show-details direct
+      - run: cabal sdist
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist-newstyle/sdist/brittany-*.tar.gz
+          name: brittany-${{ github.sha }}.tar.gz
+      - run: cabal check
