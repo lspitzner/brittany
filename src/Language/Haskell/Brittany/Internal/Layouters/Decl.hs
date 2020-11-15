@@ -98,7 +98,7 @@ layoutSig :: ToBriDoc Sig
 layoutSig lsig@(L _loc sig) = case sig of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   TypeSig _ names (HsWC _ (HsIB _ typ)) -> layoutNamesAndType Nothing names typ
-#else /* ghc-8.2 */
+#else /* ghc-8.4 */
   TypeSig names (HsWC _ (HsIB _ typ _)) -> layoutNamesAndType Nothing names typ
 #endif
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
@@ -124,7 +124,7 @@ layoutSig lsig@(L _loc sig) = case sig of
         <> Text.pack " #-}"
 #if MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   ClassOpSig _ False names (HsIB _ typ) -> layoutNamesAndType Nothing names typ
-#else /* ghc-8.2 */
+#else /* ghc-8.4 */
   ClassOpSig False names (HsIB _ typ _) -> layoutNamesAndType Nothing names typ
 #endif
 #if MIN_VERSION_ghc(8,6,0)
@@ -165,19 +165,11 @@ layoutSig lsig@(L _loc sig) = case sig of
 
 specStringCompat
   :: MonadMultiWriter [BrittanyError] m => LSig GhcPs -> InlineSpec -> m String
-#if MIN_VERSION_ghc(8,4,0)
 specStringCompat ast = \case
   NoUserInline    -> mTell [ErrorUnknownNode "NoUserInline" ast] $> ""
   Inline          -> pure "INLINE "
   Inlinable       -> pure "INLINABLE "
   NoInline        -> pure "NOINLINE "
-#else
-specStringCompat _ = \case
-  Inline          -> pure "INLINE "
-  Inlinable       -> pure "INLINABLE "
-  NoInline        -> pure "NOINLINE "
-  EmptyInlineSpec -> pure ""
-#endif
 
 layoutGuardLStmt :: ToBriDoc' (Stmt GhcPs (LHsExpr GhcPs))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
@@ -349,10 +341,8 @@ layoutPatternBind funId binderDoc lmatch@(L _ match) = do
   mIdStr <- case match of
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     Match _ (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
-#elif MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
-    Match (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
 #else
-    Match (FunRhs matchId _ _) _ _ _ -> Just <$> lrdrNameToTextAnn matchId
+    Match (FunRhs matchId _ _) _ _ -> Just <$> lrdrNameToTextAnn matchId
 #endif
     _ -> pure Nothing
   let mIdStr' = fixPatternBindIdentifier match <$> mIdStr
@@ -774,28 +764,16 @@ layoutLPatSyn
   :: Located (IdP GhcPs)
   -> HsPatSynDetails (Located (IdP GhcPs))
   -> ToBriDocM BriDocNumbered
-#if MIN_VERSION_ghc(8,4,0)
 layoutLPatSyn name (PrefixCon vars) = do
-#else
-layoutLPatSyn name (PrefixPatSyn vars) = do
-#endif
   docName <- lrdrNameToTextAnn name
   names <- mapM lrdrNameToTextAnn vars
   docSeq . fmap appSep $ docLit docName : (docLit <$> names)
-#if MIN_VERSION_ghc(8,4,0)
 layoutLPatSyn name (InfixCon left right) = do
-#else
-layoutLPatSyn name (InfixPatSyn left right) = do
-#endif
   leftDoc <- lrdrNameToTextAnn left
   docName <- lrdrNameToTextAnn name
   rightDoc <- lrdrNameToTextAnn right
   docSeq . fmap (appSep . docLit) $ [leftDoc, docName, rightDoc]
-#if MIN_VERSION_ghc(8,4,0)
 layoutLPatSyn name (RecCon recArgs) = do
-#else
-layoutLPatSyn name (RecordPatSyn recArgs) = do
-#endif
   docName <- lrdrNameToTextAnn name
   args <- mapM (lrdrNameToTextAnn . recordPatSynSelectorId) recArgs
   docSeq . fmap docLit
@@ -895,14 +873,14 @@ layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
 #if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
     XTyVarBndr{} -> error "brittany internal error: XTyVarBndr"
     UserTyVar _ name -> do
-#else                         /* 8.2 8.4 */
+#else                         /* 8.4 */
     UserTyVar name -> do
 #endif
       nameStr <- lrdrNameToTextAnn name
       docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]
 #if MIN_VERSION_ghc(8,6,0)    /* 8.6 */
     KindedTyVar _ name kind -> do
-#else                         /* 8.2 8.4 */
+#else                         /* 8.4 */
     KindedTyVar name kind -> do
 #endif
       nameStr <- lrdrNameToTextAnn name
@@ -939,14 +917,10 @@ layoutTyFamInstDecl inClass outerNode tfid = do
     FamEqn _ name pats _fixity typ = hsib_body $ tfid_eqn tfid
     bndrsMay = Nothing
     innerNode = outerNode
-#elif MIN_VERSION_ghc(8,4,0)
+#else
     FamEqn name pats _fixity typ = hsib_body $ tfid_eqn tfid
     bndrsMay = Nothing
     innerNode = outerNode
-#else
-    innerNode@(L _ (TyFamEqn name boundPats _fixity typ)) = tfid_eqn tfid
-    bndrsMay = Nothing
-    pats = hsib_body boundPats
 #endif
   docWrapNodePrior outerNode $ do
     nameStr   <- lrdrNameToTextAnn name

@@ -43,16 +43,8 @@ matrix:
 
   ##### OSX test via stack #####
 
-  # Build on macOS in addition to Linux
-  - env: BUILD=stack ARGS="--stack-yaml stack-8.2.2.yaml"
-    compiler: ": #stack 8.2.2 osx"
-    os: osx
-
   ##### CABAL #####
 
-  - env: BUILD=cabal GHCVER=8.2.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #cabal 8.2.2"
-    addons: {apt: {packages: [cabal-install-1.24,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
   - env: BUILD=cabal GHCVER=8.4.4 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #cabal 8.4.4"
     addons: {apt: {packages: [cabal-install-1.24,ghc-8.4.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
@@ -66,17 +58,8 @@ matrix:
   #  compiler: ": #GHC HEAD"
   #  addons: {apt: {packages: [cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
-  ##### CABAL DIST CHECK
-
-  - env: BUILD=cabaldist GHCVER=8.2.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #cabal 8.2.2 dist"
-    addons: {apt: {packages: [cabal-install-1.24,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-
   ##### CANEW #####
 
-  - env: BUILD=canew GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #cabal new 8.2.2"
-    addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
   - env: BUILD=canew GHCVER=8.8.1 CABALVER=3.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #cabal new 8.8.1"
     addons: {apt: {packages: [cabal-install-3.0,ghc-8.8.1,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
@@ -89,9 +72,6 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-8.2.2.yaml"
-    compiler: ": #stack 8.2.2"
-    addons: {apt: {packages: [libgmp-dev]}}
   - env: BUILD=stack ARGS="--stack-yaml stack-8.4.3.yaml"
     compiler: ": #stack 8.4.3"
     addons: {apt: {packages: [libgmp-dev]}}

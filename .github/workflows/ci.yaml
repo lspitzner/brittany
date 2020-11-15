@@ -26,9 +26,6 @@ jobs:
           - os: ubuntu-18.04
             ghc: 8.4.4
             cabal: 3.2.0.0
-          - os: ubuntu-18.04
-            ghc: 8.2.2
-            cabal: 3.2.0.0
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2

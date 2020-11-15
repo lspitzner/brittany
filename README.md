@@ -48,7 +48,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Other usage notes
 
-- Supports GHC versions `8.2`, `8.4`, `8.6`, `8.8`.
+- Supports GHC versions `8.4`, `8.6`, `8.8`.
 - included in stackage with lts>=10.0 (or nightlies dating to >=2017-11-15)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.

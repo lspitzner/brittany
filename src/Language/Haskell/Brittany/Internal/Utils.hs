@@ -62,9 +62,7 @@ import qualified Data.Generics.Uniplate.Direct as Uniplate
 #if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
 import qualified GHC.Hs.Extension as HsExtension
 #else
-#  if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 import qualified HsExtension
-#  endif /* ghc-8.4 */
 #endif /* ghc-8.10.1 */
 
 

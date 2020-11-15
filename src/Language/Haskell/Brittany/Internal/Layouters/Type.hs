@@ -44,14 +44,14 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
 #if MIN_VERSION_ghc(8,6,0)
   HsTyVar _ promoted name -> do
-#else   /* ghc-8.2 ghc-8.4 */
+#else   /* ghc-8.4 */
   HsTyVar promoted name -> do
 #endif
     t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     case promoted of
 #if MIN_VERSION_ghc(8,8,0)
       IsPromoted -> docSeq
-#else /* ghc-8.2 8.4 8.6 */
+#else /* ghc-8.4 8.6 */
       Promoted -> docSeq
 #endif
         [ docSeparator
@@ -541,7 +541,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --     }
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsIParamTy _ (L _ (HsIPName ipName)) typ1 -> do
-#else                        /* ghc-8.2 */
+#else                        /* ghc-8.4 */
   HsIParamTy (L _ (HsIPName ipName)) typ1 -> do
 #endif
     typeDoc1 <- docSharedWrapper layoutType typ1

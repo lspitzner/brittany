@@ -1,8 +1,3 @@
-#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.2 */
-{-# LANGUAGE TypeFamilies #-}
-#endif
-
-
 module Language.Haskell.Brittany.Internal.Prelude
   ( module E
   , module Language.Haskell.Brittany.Internal.Prelude
@@ -16,9 +11,7 @@ where
 #if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
 import GHC.Hs.Extension               as E ( GhcPs )
 #else
-#  if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 import HsExtension                    as E ( GhcPs )
-#  endif /* ghc-8.4 */
 #endif /* ghc-8.10.1 */
 
 import RdrName                        as E ( RdrName )
@@ -411,18 +404,10 @@ todo :: a
 todo = error "todo"
 
 
-#if !MIN_VERSION_ghc(8,4,0) /* ghc-8.2 */
-type family IdP p
-type instance IdP GhcPs = RdrName
-
-type GhcPs = RdrName
-#endif
-
-
 #if MIN_VERSION_ghc(8,8,0)
 ghcDL :: GHC.HasSrcSpan a => a -> GHC.Located (GHC.SrcSpanLess a)
 ghcDL = GHC.dL
-#else              /* ghc-8.2 8.4 8.6 */
+#else              /* ghc-8.4 8.6 */
 ghcDL :: GHC.Located a -> GHC.Located a
 ghcDL x = x
 #endif

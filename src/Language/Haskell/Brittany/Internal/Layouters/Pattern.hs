@@ -50,14 +50,14 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
     -- _ -> expr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   VarPat _ n ->
-#else                        /* ghc-8.2 8.4 */
+#else                        /* ghc-8.4 */
   VarPat   n ->
 #endif
     fmap Seq.singleton $ docLit $ lrdrNameToText n
     -- abc -> expr
 #if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   LitPat _ lit ->
-#else                        /* ghc-8.2 8.4 */
+#else                        /* ghc-8.4 */
   LitPat lit ->
 #endif
     fmap Seq.singleton $ allocateNode $ litBriDoc lit
@@ -66,7 +66,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   ParPat _ inner -> do
 #elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   ParPat _ inner -> do
-#else                        /* ghc-8.2 8.4 */
+#else                        /* ghc-8.4 */
   ParPat inner -> do
 #endif
     -- (nestedpat) -> expr
@@ -202,7 +202,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   SigPat _ pat1 (HsWC _ (HsIB _ ty1)) -> do
 #elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
   SigPat (HsWC _ (HsIB _ ty1)) pat1 -> do
-#else                        /* ghc-8.2 */
+#else                        /* ghc-8.4 */
   SigPatIn pat1 (HsWC _ (HsIB _ ty1 _)) -> do
 #endif
     -- i :: Int -> expr
