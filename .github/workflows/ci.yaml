@@ -40,6 +40,11 @@ jobs:
             ${{ matrix.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}-
             ${{ matrix.os }}-${{ matrix.ghc }}-
       - run: cabal test --test-show-details direct
+      - run: cabal install --installdir output --install-method copy
+      - uses: actions/upload-artifact@v2
+        with:
+          path: output/brittany*
+          name: brittany-${{ matrix.os }}-ghc-${{ matrix.ghc }}-${{ github.sha }}
       - run: cabal sdist
       - if: matrix.os == 'ubuntu-18.04' && matrix.ghc == '8.8.4'
         uses: actions/upload-artifact@v2
