@@ -41,6 +41,7 @@ jobs:
             ${{ matrix.os }}-${{ matrix.ghc }}-
       - run: cabal test --test-show-details direct
       - run: cabal install --installdir output --install-method copy
+      - run: strip output/brittany*
       - uses: actions/upload-artifact@v2
         with:
           path: output/brittany*
