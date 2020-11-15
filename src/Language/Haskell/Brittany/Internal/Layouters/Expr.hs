@@ -44,65 +44,29 @@ layoutExpr lexpr@(L _ expr) = do
     .>  confUnpack
   let allowFreeIndent = indentPolicy == IndentPolicyFree
   docWrapNode lexpr $ case expr of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsVar _ vname -> do
-#else
-    HsVar vname -> do
-#endif
       docLit =<< lrdrNameToTextAnn vname
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsUnboundVar _ var -> case var of
-#else
-    HsUnboundVar var -> case var of
-#endif
       OutOfScope oname _ -> docLit $ Text.pack $ occNameString oname
       TrueExprHole oname -> docLit $ Text.pack $ occNameString oname
     HsRecFld{} -> do
       -- TODO
       briDocByExactInlineOnly "HsRecFld" lexpr
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsOverLabel _ext _reboundFromLabel name ->
-#else                        /* ghc-8.4 */
-    HsOverLabel _reboundFromLabel name ->
-#endif
       let label = FastString.unpackFS name
       in docLit . Text.pack $ '#' : label
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsIPVar _ext (HsIPName name) ->
-#else
-    HsIPVar (HsIPName name) ->
-#endif
       let label = FastString.unpackFS name
       in docLit . Text.pack $ '?' : label
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsOverLit _ olit -> do
-#else
-    HsOverLit olit -> do
-#endif
       allocateNode $ overLitValBriDoc $ ol_val olit
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLit _ lit -> do
-#else
-    HsLit lit -> do
-#endif
       allocateNode $ litBriDoc lit
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLam _ (MG _ (L _ [lmatch@(L _ match)]) _)
-#else
-    HsLam (MG (L _ [lmatch@(L _ match)]) _ _ _)
-#endif
       |  pats                  <- m_pats match
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
       ,  GRHSs _ [lgrhs] llocals <- m_grhss match
-#else
-      ,  GRHSs [lgrhs] llocals  <- m_grhss match
-#endif
       ,  L _ EmptyLocalBinds {} <- llocals
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
       ,  L _ (GRHS _ [] body)     <- lgrhs
-#else
-      ,  L _ (GRHS [] body)     <- lgrhs
-#endif
       -> do
       patDocs <- zip (True : repeat False) pats `forM` \(isFirst, p) ->
         fmap return $ do
@@ -168,48 +132,26 @@ layoutExpr lexpr@(L _ expr) = do
         ]
     HsLam{} ->
       unknownNodeError "HsLam too complex" lexpr
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ XMatchGroup{} ->
       error "brittany internal error: HsLamCase XMatchGroup"
-#endif
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ (MG _ (L _ []) _) -> do
-#else                        /* ghc-8.4 */
-    HsLamCase (MG (L _ []) _ _ _) -> do
-#endif
       docSetParSpacing $ docAddBaseY BrIndentRegular $
         (docLit $ Text.pack "\\case {}")
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLamCase _ (MG _ lmatches@(L _ matches) _) -> do
-#else                        /* ghc-8.4 */
-    HsLamCase (MG lmatches@(L _ matches) _ _ _) -> do
-#endif
       binderDoc   <- docLit $ Text.pack "->"
       funcPatDocs <- docWrapNode lmatches
         $ layoutPatternBind Nothing binderDoc `mapM` matches
       docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "\\case")
         (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsApp _ exp1@(L _ HsApp{}) exp2 -> do
-#else
-    HsApp exp1@(L _ HsApp{}) exp2 -> do
-#endif
       let gather :: [LHsExpr GhcPs] -> LHsExpr GhcPs -> (LHsExpr GhcPs, [LHsExpr GhcPs])
           gather list = \case
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             L _ (HsApp _ l r) -> gather (r:list) l
-#else
-            L _ (HsApp l r) -> gather (r:list) l
-#endif
             x               -> (x, list)
       let (headE, paramEs) = gather [exp2] exp1
       let colsOrSequence = case headE of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             L _ (HsVar _ (L _ (Unqual occname))) ->
-#else
-            L _ (HsVar (L _ (Unqual occname))) ->
-#endif
               docCols (ColApp $ Text.pack $ occNameString occname)
             _ -> docSeq
       headDoc <- docSharedWrapper layoutExpr headE
@@ -255,11 +197,7 @@ layoutExpr lexpr@(L _ expr) = do
             ( docNonBottomSpacing
             $ docLines paramDocs
             )
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsApp _ exp1 exp2 -> do
-#else
-    HsApp exp1 exp2 -> do
-#endif
       -- TODO: if expDoc1 is some literal, we may want to create a docCols here.
       expDoc1 <- docSharedWrapper layoutExpr exp1
       expDoc2 <- docSharedWrapper layoutExpr exp2
@@ -301,12 +239,10 @@ layoutExpr lexpr@(L _ expr) = do
     HsAppType _ _ XHsWildCardBndrs{} ->
       error "brittany internal error: HsAppType XHsWildCardBndrs"
     HsAppType _ exp1 (HsWC _ ty1) -> do
-#elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
+#else
     HsAppType XHsWildCardBndrs{} _ ->
       error "brittany internal error: HsAppType XHsWildCardBndrs"
     HsAppType (HsWC _ ty1) exp1 -> do
-#else                        /* ghc-8.4 */
-    HsAppType exp1 (HsWC _ ty1) -> do
 #endif
       t <- docSharedWrapper layoutType ty1
       e <- docSharedWrapper layoutExpr exp1
@@ -321,23 +257,10 @@ layoutExpr lexpr@(L _ expr) = do
             e
             (docSeq [docLit $ Text.pack "@", t ])
         ]
-#if !MIN_VERSION_ghc(8,6,0)   /* ghc-8.4 */
-    HsAppTypeOut{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsAppTypeOut{}" lexpr
-#endif
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     OpApp _ expLeft@(L _ OpApp{}) expOp expRight -> do
-#else
-    OpApp expLeft@(L _ OpApp{}) expOp _ expRight -> do
-#endif
       let gather :: [(LHsExpr GhcPs, LHsExpr GhcPs)] -> LHsExpr GhcPs -> (LHsExpr GhcPs, [(LHsExpr GhcPs, LHsExpr GhcPs)])
           gather opExprList = \case
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             (L _ (OpApp _ l1 op1 r1)) -> gather ((op1, r1): opExprList) l1
-#else
-            (L _ (OpApp l1 op1 _ r1)) -> gather ((op1, r1): opExprList) l1
-#endif
             final -> (final, opExprList)
           (leftOperand, appList) = gather [] expLeft
       leftOperandDoc <- docSharedWrapper layoutExpr leftOperand
@@ -351,19 +274,11 @@ layoutExpr lexpr@(L _ expr) = do
         hasComLeft <- hasAnyCommentsConnected expLeft
         hasComOp   <- hasAnyCommentsConnected expOp
         pure $ not hasComLeft && not hasComOp
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
       let allowPar = case (expOp, expRight) of
             (L _ (HsVar _ (L _ (Unqual occname))), _)
               | occNameString occname == "$" -> True
             (_, L _ (HsApp _ _ (L _ HsVar{}))) -> False
             _ -> True
-#else
-      let allowPar = case (expOp, expRight) of
-            (L _ (HsVar (L _ (Unqual occname))), _)
-              | occNameString occname == "$" -> True
-            (_, L _ (HsApp _ (L _ HsVar{}))) -> False
-            _ -> True
-#endif
       runFilteredAlternative $ do
         -- > one + two + three
         -- or
@@ -401,27 +316,15 @@ layoutExpr lexpr@(L _ expr) = do
             $ (appListDocs <&> \(od, ed) -> docCols ColOpPrefix [appSep od, docSetBaseY ed])
               ++ [docCols ColOpPrefix [appSep opLastDoc, docSetBaseY expLastDoc]]
             )
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     OpApp _ expLeft expOp expRight -> do
-#else
-    OpApp expLeft expOp _ expRight -> do
-#endif
       expDocLeft  <- docSharedWrapper layoutExpr expLeft
       expDocOp    <- docSharedWrapper layoutExpr expOp
       expDocRight <- docSharedWrapper layoutExpr expRight
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
       let allowPar = case (expOp, expRight) of
             (L _ (HsVar _ (L _ (Unqual occname))), _)
               | occNameString occname == "$" -> True
             (_, L _ (HsApp _ _ (L _ HsVar{}))) -> False
             _ -> True
-#else
-      let allowPar = case (expOp, expRight) of
-            (L _ (HsVar (L _ (Unqual occname))), _)
-              | occNameString occname == "$" -> True
-            (_, L _ (HsApp _ (L _ HsVar{}))) -> False
-            _ -> True
-#endif
       let leftIsDoBlock = case expLeft of
             L _ HsDo{} -> True
             _          -> False
@@ -467,20 +370,12 @@ layoutExpr lexpr@(L _ expr) = do
             then docLines [expDocLeft, expDocOpAndRight]
             else docAddBaseY BrIndentRegular
                    $ docPar expDocLeft expDocOpAndRight
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     NegApp _ op _ -> do
-#else
-    NegApp op _ -> do
-#endif
       opDoc <- docSharedWrapper layoutExpr op
       docSeq [ docLit $ Text.pack "-"
              , opDoc
              ]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsPar _ innerExp -> do
-#else
-    HsPar innerExp -> do
-#endif
       innerExpDoc <- docSharedWrapper (docWrapNode lexpr . layoutExpr) innerExp
       docAlt
         [ docSeq
@@ -496,41 +391,25 @@ layoutExpr lexpr@(L _ expr) = do
           , docLit $ Text.pack ")"
           ]
         ]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     SectionL _ left op -> do -- TODO: add to testsuite
-#else
-    SectionL left op -> do -- TODO: add to testsuite
-#endif
       leftDoc <- docSharedWrapper layoutExpr left
       opDoc   <- docSharedWrapper layoutExpr op
       docSeq [leftDoc, docSeparator, opDoc]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     SectionR _ op right -> do -- TODO: add to testsuite
-#else
-    SectionR op right -> do -- TODO: add to testsuite
-#endif
       opDoc    <- docSharedWrapper layoutExpr op
       rightDoc <- docSharedWrapper layoutExpr right
       docSeq [opDoc, docSeparator, rightDoc]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     ExplicitTuple _ args boxity -> do
-#else
-    ExplicitTuple args boxity -> do
-#endif
 #if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
       let argExprs = args <&> \arg -> case arg of
             (L _ (Present _ e)) -> (arg, Just e);
             (L _ (Missing NoExtField)) -> (arg, Nothing)
             (L _ XTupArg{}) -> error "brittany internal error: XTupArg"
-#elif MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#else
       let argExprs = args <&> \arg -> case arg of
             (L _ (Present _ e)) -> (arg, Just e);
             (L _ (Missing NoExt)) -> (arg, Nothing)
             (L _ XTupArg{}) -> error "brittany internal error: XTupArg"
-#else
-      let argExprs = args <&> \arg -> case arg of
-            (L _ (Present e)) -> (arg, Just e);
-            (L _ (Missing PlaceHolder)) -> (arg, Nothing)
 #endif
       argDocs <- forM argExprs
         $ docSharedWrapper
@@ -576,15 +455,9 @@ layoutExpr lexpr@(L _ expr) = do
               lineN = docCols ColTuples [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) eN]
               end   = closeLit
             in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN, end]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsCase _ _ XMatchGroup{} ->
       error "brittany internal error: HsCase XMatchGroup"
-#endif
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsCase _ cExp (MG _ (L _ []) _) -> do
-#else
-    HsCase cExp (MG (L _ []) _ _ _) -> do
-#endif
       cExpDoc <- docSharedWrapper layoutExpr cExp
       docAlt
         [ docAddBaseY BrIndentRegular
@@ -599,11 +472,7 @@ layoutExpr lexpr@(L _ expr) = do
             )
             (docLit $ Text.pack "of {}")
         ]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsCase _ cExp (MG _ lmatches@(L _ matches) _) -> do
-#else
-    HsCase cExp (MG lmatches@(L _ matches) _ _ _) -> do
-#endif
       cExpDoc <- docSharedWrapper layoutExpr cExp
       binderDoc <- docLit $ Text.pack "->"
       funcPatDocs <- docWrapNode lmatches
@@ -627,11 +496,7 @@ layoutExpr lexpr@(L _ expr) = do
               (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
             )
         ]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsIf _ _ ifExpr thenExpr elseExpr -> do
-#else
-    HsIf _ ifExpr thenExpr elseExpr -> do
-#endif
       ifExprDoc   <- docSharedWrapper layoutExpr ifExpr
       thenExprDoc <- docSharedWrapper layoutExpr thenExpr
       elseExprDoc <- docSharedWrapper layoutExpr elseExpr
@@ -751,11 +616,7 @@ layoutExpr lexpr@(L _ expr) = do
       docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
         (docLit $ Text.pack "if")
         (layoutPatternBindFinal Nothing binderDoc Nothing clauseDocs Nothing hasComments)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsLet _ binds exp1 -> do
-#else
-    HsLet binds exp1 -> do
-#endif
       expDoc1     <- docSharedWrapper layoutExpr exp1
       -- We jump through some ugly hoops here to ensure proper sharing.
       hasComments <- hasAnyCommentsBelow lexpr
@@ -861,11 +722,7 @@ layoutExpr lexpr@(L _ expr) = do
             ]
         _ -> docSeq [appSep $ docLit $ Text.pack "let in", expDoc1]
       -- docSeq [appSep $ docLit "let in", expDoc1]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsDo _ stmtCtx (L _ stmts) -> case stmtCtx of
-#else
-    HsDo stmtCtx (L _ stmts) _ -> case stmtCtx of
-#endif
       DoExpr -> do
         stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
         docSetParSpacing
@@ -960,26 +817,13 @@ layoutExpr lexpr@(L _ expr) = do
             in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
     ExplicitList _ _ [] ->
       docLit $ Text.pack "[]"
-#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.4 */
-    ExplicitPArr{} -> do
-      -- TODO
-      briDocByExactInlineOnly "ExplicitPArr{}" lexpr
-#endif
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecordCon _ lname fields ->
-#else
-    RecordCon lname _ _ fields ->
-#endif
       case fields of
         HsRecFields fs Nothing -> do
           let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
           rFs <- fs
             `forM` \lfield@(L _ (HsRecField (L _ fieldOcc) rFExpr pun)) -> do
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
               let FieldOcc _ lnameF = fieldOcc
-#else
-              let FieldOcc lnameF _ = fieldOcc
-#endif
               rFExpDoc <- if pun
                 then return Nothing
                 else Just <$> docSharedWrapper layoutExpr rFExpr
@@ -999,22 +843,14 @@ layoutExpr lexpr@(L _ expr) = do
 #endif
           let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
           fieldDocs <- fs `forM` \fieldl@(L _ (HsRecField (L _ fieldOcc) fExpr pun)) -> do
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             let FieldOcc _ lnameF = fieldOcc
-#else
-            let FieldOcc lnameF _ = fieldOcc
-#endif
             fExpDoc <- if pun
               then return Nothing
               else Just <$> docSharedWrapper layoutExpr fExpr
             return (fieldl, lrdrNameToText lnameF, fExpDoc)
           recordExpression True indentPolicy lexpr nameDoc fieldDocs
         _ -> unknownNodeError "RecordCon with puns" lexpr
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecordUpd _ rExpr fields -> do
-#else
-    RecordUpd rExpr fields _ _ _ _ -> do
-#endif
       rExprDoc <- docSharedWrapper layoutExpr rExpr
       rFs <- fields
         `forM` \lfield@(L _ (HsRecField (L _ ambName) rFExpr pun)) -> do
@@ -1022,15 +858,10 @@ layoutExpr lexpr@(L _ expr) = do
             then return Nothing
             else Just <$> docSharedWrapper layoutExpr rFExpr
           return $ case ambName of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             Unambiguous _ n -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous   _ n -> (lfield, lrdrNameToText n, rFExpDoc)
             XAmbiguousFieldOcc{} ->
               error "brittany internal error: XAmbiguousFieldOcc"
-#else
-            Unambiguous n _ -> (lfield, lrdrNameToText n, rFExpDoc)
-            Ambiguous   n _ -> (lfield, lrdrNameToText n, rFExpDoc)
-#endif
       recordExpression False indentPolicy lexpr rExprDoc rFs
 #if MIN_VERSION_ghc(8,8,0)   /* ghc-8.6 */
     ExprWithTySig _ _ (HsWC _ XHsImplicitBndrs{}) ->
@@ -1038,14 +869,12 @@ layoutExpr lexpr@(L _ expr) = do
     ExprWithTySig _ _ XHsWildCardBndrs{} ->
       error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
     ExprWithTySig _ exp1 (HsWC _ (HsIB _ typ1)) -> do
-#elif MIN_VERSION_ghc(8,6,0) /* ghc-8.6 */
+#else
     ExprWithTySig (HsWC _ XHsImplicitBndrs{}) _ ->
       error "brittany internal error: ExprWithTySig HsWC XHsImplicitBndrs"
     ExprWithTySig XHsWildCardBndrs{} _ ->
       error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
     ExprWithTySig (HsWC _ (HsIB _ typ1)) exp1 -> do
-#else /* ghc-8.4 */
-    ExprWithTySig exp1 (HsWC _ (HsIB _ typ1 _)) -> do
 #endif
       expDoc <- docSharedWrapper layoutExpr exp1
       typDoc <- docSharedWrapper layoutType typ1
@@ -1054,11 +883,6 @@ layoutExpr lexpr@(L _ expr) = do
         , appSep $ docLit $ Text.pack "::"
         , typDoc
         ]
-#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.4 */
-    ExprWithTySigOut{} -> do
-      -- TODO
-      briDocByExactInlineOnly "ExprWithTySigOut{}" lexpr
-#endif
     ArithSeq _ Nothing info ->
       case info of
         From e1 -> do
@@ -1103,11 +927,6 @@ layoutExpr lexpr@(L _ expr) = do
             ]
     ArithSeq{} ->
       briDocByExactInlineOnly "ArithSeq" lexpr
-#if !MIN_VERSION_ghc(8,6,0)  /* ghc-8.4 */
-    PArrSeq{} -> do
-      -- TODO
-      briDocByExactInlineOnly "PArrSeq{}" lexpr
-#endif
     HsSCC{} -> do
       -- TODO
       briDocByExactInlineOnly "HsSCC{}" lexpr
@@ -1123,11 +942,7 @@ layoutExpr lexpr@(L _ expr) = do
     HsTcBracketOut{} -> do
       -- TODO
       briDocByExactInlineOnly "HsTcBracketOut{}" lexpr
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     HsSpliceE _ (HsQuasiQuote _ _ quoter _loc content) -> do
-#else
-    HsSpliceE (HsQuasiQuote _ quoter _loc content) -> do
-#endif
       allocateNode $ BDFPlain
         (Text.pack
           $  "["
@@ -1166,11 +981,7 @@ layoutExpr lexpr@(L _ expr) = do
 #else
     EWildPat{} -> do
       docLit $ Text.pack "_"
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     EAsPat _ asName asExpr -> do
-#else
-    EAsPat asName asExpr -> do
-#endif
       docSeq
         [ docLit $ lrdrNameToText asName <> Text.pack "@"
         , layoutExpr asExpr
@@ -1191,9 +1002,7 @@ layoutExpr lexpr@(L _ expr) = do
     ExplicitSum{} -> do
       -- TODO
       briDocByExactInlineOnly "ExplicitSum{}" lexpr
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     XExpr{} -> error "brittany internal error: XExpr"
-#endif
 
 recordExpression
   :: (Data.Data.Data lExpr, Data.Data.Data name)

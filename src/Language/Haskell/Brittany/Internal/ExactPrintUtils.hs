@@ -212,17 +212,9 @@ commentAnnFixTransform modul = SYB.everything (>>) genF modul
   genF = (\_ -> return ()) `SYB.extQ` exprF
   exprF :: Located (HsExpr GhcPs) -> ExactPrint.Transform ()
   exprF lexpr@(L _ expr) = case expr of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecordCon _ _ (HsRecFields fs@(_:_) Nothing) ->
-#else
-    RecordCon _ _ _ (HsRecFields fs@(_:_) Nothing) ->
-#endif
       moveTrailingComments lexpr (List.last fs)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecordUpd _ _e fs@(_:_) ->
-#else
-    RecordUpd _e fs@(_:_) _cons _ _ _ ->
-#endif
       moveTrailingComments lexpr (List.last fs)
     _ -> return ()
 

@@ -304,11 +304,8 @@ lines' s = case break (== '\n') s of
 #if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 absurdExt :: HsExtension.NoExtCon -> a
 absurdExt = HsExtension.noExtCon
-#elif MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
+#else
 -- | A method to dismiss NoExt patterns for total matches
 absurdExt :: HsExtension.NoExt -> a
 absurdExt = error "cannot construct NoExt"
-#else
-absurdExt :: ()
-absurdExt = ()
 #endif

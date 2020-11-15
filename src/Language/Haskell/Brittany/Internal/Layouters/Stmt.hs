@@ -38,17 +38,9 @@ layoutStmt lstmt@(L _ stmt) = do
   indentAmount :: Int <-
     mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   docWrapNode lstmt $ case stmt of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     LastStmt _ body False _ -> do
-#else
-    LastStmt body False _ -> do
-#endif
       layoutExpr body
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     BindStmt _ lPat expr _ _ -> do
-#else
-    BindStmt lPat expr _ _ _ -> do
-#endif
       patDoc <- fmap return $ colsWrapPat =<< layoutPat lPat
       expDoc <- docSharedWrapper layoutExpr expr
       docAlt
@@ -67,11 +59,7 @@ layoutStmt lstmt@(L _ stmt) = do
             $ docPar (docLit $ Text.pack "<-") (expDoc)
           ]
         ]
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     LetStmt _ binds -> do
-#else
-    LetStmt binds -> do
-#endif
       let isFree         = indentPolicy == IndentPolicyFree
       let indentFourPlus = indentAmount >= 4
       layoutLocalBinds binds >>= \case
@@ -116,11 +104,7 @@ layoutStmt lstmt@(L _ stmt) = do
             $ docAddBaseY BrIndentRegular
             $ docPar (docLit $ Text.pack "let")
                      (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecStmt _ stmts _ _ _ _ _ -> runFilteredAlternative $ do
-#else
-    RecStmt stmts _ _ _ _ _ _ _ _ _ -> runFilteredAlternative $ do
-#endif
       -- rec stmt1
       --     stmt2
       --     stmt3
@@ -136,11 +120,7 @@ layoutStmt lstmt@(L _ stmt) = do
       addAlternative $ docAddBaseY BrIndentRegular $ docPar
         (docLit (Text.pack "rec"))
         (docLines $ layoutStmt <$> stmts)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     BodyStmt _ expr _ _ -> do
-#else
-    BodyStmt expr _ _ _ -> do
-#endif
       expDoc <- docSharedWrapper layoutExpr expr
       docAddBaseY BrIndentRegular $ expDoc
     _ -> briDocByExactInlineOnly "some unknown statement" lstmt

@@ -37,11 +37,7 @@ prepModName = unLoc
 
 layoutImport :: ToBriDoc ImportDecl
 layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
-#if MIN_VERSION_ghc(8,6,0)
   ImportDecl _ _ (L _ modName) pkg src safe q False mas mllies -> do
-#else
-  ImportDecl _ (L _ modName) pkg src safe q False mas mllies -> do
-#endif
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
     importAsCol <- mAsk <&> _conf_layout .> _lconfig_importAsColumn .> confUnpack
     indentPolicy <- mAsk <&>  _conf_layout .> _lconfig_indentPolicy .> confUnpack

@@ -44,20 +44,11 @@ layoutDataDecl
   -> LHsQTyVars GhcPs
   -> HsDataDefn GhcPs
   -> ToBriDocM BriDocNumbered
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
 layoutDataDecl _ _ (XLHsQTyVars ext) _ = absurdExt ext
 layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
-#else
-layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
-#endif
   -- newtype MyType a b = MyType ..
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsDataDefn _ext NewType (L _ []) _ctype Nothing [cons] mDerivs -> case cons of
     (L _ (ConDeclH98 _ext consName (L _ False) _qvars (Just (L _ [])) details _conDoc)) ->
-#else
-  HsDataDefn NewType (L _ []) _ctype Nothing [cons] mDerivs -> case cons of
-    (L _ (ConDeclH98 consName Nothing (Just (L _ [])) details _conDoc)) ->
-#endif
       docWrapNode ltycl $ do
         nameStr     <- lrdrNameToTextAnn name
         consNameStr <- lrdrNameToTextAnn consName
@@ -82,11 +73,7 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
 
   -- data MyData a b
   -- (zero constructors)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [] mDerivs ->
-#else
-  HsDataDefn DataType (L _ lhsContext) _ctype Nothing [] mDerivs ->
-#endif
     docWrapNode ltycl $ do
       lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
       nameStr       <- lrdrNameToTextAnn name
@@ -100,17 +87,9 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs _) defn = case defn of
 
   -- data MyData = MyData ..
   -- data MyData = MyData { .. }
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
-#else
-  HsDataDefn DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
-#endif
     case cons of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
       (L _ (ConDeclH98 _ext consName (L _ _hasExt) qvars mRhsContext details _conDoc)) ->
-#else
-      (L _ (ConDeclH98 consName (Just (HsQTvs _ qvars _)) mRhsContext details _conDoc)) ->
-#endif
         docWrapNode ltycl $ do
           lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
           nameStr       <- lrdrNameToTextAnn name
@@ -266,18 +245,11 @@ createContextDoc (t1 : tR) = do
 createBndrDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
 createBndrDoc bs = do
   tyVarDocs <- bs `forM` \case
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     (L _ (UserTyVar _ext vname)) -> return $ (lrdrNameToText vname, Nothing)
     (L _ (KindedTyVar _ext lrdrName kind)) -> do
-#else
-    (L _ (UserTyVar vname)) -> return $ (lrdrNameToText vname, Nothing)
-    (L _ (KindedTyVar lrdrName kind)) -> do
-#endif
       d <- docSharedWrapper layoutType kind
       return $ (lrdrNameToText lrdrName, Just $ d)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     (L _ (XTyVarBndr ext)) -> absurdExt ext
-#endif
   docSeq
     $   List.intersperse docSeparator
     $   tyVarDocs
@@ -307,12 +279,8 @@ createDerivingPar derivs mainDoc = do
         <$> types
 
 derivingClauseDoc :: LHsDerivingClause GhcPs -> ToBriDocM BriDocNumbered
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
 derivingClauseDoc (L _ (XHsDerivingClause ext)) = absurdExt ext
 derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
-#else
-derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
-#endif
   (L _ []) -> docSeq []
   (L _ ts) ->
     let
@@ -330,12 +298,8 @@ derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
           $ docSeq
           $ List.intersperse docCommaSep
           $ ts <&> \case
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
             HsIB _ t -> layoutType t
             XHsImplicitBndrs x -> absurdExt x
-#else
-            HsIB _ t _ -> layoutType t
-#endif
         , whenMoreThan1Type ")"
         , rhsStrategy
         ]
@@ -344,7 +308,6 @@ derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
     (L _ StockStrategy          ) -> (docLitS " stock", docEmpty)
     (L _ AnyclassStrategy       ) -> (docLitS " anyclass", docEmpty)
     (L _ NewtypeStrategy        ) -> (docLitS " newtype", docEmpty)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     lVia@(L _ (ViaStrategy viaTypes) ) ->
       ( docEmpty
       , case viaTypes of
@@ -355,7 +318,6 @@ derivingClauseDoc (L _ (HsDerivingClause mStrategy types)) = case types of
             ]
           XHsImplicitBndrs ext -> absurdExt ext
       )
-#endif
 
 docDeriving :: ToBriDocM BriDocNumbered
 docDeriving = docLitS "deriving"
@@ -473,12 +435,8 @@ createDetailsDoc consNameStr details = case details of
     :: [LConDeclField GhcPs]
     -> [(ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)]
   mkFieldDocs = fmap $ \lField -> case lField of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc lField names t
     L _ (XConDeclField x) -> absurdExt x
-#else
-    L _ (ConDeclField names t _) -> createNamesAndTypeDoc lField names t
-#endif
 
 createForallDoc :: [LHsTyVarBndr GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
 createForallDoc []            = Nothing
@@ -497,12 +455,8 @@ createNamesAndTypeDoc lField names t =
       $   List.intersperse docCommaSep
       $   names
       <&> \case
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
         L _ (XFieldOcc x) -> absurdExt x
         L _ (FieldOcc _ fieldName) ->
-#else
-        L _ (FieldOcc fieldName _) ->
-#endif
             docLit =<< lrdrNameToTextAnn fieldName
     ]
   , docWrapNodeRest lField $ layoutType t

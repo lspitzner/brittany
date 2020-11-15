@@ -39,32 +39,12 @@ prepareName = ieLWrappedName
 
 layoutIE :: ToBriDoc IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
-#if MIN_VERSION_ghc(8,6,0)
   IEVar _ x -> layoutWrapped lie x
-#else
-  IEVar x -> layoutWrapped lie x
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   IEThingAbs _ x -> layoutWrapped lie x
-#else
-  IEThingAbs x -> layoutWrapped lie x
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   IEThingAll _ x -> docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-#else
-  IEThingAll x -> docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   IEThingWith _ x (IEWildcard _) _ _ ->
-#else
-  IEThingWith x (IEWildcard _) _ _ ->
-#endif
     docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-#if MIN_VERSION_ghc(8,6,0)
   IEThingWith _ x _ ns _ -> do
-#else
-  IEThingWith x _ ns _ -> do
-#endif
     hasComments <- orM
       ( hasCommentsBetween lie AnnOpenP AnnCloseP
       : hasAnyCommentsBelow x
@@ -95,11 +75,7 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
         $  [docSeq [docParenLSep, docWrapNode n1 $ nameDoc n1]]
         ++ map layoutItem nMs
         ++ [docSeq [docCommaSep, docNodeAnnKW lie (Just AnnOpenP) $ nameDoc nN], docParenR]
-#if MIN_VERSION_ghc(8,6,0)
   IEModuleContents _ n -> docSeq
-#else
-  IEModuleContents n -> docSeq
-#endif
     [ docLit $ Text.pack "module"
     , docSeparator
     , docLit . Text.pack . moduleNameString $ unLoc n
