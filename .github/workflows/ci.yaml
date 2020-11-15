@@ -36,7 +36,8 @@ jobs:
             ${{ matrix.os }}-${{ matrix.ghc }}-
       - run: cabal test --test-show-details direct
       - run: cabal sdist
-      - uses: actions/upload-artifact@v2
+      - if: matrix.os == 'ubuntu-18.04'
+        uses: actions/upload-artifact@v2
         with:
           path: dist-newstyle/sdist/brittany-*.tar.gz
           name: brittany-${{ github.sha }}.tar.gz
