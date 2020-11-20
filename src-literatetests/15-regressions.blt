@@ -473,13 +473,6 @@ foo n = case n of
 bar n = case n of
   (-2, -2) -> (-2, -2)
 
-#test issue 48 a
-
-foo =
-  let a    = b@1
-      cccc = ()
-  in  foo
-
 #test issue 48 b
 
 {-# LANGUAGE TypeApplications #-}
