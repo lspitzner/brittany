@@ -607,6 +607,27 @@ data XIILqcacwiuNiu = XIILqcacwiuNiu
   , jeyOcuesexaYoy_vpqn                    :: Jgtoyuh ()
   }
 
+#test normal data types in sum
+-- brittany {lconfig_indentPolicy: IndentPolicyLeft }
+data Foo
+  = Bar
+  | Baz
+  | Biz
+
+#test records in sum
+-- brittany {lconfig_indentPolicy: IndentPolicyLeft }
+data Foo
+  = Bar
+    { foo :: Int -- hello
+    , bar :: Foo
+    -- how are you
+    }
+  | Baz
+  | Biz
+    { foo :: Int
+    , bar :: Foo
+    }
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
