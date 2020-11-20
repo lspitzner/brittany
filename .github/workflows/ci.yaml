@@ -56,3 +56,11 @@ jobs:
           path: dist-newstyle/sdist/brittany-*.tar.gz
           name: brittany-${{ github.sha }}.tar.gz
       - run: cabal check
+
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v12
+      - uses: actions/checkout@v2
+      - run: nix-build

@@ -70,7 +70,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 - via `nix`:
     ~~~.sh
-    nix build -f release.nix     # or 'nix-build -f release.nix'
+    nix build
     nix-env -i ./result
     ~~~
 
@@ -101,6 +101,20 @@ log the size of the input, but _not_ the full input/output of requests.)
     ~~~~.sh
     aura -A brittany
     ~~~~
+
+# Development tips
+
+## Run a hoogle server
+
+To host a local Hoogle server with all of Brittany's dependencies run:
+
+```sh
+echo brittany.cabal |
+  $(nix-build '<nixpkgs>' --no-link -A entr)/bin/entr -r -- \
+    sh -c "nix-shell --run 'hoogle server --local'"
+```
+
+This will watch `brittany.cabal` for changes and restart the server when new dependencies are added there.
 
 # Editor Integration
 
