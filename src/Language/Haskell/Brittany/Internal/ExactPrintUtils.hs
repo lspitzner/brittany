@@ -32,7 +32,14 @@ import qualified Lexer         as GHC
 import qualified StringBuffer  as GHC
 import qualified Outputable    as GHC
 import qualified CmdLineParser as GHC
+
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+import           Bag
+#else
 import           HsSyn
+#endif
+
 import           SrcLoc ( SrcSpan, Located )
 
 
@@ -89,7 +96,11 @@ parseModuleWithCpp cpp opts args fp dynCheck =
       ++ show (warnings <&> warnExtractorCompat)
     x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+    either (\err -> ExceptT.throwE $ "transform error: " ++ show (bagToList (show <$> err)))
+#else
     either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
+#endif
            (\(a, m) -> pure (a, m, x))
       $ ExactPrint.postParseTransform res opts
 
@@ -122,7 +133,11 @@ parseModuleFromString args fp dynCheck str =
     dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
     let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
     case res of
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+      Left  err -> ExceptT.throwE $ "parse error: " ++ show (bagToList (show <$> err))
+#else
       Left  (span, err) -> ExceptT.throwE $ showOutputable span ++ ": " ++ err
+#endif
       Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
 
@@ -186,7 +201,7 @@ commentAnnFixTransformGlob ast = do
                        , ExactPrint.annsDP               = assocs'
                        }
       ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
-  
+
 
 -- TODO: this is unused by now, but it contains one detail that
 --       commentAnnFixTransformGlob does not include: Moving of comments for
@@ -212,32 +227,45 @@ commentAnnFixTransformGlob ast = do
 --       moveTrailingComments lexpr (List.last fs)
 --     _ -> return ()
 
--- moveTrailingComments :: (Data.Data.Data a,Data.Data.Data b)
---                      => GHC.Located a -> GHC.Located b -> ExactPrint.Transform ()
--- moveTrailingComments astFrom astTo = do
---   let
---     k1 = ExactPrint.mkAnnKey astFrom
---     k2 = ExactPrint.mkAnnKey astTo
---     moveComments ans = ans'
---       where
---         an1 = Data.Maybe.fromJust $ Map.lookup k1 ans
---         an2 = Data.Maybe.fromJust $ Map.lookup k2 ans
---         cs1f = ExactPrint.annFollowingComments an1
---         cs2f = ExactPrint.annFollowingComments an2
---         (comments, nonComments) = flip breakEither (ExactPrint.annsDP an1)
---              $ \case
---                (ExactPrint.AnnComment com, dp) -> Left (com, dp)
---                x -> Right x
---         an1' = an1
---           { ExactPrint.annsDP               = nonComments
---           , ExactPrint.annFollowingComments = []
---           }
---         an2' = an2
---           { ExactPrint.annFollowingComments = cs1f ++ cs2f ++ comments
---           }
---         ans' = Map.insert k1 an1' $ Map.insert k2 an2' ans
---
---   ExactPrint.modifyAnnsT moveComments
+commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
+commentAnnFixTransform modul = SYB.everything (>>) genF modul
+ where
+  genF :: Data.Data.Data a => a -> ExactPrint.Transform ()
+  genF = (\_ -> return ()) `SYB.extQ` exprF
+  exprF :: Located (HsExpr GhcPs) -> ExactPrint.Transform ()
+  exprF lexpr@(L _ expr) = case expr of
+    RecordCon _ _ (HsRecFields fs@(_:_) Nothing) ->
+      moveTrailingComments lexpr (List.last fs)
+    RecordUpd _ _e fs@(_:_) ->
+      moveTrailingComments lexpr (List.last fs)
+    _ -> return ()
+
+moveTrailingComments :: (Data.Data.Data a,Data.Data.Data b)
+                     => GHC.Located a -> GHC.Located b -> ExactPrint.Transform ()
+moveTrailingComments astFrom astTo = do
+  let
+    k1 = ExactPrint.mkAnnKey astFrom
+    k2 = ExactPrint.mkAnnKey astTo
+    moveComments ans = ans'
+      where
+        an1 = Data.Maybe.fromJust $ Map.lookup k1 ans
+        an2 = Data.Maybe.fromJust $ Map.lookup k2 ans
+        cs1f = ExactPrint.annFollowingComments an1
+        cs2f = ExactPrint.annFollowingComments an2
+        (comments, nonComments) = flip breakEither (ExactPrint.annsDP an1)
+             $ \case
+               (ExactPrint.AnnComment com, dp) -> Left (com, dp)
+               x -> Right x
+        an1' = an1
+          { ExactPrint.annsDP               = nonComments
+          , ExactPrint.annFollowingComments = []
+          }
+        an2' = an2
+          { ExactPrint.annFollowingComments = cs1f ++ cs2f ++ comments
+          }
+        ans' = Map.insert k1 an1' $ Map.insert k2 an2' ans
+
+  ExactPrint.modifyAnnsT moveComments
 
 -- | split a set of annotations in a module into a map from top-level module
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
@@ -306,10 +334,5 @@ withTransformedAnns ast m = MultiRWSS.mGetRawR >>= \case
     in  annsBalanced
 
 
-#if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 warnExtractorCompat :: GHC.Warn -> String
 warnExtractorCompat (GHC.Warn _ (L _ s)) = s
-#else /* ghc-8.0 && ghc-8.2 */
-warnExtractorCompat :: GenLocated l String -> String
-warnExtractorCompat (L _ s) = s
-#endif

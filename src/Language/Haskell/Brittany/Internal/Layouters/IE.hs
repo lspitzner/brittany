@@ -12,16 +12,22 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           GHC                            ( unLoc
-                                                , GenLocated(L)
-                                                , moduleNameString
-                                                , AnnKeywordId(..)
-                                                , Located
-                                                , runGhc
-                                                , ModuleName
-                                                )
+import           GHC     ( unLoc
+                         , runGhc
+                         , GenLocated(L)
+                         , moduleNameString
+                         , AnnKeywordId(..)
+                         , Located
+                         , ModuleName
+                         )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+import           GHC.Hs.ImpExp
+#else
 import           HsSyn
 import           HsImpExp
+#endif
+import           Name
 import           FieldLabel
 import qualified FastString
 import           BasicTypes
@@ -30,42 +36,17 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 
-#if MIN_VERSION_ghc(8,2,0)
 prepareName :: LIEWrappedName name -> Located name
 prepareName = ieLWrappedName
-#else
-prepareName :: Located name -> Located name
-prepareName = id
-#endif
 
 layoutIE :: ToBriDoc IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
-#if MIN_VERSION_ghc(8,6,0)
   IEVar _ x -> layoutWrapped lie x
-#else
-  IEVar x -> layoutWrapped lie x
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   IEThingAbs _ x -> layoutWrapped lie x
-#else
-  IEThingAbs x -> layoutWrapped lie x
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   IEThingAll _ x -> docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-#else
-  IEThingAll x -> docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   IEThingWith _ x (IEWildcard _) _ _ ->
-#else
-  IEThingWith x (IEWildcard _) _ _ ->
-#endif
     docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-#if MIN_VERSION_ghc(8,6,0)
   IEThingWith _ x _ ns _ -> do
-#else
-  IEThingWith x _ ns _ -> do
-#endif
     hasComments <- orM
       ( hasCommentsBetween lie AnnOpenP AnnCloseP
       : hasAnyCommentsBelow x
@@ -97,18 +78,13 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
         $  [docSeq [docParenLSep, docWrapNode n1 $ nameDoc n1]]
         ++ map layoutItem nMs
         ++ [docSeq [docCommaSep, docNodeAnnKW lie (Just AnnOpenP) $ nameDoc nN], docParenR]
-#if MIN_VERSION_ghc(8,6,0)
   IEModuleContents _ n -> docSeq
-#else
-  IEModuleContents n -> docSeq
-#endif
     [ docLit $ Text.pack "module"
     , docSeparator
     , docLit . Text.pack . moduleNameString $ unLoc n
     ]
   _ -> docEmpty
  where
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2, 8.4, .. */
   layoutWrapped _ = \case
     L _ (IEName    n) -> docLit =<< lrdrNameToTextAnn n
     L _ (IEPattern n) -> do
@@ -117,16 +93,6 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
     L _ (IEType n) -> do
       name <- lrdrNameToTextAnn n
       docLit $ Text.pack "type " <> name
-#else                      /* ghc-8.0 */
-  layoutWrapped outer n = do
-    name <- lrdrNameToTextAnn n
-    hasType <- hasAnnKeyword n AnnType
-    hasPattern <- hasAnnKeyword outer AnnPattern
-    docLit $ if
-      | hasType    -> Text.pack "type (" <> name <> Text.pack ")"
-      | hasPattern -> Text.pack "pattern " <> name
-      | otherwise  -> name
-#endif
 
 data SortItemsFlag = ShouldSortItems | KeepItemsUnsorted
 -- Helper function to deal with Located lists of LIEs.

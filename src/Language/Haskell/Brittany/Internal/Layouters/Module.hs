@@ -11,9 +11,14 @@ import           Language.Haskell.Brittany.Internal.Layouters.Import
 import           Language.Haskell.Brittany.Internal.Config.Types
 
 import GHC (unLoc, runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..))
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+import           GHC.Hs.ImpExp
+#else
 import           HsSyn
-import           Name
 import           HsImpExp
+#endif
+import           Name
 import           FieldLabel
 import qualified FastString
 import           BasicTypes

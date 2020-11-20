@@ -229,15 +229,12 @@ deriving instance Data (CForwardOptions Identity)
 deriving instance Data (CPreProcessorConfig Identity)
 deriving instance Data (CConfig Identity)
 
-#if MIN_VERSION_ghc(8,2,0)
--- these instances break on earlier ghcs
 deriving instance Data (CDebugConfig Option)
 deriving instance Data (CLayoutConfig Option)
 deriving instance Data (CErrorHandlingConfig Option)
 deriving instance Data (CForwardOptions Option)
 deriving instance Data (CPreProcessorConfig Option)
 deriving instance Data (CConfig Option)
-#endif
 
 instance Semigroup.Semigroup (CDebugConfig Option) where
   (<>) = gmappend
@@ -356,4 +353,3 @@ deriveCZipWith ''CErrorHandlingConfig
 deriveCZipWith ''CForwardOptions
 deriveCZipWith ''CPreProcessorConfig
 deriveCZipWith ''CConfig
-

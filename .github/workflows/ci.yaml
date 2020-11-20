@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         os:
           - macos-10.15
@@ -20,16 +21,10 @@ jobs:
           - 3.2.0.0
         include:
           - os: ubuntu-18.04
+            ghc: 8.10.2
+            cabal: 3.2.0.0
+          - os: ubuntu-18.04
             ghc: 8.6.5
-            cabal: 3.2.0.0
-          - os: ubuntu-18.04
-            ghc: 8.4.4
-            cabal: 3.2.0.0
-          - os: ubuntu-18.04
-            ghc: 8.2.2
-            cabal: 3.2.0.0
-          - os: ubuntu-18.04
-            ghc: 8.0.2
             cabal: 3.2.0.0
     runs-on: ${{ matrix.os }}
     steps:
