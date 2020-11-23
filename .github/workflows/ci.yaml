@@ -16,12 +16,12 @@ jobs:
           - ubuntu-18.04
           - windows-2019
         ghc:
-          - 8.8.4
+          - 8.10.2
         cabal:
           - 3.2.0.0
         include:
           - os: ubuntu-18.04
-            ghc: 8.10.2
+            ghc: 8.8.4
             cabal: 3.2.0.0
           - os: ubuntu-18.04
             ghc: 8.6.5
