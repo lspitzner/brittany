@@ -1,4 +1,4 @@
-# brittany [![Hackage version](https://img.shields.io/hackage/v/brittany.svg?label=Hackage)](https://hackage.haskell.org/package/brittany) [![Stackage version](https://www.stackage.org/package/brittany/badge/lts?label=Stackage)](https://www.stackage.org/package/brittany) [![Build Status](https://secure.travis-ci.org/lspitzner/brittany.svg?branch=master)](http://travis-ci.org/lspitzner/brittany) 
+# brittany [![Hackage version](https://img.shields.io/hackage/v/brittany.svg?label=Hackage)](https://hackage.haskell.org/package/brittany) [![Stackage version](https://www.stackage.org/package/brittany/badge/lts?label=Stackage)](https://www.stackage.org/package/brittany) [![Build Status](https://secure.travis-ci.org/lspitzner/brittany.svg?branch=master)](http://travis-ci.org/lspitzner/brittany)
 haskell source code formatter
 
 ![Output sample](https://github.com/lspitzner/brittany/raw/master/brittany-sample.gif)
@@ -31,7 +31,7 @@ require fixing:
   other module elements (data-decls, classes, instances, etc.)
   are not transformed in any way; this extends to e.g. **bindings inside class
   instance definitions** - they **won't be touched** (yet).
-- By using `ghc-exactprint` as the parser, brittany supports full GHC 
+- By using `ghc-exactprint` as the parser, brittany supports full GHC
   including extensions, but **some of the less common syntactic elements
   (even of 2010 haskell) are not handled**.
 - **There are some known issues regarding handling of in-source comments.**
@@ -48,7 +48,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Other usage notes
 
-- Supports GHC versions `8.0`, `8.2`, `8.4`, `8.6`, `8.8`.
+- Supports GHC versions `8.6`, `8.8`, `8.10`.
 - included in stackage with lts>=10.0 (or nightlies dating to >=2017-11-15)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
@@ -127,13 +127,13 @@ log the size of the input, but _not_ the full input/output of requests.)
 - Default mode of operation: Transform a single module, from `stdin` to `stdout`.
   Can pass one or multiple files as input, and there is a flag to override them
   in place instead of using `stdout` (since 0.9.0.0). So:
-  
+
     ~~~~ .sh
     brittany                           # stdin -> stdout
     brittany mysource.hs               # ./mysource.hs -> stdout
     brittany --write-mode=inplace *.hs # apply formatting to all ./*.hs inplace
     ~~~~
-    
+
 - For stdin/stdout usage it makes sense to enable certain syntactic extensions
   by default, i.e. to add something like this to your
   `~/.config/brittany/config.yaml` (execute `brittany` once to create default):

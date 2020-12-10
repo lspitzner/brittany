@@ -25,7 +25,11 @@ import           GHC ( runGhc
                      , AnnKeywordId (..)
                      )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
 import           Name
 import           Outputable ( ftext, showSDocUnsafe )
 import           BasicTypes
@@ -38,17 +42,12 @@ import           DataTreePrint
 layoutType :: ToBriDoc HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
-#if MIN_VERSION_ghc(8,2,0)
-#if MIN_VERSION_ghc(8,6,0)
   HsTyVar _ promoted name -> do
-#else   /* ghc-8.2 ghc-8.4 */
-  HsTyVar promoted name -> do
-#endif
     t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     case promoted of
 #if MIN_VERSION_ghc(8,8,0)
       IsPromoted -> docSeq
-#else /* ghc-8.2 8.4 8.6 */
+#else /* ghc-8.6 */
       Promoted -> docSeq
 #endif
         [ docSeparator
@@ -56,15 +55,10 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         , docWrapNode name $ docLit t
         ]
       NotPromoted -> docWrapNode name $ docLit t
-#else /* ghc-8.0 */
-  HsTyVar name -> do
-    t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
-    docWrapNode name $ docLit t
-#endif
-#if MIN_VERSION_ghc(8,6,0)
-  HsForAllTy _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
+#if MIN_VERSION_ghc(8,10,1)
+  HsForAllTy _ _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
 #else
-  HsForAllTy bndrs (L _ (HsQualTy (L _ cntxts) typ2)) -> do
+  HsForAllTy _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
 #endif
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
@@ -151,10 +145,10 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-#if MIN_VERSION_ghc(8,6,0)
-  HsForAllTy _ bndrs typ2 -> do
+#if MIN_VERSION_ghc(8,10,1)
+  HsForAllTy _ _ bndrs typ2 -> do
 #else
-  HsForAllTy bndrs typ2 -> do
+  HsForAllTy _ bndrs typ2 -> do
 #endif
     typeDoc <- layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
@@ -210,11 +204,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-#if MIN_VERSION_ghc(8,6,0)
   HsQualTy _ lcntxts@(L _ cntxts) typ1 -> do
-#else
-  HsQualTy lcntxts@(L _ cntxts) typ1 -> do
-#endif
     typeDoc <- docSharedWrapper layoutType typ1
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
     let
@@ -264,11 +254,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-#if MIN_VERSION_ghc(8,6,0)
   HsFunTy _ typ1 typ2 -> do
-#else
-  HsFunTy typ1 typ2 -> do
-#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     typeDoc2 <- docSharedWrapper layoutType typ2
     let maybeForceML = case typ2 of
@@ -292,11 +278,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           ]
         )
       ]
-#if MIN_VERSION_ghc(8,6,0)
   HsParTy _ typ1 -> do
-#else
-  HsParTy typ1 -> do
-#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
@@ -311,7 +293,6 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ])
           (docLit $ Text.pack ")")
       ]
-#if MIN_VERSION_ghc(8,6,0)
   HsAppTy _ typ1@(L _ HsAppTy{}) typ2 -> do
     let gather :: [LHsType GhcPs] -> LHsType GhcPs -> (LHsType GhcPs, [LHsType GhcPs])
         gather list = \case
@@ -339,65 +320,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           typeDoc1
           (docEnsureIndent BrIndentRegular typeDoc2)
       ]
-#else
-  HsAppTy typ1 typ2 -> do
-    typeDoc1 <- docSharedWrapper layoutType typ1
-    typeDoc2 <- docSharedWrapper layoutType typ2
-    docAlt
-      [ docSeq
-        [ docForceSingleline typeDoc1
-        , docSeparator
-        , docForceSingleline typeDoc2
-        ]
-      , docPar
-          typeDoc1
-          (docEnsureIndent BrIndentRegular typeDoc2)
-      ]
-  HsAppsTy [] -> error "HsAppsTy []"
-  HsAppsTy [L _ (HsAppPrefix typ1)] -> do
-    typeDoc1 <- docSharedWrapper layoutType typ1
-    typeDoc1
-  HsAppsTy [lname@(L _ (HsAppInfix name))] -> do
-    -- this redirection is somewhat hacky, but whatever.
-    -- TODO: a general problem when doing deep inspections on
-    --       the type (and this is not the only instance)
-    --       is that we potentially omit annotations on some of
-    --       the middle constructors. i have no idea under which
-    --       circumstances exactly important annotations (comments)
-    --       would be assigned to such constructors.
-    typeDoc1 <- -- docSharedWrapper layoutType $ (L l $ HsTyVar name)
-      lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick lname name
-    docLit typeDoc1
-  HsAppsTy (L _ (HsAppPrefix typHead):typRestA)
-    | Just typRest <- mapM (\case L _ (HsAppPrefix t) -> Just t
-                                  _ -> Nothing) typRestA -> do
-    docHead <- docSharedWrapper layoutType typHead
-    docRest <- docSharedWrapper layoutType `mapM` typRest
-    docAlt
-      [ docSeq
-      $ docForceSingleline docHead : (docRest >>= \d ->
-        [ docSeparator, docForceSingleline d ])
-      , docPar docHead (docLines $ docEnsureIndent BrIndentRegular <$> docRest)
-      ]
-  HsAppsTy (typHead:typRest) -> do
-    docHead <- docSharedWrapper layoutAppType typHead
-    docRest <- docSharedWrapper layoutAppType `mapM` typRest
-    docAlt
-      [ docSeq
-      $ docForceSingleline docHead : (docRest >>= \d ->
-        [ docSeparator, docForceSingleline d ])
-      , docPar docHead (docLines $ docEnsureIndent BrIndentRegular <$> docRest)
-      ]
-    where
-      layoutAppType (L _ (HsAppPrefix t)) = layoutType t
-      layoutAppType lt@(L _ (HsAppInfix t)) =
-        docLit =<< lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick lt t
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   HsListTy _ typ1 -> do
-#else
-  HsListTy typ1 -> do
-#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
@@ -412,29 +335,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ])
           (docLit $ Text.pack "]")
       ]
-#if MIN_VERSION_ghc(8,6,0)
-#else
-  HsPArrTy typ1 -> do
-    typeDoc1 <- docSharedWrapper layoutType typ1
-    docAlt
-      [ docSeq
-        [ docWrapNodeRest ltype $ docLit $ Text.pack "[:"
-        , docForceSingleline typeDoc1
-        , docLit $ Text.pack ":]"
-        ]
-      , docPar
-          ( docCols ColTyOpPrefix
-            [ docWrapNodeRest ltype $ docLit $ Text.pack "[:"
-            , docAddBaseY (BrIndentSpecial 2) $ typeDoc1
-            ])
-          (docLit $ Text.pack ":]")
-      ]
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   HsTupleTy _ tupleSort typs -> case tupleSort of
-#else
-  HsTupleTy tupleSort typs -> case tupleSort of
-#endif
     HsUnboxedTuple           -> unboxed
     HsBoxedTuple             -> simple
     HsConstraintTuple        -> simple
@@ -537,13 +438,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   --               }
   --     , _layouter_ast = ltype
   --     }
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
   HsIParamTy _ (L _ (HsIPName ipName)) typ1 -> do
-#elif MIN_VERSION_ghc(8,2,0) /* ghc-8.2 8.4 */
-  HsIParamTy (L _ (HsIPName ipName)) typ1 -> do
-#else                        /* ghc-8.0 */
-  HsIParamTy (HsIPName ipName) typ1 -> do
-#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     docAlt
       [ docSeq
@@ -562,33 +457,8 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             , docAddBaseY (BrIndentSpecial 2) typeDoc1
             ])
       ]
-#if MIN_VERSION_ghc(8,6,0)
-#else
-  HsEqTy typ1 typ2 -> do
-    typeDoc1 <- docSharedWrapper layoutType typ1
-    typeDoc2 <- docSharedWrapper layoutType typ2
-    docAlt
-      [ docSeq
-        [ docForceSingleline typeDoc1
-        , docWrapNodeRest ltype
-        $ docLit $ Text.pack " ~ "
-        , docForceSingleline typeDoc2
-        ]
-      , docPar
-          typeDoc1
-          ( docCols ColTyOpPrefix
-              [ docWrapNodeRest ltype
-              $ docLit $ Text.pack "~ "
-              , docAddBaseY (BrIndentSpecial 2) typeDoc2
-              ])
-      ]
-#endif
   -- TODO: test KindSig
-#if MIN_VERSION_ghc(8,6,0)
   HsKindSig _ typ1 kind1 -> do
-#else
-  HsKindSig typ1 kind1 -> do
-#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     kindDoc1 <- docSharedWrapper layoutType kind1
     hasParens <- hasAnnKeyword ltype AnnOpenP
@@ -691,11 +561,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     briDocByExactInlineOnly "HsDocTy{}" ltype
   HsRecTy{} -> -- TODO
     briDocByExactInlineOnly "HsRecTy{}" ltype
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
   HsExplicitListTy _ _ typs -> do
-#else /* ghc-8.0 */
-  HsExplicitListTy _ typs -> do
-#endif
     typDocs <- docSharedWrapper layoutType `mapM` typs
     hasComments <- hasAnyCommentsBelow ltype
     let specialCommaSep = appSep $ docLit $ Text.pack " ,"
@@ -742,39 +608,22 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
   HsExplicitTupleTy{} -> -- TODO
     briDocByExactInlineOnly "HsExplicitTupleTy{}" ltype
-#if MIN_VERSION_ghc(8,6,0)
   HsTyLit _ lit -> case lit of
-#else
-  HsTyLit lit -> case lit of
-#endif
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
     HsNumTy (SourceText srctext) _ -> docLit $ Text.pack srctext
     HsNumTy NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
     HsStrTy (SourceText srctext) _ -> docLit $ Text.pack srctext
     HsStrTy NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
-#else /* ghc-8.0 */
-    HsNumTy srctext _ -> docLit $ Text.pack srctext
-    HsStrTy srctext _ -> docLit $ Text.pack srctext
-#endif
-#if !MIN_VERSION_ghc(8,6,0)
-  HsCoreTy{} -> -- TODO
-    briDocByExactInlineOnly "HsCoreTy{}" ltype
-#endif
   HsWildCardTy _ ->
     docLit $ Text.pack "_"
-#if MIN_VERSION_ghc(8,2,0) /* ghc-8.2 */
   HsSumTy{} -> -- TODO
     briDocByExactInlineOnly "HsSumTy{}" ltype
-#endif
-#if MIN_VERSION_ghc(8,6,0)
   HsStarTy _ isUnicode -> do
     if isUnicode
       then docLit $ Text.pack "\x2605" -- Unicode star
       else docLit $ Text.pack "*"
   XHsType{} -> error "brittany internal error: XHsType"
-#endif
 #if MIN_VERSION_ghc(8,8,0)
   HsAppKindTy _ ty kind -> do
     t <- docSharedWrapper layoutType ty
@@ -796,18 +645,11 @@ layoutTyVarBndrs
   :: [LHsTyVarBndr GhcPs]
   -> ToBriDocM [(Text, Maybe (ToBriDocM BriDocNumbered))]
 layoutTyVarBndrs = mapM $ \case
-#if MIN_VERSION_ghc(8,6,0)
   (L _ (UserTyVar _ name)) -> return $ (lrdrNameToText name, Nothing)
   (L _ (KindedTyVar _ lrdrName kind)) -> do
     d <- docSharedWrapper layoutType kind
     return $ (lrdrNameToText lrdrName, Just $ d)
   (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"
-#else
-  (L _ (UserTyVar name)) -> return $ (lrdrNameToText name, Nothing)
-  (L _ (KindedTyVar lrdrName kind)) -> do
-    d <- docSharedWrapper layoutType kind
-    return $ (lrdrNameToText lrdrName, Just $ d)
-#endif
 
 -- there is no specific reason this returns a list instead of a single
 -- BriDoc node.

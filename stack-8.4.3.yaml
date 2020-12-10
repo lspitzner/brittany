@@ -1,4 +1,0 @@
-resolver: lts-12.12
-
-extra-deps:
-  - ghc-exactprint-0.5.8.1

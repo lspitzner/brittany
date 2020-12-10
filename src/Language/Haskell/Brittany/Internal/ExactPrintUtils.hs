@@ -33,7 +33,14 @@ import qualified Lexer         as GHC
 import qualified StringBuffer  as GHC
 import qualified Outputable    as GHC
 import qualified CmdLineParser as GHC
+
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+import           Bag
+#else
 import           HsSyn
+#endif
+
 import           SrcLoc ( SrcSpan, Located )
 
 
@@ -90,7 +97,11 @@ parseModuleWithCpp cpp opts args fp dynCheck =
       ++ show (warnings <&> warnExtractorCompat)
     x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+    either (\err -> ExceptT.throwE $ "transform error: " ++ show (bagToList (show <$> err)))
+#else
     either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
+#endif
            (\(a, m) -> pure (a, m, x))
       $ ExactPrint.postParseTransform res opts
 
@@ -123,7 +134,11 @@ parseModuleFromString args fp dynCheck str =
     dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
     let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
     case res of
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+      Left  err -> ExceptT.throwE $ "parse error: " ++ show (bagToList (show <$> err))
+#else
       Left  (span, err) -> ExceptT.throwE $ showOutputable span ++ ": " ++ err
+#endif
       Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
 
@@ -187,7 +202,7 @@ commentAnnFixTransformGlob ast = do
                        , ExactPrint.annsDP               = assocs'
                        }
       ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
-  
+
 
 
 commentAnnFixTransform :: GHC.ParsedSource -> ExactPrint.Transform ()
@@ -197,17 +212,9 @@ commentAnnFixTransform modul = SYB.everything (>>) genF modul
   genF = (\_ -> return ()) `SYB.extQ` exprF
   exprF :: Located (HsExpr GhcPs) -> ExactPrint.Transform ()
   exprF lexpr@(L _ expr) = case expr of
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecordCon _ _ (HsRecFields fs@(_:_) Nothing) ->
-#else
-    RecordCon _ _ _ (HsRecFields fs@(_:_) Nothing) ->
-#endif
       moveTrailingComments lexpr (List.last fs)
-#if MIN_VERSION_ghc(8,6,0)   /* ghc-8.6 */
     RecordUpd _ _e fs@(_:_) ->
-#else
-    RecordUpd _e fs@(_:_) _cons _ _ _ ->
-#endif
       moveTrailingComments lexpr (List.last fs)
     _ -> return ()
 
@@ -305,10 +312,5 @@ withTransformedAnns ast m = MultiRWSS.mGetRawR >>= \case
     in  annsBalanced
 
 
-#if MIN_VERSION_ghc(8,4,0) /* ghc-8.4 */
 warnExtractorCompat :: GHC.Warn -> String
 warnExtractorCompat (GHC.Warn _ (L _ s)) = s
-#else /* ghc-8.0 && ghc-8.2 */
-warnExtractorCompat :: GenLocated l String -> String
-warnExtractorCompat (L _ s) = s
-#endif

@@ -12,7 +12,11 @@ import           GHC                                      ( unLoc
                                                           , moduleNameString
                                                           , Located
                                                           )
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Hs
+#else
 import           HsSyn
+#endif
 import           Name
 import           FieldLabel
 import qualified FastString
@@ -22,32 +26,18 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 
-#if MIN_VERSION_ghc(8,2,0)
 prepPkg :: SourceText -> String
 prepPkg rawN = case rawN of
   SourceText n -> n
   -- This would be odd to encounter and the
   -- result will most certainly be wrong
   NoSourceText -> ""
-#else
-prepPkg :: String -> String
-prepPkg = id
-#endif
-#if MIN_VERSION_ghc(8,2,0)
 prepModName :: Located e -> e
 prepModName = unLoc
-#else
-prepModName :: e -> e
-prepModName = id
-#endif
 
 layoutImport :: ToBriDoc ImportDecl
 layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
-#if MIN_VERSION_ghc(8,6,0)
   ImportDecl _ _ (L _ modName) pkg src safe q False mas mllies -> do
-#else
-  ImportDecl _ (L _ modName) pkg src safe q False mas mllies -> do
-#endif
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
     importAsCol <- mAsk <&> _conf_layout .> _lconfig_importAsColumn .> confUnpack
     indentPolicy <- mAsk <&>  _conf_layout .> _lconfig_indentPolicy .> confUnpack
@@ -59,7 +49,11 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
       hiding   = maybe False fst mllies
       minQLength = length "import qualified "
       qLengthReal =
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+        let qualifiedPart = if q /= NotQualified then length "qualified " else 0
+#else
         let qualifiedPart = if q then length "qualified " else 0
+#endif
             safePart      = if safe then length "safe " else 0
             pkgPart       = maybe 0 ((+ 1) . Text.length) pkgNameT
             srcPart       = if src then length "{-# SOURCE #-} " else 0
@@ -73,7 +67,11 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
         [ appSep $ docLit $ Text.pack "import"
         , if src then appSep $ docLit $ Text.pack "{-# SOURCE #-}" else docEmpty
         , if safe then appSep $ docLit $ Text.pack "safe" else docEmpty
+#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+        , if q /= NotQualified then appSep $ docLit $ Text.pack "qualified" else docEmpty
+#else
         , if q then appSep $ docLit $ Text.pack "qualified" else docEmpty
+#endif
         , maybe docEmpty (appSep . docLit) pkgNameT
         ]
       indentName =
