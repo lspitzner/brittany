@@ -1,5 +1,1 @@
-resolver: lts-13.23
-
-extra-deps:
-  - butcher-1.3.2.1
-  - multistate-0.8.0.1
+resolver: lts-14.27
