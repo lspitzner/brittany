@@ -1,5 +1,11 @@
 # Revision history for brittany
 
+## 0.13.0.0 -- December 2020
+
+* #324: Added support for GHC 8.10.
+  * Dropped support for GHC 8.4, 8.2, and 8.0.
+  * Thanks @jneira, @bubba, @infinity0, and @expipiplus1!
+
 ## 0.12.2.0 -- November 2020
 
 * #207: Fix newtype indent in associated type family.
