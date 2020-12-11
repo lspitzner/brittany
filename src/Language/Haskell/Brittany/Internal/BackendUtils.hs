@@ -28,6 +28,7 @@ module Language.Haskell.Brittany.Internal.BackendUtils
   , layoutMoveToCommentPos
   , layoutIndentRestorePostComment
   , moveToExactAnn
+  , moveToY
   , ppmMoveToExactLoc
   , layoutWritePriorComments
   , layoutWritePostComments
@@ -469,20 +470,23 @@ moveToExactAnn annKey = do
       -- curY <- mGet <&> _lstate_curY
       let ExactPrint.DP (y, _x) = ExactPrint.annEntryDelta ann
       -- mModify $ \state -> state { _lstate_addNewline = Just x }
-      mModify $ \state ->
-        let upd = case _lstate_curYOrAddNewline state of
-              Left  i -> if y == 0 then Left i else Right y
-              Right i -> Right $ max y i
-        in  state
-              { _lstate_curYOrAddNewline = upd
-              , _lstate_addSepSpace      = if Data.Either.isRight upd
-                then
-                  _lstate_commentCol state
-                    <|> _lstate_addSepSpace state
-                    <|> Just (lstate_baseY state)
-                else Nothing
-              , _lstate_commentCol       = Nothing
-              }
+      moveToY y
+
+moveToY :: MonadMultiState LayoutState m => Int -> m ()
+moveToY y = mModify $ \state ->
+  let upd = case _lstate_curYOrAddNewline state of
+        Left  i -> if y == 0 then Left i else Right y
+        Right i -> Right $ max y i
+  in  state
+        { _lstate_curYOrAddNewline = upd
+        , _lstate_addSepSpace      = if Data.Either.isRight upd
+                                       then
+                                         _lstate_commentCol state
+                                         <|> _lstate_addSepSpace state
+                                         <|> Just (lstate_baseY state)
+                                       else Nothing
+        , _lstate_commentCol       = Nothing
+        }
 -- fixMoveToLineByIsNewline :: MonadMultiState
 --                                                   LayoutState m => Int -> m Int
 -- fixMoveToLineByIsNewline x = do

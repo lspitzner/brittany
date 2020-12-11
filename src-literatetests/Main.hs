@@ -159,6 +159,10 @@ main = do
           (Parsec.noneOf "\r\n")
         , _ <- Parsec.eof
         ]
+      , [ NormalLine mempty
+        | _ <- Parsec.try $ Parsec.string "<BLANKLINE>"
+        , _ <- Parsec.eof
+        ]
       ]
     lineMapper :: Text -> InputLine
     lineMapper line = case Parsec.runParser specialLineParser () "" line of

@@ -21,6 +21,7 @@ import           Name
 import           FieldLabel
 import qualified FastString
 import           BasicTypes
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 
 import           Language.Haskell.Brittany.Internal.Utils
 
@@ -35,8 +36,8 @@ prepPkg rawN = case rawN of
 prepModName :: Located e -> e
 prepModName = unLoc
 
-layoutImport :: ToBriDoc ImportDecl
-layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
+layoutImport :: ImportDecl GhcPs -> ToBriDocM BriDocNumbered
+layoutImport importD = case importD of
   ImportDecl _ _ (L _ modName) pkg src safe q False mas mllies -> do
     importCol <- mAsk <&> _conf_layout .> _lconfig_importColumn .> confUnpack
     importAsCol <- mAsk <&> _conf_layout .> _lconfig_importAsColumn .> confUnpack
@@ -90,14 +91,14 @@ layoutImport limportD@(L _ importD) = docWrapNode limportD $ case importD of
           hasComments <- hasAnyCommentsBelow llies
           if compact
           then docAlt
-            [ docSeq [hidDoc, docForceSingleline $ layoutLLIEs True llies]
+            [ docSeq [hidDoc, docForceSingleline $ layoutLLIEs True ShouldSortItems llies]
             , let makeParIfHiding = if hiding
                     then docAddBaseY BrIndentRegular . docPar hidDoc
                     else id
-              in makeParIfHiding (layoutLLIEs True llies)
+              in makeParIfHiding (layoutLLIEs True ShouldSortItems llies)
             ]
           else do
-            ieDs <- layoutAnnAndSepLLIEs llies
+            ieDs <- layoutAnnAndSepLLIEs ShouldSortItems llies
             docWrapNodeRest llies
               $ docEnsureIndent (BrIndentSpecial hidDocCol)
               $ case ieDs of
