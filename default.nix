@@ -1,38 +1,18 @@
-{ mkDerivation, aeson, base, butcher, bytestring, cmdargs
-, containers, czipwith, data-tree-print, deepseq, directory, extra
-, filepath, ghc, ghc-boot-th, ghc-exactprint, ghc-paths, hspec
-, monad-memo, mtl, multistate, neat-interpolation, parsec, pretty
-, random, safe, semigroups, stdenv, strict, syb, text, transformers
-, uniplate, unsafe, yaml
+{ nixpkgsSrc ? builtins.fetchTarball {
+  url =
+    "https://github.com/nixos/nixpkgs/archive/069f183f16c3ea5d4b6e7625433b92eba77534f7.tar.gz"; # nixos-unstable
+  sha256 = "1by9rqvr2k6iz2yipf89yaj254yicpwq384ijgyy8p71lfxbbww2";
+}, pkgs ? import nixpkgsSrc { }, compiler ? null, forShell ? pkgs.lib.inNixShell
 }:
-mkDerivation {
-  pname = "brittany";
-  version = "0.11.0.0";
-  src = ./.;
-  isLibrary = true;
-  isExecutable = true;
-  libraryHaskellDepends = [
-    aeson base butcher bytestring cmdargs containers czipwith
-    data-tree-print deepseq directory extra filepath ghc ghc-boot-th
-    ghc-exactprint ghc-paths monad-memo mtl multistate
-    neat-interpolation pretty random safe semigroups strict syb text
-    transformers uniplate unsafe yaml
-  ];
-  executableHaskellDepends = [
-    aeson base butcher bytestring cmdargs containers czipwith
-    data-tree-print deepseq directory extra filepath ghc ghc-boot-th
-    ghc-exactprint ghc-paths monad-memo mtl multistate
-    neat-interpolation pretty safe semigroups strict syb text
-    transformers uniplate unsafe yaml
-  ];
-  testHaskellDepends = [
-    aeson base butcher bytestring cmdargs containers czipwith
-    data-tree-print deepseq directory extra filepath ghc ghc-boot-th
-    ghc-exactprint ghc-paths hspec monad-memo mtl multistate
-    neat-interpolation parsec pretty safe semigroups strict syb text
-    transformers uniplate unsafe yaml
-  ];
-  homepage = "https://github.com/lspitzner/brittany/";
-  description = "Haskell source code formatter";
-  license = stdenv.lib.licenses.agpl3;
+
+let
+  haskellPackages = if compiler == null then
+    pkgs.haskellPackages
+  else
+    pkgs.haskell.packages.${compiler};
+
+in haskellPackages.developPackage {
+  name = "brittany";
+  root = pkgs.nix-gitignore.gitignoreSource [ ] ./.;
+  returnShellEnv = forShell;
 }
