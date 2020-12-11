@@ -1,5 +1,9 @@
 # Revision history for brittany
 
+## 0.13.1.0 -- December 2020
+
+* #330: Started sorting imports. Thanks @expipiplus1!
+
 ## 0.13.0.0 -- December 2020
 
 * #324: Added support for GHC 8.10.
