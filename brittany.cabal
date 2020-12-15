@@ -120,7 +120,7 @@ library {
     , czipwith >=1.0.1.0 && <1.1
     , ghc-boot-th >=8.6.1 && <8.11
     , filepath >=1.4.1.0 && <1.5
-    , random >= 1.1 && <1.2
+    , random >= 1.1 && <1.3
     }
   default-extensions: {
     CPP
