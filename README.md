@@ -96,10 +96,9 @@ log the size of the input, but _not_ the full input/output of requests.)
     (TODO: These instructions are more confusing than helpful. I am inclined
     to just remove them.)
 
-- on ArchLinux via [the brittany AUR package](https://aur.archlinux.org/packages/brittany/)
-  using `aura`:
+- on ArchLinux:
     ~~~~.sh
-    aura -A brittany
+    pacman -S haskell-brittany
     ~~~~
 
 # Development tips
