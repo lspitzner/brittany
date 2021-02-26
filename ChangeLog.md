@@ -1,5 +1,11 @@
 # Revision history for brittany
 
+## 0.13.1.1 -- February 2021
+
+* #333: Allowed random 1.2. Thanks @felixonmars!
+* #334: Updated Arch install instructions. Thanks @ahstro!
+* #343: Allowed ghc-exactprint 0.6.4. Thanks @maralorn!
+
 ## 0.13.1.0 -- December 2020
 
 * #330: Started sorting imports. Thanks @expipiplus1!
