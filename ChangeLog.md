@@ -1,5 +1,9 @@
 # Revision history for brittany
 
+## 0.13.1.2 -- May 2021
+
+* #347: Allowed hspec 2.8. Thanks @felixonmars!
+
 ## 0.13.1.1 -- February 2021
 
 * #333: Allowed random 1.2. Thanks @felixonmars!
