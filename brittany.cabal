@@ -1,5 +1,5 @@
 name:                 brittany
-version:              0.13.1.1
+version:              0.13.1.2
 synopsis:             Haskell source code formatter
 description: {
   See <https://github.com/lspitzner/brittany/blob/master/README.md the README>.
