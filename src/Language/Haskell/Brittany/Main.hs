@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Language.Haskell.Brittany.Main (main) where
+module Language.Haskell.Brittany.Main (main, pPrintText) where
 
 
 
@@ -482,3 +482,121 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
          ]
       then trace "----"
       else id
+
+
+-- | Similar to 'coreIO' but we:
+--
+-- - take the input text as an argument
+-- - return both the error list & result text
+-- - ignore tracing & never print to stdout
+-- - always check the generated text
+--
+-- This is mostly useful for 3rd party programs, like haskell-language-server.
+pPrintText
+  :: Config -- ^ global program config
+  -> Text   -- ^ input text
+  -> IO ([BrittanyError], Text) -- ^ list of errors/warnings & result text
+pPrintText config text =
+  fmap (either id id) . ExceptT.runExceptT $ do
+    let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
+    -- there is a good of code duplication between the following code and the
+    -- `pureModuleTransform` function. Unfortunately, there are also a good
+    -- amount of slight differences: This module is a bit more verbose, and
+    -- it tries to use the full-blown `parseModule` function which supports
+    -- CPP (but requires the input to be a file..).
+    let cppMode    = config & _conf_preprocessor & _ppconf_CPPMode & confUnpack
+    -- the flag will do the following: insert a marker string
+    -- ("-- BRITANY_INCLUDE_HACK ") right before any lines starting with
+    -- "#include" before processing (parsing) input; and remove that marker
+    -- string from the transformation output.
+    -- The flag is intentionally misspelled to prevent clashing with
+    -- inline-config stuff.
+    let hackAroundIncludes =
+          config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
+    let exactprintOnly = viaGlobal || viaDebug
+         where
+          viaGlobal = config & _conf_roundtrip_exactprint_only & confUnpack
+          viaDebug =
+            config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
+
+    let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+          then case cppMode of
+            CPPModeAbort ->
+              return $ Left "Encountered -XCPP. Aborting."
+            CPPModeWarn ->
+              return $ Right True
+            CPPModeNowarn ->
+              return $ Right True
+          else return $ Right False
+    parseResult <- do
+        -- TODO: refactor this hack to not be mixed into parsing logic
+        let hackF s = if "#include" `isPrefixOf` s
+              then "-- BRITANY_INCLUDE_HACK " ++ s
+              else s
+        let hackTransform = if hackAroundIncludes && not exactprintOnly
+              then List.intercalate "\n" . fmap hackF . lines'
+              else id
+        liftIO $ parseModuleFromString ghcOptions
+                                                   "stdin"
+                                                   cppCheckFunc
+                                                   (hackTransform $ Text.unpack text)
+    case parseResult of
+      Left left -> do
+        ExceptT.throwE ([ErrorInput left], text)
+      Right (anns, parsedSource, hasCPP) -> do
+        (inlineConf, perItemConf) <-
+          case
+            extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource)
+          of
+            Left (err, input) -> do
+              let errMsg =
+                    "Error: parse error in inline configuration: "
+                    <> err
+                    <> "  in the string \""
+                    <> input
+                    <> "\"."
+              ExceptT.throwE ([ErrorInput errMsg], text)
+            Right c ->
+              pure c
+        let moduleConf = cZipWith fromOptionIdentity config inlineConf
+        let disableFormatting =
+              moduleConf & _conf_disable_formatting & confUnpack
+        (errsWarns, outSText, _) <- do
+          if
+            | disableFormatting -> do
+              pure ([], text, False)
+            | exactprintOnly -> do
+              let r = Text.pack $ ExactPrint.exactPrint parsedSource anns
+              pure ([], r, r /= text)
+            | otherwise -> do
+              (ews, outRaw) <- if hasCPP
+                then return
+                  $ pPrintModule moduleConf perItemConf anns parsedSource
+                else liftIO $ pPrintModuleAndCheck moduleConf
+                                                   perItemConf
+                                                   anns
+                                                   parsedSource
+              let hackF s = fromMaybe s $ TextL.stripPrefix
+                    (TextL.pack "-- BRITANY_INCLUDE_HACK ")
+                    s
+              let out = TextL.toStrict $ if hackAroundIncludes
+                    then
+                      TextL.intercalate (TextL.pack "\n")
+                      $ hackF
+                      <$> TextL.splitOn (TextL.pack "\n") outRaw
+                    else outRaw
+              out' <- if moduleConf & _conf_obfuscate & confUnpack
+                then lift $ obfuscate out
+                else pure out
+              pure (ews, out', out' /= text)
+        let customErrOrder ErrorInput{}         = 4
+            customErrOrder LayoutWarning{}      = -1 :: Int
+            customErrOrder ErrorOutputCheck{}   = 1
+            customErrOrder ErrorUnusedComment{} = 2
+            customErrOrder ErrorUnknownNode{}   = -2 :: Int
+            customErrOrder ErrorMacroConfig{}   = 5
+            hasErrors =
+              if config & _conf_errorHandling & _econf_Werror & confUnpack
+                then not $ null errsWarns
+                else 0 < maximum (-1 : fmap customErrOrder errsWarns)
+        return (errsWarns, if hasErrors then text else outSText)
