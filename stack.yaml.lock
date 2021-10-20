@@ -5,15 +5,36 @@
 
 packages:
 - completed:
+    hackage: butcher-1.3.3.2@sha256:0be5b914f648ec9c63cb88730d983602aef829a7c8c31343952e4642e6b52a84,3150
+    pantry-tree:
+      size: 1197
+      sha256: 96fe696234de07e4d9253d80ddf189f8cfaf2e262e977438343a6069677a39d2
+  original:
+    hackage: butcher-1.3.3.2@sha256:0be5b914f648ec9c63cb88730d983602aef829a7c8c31343952e4642e6b52a84,3150
+- completed:
+    hackage: czipwith-1.0.1.3@sha256:24b13ff95927d29759b914bc5317adb53f3c15f1dd351092d648fbb2df4480eb,1671
+    pantry-tree:
+      size: 323
+      sha256: 4362e19590e51a82c520f189bf69cec39cefc65544fb3304af93ea65f9c1e57e
+  original:
+    hackage: czipwith-1.0.1.3@sha256:24b13ff95927d29759b914bc5317adb53f3c15f1dd351092d648fbb2df4480eb,1671
+- completed:
     hackage: data-tree-print-0.1.0.2@sha256:d845e99f322df70e0c06d6743bf80336f5918d5423498528beb0593a2afc1703,1620
     pantry-tree:
       size: 272
       sha256: b8778eb1b16fddb91b2eed2b25f33a89d1e4f7a533160de4ccbf226f82456135
   original:
-    hackage: data-tree-print-0.1.0.2
+    hackage: data-tree-print-0.1.0.2@sha256:d845e99f322df70e0c06d6743bf80336f5918d5423498528beb0593a2afc1703,1620
+- completed:
+    hackage: multistate-0.8.0.3@sha256:49d600399f3a4bfd8c8ba2e924c6592e84915b63c52970818982baa274cd9ac3,3588
+    pantry-tree:
+      size: 2143
+      sha256: 73b47c11a753963b033b79209a66490013da35854dd1064b3633dd23c3fa5650
+  original:
+    hackage: multistate-0.8.0.3@sha256:49d600399f3a4bfd8c8ba2e924c6592e84915b63c52970818982baa274cd9ac3,3588
 snapshots:
 - completed:
-    size: 556768
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2020/12/9.yaml
-    sha256: bca31ebf05f842be9dd24410eca84f296da1860369a82eb7466f447a76cca762
-  original: nightly-2020-12-09
+    size: 589241
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2021/10/20.yaml
+    sha256: 69b52866fbe539d7de306ef34c4482323f7b846e0d7348188152dea980a11547
+  original: nightly-2021-10-20
