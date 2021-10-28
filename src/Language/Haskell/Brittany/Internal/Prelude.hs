@@ -14,8 +14,16 @@ import GHC.Hs.Extension               as E ( GhcPs )
 import HsExtension                    as E ( GhcPs )
 #endif /* ghc-8.10.1 */
 
+#if MIN_VERSION_ghc(9,0,0)
+import GHC.Types.Name.Reader          as E ( RdrName )
+#else
 import RdrName                        as E ( RdrName )
-#if MIN_VERSION_ghc(8,8,0)
+#endif
+
+#if MIN_VERSION_ghc(9,0,0)
+-- Does not exist in GHC >= 9.0.1.
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/17494
+#elif MIN_VERSION_ghc(8,8,0)
 import qualified GHC                       ( dL, HasSrcSpan, SrcSpanLess )
 #endif
 import qualified GHC                       ( Located )
@@ -404,7 +412,10 @@ todo :: a
 todo = error "todo"
 
 
-#if MIN_VERSION_ghc(8,8,0)
+#if MIN_VERSION_ghc(9,0,0)
+ghcDL :: a -> a
+ghcDL = id
+#elif MIN_VERSION_ghc(8,8,0)
 ghcDL :: GHC.HasSrcSpan a => a -> GHC.Located (GHC.SrcSpanLess a)
 ghcDL = GHC.dL
 #else              /* ghc-8.6 */
