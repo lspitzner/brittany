@@ -46,11 +46,20 @@ import           Data.Generics.Aliases
 import qualified Text.PrettyPrint as PP
 import           Text.PrettyPrint ( ($+$), (<+>) )
 
+#if MIN_VERSION_ghc(9,0,0)
+import qualified GHC.Utils.Outputable as GHC
+import qualified GHC.Driver.Session   as GHC
+import qualified GHC.Data.FastString  as GHC
+import qualified GHC.Types.SrcLoc     as GHC
+import           GHC.Types.Name.Occurrence as OccName ( occNameString )
+#else
 import qualified Outputable    as GHC
 import qualified DynFlags      as GHC
 import qualified FastString    as GHC
 import qualified SrcLoc        as GHC
 import           OccName ( occNameString )
+#endif
+
 import qualified Data.ByteString as B
 
 import           DataTreePrint
