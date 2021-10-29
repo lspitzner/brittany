@@ -30,10 +30,17 @@ import           GHC.Hs
 #else
 import           HsSyn
 #endif
+#if MIN_VERSION_ghc(9,0,0)
+import           GHC.Types.Name
+import           GHC.Utils.Outputable ( ftext, showSDocUnsafe )
+import           GHC.Types.Basic
+import qualified GHC.Types.SrcLoc
+#else
 import           Name
 import           Outputable ( ftext, showSDocUnsafe )
 import           BasicTypes
 import qualified SrcLoc
+#endif
 
 import           DataTreePrint
 
@@ -56,7 +63,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         ]
       NotPromoted -> docWrapNode name $ docLit t
 #if MIN_VERSION_ghc(8,10,1)
+#if MIN_VERSION_ghc(9,0,0)
+  HsForAllTy _ tele (L _ (HsQualTy _ (L _ cntxts) typ2)) -> let bndrs = hsf_vis_bndrs tele in do
+#else
   HsForAllTy _ _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
+#endif
 #else
   HsForAllTy _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
 #endif
@@ -146,7 +157,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           )
       ]
 #if MIN_VERSION_ghc(8,10,1)
+#if MIN_VERSION_ghc(9,0,0)
+  HsForAllTy _ tele typ2 -> let bndrs = hsf_vis_bndrs tele in do
+#else
   HsForAllTy _ _ bndrs typ2 -> do
+#endif
 #else
   HsForAllTy _ bndrs typ2 -> do
 #endif
@@ -254,7 +269,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
+#if MIN_VERSION_ghc(9,0,0)
+  HsFunTy _ _ typ1 typ2 -> do
+#else
   HsFunTy _ typ1 typ2 -> do
+#endif
     typeDoc1 <- docSharedWrapper layoutType typ1
     typeDoc2 <- docSharedWrapper layoutType typ2
     let maybeForceML = case typ2 of
@@ -642,11 +661,20 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
 #endif
 
 layoutTyVarBndrs
+#if MIN_VERSION_ghc(9,0,0)
+  :: [LHsTyVarBndr flag GhcPs]
+#else
   :: [LHsTyVarBndr GhcPs]
+#endif
   -> ToBriDocM [(Text, Maybe (ToBriDocM BriDocNumbered))]
 layoutTyVarBndrs = mapM $ \case
+#if MIN_VERSION_ghc(9,0,0)
+  (L _ (UserTyVar _ _ name)) -> return $ (lrdrNameToText name, Nothing)
+  (L _ (KindedTyVar _ _ lrdrName kind)) -> do
+#else
   (L _ (UserTyVar _ name)) -> return $ (lrdrNameToText name, Nothing)
   (L _ (KindedTyVar _ lrdrName kind)) -> do
+#endif
     d <- docSharedWrapper layoutType kind
     return $ (lrdrNameToText lrdrName, Just $ d)
   (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"
