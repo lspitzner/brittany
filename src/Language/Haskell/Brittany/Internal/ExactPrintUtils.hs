@@ -20,6 +20,22 @@ import           Language.Haskell.Brittany.Internal.Utils
 import           Data.Data
 import           Data.HList.HList
 
+#if MIN_VERSION_ghc(9,0,0)
+import           GHC.Driver.Session ( getDynFlags )
+import           GHC ( runGhc, GenLocated(L), moduleNameString )
+import qualified GHC.Driver.Session    as GHC
+import qualified GHC                   as GHC hiding (parseModule)
+import qualified GHC.Parser            as GHC
+import qualified GHC.Types.SrcLoc      as GHC
+import qualified GHC.Data.FastString   as GHC
+import qualified GHC.Parser.Lexer      as GHC
+import qualified GHC.Data.StringBuffer as GHC
+import qualified GHC.Utils.Outputable  as GHC
+import qualified GHC.Driver.CmdLine    as GHC
+import           GHC.Hs
+import           GHC.Data.Bag
+import           GHC.Types.SrcLoc ( SrcSpan, Located )
+#else
 import           DynFlags ( getDynFlags )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
 import qualified DynFlags      as GHC
@@ -41,6 +57,7 @@ import           HsSyn
 #endif
 
 import           SrcLoc ( SrcSpan, Located )
+#endif
 
 
 import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
@@ -153,7 +170,11 @@ commentAnnFixTransformGlob ast = do
       annsMap = Map.fromListWith
         (flip const)
         [ (GHC.realSrcSpanEnd span, annKey)
+#if MIN_VERSION_ghc(9,0,0)
+        | (GHC.RealSrcSpan span _, annKey) <- Foldable.toList nodes
+#else
         | (GHC.RealSrcSpan span, annKey) <- Foldable.toList nodes
+#endif
         ]
   nodes `forM_` (snd .> processComs annsMap)
  where
@@ -168,9 +189,14 @@ commentAnnFixTransformGlob ast = do
           :: (ExactPrint.Comment, ExactPrint.DeltaPos)
           -> ExactPrint.TransformT Identity Bool
         processCom comPair@(com, _) =
+#if MIN_VERSION_ghc(9,0,0)
+          case GHC.realSrcSpanStart $ ExactPrint.commentIdentifier com of
+            comLoc -> case Map.lookupLE comLoc annsMap of
+#else
           case GHC.srcSpanStart $ ExactPrint.commentIdentifier com of
             GHC.UnhelpfulLoc{}    -> return True -- retain comment at current node.
             GHC.RealSrcLoc comLoc -> case Map.lookupLE comLoc annsMap of
+#endif
               Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
                 (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
                   move $> False
@@ -179,8 +205,13 @@ commentAnnFixTransformGlob ast = do
                where
                 ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
                 ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
+#if MIN_VERSION_ghc(9,0,0)
+                loc1                              = GHC.realSrcSpanStart annKeyLoc1
+                loc2                              = GHC.realSrcSpanStart annKeyLoc2
+#else
                 loc1                              = GHC.srcSpanStart annKeyLoc1
                 loc2                              = GHC.srcSpanStart annKeyLoc2
+#endif
                 move = ExactPrint.modifyAnnsT $ \anns ->
                   let
                     ann2  = Data.Maybe.fromJust $ Map.lookup annKey2 anns
@@ -271,12 +302,20 @@ moveTrailingComments astFrom astTo = do
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
 -- implementation would have.
 extractToplevelAnns
+#if MIN_VERSION_ghc(9,0,0)
+  :: Located HsModule
+#else
   :: Located (HsModule GhcPs)
+#endif
   -> ExactPrint.Anns
   -> Map ExactPrint.AnnKey ExactPrint.Anns
 extractToplevelAnns lmod anns = output
  where
+#if MIN_VERSION_ghc(9,0,0)
+  (L _ (HsModule _ _ _ _ ldecls _ _)) = lmod
+#else
   (L _ (HsModule _ _ _ ldecls _ _)) = lmod
+#endif
   declMap1 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
   declMap1 = Map.unions $ ldecls <&> \ldecl ->
     Map.fromSet (const (ExactPrint.mkAnnKey ldecl)) (foldedAnnKeys ldecl)
