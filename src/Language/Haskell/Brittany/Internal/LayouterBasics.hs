@@ -99,6 +99,15 @@ import Language.Haskell.Brittany.Internal.Types
 import Language.Haskell.Brittany.Internal.Utils
 import Language.Haskell.Brittany.Internal.ExactPrintUtils
 
+#if MIN_VERSION_ghc(9,0,0)
+import GHC.Types.Name.Reader ( RdrName(..) )
+import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
+import qualified GHC.Types.SrcLoc as GHC
+import           GHC.Types.Name.Occurrence ( occNameString )
+import           GHC.Types.Name ( getOccString )
+import           GHC ( moduleName )
+import           GHC.Parser.Annotation ( AnnKeywordId(..) )
+#else
 import           RdrName ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import qualified SrcLoc        as GHC
@@ -106,6 +115,7 @@ import           OccName ( occNameString )
 import           Name ( getOccString )
 import           Module ( moduleName )
 import           ApiAnnotation ( AnnKeywordId(..) )
+#endif
 
 import           Data.Data
 import           Data.Generics.Schemes
@@ -299,7 +309,13 @@ filterAnns ast =
 -- b) after (in source code order) the node.
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) =
+#if MIN_VERSION_ghc(9,0,0)
+  case l of
+    GHC.RealSrcSpan rss _ -> List.any (\(c, _) -> ExactPrint.commentIdentifier c > rss)
+    GHC.UnhelpfulSpan _ -> const False
+#else
   List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
+#endif
     <$> astConnectedComments ast
 
 hasCommentsBetween
