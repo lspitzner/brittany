@@ -313,7 +313,7 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
                 True  -> not $ null errsWarns
       if hasErrors
         then throwE $ errsWarns
-        else pure $ TextL.toStrict outputTextL
+        else pure $ TextL.toStrict $ TextL.snoc outputTextL '\n'
 
 
 
@@ -398,7 +398,7 @@ parsePrintModuleTests conf filename input = do
         else lift
           $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
       if null errs
-        then pure $ TextL.toStrict $ ltext
+        then pure $ TextL.toStrict $ TextL.snoc ltext '\n'
         else
           let
             errStrs = errs <&> \case

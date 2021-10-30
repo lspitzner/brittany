@@ -26,7 +26,7 @@ main = hspec $ do
             , "  ]"
             ]
       output <- liftIO $ parsePrintModule staticDefaultConfig input
-      input `shouldSatisfy` \_ -> case output of
-        Right x | x == expected -> True
-        _                       -> False
+      hush output `shouldBe` Just expected
 
+hush :: Either a b -> Maybe b
+hush = either (const Nothing) Just

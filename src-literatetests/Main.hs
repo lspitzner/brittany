@@ -188,10 +188,10 @@ roundTripEqual c t =
     `shouldReturn` Right (PPTextWrapper t)
 
 newtype PPTextWrapper = PPTextWrapper Text
-  deriving Eq
+  deriving (Eq, Show)
 
-instance Show PPTextWrapper where
-  show (PPTextWrapper t) = "\n" ++ Text.unpack t
+-- instance Show PPTextWrapper where
+--   show (PPTextWrapper t) = "\n" ++ Text.unpack t
 
 -- brittany-next-binding --columns 160
 -- brittany-next-binding { lconfig_indentPolicy: IndentPolicyLeft }
