@@ -21,13 +21,9 @@ import           GHC                            ( Located
                                                 , ol_val
                                                 )
 import qualified GHC
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-#else
-import           HsSyn
-#endif
-import           Name
-import           BasicTypes
+import           GHC.Types.Name
+import           GHC.Types.Basic
 
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
 import           Language.Haskell.Brittany.Internal.Layouters.Type
@@ -45,7 +41,7 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 -- We will use `case .. of` as the imagined prefix to the examples used in
 -- the different cases below.
 layoutPat :: LPat GhcPs -> ToBriDocM (Seq BriDocNumbered)
-layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
+layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
   WildPat _  -> fmap Seq.singleton $ docLit $ Text.pack "_"
     -- _ -> expr
   VarPat _ n ->
@@ -54,11 +50,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   LitPat _ lit ->
     fmap Seq.singleton $ allocateNode $ litBriDoc lit
     -- 0 -> expr
-#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.8 */
   ParPat _ inner -> do
-#else
-  ParPat _ inner -> do
-#endif
     -- (nestedpat) -> expr
     left  <- docLit $ Text.pack "("
     right <- docLit $ Text.pack ")"
@@ -78,7 +70,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
     --       x1' <- docSeq [docLit $ Text.pack "(", return x1]
     --       xN' <- docSeq [return xN, docLit $ Text.pack ")"]
     --       return $ (x1' Seq.<| middle) Seq.|> xN'
-  ConPatIn lname (PrefixCon args) -> do
+  ConPat _ lname (PrefixCon args) -> do
     -- Abc a b c -> expr
     nameDoc <- lrdrNameToTextAnn lname
     argDocs <- layoutPat `mapM` args
@@ -91,18 +83,18 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
           $ spacifyDocs
           $ fmap colsWrapPat argDocs
         return $ x1 Seq.<| xR
-  ConPatIn lname (InfixCon left right) -> do
+  ConPat _ lname (InfixCon left right) -> do
     -- a :< b -> expr
     nameDoc <- lrdrNameToTextAnn lname
     leftDoc <- appSep . colsWrapPat =<< layoutPat left
     rightDoc <- colsWrapPat =<< layoutPat right
     middle <- appSep $ docLit nameDoc
     return $ Seq.empty Seq.|> leftDoc Seq.|> middle Seq.|> rightDoc
-  ConPatIn lname (RecCon (HsRecFields [] Nothing)) -> do
+  ConPat _ lname (RecCon (HsRecFields [] Nothing)) -> do
     -- Abc{} -> expr
     let t = lrdrNameToText lname
     fmap Seq.singleton $ docLit $ t <> Text.pack "{}"
-  ConPatIn lname (RecCon (HsRecFields fs@(_:_) Nothing)) -> do
+  ConPat _ lname (RecCon (HsRecFields fs@(_:_) Nothing)) -> do
     -- Abc { a = locA, b = locB, c = locC } -> expr1
     -- Abc { a, b, c } -> expr2
     let t = lrdrNameToText lname
@@ -126,22 +118,14 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
       , docSeparator
       , docLit $ Text.pack "}"
       ]
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
-  ConPatIn lname (RecCon (HsRecFields [] (Just (L _ 0)))) -> do
-#else
-  ConPatIn lname (RecCon (HsRecFields [] (Just 0))) -> do
-#endif
+  ConPat _ lname (RecCon (HsRecFields [] (Just (L _ 0)))) -> do
     -- Abc { .. } -> expr
     let t = lrdrNameToText lname
     Seq.singleton <$> docSeq
       [ appSep $ docLit t
       , docLit $ Text.pack "{..}"
       ]
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
-  ConPatIn lname (RecCon (HsRecFields fs@(_:_) (Just (L _ dotdoti)))) | dotdoti == length fs -> do
-#else
-  ConPatIn lname (RecCon (HsRecFields fs@(_:_) (Just dotdoti))) | dotdoti == length fs -> do
-#endif
+  ConPat _ lname (RecCon (HsRecFields fs@(_:_) (Just (L _ dotdoti)))) | dotdoti == length fs -> do
     -- Abc { a = locA, .. }
     let t = lrdrNameToText lname
     fds <- fs `forM` \(L _ (HsRecField (L _ fieldOcc) fPat pun)) -> do
@@ -172,11 +156,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
   AsPat _ asName asPat -> do
     -- bind@nestedpat -> expr
     wrapPatPrepend asPat (docLit $ lrdrNameToText asName <> Text.pack "@")
-#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.8 */
-  SigPat _ pat1 (HsWC _ (HsIB _ ty1)) -> do
-#else
-  SigPat (HsWC _ (HsIB _ ty1)) pat1 -> do
-#endif
+  SigPat _ pat1 (HsPS _ ty1) -> do
     -- i :: Int -> expr
     patDocs <- layoutPat pat1
     tyDoc <- docSharedWrapper layoutType ty1
@@ -214,7 +194,7 @@ layoutPat (ghcDL -> lpat@(L _ pat)) = docWrapNode lpat $ case pat of
       Just{}  -> Seq.fromList [negDoc, litDoc]
       Nothing -> Seq.singleton litDoc
 
-  _ -> return <$> briDocByExactInlineOnly "some unknown pattern" (ghcDL lpat)
+  _ -> return <$> briDocByExactInlineOnly "some unknown pattern" lpat
 
 colsWrapPat :: Seq BriDocNumbered -> ToBriDocM BriDocNumbered
 colsWrapPat = docCols ColPatterns . fmap return . Foldable.toList

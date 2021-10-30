@@ -20,27 +20,22 @@ import           Language.Haskell.Brittany.Internal.Utils
 import           Data.Data
 import           Data.HList.HList
 
-import           DynFlags ( getDynFlags )
+import           GHC.Driver.Session ( getDynFlags )
 import           GHC ( runGhc, GenLocated(L), moduleNameString )
-import qualified DynFlags      as GHC
+import qualified GHC.Driver.Session      as GHC
 import qualified GHC           as GHC hiding (parseModule)
-import qualified Parser        as GHC
-import qualified SrcLoc        as GHC
-import qualified FastString    as GHC
-import qualified GHC           as GHC hiding (parseModule)
-import qualified Lexer         as GHC
-import qualified StringBuffer  as GHC
-import qualified Outputable    as GHC
-import qualified CmdLineParser as GHC
+import qualified GHC.Parser        as GHC
+import qualified GHC.Types.SrcLoc        as GHC
+import qualified GHC.Data.FastString    as GHC
+import qualified GHC.Parser.Lexer         as GHC
+import qualified GHC.Data.StringBuffer  as GHC
+import qualified GHC.Utils.Outputable    as GHC
+import qualified GHC.Driver.CmdLine as GHC
 
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-import           Bag
-#else
-import           HsSyn
-#endif
+import           GHC.Data.Bag
 
-import           SrcLoc ( SrcSpan, Located )
+import           GHC.Types.SrcLoc ( SrcSpan, Located )
 
 
 import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
@@ -96,11 +91,7 @@ parseModuleWithCpp cpp opts args fp dynCheck =
       ++ show (warnings <&> warnExtractorCompat)
     x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
     res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
     either (\err -> ExceptT.throwE $ "transform error: " ++ show (bagToList (show <$> err)))
-#else
-    either (\(span, err) -> ExceptT.throwE $ show span ++ ": " ++ err)
-#endif
            (\(a, m) -> pure (a, m, x))
       $ ExactPrint.postParseTransform res opts
 
@@ -133,11 +124,7 @@ parseModuleFromString args fp dynCheck str =
     dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
     let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
     case res of
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
       Left  err -> ExceptT.throwE $ "parse error: " ++ show (bagToList (show <$> err))
-#else
-      Left  (span, err) -> ExceptT.throwE $ showOutputable span ++ ": " ++ err
-#endif
       Right (a   , m  ) -> pure (a, m, dynCheckRes)
 
 
@@ -153,7 +140,7 @@ commentAnnFixTransformGlob ast = do
       annsMap = Map.fromListWith
         (flip const)
         [ (GHC.realSrcSpanEnd span, annKey)
-        | (GHC.RealSrcSpan span, annKey) <- Foldable.toList nodes
+        | (GHC.RealSrcSpan span _, annKey) <- Foldable.toList nodes
         ]
   nodes `forM_` (snd .> processComs annsMap)
  where
@@ -168,9 +155,8 @@ commentAnnFixTransformGlob ast = do
           :: (ExactPrint.Comment, ExactPrint.DeltaPos)
           -> ExactPrint.TransformT Identity Bool
         processCom comPair@(com, _) =
-          case GHC.srcSpanStart $ ExactPrint.commentIdentifier com of
-            GHC.UnhelpfulLoc{}    -> return True -- retain comment at current node.
-            GHC.RealSrcLoc comLoc -> case Map.lookupLE comLoc annsMap of
+          case GHC.realSrcSpanStart $ ExactPrint.commentIdentifier com of
+            comLoc -> case Map.lookupLE comLoc annsMap of
               Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
                 (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
                   move $> False
@@ -179,8 +165,8 @@ commentAnnFixTransformGlob ast = do
                where
                 ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
                 ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
-                loc1                              = GHC.srcSpanStart annKeyLoc1
-                loc2                              = GHC.srcSpanStart annKeyLoc2
+                loc1                              = GHC.realSrcSpanStart annKeyLoc1
+                loc2                              = GHC.realSrcSpanStart annKeyLoc2
                 move = ExactPrint.modifyAnnsT $ \anns ->
                   let
                     ann2  = Data.Maybe.fromJust $ Map.lookup annKey2 anns
@@ -271,12 +257,12 @@ moveTrailingComments astFrom astTo = do
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
 -- implementation would have.
 extractToplevelAnns
-  :: Located (HsModule GhcPs)
+  :: Located HsModule
   -> ExactPrint.Anns
   -> Map ExactPrint.AnnKey ExactPrint.Anns
 extractToplevelAnns lmod anns = output
  where
-  (L _ (HsModule _ _ _ ldecls _ _)) = lmod
+  (L _ (HsModule _ _ _ _ ldecls _ _)) = lmod
   declMap1 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
   declMap1 = Map.unions $ ldecls <&> \ldecl ->
     Map.fromSet (const (ExactPrint.mkAnnKey ldecl)) (foldedAnnKeys ldecl)

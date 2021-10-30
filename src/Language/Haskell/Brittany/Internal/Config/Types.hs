@@ -340,16 +340,16 @@ data ExactPrintFallbackMode
                                  -- A PROGRAM BY TRANSFORMING IT.
   deriving (Show, Generic, Data)
 
-instance CFunctor CDebugConfig
-instance CFunctor CLayoutConfig
-instance CFunctor CErrorHandlingConfig
-instance CFunctor CForwardOptions
-instance CFunctor CPreProcessorConfig
-instance CFunctor CConfig
-
 deriveCZipWith ''CDebugConfig
 deriveCZipWith ''CLayoutConfig
 deriveCZipWith ''CErrorHandlingConfig
 deriveCZipWith ''CForwardOptions
 deriveCZipWith ''CPreProcessorConfig
 deriveCZipWith ''CConfig
+
+instance CFunctor CDebugConfig
+instance CFunctor CLayoutConfig
+instance CFunctor CErrorHandlingConfig
+instance CFunctor CForwardOptions
+instance CFunctor CPreProcessorConfig
+instance CFunctor CConfig

@@ -46,11 +46,11 @@ import           Data.Generics.Aliases
 import qualified Text.PrettyPrint as PP
 import           Text.PrettyPrint ( ($+$), (<+>) )
 
-import qualified Outputable    as GHC
-import qualified DynFlags      as GHC
-import qualified FastString    as GHC
-import qualified SrcLoc        as GHC
-import           OccName ( occNameString )
+import qualified GHC.Utils.Outputable as GHC
+import qualified GHC.Driver.Session   as GHC
+import qualified GHC.Data.FastString  as GHC
+import qualified GHC.Types.SrcLoc     as GHC
+import           GHC.Types.Name.Occurrence as OccName ( occNameString )
 import qualified Data.ByteString as B
 
 import           DataTreePrint
@@ -59,11 +59,7 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import           Language.Haskell.Brittany.Internal.Types
 
 import qualified Data.Generics.Uniplate.Direct as Uniplate
-#if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
 import qualified GHC.Hs.Extension as HsExtension
-#else
-import qualified HsExtension
-#endif /* ghc-8.10.1 */
 
 
 
@@ -301,11 +297,5 @@ lines' s = case break (== '\n') s of
   (s1, [_]) -> [s1, ""]
   (s1, (_:r)) -> s1 : lines' r
 
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 absurdExt :: HsExtension.NoExtCon -> a
 absurdExt = HsExtension.noExtCon
-#else
--- | A method to dismiss NoExt patterns for total matches
-absurdExt :: HsExtension.NoExt -> a
-absurdExt = error "cannot construct NoExt"
-#endif

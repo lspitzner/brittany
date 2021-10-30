@@ -8,16 +8,9 @@ where
 
 -- rather project-specific stuff:
 ---------------------------------
-#if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
 import GHC.Hs.Extension               as E ( GhcPs )
-#else
-import HsExtension                    as E ( GhcPs )
-#endif /* ghc-8.10.1 */
 
-import RdrName                        as E ( RdrName )
-#if MIN_VERSION_ghc(8,8,0)
-import qualified GHC                       ( dL, HasSrcSpan, SrcSpanLess )
-#endif
+import GHC.Types.Name.Reader          as E ( RdrName )
 import qualified GHC                       ( Located )
 
 
@@ -402,12 +395,3 @@ import Data.Data                     as E ( toConstr
 
 todo :: a
 todo = error "todo"
-
-
-#if MIN_VERSION_ghc(8,8,0)
-ghcDL :: GHC.HasSrcSpan a => a -> GHC.Located (GHC.SrcSpanLess a)
-ghcDL = GHC.dL
-#else              /* ghc-8.6 */
-ghcDL :: GHC.Located a -> GHC.Located a
-ghcDL x = x
-#endif

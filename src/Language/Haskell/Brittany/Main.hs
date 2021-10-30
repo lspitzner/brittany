@@ -16,7 +16,7 @@ import qualified Data.Map                                as Map
 import qualified Data.Monoid
 
 import           GHC                                      ( GenLocated(L) )
-import           Outputable                               ( Outputable(..)
+import           GHC.Utils.Outputable                               ( Outputable(..)
                                                           , showSDocUnsafe
                                                           )
 
@@ -46,7 +46,7 @@ import qualified System.Exit
 import qualified System.Directory                        as Directory
 import qualified System.FilePath.Posix                   as FilePath
 
-import qualified DynFlags                                as GHC
+import qualified GHC.Driver.Session                                as GHC
 import qualified GHC.LanguageExtensions.Type             as GHC
 
 import           Paths_brittany

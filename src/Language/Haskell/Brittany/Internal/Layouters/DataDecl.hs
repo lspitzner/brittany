@@ -16,16 +16,12 @@ import           Language.Haskell.Brittany.Internal.Types
 import           Language.Haskell.Brittany.Internal.LayouterBasics
 import           Language.Haskell.Brittany.Internal.Config.Types
 
-import           RdrName ( RdrName(..) )
+import           GHC.Types.Name.Reader ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
 import qualified GHC
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-#else
-import           HsSyn
-#endif
-import           Name
-import           BasicTypes
+import           GHC.Types.Name
+import           GHC.Types.Basic
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
 
 import           Language.Haskell.Brittany.Internal.Layouters.Type
@@ -34,7 +30,7 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 import           Language.Haskell.Brittany.Internal.Utils
 
-import           Bag ( mapBagM )
+import           GHC.Data.Bag ( mapBagM )
 
 
 
@@ -242,11 +238,11 @@ createContextDoc (t1 : tR) = do
       ]
     ]
 
-createBndrDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
+createBndrDoc :: [LHsTyVarBndr tag GhcPs] -> ToBriDocM BriDocNumbered
 createBndrDoc bs = do
   tyVarDocs <- bs `forM` \case
-    (L _ (UserTyVar _ext vname)) -> return $ (lrdrNameToText vname, Nothing)
-    (L _ (KindedTyVar _ext lrdrName kind)) -> do
+    (L _ (UserTyVar _ _ext vname)) -> return $ (lrdrNameToText vname, Nothing)
+    (L _ (KindedTyVar _ _ext lrdrName kind)) -> do
       d <- docSharedWrapper layoutType kind
       return $ (lrdrNameToText lrdrName, Just $ d)
     (L _ (XTyVarBndr ext)) -> absurdExt ext
@@ -334,21 +330,21 @@ createDetailsDoc consNameStr details = case details of
         , docForceSingleline
           $ docSeq
           $ List.intersperse docSeparator
-          $ args <&> layoutType
+          $ fmap hsScaledThing args <&> layoutType
         ]
       leftIndented = docSetParSpacing
         . docAddBaseY BrIndentRegular
         . docPar (docLit consNameStr)
         . docLines
-        $ layoutType <$> args
+        $ layoutType <$> fmap hsScaledThing args
       multiAppended = docSeq
         [ docLit consNameStr
         , docSeparator
-        , docSetBaseY $ docLines $ layoutType <$> args
+        , docSetBaseY $ docLines $ layoutType <$> fmap hsScaledThing args
         ]
       multiIndented = docSetBaseY $ docAddBaseY BrIndentRegular $ docPar
         (docLit consNameStr)
-        (docLines $ layoutType <$> args)
+        (docLines $ layoutType <$> fmap hsScaledThing args)
     case indentPolicy of
       IndentPolicyLeft     -> docAlt [singleLine, leftIndented]
       IndentPolicyMultiple -> docAlt [singleLine, multiAppended, leftIndented]
@@ -424,11 +420,11 @@ createDetailsDoc consNameStr details = case details of
             ]
           )
   InfixCon arg1 arg2 -> docSeq
-    [ layoutType arg1
+    [ layoutType $ hsScaledThing arg1
     , docSeparator
     , docLit consNameStr
     , docSeparator
-    , layoutType arg2
+    , layoutType $ hsScaledThing arg2
     ]
  where
   mkFieldDocs
@@ -438,7 +434,7 @@ createDetailsDoc consNameStr details = case details of
     L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc lField names t
     L _ (XConDeclField x) -> absurdExt x
 
-createForallDoc :: [LHsTyVarBndr GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
+createForallDoc :: [LHsTyVarBndr tag GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
 createForallDoc []            = Nothing
 createForallDoc lhsTyVarBndrs = Just $ docSeq
   [docLitS "forall ", createBndrDoc lhsTyVarBndrs]

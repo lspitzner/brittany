@@ -17,14 +17,10 @@ import           GHC                            ( runGhc
                                                 , GenLocated(L)
                                                 , moduleNameString
                                                 )
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-#else
-import           HsSyn
-#endif
-import           Name
-import qualified FastString
-import           BasicTypes
+import           GHC.Types.Name
+import qualified GHC.Data.FastString as FastString
+import           GHC.Types.Basic
 
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 import           Language.Haskell.Brittany.Internal.Layouters.Decl
@@ -38,9 +34,9 @@ layoutStmt lstmt@(L _ stmt) = do
   indentAmount :: Int <-
     mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   docWrapNode lstmt $ case stmt of
-    LastStmt _ body False _ -> do
+    LastStmt _ body (Just False) _ -> do
       layoutExpr body
-    BindStmt _ lPat expr _ _ -> do
+    BindStmt _ lPat expr -> do
       patDoc <- fmap return $ colsWrapPat =<< layoutPat lPat
       expDoc <- docSharedWrapper layoutExpr expr
       docAlt

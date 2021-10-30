@@ -12,15 +12,12 @@ import           GHC                                      ( unLoc
                                                           , moduleNameString
                                                           , Located
                                                           )
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-#else
-import           HsSyn
-#endif
-import           Name
-import           FieldLabel
-import qualified FastString
-import           BasicTypes
+import           GHC.Types.Name
+import           GHC.Types.FieldLabel
+import qualified GHC.Data.FastString
+import           GHC.Types.Basic
+import GHC.Unit.Types (IsBootInterface(..))
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 
 import           Language.Haskell.Brittany.Internal.Utils
@@ -50,14 +47,10 @@ layoutImport importD = case importD of
       hiding   = maybe False fst mllies
       minQLength = length "import qualified "
       qLengthReal =
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
         let qualifiedPart = if q /= NotQualified then length "qualified " else 0
-#else
-        let qualifiedPart = if q then length "qualified " else 0
-#endif
             safePart      = if safe then length "safe " else 0
             pkgPart       = maybe 0 ((+ 1) . Text.length) pkgNameT
-            srcPart       = if src then length "{-# SOURCE #-} " else 0
+            srcPart = case src of { IsBoot -> length "{-# SOURCE #-} "; NotBoot -> 0 }
         in  length "import " + srcPart + safePart + qualifiedPart + pkgPart
       qLength          = max minQLength qLengthReal
       -- Cost in columns of importColumn
@@ -66,13 +59,9 @@ layoutImport importD = case importD of
       nameCost         = Text.length modNameT + qLength
       importQualifiers = docSeq
         [ appSep $ docLit $ Text.pack "import"
-        , if src then appSep $ docLit $ Text.pack "{-# SOURCE #-}" else docEmpty
+        , case src of { IsBoot -> appSep $ docLit $ Text.pack "{-# SOURCE #-}"; NotBoot -> docEmpty }
         , if safe then appSep $ docLit $ Text.pack "safe" else docEmpty
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
         , if q /= NotQualified then appSep $ docLit $ Text.pack "qualified" else docEmpty
-#else
-        , if q then appSep $ docLit $ Text.pack "qualified" else docEmpty
-#endif
         , maybe docEmpty (appSep . docLit) pkgNameT
         ]
       indentName =

@@ -11,17 +11,12 @@ import           Language.Haskell.Brittany.Internal.Layouters.Import
 import           Language.Haskell.Brittany.Internal.Config.Types
 
 import GHC (unLoc, runGhc, GenLocated(L), moduleNameString, AnnKeywordId(..))
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
 import           GHC.Hs.ImpExp
-#else
-import           HsSyn
-import           HsImpExp
-#endif
-import           Name
-import           FieldLabel
-import qualified FastString
-import           BasicTypes
+import           GHC.Types.Name
+import           GHC.Types.FieldLabel
+import qualified GHC.Data.FastString
+import           GHC.Types.Basic
 import           Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import           Language.Haskell.GHC.ExactPrint.Types
@@ -34,16 +29,16 @@ import           Language.Haskell.Brittany.Internal.Utils
 
 
 
-layoutModule :: ToBriDoc HsModule
+layoutModule :: ToBriDoc' HsModule
 layoutModule lmod@(L _ mod') = case mod' of
     -- Implicit module Main
-  HsModule Nothing  _   imports _ _ _ -> do
+  HsModule _ Nothing  _   imports _ _ _ -> do
     commentedImports <- transformToCommentedImport imports
     -- groupify commentedImports `forM_` tellDebugMessShow
     docLines (commentedImportsToDoc <$> sortCommentedImports commentedImports)
     -- sortedImports <- sortImports imports
     -- docLines $ [layoutImport y i | (y, i) <- sortedImports]
-  HsModule (Just n) les imports _ _ _ -> do
+  HsModule _ (Just n) les imports _ _ _ -> do
     commentedImports <- transformToCommentedImport imports
     -- groupify commentedImports `forM_` tellDebugMessShow
     -- sortedImports <- sortImports imports

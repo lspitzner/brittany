@@ -99,13 +99,13 @@ import Language.Haskell.Brittany.Internal.Types
 import Language.Haskell.Brittany.Internal.Utils
 import Language.Haskell.Brittany.Internal.ExactPrintUtils
 
-import           RdrName ( RdrName(..) )
+import           GHC.Types.Name.Reader ( RdrName(..) )
 import           GHC ( Located, runGhc, GenLocated(L), moduleNameString )
-import qualified SrcLoc        as GHC
-import           OccName ( occNameString )
-import           Name ( getOccString )
-import           Module ( moduleName )
-import           ApiAnnotation ( AnnKeywordId(..) )
+import qualified GHC.Types.SrcLoc        as GHC
+import           GHC.Types.Name.Occurrence ( occNameString )
+import           GHC.Types.Name ( getOccString )
+import           GHC ( moduleName )
+import           GHC.Parser.Annotation ( AnnKeywordId(..) )
 
 import           Data.Data
 import           Data.Generics.Schemes
@@ -299,7 +299,7 @@ filterAnns ast =
 -- b) after (in source code order) the node.
 hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) =
-  List.any (\(c, _) -> ExactPrint.commentIdentifier c > l)
+  List.any (\(c, _) -> ExactPrint.commentIdentifier c > ExactPrint.Utils.rs l)
     <$> astConnectedComments ast
 
 hasCommentsBetween

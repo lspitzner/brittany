@@ -21,6 +21,7 @@ where
 #include "prelude.inc"
 
 import Data.Yaml
+import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.Types as Aeson
 
 import Language.Haskell.Brittany.Internal.Config.Types
@@ -113,18 +114,17 @@ makeToJSONMaybe(CConfig)
 -- config file content.
 instance FromJSON (CConfig Maybe) where
   parseJSON (Object v) = Config
-    <$> v .:?  Text.pack "conf_version"
-    <*> v .:?= Text.pack "conf_debug"
-    <*> v .:?= Text.pack "conf_layout"
-    <*> v .:?= Text.pack "conf_errorHandling"
-    <*> v .:?= Text.pack "conf_forward"
-    <*> v .:?= Text.pack "conf_preprocessor"
-    <*> v .:?  Text.pack "conf_roundtrip_exactprint_only"
-    <*> v .:?  Text.pack "conf_disable_formatting"
-    <*> v .:?  Text.pack "conf_obfuscate"
+    <$> v .:?  Key.fromString "conf_version"
+    <*> v .:?= Key.fromString "conf_debug"
+    <*> v .:?= Key.fromString "conf_layout"
+    <*> v .:?= Key.fromString "conf_errorHandling"
+    <*> v .:?= Key.fromString "conf_forward"
+    <*> v .:?= Key.fromString "conf_preprocessor"
+    <*> v .:?  Key.fromString "conf_roundtrip_exactprint_only"
+    <*> v .:?  Key.fromString "conf_disable_formatting"
+    <*> v .:?  Key.fromString "conf_obfuscate"
   parseJSON invalid    = Aeson.typeMismatch "Config" invalid
 
 -- Pretends that the value is {} when the key is not present.
-(.:?=) :: FromJSON a => Object -> Text -> Parser a
+(.:?=) :: FromJSON a => Object -> Key.Key -> Parser a
 o .:?= k = o .:? k >>= maybe (parseJSON (Aeson.object [])) pure
-

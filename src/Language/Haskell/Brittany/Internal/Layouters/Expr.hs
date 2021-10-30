@@ -19,14 +19,10 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 
 import           GHC ( runGhc, GenLocated(L), SrcSpan, moduleNameString, AnnKeywordId(..), RdrName(..) )
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-#else
-import           HsSyn
-#endif
-import           Name
-import qualified FastString
-import           BasicTypes
+import           GHC.Types.Name
+import qualified GHC.Data.FastString as FastString
+import           GHC.Types.Basic
 
 import           Language.Haskell.Brittany.Internal.Utils
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
@@ -46,9 +42,8 @@ layoutExpr lexpr@(L _ expr) = do
   docWrapNode lexpr $ case expr of
     HsVar _ vname -> do
       docLit =<< lrdrNameToTextAnn vname
-    HsUnboundVar _ var -> case var of
-      OutOfScope oname _ -> docLit $ Text.pack $ occNameString oname
-      TrueExprHole oname -> docLit $ Text.pack $ occNameString oname
+    HsUnboundVar _ oname ->
+      docLit $ Text.pack $ occNameString oname
     HsRecFld{} -> do
       -- TODO
       briDocByExactInlineOnly "HsRecFld" lexpr
@@ -79,8 +74,8 @@ layoutExpr lexpr@(L _ expr) = do
           -- by wrapping it in docSeq below. We _could_ add alignments for
           -- stuff like lists-of-lambdas. Nothing terribly important..)
           let shouldPrefixSeparator = case p of
-                (ghcDL -> L _ LazyPat{}) -> isFirst
-                (ghcDL -> L _ BangPat{}) -> isFirst
+                L _ LazyPat{} -> isFirst
+                L _ BangPat{} -> isFirst
                 _               -> False
           patDocSeq <- layoutPat p
           fixed <- case Seq.viewl patDocSeq of
@@ -235,15 +230,9 @@ layoutExpr lexpr@(L _ expr) = do
           expDoc1
           expDoc2
         ]
-#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.8 */
     HsAppType _ _ XHsWildCardBndrs{} ->
       error "brittany internal error: HsAppType XHsWildCardBndrs"
     HsAppType _ exp1 (HsWC _ ty1) -> do
-#else
-    HsAppType XHsWildCardBndrs{} _ ->
-      error "brittany internal error: HsAppType XHsWildCardBndrs"
-    HsAppType (HsWC _ ty1) exp1 -> do
-#endif
       t <- docSharedWrapper layoutType ty1
       e <- docSharedWrapper layoutExpr exp1
       docAlt
@@ -400,17 +389,10 @@ layoutExpr lexpr@(L _ expr) = do
       rightDoc <- docSharedWrapper layoutExpr right
       docSeq [opDoc, docSeparator, rightDoc]
     ExplicitTuple _ args boxity -> do
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
       let argExprs = args <&> \arg -> case arg of
             (L _ (Present _ e)) -> (arg, Just e);
             (L _ (Missing NoExtField)) -> (arg, Nothing)
             (L _ XTupArg{}) -> error "brittany internal error: XTupArg"
-#else
-      let argExprs = args <&> \arg -> case arg of
-            (L _ (Present _ e)) -> (arg, Just e);
-            (L _ (Missing NoExt)) -> (arg, Nothing)
-            (L _ XTupArg{}) -> error "brittany internal error: XTupArg"
-#endif
       argDocs <- forM argExprs
         $ docSharedWrapper
         $ \(arg, exprM) -> docWrapNode arg $ maybe docEmpty layoutExpr exprM
@@ -496,7 +478,7 @@ layoutExpr lexpr@(L _ expr) = do
               (docSetBaseAndIndent $ docNonBottomSpacing $ docLines $ return <$> funcPatDocs)
             )
         ]
-    HsIf _ _ ifExpr thenExpr elseExpr -> do
+    HsIf _ ifExpr thenExpr elseExpr -> do
       ifExprDoc   <- docSharedWrapper layoutExpr ifExpr
       thenExprDoc <- docSharedWrapper layoutExpr thenExpr
       elseExprDoc <- docSharedWrapper layoutExpr elseExpr
@@ -723,14 +705,14 @@ layoutExpr lexpr@(L _ expr) = do
         _ -> docSeq [appSep $ docLit $ Text.pack "let in", expDoc1]
       -- docSeq [appSep $ docLit "let in", expDoc1]
     HsDo _ stmtCtx (L _ stmts) -> case stmtCtx of
-      DoExpr -> do
+      DoExpr _ -> do
         stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
         docSetParSpacing
           $ docAddBaseY BrIndentRegular
           $ docPar
               (docLit $ Text.pack "do")
               (docSetBaseAndIndent $ docNonBottomSpacing $ docLines stmtDocs)
-      MDoExpr -> do
+      MDoExpr _ -> do
         stmtDocs <- docSharedWrapper layoutStmt `mapM` stmts
         docSetParSpacing
           $ docAddBaseY BrIndentRegular
@@ -829,18 +811,10 @@ layoutExpr lexpr@(L _ expr) = do
                 else Just <$> docSharedWrapper layoutExpr rFExpr
               return $ (lfield, lrdrNameToText lnameF, rFExpDoc)
           recordExpression False indentPolicy lexpr nameDoc rFs
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
         HsRecFields [] (Just (L _ 0)) -> do
-#else
-        HsRecFields [] (Just 0) -> do
-#endif
           let t = lrdrNameToText lname
           docWrapNode lname $ docLit $ t <> Text.pack " { .. }"
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
         HsRecFields fs@(_:_) (Just (L _ dotdoti)) | dotdoti == length fs -> do
-#else
-        HsRecFields fs@(_:_) (Just dotdoti) | dotdoti == length fs -> do
-#endif
           let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
           fieldDocs <- fs `forM` \fieldl@(L _ (HsRecField (L _ fieldOcc) fExpr pun)) -> do
             let FieldOcc _ lnameF = fieldOcc
@@ -863,19 +837,11 @@ layoutExpr lexpr@(L _ expr) = do
             XAmbiguousFieldOcc{} ->
               error "brittany internal error: XAmbiguousFieldOcc"
       recordExpression False indentPolicy lexpr rExprDoc rFs
-#if MIN_VERSION_ghc(8,8,0)   /* ghc-8.6 */
     ExprWithTySig _ _ (HsWC _ XHsImplicitBndrs{}) ->
       error "brittany internal error: ExprWithTySig HsWC XHsImplicitBndrs"
     ExprWithTySig _ _ XHsWildCardBndrs{} ->
       error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
     ExprWithTySig _ exp1 (HsWC _ (HsIB _ typ1)) -> do
-#else
-    ExprWithTySig (HsWC _ XHsImplicitBndrs{}) _ ->
-      error "brittany internal error: ExprWithTySig HsWC XHsImplicitBndrs"
-    ExprWithTySig XHsWildCardBndrs{} _ ->
-      error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
-    ExprWithTySig (HsWC _ (HsIB _ typ1)) exp1 -> do
-#endif
       expDoc <- docSharedWrapper layoutExpr exp1
       typDoc <- docSharedWrapper layoutType typ1
       docSeq
@@ -927,12 +893,6 @@ layoutExpr lexpr@(L _ expr) = do
             ]
     ArithSeq{} ->
       briDocByExactInlineOnly "ArithSeq" lexpr
-    HsSCC{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsSCC{}" lexpr
-    HsCoreAnn{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsCoreAnn{}" lexpr
     HsBracket{} -> do
       -- TODO
       briDocByExactInlineOnly "HsBracket{}" lexpr
@@ -959,43 +919,12 @@ layoutExpr lexpr@(L _ expr) = do
     HsStatic{} -> do
       -- TODO
       briDocByExactInlineOnly "HsStatic{}" lexpr
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
-#else
-    HsArrApp{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsArrApp{}" lexpr
-    HsArrForm{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsArrForm{}" lexpr
-#endif
     HsTick{} -> do
       -- TODO
       briDocByExactInlineOnly "HsTick{}" lexpr
     HsBinTick{} -> do
       -- TODO
       briDocByExactInlineOnly "HsBinTick{}" lexpr
-    HsTickPragma{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsTickPragma{}" lexpr
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
-#else
-    EWildPat{} -> do
-      docLit $ Text.pack "_"
-    EAsPat _ asName asExpr -> do
-      docSeq
-        [ docLit $ lrdrNameToText asName <> Text.pack "@"
-        , layoutExpr asExpr
-        ]
-    EViewPat{} -> do
-      -- TODO
-      briDocByExactInlineOnly "EViewPat{}" lexpr
-    ELazyPat{} -> do
-      -- TODO
-      briDocByExactInlineOnly "ELazyPat{}" lexpr
-#endif
-    HsWrap{} -> do
-      -- TODO
-      briDocByExactInlineOnly "HsWrap{}" lexpr
     HsConLikeOut{} -> do
       -- TODO
       briDocByExactInlineOnly "HsWrap{}" lexpr

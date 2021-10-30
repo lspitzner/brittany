@@ -20,17 +20,12 @@ import           GHC     ( unLoc
                          , Located
                          , ModuleName
                          )
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
 import           GHC.Hs.ImpExp
-#else
-import           HsSyn
-import           HsImpExp
-#endif
-import           Name
-import           FieldLabel
-import qualified FastString
-import           BasicTypes
+import           GHC.Types.Name
+import           GHC.Types.FieldLabel
+import qualified GHC.Data.FastString
+import           GHC.Types.Basic
 
 import           Language.Haskell.Brittany.Internal.Utils
 

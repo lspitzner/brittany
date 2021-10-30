@@ -25,15 +25,11 @@ import           GHC ( runGhc
                      , AnnKeywordId (..)
                      )
 import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
 import           GHC.Hs
-#else
-import           HsSyn
-#endif
-import           Name
-import           Outputable ( ftext, showSDocUnsafe )
-import           BasicTypes
-import qualified SrcLoc
+import           GHC.Types.Name
+import           GHC.Utils.Outputable ( ftext, showSDocUnsafe )
+import           GHC.Types.Basic
+import qualified GHC.Types.SrcLoc
 
 import           DataTreePrint
 
@@ -45,21 +41,14 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsTyVar _ promoted name -> do
     t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     case promoted of
-#if MIN_VERSION_ghc(8,8,0)
       IsPromoted -> docSeq
-#else /* ghc-8.6 */
-      Promoted -> docSeq
-#endif
         [ docSeparator
         , docTick
         , docWrapNode name $ docLit t
         ]
       NotPromoted -> docWrapNode name $ docLit t
-#if MIN_VERSION_ghc(8,10,1)
-  HsForAllTy _ _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
-#else
-  HsForAllTy _ bndrs (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
-#endif
+  HsForAllTy _ hsf (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
+    let bndrs = hsf_vis_bndrs hsf
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
@@ -145,11 +134,8 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-#if MIN_VERSION_ghc(8,10,1)
-  HsForAllTy _ _ bndrs typ2 -> do
-#else
-  HsForAllTy _ bndrs typ2 -> do
-#endif
+  HsForAllTy _ hsf typ2 -> do
+    let bndrs = hsf_vis_bndrs hsf
     typeDoc <- layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
     let maybeForceML = case typ2 of
@@ -254,7 +240,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
             ]
           )
       ]
-  HsFunTy _ typ1 typ2 -> do
+  HsFunTy _ _ typ1 typ2 -> do
     typeDoc1 <- docSharedWrapper layoutType typ1
     typeDoc2 <- docSharedWrapper layoutType typ2
     let maybeForceML = case typ2 of
@@ -624,7 +610,6 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       then docLit $ Text.pack "\x2605" -- Unicode star
       else docLit $ Text.pack "*"
   XHsType{} -> error "brittany internal error: XHsType"
-#if MIN_VERSION_ghc(8,8,0)
   HsAppKindTy _ ty kind -> do
     t <- docSharedWrapper layoutType ty
     k <- docSharedWrapper layoutType kind
@@ -639,14 +624,13 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           t
           (docSeq [docLit $ Text.pack "@", k ])
       ]
-#endif
 
 layoutTyVarBndrs
-  :: [LHsTyVarBndr GhcPs]
+  :: [LHsTyVarBndr () GhcPs]
   -> ToBriDocM [(Text, Maybe (ToBriDocM BriDocNumbered))]
 layoutTyVarBndrs = mapM $ \case
-  (L _ (UserTyVar _ name)) -> return $ (lrdrNameToText name, Nothing)
-  (L _ (KindedTyVar _ lrdrName kind)) -> do
+  (L _ (UserTyVar _ _ name)) -> return $ (lrdrNameToText name, Nothing)
+  (L _ (KindedTyVar _ _ lrdrName kind)) -> do
     d <- docSharedWrapper layoutType kind
     return $ (lrdrNameToText lrdrName, Just $ d)
   (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"

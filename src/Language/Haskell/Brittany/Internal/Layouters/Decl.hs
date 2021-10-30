@@ -27,6 +27,7 @@ import           Language.Haskell.Brittany.Internal.Layouters.Type
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint
 import           Language.Haskell.Brittany.Internal.ExactPrintUtils
 import           Language.Haskell.Brittany.Internal.Utils
 
@@ -35,17 +36,12 @@ import           GHC                            ( runGhc
                                                 , moduleNameString
                                                 , AnnKeywordId(..)
                                                 )
-import           SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
-import qualified FastString
-#if MIN_VERSION_ghc(8,10,1) /* ghc-8.10.1 */
+import           GHC.Types.SrcLoc ( SrcSpan, noSrcSpan, Located , getLoc, unLoc )
+import qualified GHC.Data.FastString as FastString
 import           GHC.Hs
 import           GHC.Hs.Extension (NoExtField (..))
-#else
-import           HsSyn
-import           HsExtension (NoExt (..))
-#endif
-import           Name
-import           BasicTypes ( InlinePragma(..)
+import           GHC.Types.Name
+import           GHC.Types.Basic ( InlinePragma(..)
                             , Activation(..)
                             , InlineSpec(..)
                             , RuleMatchInfo(..)
@@ -59,7 +55,7 @@ import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
 import           Language.Haskell.Brittany.Internal.Layouters.Pattern
 import           Language.Haskell.Brittany.Internal.Layouters.DataDecl
 
-import           Bag ( mapBagM, bagToList, emptyBag )
+import           GHC.Data.Bag ( mapBagM, bagToList, emptyBag )
 import           Data.Char (isUpper)
 
 
@@ -145,7 +141,7 @@ specStringCompat ast = \case
 layoutGuardLStmt :: ToBriDoc' (Stmt GhcPs (LHsExpr GhcPs))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
   BodyStmt _ body _ _      -> layoutExpr body
-  BindStmt _ lPat expr _ _ -> do
+  BindStmt _ lPat expr -> do
     patDoc <- docSharedWrapper layoutPat lPat
     expDoc <- docSharedWrapper layoutExpr expr
     docCols ColBindStmt
@@ -164,7 +160,7 @@ layoutBind
        (HsBindLR GhcPs GhcPs)
        (Either [BriDocNumbered] BriDocNumbered)
 layoutBind lbind@(L _ bind) = case bind of
-  FunBind _ fId (MG _ lmatches@(L _ matches) _) _ [] -> do
+  FunBind _ fId (MG _ lmatches@(L _ matches) _) [] -> do
     idStr       <- lrdrNameToTextAnn fId
     binderDoc   <- docLit $ Text.pack "="
     funcPatDocs <-
@@ -186,11 +182,7 @@ layoutBind lbind@(L _ bind) = case bind of
                                                             clauseDocs
                                                             mWhereArg
                                                             hasComments
-#if MIN_VERSION_ghc(8,8,0)
   PatSynBind _ (PSB _ patID lpat rpat dir) -> do
-#else
-  PatSynBind _ (PSB _ patID lpat rpat dir) -> do
-#endif
     fmap Right $ docWrapNode lbind $ layoutPatSynBind patID
                                                       lpat
                                                       dir
@@ -226,7 +218,7 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
     let unordered =
           [ BagBind b | b <- Data.Foldable.toList bindlrs ]
             ++ [ BagSig s | s <- sigs ]
-        ordered = sortBy (comparing bindOrSigtoSrcSpan) unordered
+        ordered = sortBy (comparing $ ExactPrint.rs . bindOrSigtoSrcSpan) unordered
     docs <- docWrapNode lbinds $ join <$> ordered `forM` \case
       BagBind b -> either id return <$> layoutBind b
       BagSig  s -> return <$> layoutSig s
@@ -734,7 +726,7 @@ layoutSynDecl
   :: Bool
   -> (ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered)
   -> Located (IdP GhcPs)
-  -> [LHsTyVarBndr GhcPs]
+  -> [LHsTyVarBndr () GhcPs]
   -> LHsType GhcPs
   -> ToBriDocM BriDocNumbered
 layoutSynDecl isInfix wrapNodeRest name vars typ = do
@@ -771,14 +763,14 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
   hasComments <- hasAnyCommentsConnected typ
   layoutLhsAndType hasComments sharedLhs "=" typeDoc
 
-layoutTyVarBndr :: Bool -> ToBriDoc HsTyVarBndr
+layoutTyVarBndr :: Bool -> ToBriDoc (HsTyVarBndr ())
 layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
   docWrapNodePrior lbndr $ case bndr of
     XTyVarBndr{} -> error "brittany internal error: XTyVarBndr"
-    UserTyVar _ name -> do
+    UserTyVar _ _ name -> do
       nameStr <- lrdrNameToTextAnn name
       docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]
-    KindedTyVar _ name kind -> do
+    KindedTyVar _ _ name kind -> do
       nameStr <- lrdrNameToTextAnn name
       docSeq
         $  [ docSeparator | needsSep ]
@@ -804,16 +796,10 @@ layoutTyFamInstDecl
   -> ToBriDocM BriDocNumbered
 layoutTyFamInstDecl inClass outerNode tfid = do
   let
-#if MIN_VERSION_ghc(8,8,0)
     FamEqn _ name bndrsMay pats _fixity typ = hsib_body $ tfid_eqn tfid
     -- bndrsMay isJust e.g. with
     --   type instance forall a . MyType (Maybe a) = Either () a
     innerNode = outerNode
-#else
-    FamEqn _ name pats _fixity typ = hsib_body $ tfid_eqn tfid
-    bndrsMay = Nothing
-    innerNode = outerNode
-#endif
   docWrapNodePrior outerNode $ do
     nameStr   <- lrdrNameToTextAnn name
     needsParens <- hasAnnKeyword outerNode AnnOpenP
@@ -822,7 +808,7 @@ layoutTyFamInstDecl inClass outerNode tfid = do
         then docLit $ Text.pack "type"
         else docSeq
           [appSep . docLit $ Text.pack "type", docLit $ Text.pack "instance"]
-      makeForallDoc :: [LHsTyVarBndr GhcPs] -> ToBriDocM BriDocNumbered
+      makeForallDoc :: [LHsTyVarBndr () GhcPs] -> ToBriDocM BriDocNumbered
       makeForallDoc bndrs = do
         bndrDocs <- layoutTyVarBndrs bndrs
         docSeq
@@ -845,7 +831,6 @@ layoutTyFamInstDecl inClass outerNode tfid = do
     layoutLhsAndType hasComments lhs "=" typeDoc
 
 
-#if MIN_VERSION_ghc(8,8,0)
 layoutHsTyPats :: [HsArg (LHsType GhcPs) (LHsKind GhcPs)] -> [ToBriDocM BriDocNumbered]
 layoutHsTyPats pats = pats <&> \case
   HsValArg tm     -> layoutType tm
@@ -854,10 +839,6 @@ layoutHsTyPats pats = pats <&> \case
     -- is a bit strange. Hopefully this does not ignore any important
     -- annotations.
   HsArgPar _l     -> error "brittany internal error: HsArgPar{}"
-#else
-layoutHsTyPats :: [LHsType GhcPs] -> [ToBriDocM BriDocNumbered]
-layoutHsTyPats pats = layoutType <$> pats
-#endif
 
 --------------------------------------------------------------------------------
 -- ClsInstDecl
@@ -881,21 +862,12 @@ layoutClsInst lcid@(L _ cid) = docLines
   ]
  where
   layoutInstanceHead :: ToBriDocM BriDocNumbered
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
   layoutInstanceHead =
     briDocByExactNoComment
       $   InstD NoExtField
       .   ClsInstD NoExtField
       .   removeChildren
       <$> lcid
-#else
-  layoutInstanceHead =
-    briDocByExactNoComment
-      $   InstD NoExt
-      .   ClsInstD NoExt
-      .   removeChildren
-      <$> lcid
-#endif
 
   removeChildren :: ClsInstDecl p -> ClsInstDecl p
   removeChildren c = c
@@ -909,7 +881,7 @@ layoutClsInst lcid@(L _ cid) = docLines
   docSortedLines
     :: [ToBriDocM (Located BriDocNumbered)] -> ToBriDocM BriDocNumbered
   docSortedLines l =
-    allocateNode . BDFLines . fmap unLoc . List.sortOn getLoc =<< sequence l
+    allocateNode . BDFLines . fmap unLoc . List.sortOn (ExactPrint.rs . getLoc) =<< sequence l
 
   layoutAndLocateSig :: ToBriDocC (Sig GhcPs) (Located BriDocNumbered)
   layoutAndLocateSig lsig@(L loc _) = L loc <$> layoutSig lsig

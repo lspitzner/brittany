@@ -53,21 +53,17 @@ import           Language.Haskell.Brittany.Internal.Transformations.Indent
 
 import qualified GHC                           as GHC
                                                    hiding ( parseModule )
-import           ApiAnnotation                            ( AnnKeywordId(..) )
+import           GHC.Parser.Annotation                            ( AnnKeywordId(..) )
 import           GHC                                      ( Located
                                                           , runGhc
                                                           , GenLocated(L)
                                                           , moduleNameString
                                                           )
-import           RdrName                                  ( RdrName(..) )
-import           SrcLoc                                   ( SrcSpan )
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
+import           GHC.Types.Name.Reader                                  ( RdrName(..) )
+import           GHC.Types.SrcLoc                                   ( SrcSpan )
 import           GHC.Hs
-import           Bag
-#else
-import           HsSyn
-#endif
-import qualified DynFlags                                as GHC
+import           GHC.Data.Bag
+import qualified GHC.Driver.Session                                as GHC
 import qualified GHC.LanguageExtensions.Type             as GHC
 
 import           Data.Char                                ( isSpace )
@@ -226,7 +222,7 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
 
 
 getTopLevelDeclNameMap :: GHC.ParsedSource -> TopLevelDeclNameMap
-getTopLevelDeclNameMap (L _ (HsModule _name _exports _ decls _ _)) =
+getTopLevelDeclNameMap (L _ (HsModule _ _name _exports _ decls _ _)) =
   TopLevelDeclNameMap $ Map.fromList
     [ (ExactPrint.mkAnnKey decl, name)
     | decl       <- decls
@@ -385,11 +381,7 @@ parsePrintModuleTests conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
   case parseResult of
-#if MIN_VERSION_ghc(8,10,1)   /* ghc-8.10.1 */
     Left  err                  -> return $ Left $ "parsing error: " ++ show (bagToList (show <$> err))
-#else
-    Left  (_   , s           ) -> return $ Left $ "parsing error: " ++ s
-#endif
     Right (anns, parsedModule) -> runExceptT $ do
       (inlineConf, perItemConf) <-
         case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
@@ -460,8 +452,8 @@ toLocal conf anns m = do
   MultiRWSS.mGetRawW >>= \w -> MultiRWSS.mPutRawW (w `mappend` write)
   pure x
 
-ppModule :: GenLocated SrcSpan (HsModule GhcPs) -> PPM ()
-ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
+ppModule :: GenLocated SrcSpan HsModule -> PPM ()
+ppModule lmod@(L _loc _m@(HsModule _ _name _exports _ decls _ _)) = do
   post <- ppPreamble lmod
   decls `forM_` \decl -> do
     let declAnnKey       = ExactPrint.mkAnnKey decl
@@ -505,10 +497,10 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
     (ExactPrint.AnnComment (ExactPrint.Comment cmStr _ _), l) -> do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
-    (ExactPrint.G AnnEofPos, (ExactPrint.DP (eofZ, eofX))) ->
+    (ExactPrint.G _, (ExactPrint.DP (eofZ, eofX))) ->
       let folder (acc, _) (kw, ExactPrint.DP (y, x)) = case kw of
             ExactPrint.AnnComment cm
-              | GHC.RealSrcSpan span <- ExactPrint.commentIdentifier cm
+              | span <- ExactPrint.commentIdentifier cm
               -> ( acc + y + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
                  , x + GHC.srcSpanEndCol span - GHC.srcSpanStartCol span
                  )
@@ -520,16 +512,16 @@ ppModule lmod@(L _loc _m@(HsModule _name _exports _ decls _ _)) = do
 getDeclBindingNames :: LHsDecl GhcPs -> [String]
 getDeclBindingNames (L _ decl) = case decl of
   SigD _ (TypeSig _ ns _) -> ns <&> \(L _ n) -> Text.unpack (rdrNameToText n)
-  ValD _ (FunBind _ (L _ n) _ _ _) -> [Text.unpack $ rdrNameToText n]
+  ValD _ (FunBind _ (L _ n) _ _) -> [Text.unpack $ rdrNameToText n]
   _                              -> []
 
 
 -- Prints the information associated with the module annotation
 -- This includes the imports
 ppPreamble
-  :: GenLocated SrcSpan (HsModule GhcPs)
+  :: GenLocated SrcSpan HsModule
   -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
-ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
+ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _ _)) = do
   filteredAnns <- mAsk <&> \annMap ->
     Map.findWithDefault Map.empty (ExactPrint.mkAnnKey lmod) annMap
     -- Since ghc-exactprint adds annotations following (implicit)
@@ -550,15 +542,10 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _)) = do
             modAnnsDp = ExactPrint.annsDP mAnn
             isWhere (ExactPrint.G AnnWhere) = True
             isWhere _                       = False
-            isEof (ExactPrint.G AnnEofPos) = True
-            isEof _                        = False
             whereInd     = List.findIndex (isWhere . fst) modAnnsDp
-            eofInd       = List.findIndex (isEof . fst) modAnnsDp
-            (pre, post') = case (whereInd, eofInd) of
-              (Nothing, Nothing) -> ([], modAnnsDp)
-              (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
-              (Nothing, Just _i) -> ([], modAnnsDp)
-              (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
+            (pre, post') = case whereInd of
+              Nothing -> ([], modAnnsDp)
+              Just i -> List.splitAt (i + 1) modAnnsDp
             mAnn' = mAnn { ExactPrint.annsDP = pre }
             filteredAnns'' =
               Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
@@ -585,7 +572,7 @@ _sigHead = \case
 
 _bindHead :: HsBind GhcPs -> String
 _bindHead = \case
-  FunBind _ fId _ _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
+  FunBind _ fId _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
   PatBind _ _pat _ ([], []) -> "PatBind smth"
   _                           -> "unknown bind"
 
