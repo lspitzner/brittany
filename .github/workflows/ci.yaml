@@ -2,38 +2,34 @@ name: CI
 on:
   pull_request:
     branches:
-      - master
+      - main
   push:
     branches:
-      - master
+      - main
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         os:
-          - macos-10.15
-          - ubuntu-18.04
+          - macos-11
+          - ubuntu-20.04
           - windows-2019
         ghc:
-          - 8.10.2
+          - 9.0.1
         cabal:
-          - 3.2.0.0
-        include:
-          - os: ubuntu-18.04
-            ghc: 8.8.4
-            cabal: 3.2.0.0
-          - os: ubuntu-18.04
-            ghc: 8.6.5
-            cabal: 3.2.0.0
+          - 3.6.2.0
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - run: mkdir artifact
+      - run: mkdir artifact/${{ matrix.os }}
       - id: setup-haskell
-        uses: actions/setup-haskell@v1
+        uses: haskell/actions/setup@v1
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
+      - run: cabal configure --enable-tests
       - run: cabal freeze
       - run: cat cabal.project.freeze
       - uses: actions/cache@v2
@@ -43,24 +39,12 @@ jobs:
           restore-keys: |
             ${{ matrix.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}-
             ${{ matrix.os }}-${{ matrix.ghc }}-
+      - run: cabal build
+      - run: cabal install --installdir artifact/${{ matrix.os }} --install-method copy
       - run: cabal test --test-show-details direct
-      - run: cabal install --installdir output --install-method copy
-      - run: strip output/brittany*
+      - run: cabal check
+      - run: cabal sdist --output-dir artifact/${{ matrix.os }}
       - uses: actions/upload-artifact@v2
         with:
-          path: output/brittany*
-          name: brittany-${{ matrix.os }}-ghc-${{ matrix.ghc }}-${{ github.sha }}
-      - if: matrix.os == 'ubuntu-18.04' && matrix.ghc == '8.10.2'
-        uses: actions/upload-artifact@v2
-        with:
-          path: dist-newstyle/sdist/brittany-*.tar.gz
-          name: brittany-${{ github.sha }}.tar.gz
-      - run: cabal check
-
-
-  nix:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: cachix/install-nix-action@v12
-      - uses: actions/checkout@v2
-      - run: nix-build
+          path: artifact
+          name: brittany-${{ github.sha }}

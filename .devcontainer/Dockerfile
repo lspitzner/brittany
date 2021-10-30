@@ -19,7 +19,7 @@ RUN \
 USER "$USER_NAME"
 ENV PATH="/home/$USER_NAME/.cabal/bin:/home/$USER_NAME/.ghcup/bin:$PATH"
 
-ARG GHC_VERSION=9.2.1
+ARG GHC_VERSION=9.0.1
 RUN \
     ghcup install ghc "$GHC_VERSION" --set && \
     ghc --version
@@ -28,3 +28,8 @@ ARG CABAL_VERSION=3.6.2.0
 RUN \
     ghcup install cabal "$CABAL_VERSION" --set && \
     cabal --version
+
+ARG HLS_VERSION=1.4.0
+RUN \
+    ghcup install hls "$HLS_VERSION" --set && \
+    haskell-language-server-wrapper --version
