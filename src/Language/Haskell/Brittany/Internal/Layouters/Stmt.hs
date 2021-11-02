@@ -34,7 +34,7 @@ layoutStmt lstmt@(L _ stmt) = do
   indentAmount :: Int <-
     mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   docWrapNode lstmt $ case stmt of
-    LastStmt _ body (Just False) _ -> do
+    LastStmt _ body Nothing _ -> do
       layoutExpr body
     BindStmt _ lPat expr -> do
       patDoc <- fmap return $ colsWrapPat =<< layoutPat lPat
