@@ -48,7 +48,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         ]
       NotPromoted -> docWrapNode name $ docLit t
   HsForAllTy _ hsf (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
-    let bndrs = hsf_vis_bndrs hsf
+    let bndrs = getBinders hsf
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
@@ -135,7 +135,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
           )
       ]
   HsForAllTy _ hsf typ2 -> do
-    let bndrs = hsf_vis_bndrs hsf
+    let bndrs = getBinders hsf
     typeDoc <- layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
     let maybeForceML = case typ2 of
@@ -647,3 +647,15 @@ processTyVarBndrsSingleline bndrDocs = bndrDocs >>= \case
     , docForceSingleline $ doc
     , docLit $ Text.pack ")"
     ]
+
+getBinders :: HsForAllTelescope pass -> [LHsTyVarBndr () pass]
+getBinders x = case x of
+  HsForAllVis _ b -> b
+  HsForAllInvis _ b -> fmap withoutSpecificity b
+  XHsForAllTelescope _ -> []
+
+withoutSpecificity :: LHsTyVarBndr flag pass -> LHsTyVarBndr () pass
+withoutSpecificity = fmap $ \ x -> case x of
+  UserTyVar a _ c -> UserTyVar a () c
+  KindedTyVar a _ c d -> KindedTyVar a () c d
+  XTyVarBndr a -> XTyVarBndr a
