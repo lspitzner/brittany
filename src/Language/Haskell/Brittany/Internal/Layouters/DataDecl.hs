@@ -238,7 +238,7 @@ createContextDoc (t1 : tR) = do
       ]
     ]
 
-createBndrDoc :: [LHsTyVarBndr tag GhcPs] -> ToBriDocM BriDocNumbered
+createBndrDoc :: [LHsTyVarBndr flag GhcPs] -> ToBriDocM BriDocNumbered
 createBndrDoc bs = do
   tyVarDocs <- bs `forM` \case
     (L _ (UserTyVar _ _ext vname)) -> return $ (lrdrNameToText vname, Nothing)
@@ -434,7 +434,7 @@ createDetailsDoc consNameStr details = case details of
     L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc lField names t
     L _ (XConDeclField x) -> absurdExt x
 
-createForallDoc :: [LHsTyVarBndr tag GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
+createForallDoc :: [LHsTyVarBndr flag GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
 createForallDoc []            = Nothing
 createForallDoc lhsTyVarBndrs = Just $ docSeq
   [docLitS "forall ", createBndrDoc lhsTyVarBndrs]
