@@ -1,0 +1,6 @@
+{
+    "purple-yolk.brittany.command": "false",
+    "purple-yolk.ghci.command": "cabal repl --repl-options -ddump-json",
+    "purple-yolk.hlint.command": "false",
+    "purple-yolk.hlint.onSave": false
+}
