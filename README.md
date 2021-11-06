@@ -68,12 +68,6 @@ log the size of the input, but _not_ the full input/output of requests.)
     you may want to clone the repo and try again (there are several stack.yamls
     included).
 
-- via `nix`:
-    ~~~.sh
-    nix build
-    nix-env -i ./result
-    ~~~
-
 - via `cabal`
 
     Due to constant changes to the cabal UI, I have given up on making sure
@@ -102,18 +96,6 @@ log the size of the input, but _not_ the full input/output of requests.)
     ~~~~
 
 # Development tips
-
-## Run a hoogle server
-
-To host a local Hoogle server with all of Brittany's dependencies run:
-
-```sh
-echo brittany.cabal |
-  $(nix-build '<nixpkgs>' --no-link -A entr)/bin/entr -r -- \
-    sh -c "nix-shell --run 'hoogle server --local'"
-```
-
-This will watch `brittany.cabal` for changes and restart the server when new dependencies are added there.
 
 # Editor Integration
 
