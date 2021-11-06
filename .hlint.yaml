@@ -8,11 +8,7 @@
 # Specify additional command line arguments
 
 - arguments:
-    [ "--language=GADTs"
-    , "--language=LambdaCase"
-    , "--language=MultiWayIf"
-    , "--language=KindSignatures"
-    , "--cross"
+    [ "--cross"
     , "--threads=0"
     ]
 

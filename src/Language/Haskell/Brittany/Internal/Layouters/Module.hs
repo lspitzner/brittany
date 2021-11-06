@@ -1,3 +1,13 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MonadComprehensions #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Module (layoutModule) where

@@ -125,21 +125,6 @@ library {
     , uniplate ^>= 1.6.13
     , yaml ^>= 0.11.7
     }
-  default-extensions: {
-    CPP
-
-    NoImplicitPrelude
-
-    GADTs
-
-    FlexibleContexts
-    FlexibleInstances
-    ScopedTypeVariables
-    MonadComprehensions
-    LambdaCase
-    MultiWayIf
-    KindSignatures
-  }
 }
 
 executable brittany
