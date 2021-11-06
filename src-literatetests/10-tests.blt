@@ -1551,6 +1551,97 @@ instance Foo Int where
     { unBarInt :: Int
     }
 
+###############################################################################
+###############################################################################
+###############################################################################
+#group gh-357
+###############################################################################
+###############################################################################
+###############################################################################
+
+#test type-instance-without-comment
+
+{-# language TypeFamilies #-}
+type family F a
+type instance F Int = IO Int
+
+#test type-instance-with-comment
+
+{-# language TypeFamilies #-}
+type family F a
+type instance F Int = IO Int -- x
+
+#test newtype-instance-without-comment
+
+{-# language TypeFamilies #-}
+data family F a
+newtype instance F Int = N Int
+
+#test newtype-instance-with-comment
+
+{-# language TypeFamilies #-}
+data family F a
+newtype instance F Int = N Int -- x
+
+#test data-instance-without-comment
+
+{-# language TypeFamilies #-}
+data family F a
+data instance F Int = D Int
+
+#test data-instance-with-comment
+
+{-# language TypeFamilies #-}
+data family F a
+data instance F Int = D Int -- x
+
+#test instance-type-without-comment
+
+{-# language TypeFamilies #-}
+class C a where
+  type family F a
+instance C Int where
+  type F Int = IO Int
+
+#test instance-type-with-comment
+
+{-# language TypeFamilies #-}
+class C a where
+  type family F a
+instance C Int where
+  type F Int = IO Int -- x
+
+#test instance-newtype-without-comment
+
+{-# language TypeFamilies #-}
+class C a where
+  data family F a
+instance C Int where
+  newtype F Int = N Int
+
+#test instance-newtype-with-comment
+
+{-# language TypeFamilies #-}
+class C a where
+  data family F a
+instance C Int where
+  newtype F Int = N Int -- x
+
+#test instance-data-without-comment
+
+{-# language TypeFamilies #-}
+class C a where
+  data family F a
+instance C Int where
+  data F Int = D Int
+
+#test instance-data-with-comment
+
+{-# language TypeFamilies #-}
+class C a where
+  data family F a
+instance C Int where
+  data F Int = D Int -- x
 
 ###############################################################################
 ###############################################################################
