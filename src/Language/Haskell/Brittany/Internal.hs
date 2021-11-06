@@ -313,7 +313,7 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
                 True  -> not $ null errsWarns
       if hasErrors
         then throwE $ errsWarns
-        else pure $ TextL.toStrict $ TextL.snoc outputTextL '\n'
+        else pure $ TextL.toStrict outputTextL
 
 
 
@@ -398,7 +398,7 @@ parsePrintModuleTests conf filename input = do
         else lift
           $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
       if null errs
-        then pure $ TextL.toStrict $ TextL.snoc ltext '\n'
+        then pure $ TextL.toStrict ltext
         else
           let
             errStrs = errs <&> \case
@@ -497,7 +497,7 @@ ppModule lmod@(L _loc _m@(HsModule _ _name _exports _ decls _ _)) = do
     (ExactPrint.AnnComment (ExactPrint.Comment cmStr _ _), l) -> do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
-    (ExactPrint.G _, (ExactPrint.DP (eofZ, eofX))) ->
+    (ExactPrint.AnnEofPos, (ExactPrint.DP (eofZ, eofX))) ->
       let folder (acc, _) (kw, ExactPrint.DP (y, x)) = case kw of
             ExactPrint.AnnComment cm
               | span <- ExactPrint.commentIdentifier cm
