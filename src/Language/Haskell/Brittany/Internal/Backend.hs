@@ -4,10 +4,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.Brittany.Internal.Backend
-  ( layoutBriDocM
-  )
-where
+module Language.Haskell.Brittany.Internal.Backend where
 
 
 

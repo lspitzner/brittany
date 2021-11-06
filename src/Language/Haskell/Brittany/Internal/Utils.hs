@@ -5,33 +5,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.Brittany.Internal.Utils
-  ( parDoc
-  , parDocW
-  , fromMaybeIdentity
-  , fromOptionIdentity
-  , traceIfDumpConf
-  , mModify
-  , customLayouterF
-  , astToDoc
-  , briDocToDoc
-  -- , displayBriDocSimpleTree
-  , annsDoc
-  , Max (..)
-  , tellDebugMess
-  , tellDebugMessShow
-  , briDocToDocWithAnns
-  , breakEither
-  , spanMaybe
-  , transformUp
-  , transformDownMay
-  , FirstLastView(..)
-  , splitFirstLast
-  , lines'
-  , showOutputable
-  , absurdExt
-  )
-where
+module Language.Haskell.Brittany.Internal.Utils where
 
 
 

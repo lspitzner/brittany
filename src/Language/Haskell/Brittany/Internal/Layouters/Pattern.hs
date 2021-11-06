@@ -1,11 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.Pattern
-  ( layoutPat
-  , colsWrapPat
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.Pattern where
 
 
 

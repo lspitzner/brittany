@@ -1,7 +1,3 @@
-module Main where
-
-
-
 import           Test.Hspec
 import           Language.Haskell.Brittany
 import qualified Data.Text as Text

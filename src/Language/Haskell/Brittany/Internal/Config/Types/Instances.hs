@@ -16,8 +16,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Config.Types.Instances
-where
+module Language.Haskell.Brittany.Internal.Config.Types.Instances where
 
 
 

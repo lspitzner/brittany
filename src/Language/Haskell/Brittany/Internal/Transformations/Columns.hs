@@ -1,10 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Transformations.Columns
-  ( transformSimplifyColumns
-  )
-where
+module Language.Haskell.Brittany.Internal.Transformations.Columns where
 
 
 

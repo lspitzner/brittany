@@ -1,10 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Transformations.Par
-  ( transformSimplifyPar
-  )
-where
+module Language.Haskell.Brittany.Internal.Transformations.Par where
 
 
 

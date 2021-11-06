@@ -1,10 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.DataDecl
-  ( layoutDataDecl
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.DataDecl where
 
 
 

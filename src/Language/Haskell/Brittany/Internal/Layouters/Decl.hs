@@ -3,17 +3,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.Decl
-  ( layoutDecl
-  , layoutSig
-  , layoutBind
-  , layoutLocalBinds
-  , layoutGuardLStmt
-  , layoutPatternBind
-  , layoutGrhs
-  , layoutPatternBindFinal
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.Decl where
 
 
 

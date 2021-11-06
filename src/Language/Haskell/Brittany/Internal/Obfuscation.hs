@@ -1,9 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Obfuscation
-  ( obfuscate
-  )
-where
+module Language.Haskell.Brittany.Internal.Obfuscation where
 
 
 

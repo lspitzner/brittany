@@ -2,13 +2,7 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.IE
-  ( layoutIE
-  , layoutLLIEs
-  , layoutAnnAndSepLLIEs
-  , SortItemsFlag(..)
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.IE where
 
 import Language.Haskell.Brittany.Internal.Prelude
 import qualified Data.List.Extra

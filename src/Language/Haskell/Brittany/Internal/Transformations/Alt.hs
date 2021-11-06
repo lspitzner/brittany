@@ -7,10 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Language.Haskell.Brittany.Internal.Transformations.Alt
-  ( transformAlts
-  )
-where
+module Language.Haskell.Brittany.Internal.Transformations.Alt where
 
 
 

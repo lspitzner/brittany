@@ -1,25 +1,7 @@
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Config
-  ( CConfig(..)
-  , CDebugConfig(..)
-  , CLayoutConfig(..)
-  , DebugConfig
-  , LayoutConfig
-  , Config
-  , cmdlineConfigParser
-  , staticDefaultConfig
-  , forwardOptionsSyntaxExtsEnabled
-  , readConfig
-  , userConfigPath
-  , findLocalConfigPath
-  , readConfigs
-  , readConfigsWithUserConfig
-  , writeDefaultConfig
-  , showConfigYaml
-  )
-where
+module Language.Haskell.Brittany.Internal.Config where
 
 
 

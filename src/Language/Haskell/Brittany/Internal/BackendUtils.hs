@@ -1,34 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.BackendUtils
-  ( layoutWriteAppend
-  , layoutWriteAppendMultiline
-  , layoutWriteNewlineBlock
-  , layoutWriteNewline
-  , layoutWriteEnsureNewlineBlock
-  , layoutWriteEnsureBlock
-  , layoutWithAddBaseCol
-  , layoutWithAddBaseColBlock
-  , layoutWithAddBaseColN
-  , layoutWithAddBaseColNBlock
-  , layoutBaseYPushCur
-  , layoutBaseYPop
-  , layoutIndentLevelPushCur
-  , layoutIndentLevelPop
-  , layoutWriteEnsureAbsoluteN
-  , layoutAddSepSpace
-  , layoutSetCommentCol
-  , layoutMoveToCommentPos
-  , layoutIndentRestorePostComment
-  , moveToExactAnn
-  , moveToY
-  , ppmMoveToExactLoc
-  , layoutWritePriorComments
-  , layoutWritePostComments
-  , layoutRemoveIndentLevelLinger
-  )
-where
+module Language.Haskell.Brittany.Internal.BackendUtils where
 
 
 import Language.Haskell.Brittany.Internal.Prelude

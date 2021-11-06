@@ -2,13 +2,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonadComprehensions #-}
 
-module Main
-  ( main
-  )
-where
-
-
-
 import Language.Haskell.Brittany.Internal.Prelude
 import qualified Data.List.Extra
 import qualified Data.Maybe

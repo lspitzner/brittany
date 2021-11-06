@@ -1,10 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Transformations.Indent
-  ( transformSimplifyIndent
-  )
-where
+module Language.Haskell.Brittany.Internal.Transformations.Indent where
 
 
 

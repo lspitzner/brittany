@@ -1,8 +1,4 @@
-module Language.Haskell.Brittany.Internal.Prelude
-  ( module E
-  , module Language.Haskell.Brittany.Internal.Prelude
-  )
-where
+module Language.Haskell.Brittany.Internal.Prelude ( module E ) where
 
 
 
@@ -361,6 +357,3 @@ import Control.Monad.Trans.Maybe     as E ( MaybeT (..)
 
 import Data.Data                     as E ( toConstr
                                           )
-
-todo :: a
-todo = error "todo"

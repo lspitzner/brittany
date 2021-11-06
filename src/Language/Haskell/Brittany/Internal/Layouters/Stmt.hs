@@ -2,10 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.Stmt
-  ( layoutStmt
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.Stmt where
 
 
 

@@ -11,8 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Language.Haskell.Brittany.Internal.Types
-where
+module Language.Haskell.Brittany.Internal.Types where
 
 
 

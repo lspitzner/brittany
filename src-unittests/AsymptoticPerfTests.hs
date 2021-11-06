@@ -1,9 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module AsymptoticPerfTests
-  ( asymptoticPerfTest
-  )
-where
+module AsymptoticPerfTests where
 
 
 

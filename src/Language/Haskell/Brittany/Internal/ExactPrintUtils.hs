@@ -5,15 +5,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.Brittany.Internal.ExactPrintUtils
-  ( parseModule
-  , parseModuleFromString
-  , commentAnnFixTransformGlob
-  , extractToplevelAnns
-  , foldedAnnKeys
-  , withTransformedAnns
-  )
-where
+module Language.Haskell.Brittany.Internal.ExactPrintUtils where
 
 
 

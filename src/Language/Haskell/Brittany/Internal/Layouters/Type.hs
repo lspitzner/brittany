@@ -1,12 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.Type
-  ( layoutType
-  , layoutTyVarBndrs
-  , processTyVarBndrsSingleline
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.Type where
 
 
 

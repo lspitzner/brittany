@@ -2,12 +2,7 @@
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Language.Haskell.Brittany.Internal.Layouters.Expr
-  ( layoutExpr
-  , litBriDoc
-  , overLitValBriDoc
-  )
-where
+module Language.Haskell.Brittany.Internal.Layouters.Expr where
 
 
 

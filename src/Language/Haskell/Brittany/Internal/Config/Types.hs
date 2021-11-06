@@ -5,11 +5,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Language.Haskell.Brittany.Internal.Config.Types
-  ( module Language.Haskell.Brittany.Internal.Config.Types
-  , cMap
-  )
-where
+module Language.Haskell.Brittany.Internal.Config.Types where
 
 
 
