@@ -72,6 +72,7 @@ common library
     -Wno-missing-safe-haskell-mode
     -Wno-monomorphism-restriction
     -Wno-prepositive-qualified-module
+    -Wno-safe
     -Wno-unsafe
 
 common executable
@@ -134,8 +135,6 @@ test-suite unittests
   build-depends:
     , hspec ^>= 2.8.3
   main-is:          TestMain.hs
-  other-modules:    TestUtils
-                    AsymptoticPerfTests
   hs-source-dirs:   src-unittests
 
 test-suite littests
