@@ -1,7 +1,3 @@
-#define INSERTTRACESALT 0
-#define INSERTTRACESALTVISIT 0
-#define INSERTTRACESGETSPACING 0
-
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
@@ -117,14 +113,6 @@ transformAlts =
 
     rec :: BriDocNumbered -> Memo.MemoT Int [VerticalSpacing] (MultiRWSS.MultiRWS r w (AltCurPos ': s)) BriDocNumbered
     rec bdX@(brDcId, brDc) = do
-#if INSERTTRACESALTVISIT
-      do
-        acp :: AltCurPos <- mGet
-        tellDebugMess $ "transformAlts: visiting: " ++ case brDc of
-          BDFAnnotationPrior annKey _ -> show (toConstr brDc, annKey, acp)
-          BDFAnnotationRest annKey _ -> show (toConstr brDc, annKey, acp)
-          _ -> show (toConstr brDc, acp)
-#endif
       let reWrap = (,) brDcId
       -- debugAcp :: AltCurPos <- mGet
       case brDc of
@@ -206,20 +194,10 @@ transformAlts =
                   -- TODO: use COMPLETE pragma instead?
                   lineCheck _ = error "ghc exhaustive check is insufficient"
               lconf <- _conf_layout <$> mAsk
-#if INSERTTRACESALT
-              tellDebugMess $ "considering options with " ++ show (length alts, acp)
-#endif
               let options = -- trace ("considering options:" ++ show (length alts, acp)) $
                             (zip spacings alts
                              <&> \(vs, bd) -> -- trace ("spacing=" ++ show vs ++ ",hasSpace=" ++ show (hasSpace lconf acp vs) ++ ",lineCheck=" ++ show (lineCheck vs))
                                ( hasSpace1 lconf acp vs && lineCheck vs, bd))
-#if INSERTTRACESALT
-              zip spacings options `forM_` \(vs, (_, bd)) ->
-                tellDebugMess $ "  " ++ "spacing=" ++ show vs
-                             ++ ",hasSpace1=" ++ show (hasSpace1 lconf acp vs)
-                             ++ ",lineCheck=" ++ show (lineCheck vs)
-                             ++ " " ++ show (toConstr bd)
-#endif
               id -- - $ (fmap $ \x -> traceShow (briDocToDoc x) x)
                  $ rec
                  $ fromMaybe (-- trace ("choosing last") $
@@ -240,9 +218,6 @@ transformAlts =
                       AltLineModeStateForceML{} -> p /= VerticalSpacingParNone
                       AltLineModeStateContradiction -> False
               lconf <- _conf_layout <$> mAsk
-#if INSERTTRACESALT
-              tellDebugMess $ "considering options with " ++ show (length alts, acp)
-#endif
               let options = -- trace ("considering options:" ++ show (length alts, acp)) $
                             (zip spacings alts
                              <&> \(vs, bd) -> -- trace ("spacing=" ++ show vs ++ ",hasSpace=" ++ show (hasSpace lconf acp vs) ++ ",lineCheck=" ++ show (lineCheck vs))
@@ -250,14 +225,6 @@ transformAlts =
                                && any lineCheck vs, bd))
               let checkedOptions :: [Maybe (Int, BriDocNumbered)] =
                     zip [1..] options <&> (\(i, (b,x)) -> [ (i, x) | b ])
-#if INSERTTRACESALT
-              zip spacings options `forM_` \(vs, (_, bd)) ->
-                tellDebugMess $ "  " ++ "spacing=" ++ show vs
-                             ++ ",hasSpace2=" ++ show (hasSpace2 lconf acp <$> vs)
-                             ++ ",lineCheck=" ++ show (lineCheck <$> vs)
-                             ++ " " ++ show (toConstr bd)
-              tellDebugMess $ "  " ++ show (Data.Maybe.mapMaybe (fmap fst) checkedOptions)
-#endif
               id -- - $ (fmap $ \x -> traceShow (briDocToDoc x) x)
                  $ rec
                  $ fromMaybe (-- trace ("choosing last") $
@@ -510,9 +477,6 @@ getSpacing !bridoc = rec bridoc
         r <- rec bd
         tellDebugMess $ "getSpacing: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): mVs=" ++ show r
         return r
-#if INSERTTRACESGETSPACING
-    tellDebugMess $ "getSpacing: visiting: " ++ show (toConstr $ brDc) ++ " -> " ++ show result
-#endif
     return result
   maxVs :: [LineModeValidity VerticalSpacing] -> LineModeValidity VerticalSpacing
   maxVs = foldl'
@@ -867,16 +831,6 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
           r <- rec bd
           tellDebugMess $ "getSpacings: BDFDebug " ++ show s ++ " (node-id=" ++ show brDcId ++ "): vs=" ++ show (take 9 r)
           return r
-#if INSERTTRACESGETSPACING
-      case brdc of
-        BDFAnnotationPrior{} -> return ()
-        BDFAnnotationRest{} -> return ()
-        _ -> mTell $ Seq.fromList ["getSpacings: visiting: "
-                            ++ show (toConstr $ brdc) -- (briDocToDoc $ unwrapBriDocNumbered (0, brdc))
-                           , " -> "
-                            ++ show (take 9 result)
-                           ]
-#endif
       return result
     maxVs :: [VerticalSpacing] -> VerticalSpacing
     maxVs = foldl'

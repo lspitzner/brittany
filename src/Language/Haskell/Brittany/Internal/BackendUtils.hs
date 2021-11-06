@@ -1,11 +1,6 @@
-#define INSERTTRACES 0
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeApplications #-}
-#if !INSERTTRACES
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
-#endif
 
 module Language.Haskell.Brittany.Internal.BackendUtils
   ( layoutWriteAppend
@@ -58,13 +53,7 @@ traceLocal
   :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m, Show a)
   => a
   -> m ()
-#if INSERTTRACES
-traceLocal x = do
-  mGet >>= tellDebugMessShow @LayoutState
-  tellDebugMessShow x
-#else
 traceLocal _ = return ()
-#endif
 
 
 layoutWriteAppend
@@ -79,21 +68,12 @@ layoutWriteAppend t = do
   state <- mGet
   case _lstate_curYOrAddNewline state of
     Right i -> do
-#if INSERTTRACES
-      tellDebugMessShow ("  inserted newlines: ", i)
-#endif
       replicateM_ i $ mTell $ Text.Builder.fromString $ "\n"
     Left{} -> do
-#if INSERTTRACES
-      tellDebugMessShow ("  inserted no newlines")
-#endif
       return ()
   let spaces = case _lstate_addSepSpace state of
         Just i -> i
         Nothing -> 0
-#if INSERTTRACES
-  tellDebugMessShow ("  inserted spaces: ", spaces)
-#endif
   mTell $ Text.Builder.fromText $ Text.pack (replicate spaces ' ')
   mTell $ Text.Builder.fromText $ t
   mModify $ \s -> s
@@ -159,7 +139,7 @@ layoutWriteNewlineBlock = do
 --   mSet $ state
 --     { _lstate_addSepSpace = Just
 --                           $ if isJust $ _lstate_addNewline state
---         then i 
+--         then i
 --         else _lstate_indLevelLinger state + i - _lstate_curY state
 --     }
 
@@ -303,9 +283,6 @@ layoutRemoveIndentLevelLinger :: ( MonadMultiState LayoutState m
              , MonadMultiWriter (Seq String) m
              ) => m ()
 layoutRemoveIndentLevelLinger = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutRemoveIndentLevelLinger")
-#endif
   mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
                     }
 
@@ -318,9 +295,6 @@ layoutWithAddBaseCol
   => m ()
   -> m ()
 layoutWithAddBaseCol m = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutWithAddBaseCol")
-#endif
   amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   state <- mGet
   layoutBaseYPushInternal $ lstate_baseY state + amount
@@ -336,9 +310,6 @@ layoutWithAddBaseColBlock
   => m ()
   -> m ()
 layoutWithAddBaseColBlock m = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutWithAddBaseColBlock")
-#endif
   amount <- mAsk <&> _conf_layout .> _lconfig_indentAmount .> confUnpack
   state <- mGet
   layoutBaseYPushInternal $ lstate_baseY state + amount
@@ -390,9 +361,6 @@ layoutWithAddBaseColN
   -> m ()
   -> m ()
 layoutWithAddBaseColN amount m = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutWithAddBaseColN", amount)
-#endif
   state <- mGet
   layoutBaseYPushInternal $ lstate_baseY state + amount
   m
@@ -444,9 +412,6 @@ layoutAddSepSpace :: (MonadMultiState LayoutState m
   , MonadMultiWriter (Seq String) m)
    => m ()
 layoutAddSepSpace = do
-#if INSERTTRACES
-  tellDebugMessShow ("layoutAddSepSpace")
-#endif
   state <- mGet
   mSet $ state
     { _lstate_addSepSpace = Just $ fromMaybe 1 $ _lstate_addSepSpace state }
@@ -523,9 +488,6 @@ layoutWritePriorComments ast = do
           Map.adjust (\ann -> ann { ExactPrint.annPriorComments = [] }) key anns
       }
     return mAnn
-#if INSERTTRACES
-  tellDebugMessShow ("layoutWritePriorComments", ExactPrint.mkAnnKey ast, mAnn)
-#endif
   case mAnn of
     Nothing -> return ()
     Just priors -> do
@@ -559,9 +521,6 @@ layoutWritePostComments ast = do
                      anns
       }
     return mAnn
-#if INSERTTRACES
-  tellDebugMessShow ("layoutWritePostComments", ExactPrint.mkAnnKey ast, mAnn)
-#endif
   case mAnn of
     Nothing -> return ()
     Just posts -> do
@@ -584,9 +543,6 @@ layoutIndentRestorePostComment = do
   state <- mGet
   let mCommentCol = _lstate_commentCol state
   let eCurYAddNL  = _lstate_curYOrAddNewline state
-#if INSERTTRACES
-  tellDebugMessShow ("layoutIndentRestorePostComment", mCommentCol)
-#endif
   mModify $ \s -> s { _lstate_commentCol = Nothing
                     , _lstate_commentNewlines = 0
                     }
@@ -604,7 +560,7 @@ layoutIndentRestorePostComment = do
 -- layoutWritePriorCommentsRestore x = do
 --   layoutWritePriorComments x
 --   layoutIndentRestorePostComment
--- 
+--
 -- layoutWritePostCommentsRestore :: (Data.Data.Data ast,
 --                                                MonadMultiWriter Text.Builder.Builder m,
 --                                                MonadMultiState LayoutState m
