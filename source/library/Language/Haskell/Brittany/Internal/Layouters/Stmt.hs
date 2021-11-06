@@ -4,26 +4,19 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Stmt where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
+import GHC (GenLocated(L))
+import GHC.Hs
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
 
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import           GHC                            ( GenLocated(L)
-                                                )
-import           GHC.Hs
-
-import           Language.Haskell.Brittany.Internal.Layouters.Pattern
-import           Language.Haskell.Brittany.Internal.Layouters.Decl
+import Language.Haskell.Brittany.Internal.Layouters.Decl
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
-
-
+import Language.Haskell.Brittany.Internal.Layouters.Pattern
 
 layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))
 layoutStmt lstmt@(L _ stmt) = do
@@ -53,12 +46,12 @@ layoutStmt lstmt@(L _ stmt) = do
           ]
         ]
     LetStmt _ binds -> do
-      let isFree         = indentPolicy == IndentPolicyFree
+      let isFree = indentPolicy == IndentPolicyFree
       let indentFourPlus = indentAmount >= 4
       layoutLocalBinds binds >>= \case
-        Nothing        -> docLit $ Text.pack "let"
+        Nothing -> docLit $ Text.pack "let"
           -- i just tested the above, and it is indeed allowed. heh.
-        Just []        -> docLit $ Text.pack "let" -- this probably never happens
+        Just [] -> docLit $ Text.pack "let" -- this probably never happens
         Just [bindDoc] -> docAlt
           [ -- let bind = expr
             docCols
@@ -68,9 +61,10 @@ layoutStmt lstmt@(L _ stmt) = do
                 f = case indentPolicy of
                   IndentPolicyFree -> docSetBaseAndIndent
                   IndentPolicyLeft -> docForceSingleline
-                  IndentPolicyMultiple | indentFourPlus -> docSetBaseAndIndent
-                                       | otherwise      -> docForceSingleline
-              in  f $ return bindDoc
+                  IndentPolicyMultiple
+                    | indentFourPlus -> docSetBaseAndIndent
+                    | otherwise -> docForceSingleline
+              in f $ return bindDoc
             ]
           , -- let
               --   bind = expr
@@ -84,10 +78,11 @@ layoutStmt lstmt@(L _ stmt) = do
           --     ccc = exprc
           addAlternativeCond (isFree || indentFourPlus) $ docSeq
             [ appSep $ docLit $ Text.pack "let"
-            , let f = if indentFourPlus
-                    then docEnsureIndent BrIndentRegular
-                    else docSetBaseAndIndent
-              in  f $ docLines $ return <$> bindDocs
+            , let
+                f = if indentFourPlus
+                  then docEnsureIndent BrIndentRegular
+                  else docSetBaseAndIndent
+              in f $ docLines $ return <$> bindDocs
             ]
           -- let
           --   aaa = expra
@@ -95,8 +90,9 @@ layoutStmt lstmt@(L _ stmt) = do
           --   ccc = exprc
           addAlternativeCond (not indentFourPlus)
             $ docAddBaseY BrIndentRegular
-            $ docPar (docLit $ Text.pack "let")
-                     (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
+            $ docPar
+                (docLit $ Text.pack "let")
+                (docSetBaseAndIndent $ docLines $ return <$> bindDocs)
     RecStmt _ stmts _ _ _ _ _ -> runFilteredAlternative $ do
       -- rec stmt1
       --     stmt2

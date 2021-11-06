@@ -3,16 +3,10 @@
 
 module Language.Haskell.Brittany.Internal.Transformations.Indent where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-
 import qualified Data.Generics.Uniplate.Direct as Uniplate
-
-
+import qualified GHC.OldList as List
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.Types
 
 -- prepare layouting by translating BDPar's, replacing them with Indents and
 -- floating those in. This gives a more clear picture of what exactly is
@@ -31,15 +25,17 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
   --     [ BDAddBaseY ind x
   --     , BDEnsureIndent ind indented
   --     ]
-  BDLines lines | any ( \case
-                        BDLines{} -> True
-                        BDEmpty{} -> True
-                        _         -> False
-                      )
-                      lines ->
-    Just $ BDLines $ filter isNotEmpty $ lines >>= \case
+  BDLines lines
+    | any
+      (\case
+        BDLines{} -> True
+        BDEmpty{} -> True
+        _ -> False
+      )
+      lines
+    -> Just $ BDLines $ filter isNotEmpty $ lines >>= \case
       BDLines l -> l
-      x         -> [x]
+      x -> [x]
   BDLines [l] -> Just l
   BDAddBaseY i (BDAnnotationPrior k x) ->
     Just $ BDAnnotationPrior k (BDAddBaseY i x)
@@ -53,4 +49,4 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
     Just $ BDCols sig $ List.init l ++ [BDAddBaseY i $ List.last l]
   BDAddBaseY _ lit@BDLit{} -> Just lit
 
-  _                        -> Nothing
+  _ -> Nothing
