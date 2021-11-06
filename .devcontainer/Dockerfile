@@ -28,8 +28,3 @@ ARG CABAL_VERSION=3.6.2.0
 RUN \
     ghcup install cabal "$CABAL_VERSION" --set && \
     cabal --version
-
-ARG HLS_VERSION=1.4.0
-RUN \
-    ghcup install hls "$HLS_VERSION" --set && \
-    haskell-language-server-wrapper --version
