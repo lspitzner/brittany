@@ -446,7 +446,6 @@ data Foo = Bar
   deriving (Show, Eq, Monad, Functor, Traversable, Foldable)
 
 #test record multiple deriving strategies
-#min-ghc 8.2
 data Foo = Bar
   { foo  :: Baz
   , bars :: Bizzz
@@ -461,7 +460,6 @@ data Foo = Bar
   deriving newtype (Traversable, Foldable)
 
 #test record deriving via
-#min-ghc 8.6
 data Foo = Bar
   { foo  :: Baz
   , bars :: Bizzz
@@ -535,7 +533,6 @@ data Foo = Bar
 ## maybe we want to switch to a differnt layout when there are such comments.
 ## Don't hesitate to modify this testcase, it clearly is not the ideal layout
 ## for this.
-#min-ghc 8.6
 
 data Foo = Bar
   { foo  :: Baz

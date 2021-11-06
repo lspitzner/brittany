@@ -121,7 +121,7 @@ pattern myLeftVariableName `MyInfixPatternMatcher` myRightVariableName <-
   [myLongLeftVariableName, myLongRightVariableName] where
   MyInfixPatternMatcher x y = [x, x, y]
 
-#test Pattern synonym types 
+#test Pattern synonym types
 {-# LANGUAGE PatternSynonyms #-}
 pattern J :: a -> Maybe a
 pattern J x = Just x
@@ -152,7 +152,6 @@ pattern Signed x <- (asSigned -> x) where
   Signed (Pos x) = x  -- positive comment
 
 #test Pattern synonym types multiple names
-#min-ghc 8.2
 {-# LANGUAGE PatternSynonyms #-}
 pattern J, K :: a -> Maybe a
 

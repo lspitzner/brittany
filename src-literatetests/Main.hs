@@ -1,9 +1,7 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonadComprehensions #-}
 
 import Language.Haskell.Brittany.Internal.Prelude
-import qualified Data.List.Extra
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
@@ -32,7 +30,6 @@ import           System.FilePath                ( (</>) )
 data InputLine
   = GroupLine Text
   | HeaderLine Text
-  | GhcVersionGuardLine Text
   | PendingLine
   | NormalLine Text
   | CommentLine
@@ -41,7 +38,6 @@ data InputLine
 data TestCase = TestCase
   { testName :: Text
   , isPending :: Bool
-  , minGHCVersion :: Maybe Text
   , content :: Text
   }
 
@@ -56,26 +52,17 @@ main = do
   let groups = createChunks =<< inputs
   inputCtxFree <- Text.IO.readFile "src-literatetests/30-tests-context-free.blt"
   let groupsCtxFree = createChunks inputCtxFree
-  let parseVersion :: Text -> Maybe [Int]
-      parseVersion =
-        mapM (readMaybe . Text.unpack) . Text.splitOn (Text.pack ".")
-  let ghcVersion = Data.Maybe.fromJust $ parseVersion $ Text.pack VERSION_ghc
-  let checkVersion = \case
-        Nothing -> True -- no version constraint
-        Just s  -> case parseVersion s of
-          Nothing -> error $ "could not parse version " ++ Text.unpack s
-          Just v  -> v <= ghcVersion
   hspec $ do
     groups `forM_` \(groupname, tests) -> do
       describe (Text.unpack groupname) $ do
-        tests `forM_` \test -> when (checkVersion $ minGHCVersion test) $ do
+        tests `forM_` \test -> do
           (if isPending test then before_ pending else id)
             $ it (Text.unpack $ testName test)
             $ roundTripEqual defaultTestConfig
             $ content test
     groupsCtxFree `forM_` \(groupname, tests) -> do
       describe ("context free: " ++ Text.unpack groupname) $ do
-        tests `forM_` \test -> when (checkVersion $ minGHCVersion test) $ do
+        tests `forM_` \test -> do
           (if isPending test then before_ pending else id)
             $ it (Text.unpack $ testName test)
             $ roundTripEqual contextFreeTestConfig
@@ -113,15 +100,12 @@ main = do
         in  TestCase
               { testName      = n
               , isPending     = any isPendingLine rest
-              , minGHCVersion = Data.List.Extra.firstJust extractMinGhc rest
               , content       = Text.unlines normalLines
               }
       l ->
         error $ "first non-empty line must start with #test footest\n" ++ show l
     extractNormal (NormalLine l) = Just l
     extractNormal _              = Nothing
-    extractMinGhc (GhcVersionGuardLine v) = Just v
-    extractMinGhc _                       = Nothing
     isPendingLine PendingLine{} = True
     isPendingLine _             = False
     specialLineParser :: Parser InputLine
@@ -137,11 +121,6 @@ main = do
         , _    <- Parsec.many1 $ Parsec.oneOf " \t"
         , name <- Parsec.many1 $ Parsec.noneOf "\r\n:"
         , _    <- Parsec.eof
-        ]
-      , [ GhcVersionGuardLine $ Text.pack version
-        | _       <- Parsec.try $ Parsec.string "#min-ghc"
-        , _       <- Parsec.many1 $ Parsec.oneOf " \t"
-        , version <- Parsec.many1 $ Parsec.noneOf "\r\n:"
         ]
       , [ PendingLine
         | _ <- Parsec.try $ Parsec.string "#pending"
