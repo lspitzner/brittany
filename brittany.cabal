@@ -30,6 +30,11 @@ source-repository head
   type: git
   location: https://github.com/lspitzner/brittany.git
 
+flag pedantic
+  default: False
+  description: Enables @-Werror@, which turns warnings into errors.
+  manual: True
+
 common library
   build-depends:
     , aeson ^>= 2.0.1
@@ -74,6 +79,9 @@ common library
     -Wno-prepositive-qualified-module
     -Wno-safe
     -Wno-unsafe
+
+  if flag(pedantic)
+    ghc-options: -Werror
 
 common executable
   import: library
