@@ -11,14 +11,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-11
-          - ubuntu-20.04
-          - windows-2019
-        ghc:
-          - 9.0.1
-        cabal:
-          - 3.6.2.0
+        include:
+          - { os: macos-11, ghc: 9.0.1, cabal: 3.6.2.0 }
+          - { os: ubuntu-20.04, ghc: 9.0.1, cabal: 3.6.2.0 }
+          - { os: windows-2019, ghc: 9.0.1, cabal: 3.6.2.0, ext: .exe }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -44,6 +40,10 @@ jobs:
       - run: cabal test --test-show-details direct
       - run: cabal check
       - run: cabal sdist --output-dir artifact/${{ matrix.os }}
+      - uses: svenstaro/upx-action@v2
+        with:
+          file: artifact/${{ matrix.os }}/brittany${{ matrix.ext }}
+          args: --best
       - uses: actions/upload-artifact@v2
         with:
           path: artifact
