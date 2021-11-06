@@ -65,6 +65,7 @@ library {
     Language.Haskell.Brittany.Internal.Obfuscation
     Paths_brittany
   }
+  autogen-modules: Paths_brittany
   other-modules: {
     Language.Haskell.Brittany.Internal.LayouterBasics
     Language.Haskell.Brittany.Internal.Backend
