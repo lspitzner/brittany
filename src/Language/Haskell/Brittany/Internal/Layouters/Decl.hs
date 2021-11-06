@@ -863,7 +863,7 @@ layoutClsInst lcid@(L _ cid) = docLines
       .   removeChildren
       <$> lcid
 
-  removeChildren :: ClsInstDecl p -> ClsInstDecl p
+  removeChildren :: ClsInstDecl GhcPs -> ClsInstDecl GhcPs
   removeChildren c = c
     { cid_binds         = emptyBag
     , cid_sigs          = []
