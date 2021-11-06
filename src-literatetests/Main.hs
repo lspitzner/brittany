@@ -32,6 +32,9 @@ import System.Timeout ( timeout )
 
 import Language.Haskell.Brittany.Internal.PreludeUtils
 
+hush :: Either a b -> Maybe b
+hush = either (const Nothing) Just
+
 
 
 asymptoticPerfTest :: Spec
@@ -92,6 +95,21 @@ main = do
   let groupsCtxFree = createChunks inputCtxFree
   hspec $ do
     describe "asymptotic perf roundtrips" $ asymptoticPerfTest
+    describe "library interface basic functionality" $ do
+      it "gives properly formatted result for valid input" $ do
+        let
+          input = Text.pack $ unlines
+            ["func = [00000000000000000000000, 00000000000000000000000, 00000000000000000000000, 00000000000000000000000]"]
+        let expected = Text.pack $ unlines
+              [ "func ="
+              , "  [ 00000000000000000000000"
+              , "  , 00000000000000000000000"
+              , "  , 00000000000000000000000"
+              , "  , 00000000000000000000000"
+              , "  ]"
+              ]
+        output <- liftIO $ parsePrintModule staticDefaultConfig input
+        hush output `shouldBe` Just expected
     groups `forM_` \(groupname, tests) -> do
       describe (Text.unpack groupname) $ do
         tests `forM_` \test -> do

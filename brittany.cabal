@@ -138,12 +138,3 @@ test-suite littests
     , parsec ^>= 3.1.14
   main-is:          Main.hs
   hs-source-dirs:   src-literatetests
-
-test-suite libinterfacetests
-  import: executable
-
-  type:             exitcode-stdio-1.0
-  build-depends:
-    , hspec ^>= 2.8.3
-  main-is:          Main.hs
-  hs-source-dirs:   src-libinterfacetests
