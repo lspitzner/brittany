@@ -84,8 +84,22 @@ library {
     Language.Haskell.Brittany.Internal.Transformations.Indent
   }
   ghc-options: {
-    -Wall
-    -fno-warn-redundant-constraints
+    -Weverything
+    -Wno-deriving-typeable
+    -Wno-incomplete-record-updates
+    -Wno-incomplete-uni-patterns
+    -Wno-missing-deriving-strategies
+    -Wno-missing-export-lists
+    -Wno-missing-import-lists
+    -Wno-missing-local-signatures
+    -Wno-missing-safe-haskell-mode
+    -Wno-monomorphism-restriction
+    -Wno-noncanonical-monad-instances
+    -Wno-noncanonical-monoid-instances
+    -Wno-prepositive-qualified-module
+    -Wno-redundant-constraints
+    -Wno-unsafe
+    -Wno-unused-packages
   }
   build-depends:
     { base ^>= 4.15.0
