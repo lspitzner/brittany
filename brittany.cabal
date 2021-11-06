@@ -128,7 +128,7 @@ executable brittany
   hs-source-dirs: source/executable
   main-is: Main.hs
 
-test-suite littests
+test-suite brittany-test-suite
   import: executable
 
   type:             exitcode-stdio-1.0
