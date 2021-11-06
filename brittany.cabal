@@ -24,7 +24,7 @@ extra-doc-files:
   README.md
   doc/implementation/*.md
 extra-source-files:
-  src-literatetests/*.blt
+  data/*.blt
 
 source-repository head
   type: git

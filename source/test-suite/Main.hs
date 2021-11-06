@@ -84,14 +84,14 @@ data TestCase = TestCase
 
 main :: IO ()
 main = do
-  files <- System.Directory.listDirectory "src-literatetests/"
+  files <- System.Directory.listDirectory "data/"
   let blts =
         List.sort
           $ filter (\x -> not ("tests-context-free.blt" `isSuffixOf` x))
           $ filter (".blt" `isSuffixOf`) files
-  inputs <- blts `forM` \blt -> Text.IO.readFile ("src-literatetests" </> blt)
+  inputs <- blts `forM` \blt -> Text.IO.readFile ("data" </> blt)
   let groups = createChunks =<< inputs
-  inputCtxFree <- Text.IO.readFile "src-literatetests/30-tests-context-free.blt"
+  inputCtxFree <- Text.IO.readFile "data/30-tests-context-free.blt"
   let groupsCtxFree = createChunks inputCtxFree
   hspec $ do
     describe "asymptotic perf roundtrips" $ asymptoticPerfTest
