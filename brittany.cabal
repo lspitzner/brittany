@@ -85,7 +85,6 @@ library {
   }
   ghc-options: {
     -Wall
-    -fno-warn-unused-imports
     -fno-warn-redundant-constraints
   }
   build-depends:

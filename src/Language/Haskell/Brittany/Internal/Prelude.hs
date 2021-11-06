@@ -11,7 +11,6 @@ where
 import GHC.Hs.Extension               as E ( GhcPs )
 
 import GHC.Types.Name.Reader          as E ( RdrName )
-import qualified GHC                       ( Located )
 
 
 -- more general:
@@ -56,21 +55,11 @@ import Data.Set                      as E ( Set )
 
 import Data.Text                     as E ( Text )
 
-import Prelude                       as E ( Char
-                                          , String
-                                          , Int
-                                          , Integer
-                                          , Float
-                                          , Double
-                                          , Bool (..)
-                                          , undefined
+import Prelude                       as E ( undefined
                                           , Eq (..)
                                           , Ord (..)
                                           , Enum (..)
                                           , Bounded (..)
-                                          , Maybe (..)
-                                          , Either (..)
-                                          , IO
                                           , (<$>)
                                           , (.)
                                           , ($)
@@ -101,7 +90,6 @@ import Prelude                       as E ( Char
                                           , (||)
                                           , curry
                                           , uncurry
-                                          , Ordering (..)
                                           , flip
                                           , const
                                           , seq
@@ -184,14 +172,12 @@ import Data.Word                     as E ( Word32
                                           )
 
 import Data.Ord                      as E ( comparing
-                                          , Down (..)
                                           )
 
 import Data.Either                   as E ( either
                                           )
 
-import Data.Ratio                    as E ( Ratio
-                                          , (%)
+import Data.Ratio                    as E ( (%)
                                           , numerator
                                           , denominator
                                           )
@@ -240,8 +226,7 @@ import Control.Concurrent            as E ( threadDelay
                                           , forkOS
                                           )
 
-import Control.Concurrent.MVar       as E ( MVar
-                                          , newEmptyMVar
+import Control.Concurrent.MVar       as E ( newEmptyMVar
                                           , newMVar
                                           , putMVar
                                           , readMVar
@@ -273,7 +258,7 @@ import Data.Monoid                   as E ( mconcat
                                           )
 
 import Data.Bifunctor                as E ( bimap )
-import Data.Functor                  as E ( (<$), ($>) )
+import Data.Functor                  as E ( ($>) )
 import Data.Function                 as E ( (&) )
 import Data.Semigroup                as E ( (<>)
                                           , Semigroup(..)
@@ -291,12 +276,6 @@ import Control.Arrow                 as E ( first
                                           , (&&&)
                                           , (>>>)
                                           , (<<<)
-                                          )
-
-import Data.Functor.Identity         as E ( Identity (..)
-                                          )
-
-import Data.Proxy                    as E ( Proxy (..)
                                           )
 
 import Data.Version                  as E ( showVersion
@@ -371,15 +350,6 @@ import Control.Monad.Trans.MultiRWS  as E ( -- MultiRWST (..)
                                           -- , mPutRawW
                                           -- , mPutRawS
                                           )
-
-import Control.Monad.Trans.MultiReader    ( runMultiReaderTNil
-                                          , runMultiReaderTNil_
-                                          , MultiReaderT (..)
-                                          , MultiReader
-                                          , MultiReaderTNull
-                                          )
-
-import Data.Text                     as E ( Text )
 
 import Control.Monad.IO.Class        as E ( MonadIO (..)
                                           )
