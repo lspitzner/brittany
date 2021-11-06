@@ -40,7 +40,6 @@ layoutDataDecl
   -> LHsQTyVars GhcPs
   -> HsDataDefn GhcPs
   -> ToBriDocM BriDocNumbered
-layoutDataDecl _ _ (XLHsQTyVars ext) _ = absurdExt ext
 layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
   -- newtype MyType a b = MyType ..
   HsDataDefn _ext NewType (L _ []) _ctype Nothing [cons] mDerivs -> case cons of
@@ -245,7 +244,6 @@ createBndrDoc bs = do
     (L _ (KindedTyVar _ _ext lrdrName kind)) -> do
       d <- docSharedWrapper layoutType kind
       return $ (lrdrNameToText lrdrName, Just $ d)
-    (L _ (XTyVarBndr ext)) -> absurdExt ext
   docSeq
     $   List.intersperse docSeparator
     $   tyVarDocs
@@ -275,7 +273,6 @@ createDerivingPar derivs mainDoc = do
         <$> types
 
 derivingClauseDoc :: LHsDerivingClause GhcPs -> ToBriDocM BriDocNumbered
-derivingClauseDoc (L _ (XHsDerivingClause ext)) = absurdExt ext
 derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
   (L _ []) -> docSeq []
   (L _ ts) ->
@@ -295,7 +292,6 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
           $ List.intersperse docCommaSep
           $ ts <&> \case
             HsIB _ t -> layoutType t
-            XHsImplicitBndrs x -> absurdExt x
         , whenMoreThan1Type ")"
         , rhsStrategy
         ]
@@ -312,7 +308,6 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
             , docSeparator
             , layoutType t
             ]
-          XHsImplicitBndrs ext -> absurdExt ext
       )
 
 docDeriving :: ToBriDocM BriDocNumbered
@@ -432,7 +427,6 @@ createDetailsDoc consNameStr details = case details of
     -> [(ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)]
   mkFieldDocs = fmap $ \lField -> case lField of
     L _ (ConDeclField _ext names t _) -> createNamesAndTypeDoc lField names t
-    L _ (XConDeclField x) -> absurdExt x
 
 createForallDoc :: [LHsTyVarBndr flag GhcPs] -> Maybe (ToBriDocM BriDocNumbered)
 createForallDoc []            = Nothing
@@ -451,7 +445,6 @@ createNamesAndTypeDoc lField names t =
       $   List.intersperse docCommaSep
       $   names
       <&> \case
-        L _ (XFieldOcc x) -> absurdExt x
         L _ (FieldOcc _ fieldName) ->
             docLit =<< lrdrNameToTextAnn fieldName
     ]

@@ -90,6 +90,7 @@ layoutSig lsig@(L _loc sig) = case sig of
             AlwaysActive     -> ""
             ActiveBefore _ i -> "[~" ++ show i ++ "] "
             ActiveAfter  _ i -> "[" ++ show i ++ "] "
+            FinalActive      -> error "brittany internal error: FinalActive"
       let conlikeStr = case conlike of
             FunLike -> ""
             ConLike -> "CONLIKE "
@@ -190,7 +191,6 @@ layoutBind lbind@(L _ bind) = case bind of
   _ -> Right <$> unknownNodeError "" lbind
 layoutIPBind :: ToBriDoc IPBind
 layoutIPBind lipbind@(L _ bind) = case bind of
-  XIPBind{} -> unknownNodeError "XIPBind" lipbind
   IPBind _ (Right _) _ -> error "brittany internal error: IPBind Right"
   IPBind _ (Left (L _ (HsIPName name))) expr -> do
     ipName <- docLit $ Text.pack $ '?' : FastString.unpackFS name
@@ -225,9 +225,6 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
     return $ Just $ docs
 --  x@(HsValBinds (ValBindsOut _binds _lsigs)) ->
   HsValBinds _ (XValBindsLR{}) -> error "brittany internal error: XValBindsLR"
-  XHsLocalBindsLR{} -> error "brittany internal error: XHsLocalBindsLR"
-  x@(HsIPBinds _ XHsIPBinds{}) ->
-    Just . (: []) <$> unknownNodeError "XHsIPBinds" (L noSrcSpan x)
   HsIPBinds _ (IPBinds _ bb) ->
     Just <$> mapM layoutIPBind bb
   EmptyLocalBinds{} -> return $ Nothing
@@ -241,7 +238,6 @@ layoutGrhs lgrhs@(L _ (GRHS _ guards body)) = do
   guardDocs <- docWrapNode lgrhs $ layoutStmt `mapM` guards
   bodyDoc   <- layoutExpr body
   return (guardDocs, bodyDoc, body)
-layoutGrhs (L _ (XGRHS{})) = error "brittany internal error: XGRHS"
 
 layoutPatternBind
   :: Maybe Text
@@ -766,7 +762,6 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
 layoutTyVarBndr :: Bool -> ToBriDoc (HsTyVarBndr ())
 layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
   docWrapNodePrior lbndr $ case bndr of
-    XTyVarBndr{} -> error "brittany internal error: XTyVarBndr"
     UserTyVar _ _ name -> do
       nameStr <- lrdrNameToTextAnn name
       docSeq $ [docSeparator | needsSep] ++ [docLit nameStr]

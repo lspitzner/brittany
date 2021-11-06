@@ -127,8 +127,6 @@ layoutExpr lexpr@(L _ expr) = do
         ]
     HsLam{} ->
       unknownNodeError "HsLam too complex" lexpr
-    HsLamCase _ XMatchGroup{} ->
-      error "brittany internal error: HsLamCase XMatchGroup"
     HsLamCase _ (MG _ (L _ []) _) -> do
       docSetParSpacing $ docAddBaseY BrIndentRegular $
         (docLit $ Text.pack "\\case {}")
@@ -230,8 +228,6 @@ layoutExpr lexpr@(L _ expr) = do
           expDoc1
           expDoc2
         ]
-    HsAppType _ _ XHsWildCardBndrs{} ->
-      error "brittany internal error: HsAppType XHsWildCardBndrs"
     HsAppType _ exp1 (HsWC _ ty1) -> do
       t <- docSharedWrapper layoutType ty1
       e <- docSharedWrapper layoutExpr exp1
@@ -392,7 +388,6 @@ layoutExpr lexpr@(L _ expr) = do
       let argExprs = args <&> \arg -> case arg of
             (L _ (Present _ e)) -> (arg, Just e);
             (L _ (Missing NoExtField)) -> (arg, Nothing)
-            (L _ XTupArg{}) -> error "brittany internal error: XTupArg"
       argDocs <- forM argExprs
         $ docSharedWrapper
         $ \(arg, exprM) -> docWrapNode arg $ maybe docEmpty layoutExpr exprM
@@ -437,8 +432,6 @@ layoutExpr lexpr@(L _ expr) = do
               lineN = docCols ColTuples [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenP) eN]
               end   = closeLit
             in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN, end]
-    HsCase _ _ XMatchGroup{} ->
-      error "brittany internal error: HsCase XMatchGroup"
     HsCase _ cExp (MG _ (L _ []) _) -> do
       cExpDoc <- docSharedWrapper layoutExpr cExp
       docAlt
@@ -834,13 +827,7 @@ layoutExpr lexpr@(L _ expr) = do
           return $ case ambName of
             Unambiguous _ n -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous   _ n -> (lfield, lrdrNameToText n, rFExpDoc)
-            XAmbiguousFieldOcc{} ->
-              error "brittany internal error: XAmbiguousFieldOcc"
       recordExpression False indentPolicy lexpr rExprDoc rFs
-    ExprWithTySig _ _ (HsWC _ XHsImplicitBndrs{}) ->
-      error "brittany internal error: ExprWithTySig HsWC XHsImplicitBndrs"
-    ExprWithTySig _ _ XHsWildCardBndrs{} ->
-      error "brittany internal error: ExprWithTySig XHsWildCardBndrs"
     ExprWithTySig _ exp1 (HsWC _ (HsIB _ typ1)) -> do
       expDoc <- docSharedWrapper layoutExpr exp1
       typDoc <- docSharedWrapper layoutType typ1
@@ -931,7 +918,9 @@ layoutExpr lexpr@(L _ expr) = do
     ExplicitSum{} -> do
       -- TODO
       briDocByExactInlineOnly "ExplicitSum{}" lexpr
-    XExpr{} -> error "brittany internal error: XExpr"
+    HsPragE{} -> do
+      -- TODO
+      briDocByExactInlineOnly "HsPragE{}" lexpr
 
 recordExpression
   :: (Data.Data.Data lExpr, Data.Data.Data name)

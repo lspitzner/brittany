@@ -217,7 +217,6 @@ lieToText = \case
   L _ (IEGroup _ _ _         ) -> Text.pack "@IEGroup"
   L _ (IEDoc      _ _        ) -> Text.pack "@IEDoc"
   L _ (IEDocNamed _ _        ) -> Text.pack "@IEDocNamed"
-  L _ (XIE _                 ) -> Text.pack "@XIE"
  where
   moduleNameToText :: Located ModuleName -> Text
   moduleNameToText (L _ name) = Text.pack ("@IEModuleContents" ++ moduleNameString name)

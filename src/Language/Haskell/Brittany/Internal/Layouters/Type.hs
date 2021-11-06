@@ -633,7 +633,6 @@ layoutTyVarBndrs = mapM $ \case
   (L _ (KindedTyVar _ _ lrdrName kind)) -> do
     d <- docSharedWrapper layoutType kind
     return $ (lrdrNameToText lrdrName, Just $ d)
-  (L _ (XTyVarBndr{})) -> error "brittany internal error: XTyVarBndr"
 
 -- there is no specific reason this returns a list instead of a single
 -- BriDoc node.
