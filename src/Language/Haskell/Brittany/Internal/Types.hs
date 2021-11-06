@@ -217,7 +217,7 @@ data ColSig
 data BrIndent = BrIndentNone
               | BrIndentRegular
               | BrIndentSpecial Int
-  deriving (Eq, Ord, Typeable, Data.Data.Data, Show)
+  deriving (Eq, Ord, Data.Data.Data, Show)
 
 type ToBriDocM = MultiRWSS.MultiRWS
                    '[Config, Anns] -- reader
@@ -231,7 +231,7 @@ type ToBriDocC sym c          = Located sym         -> ToBriDocM c
 data DocMultiLine
   = MultiLineNo
   | MultiLinePossible
-  deriving (Eq, Typeable)
+  deriving (Eq)
 
 -- isomorphic to BriDocF Identity. Provided for ease of use, as we do a lot
 -- of transformations on `BriDocF Identity`s and it is really annoying to

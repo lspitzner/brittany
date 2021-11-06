@@ -85,7 +85,6 @@ library {
   }
   ghc-options: {
     -Weverything
-    -Wno-deriving-typeable
     -Wno-incomplete-record-updates
     -Wno-incomplete-uni-patterns
     -Wno-missing-deriving-strategies
