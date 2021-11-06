@@ -1,6 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE CPP #-}
-
 module Main
   ( main
   )

@@ -1,17 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE MonadComprehensions #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE KindSignatures #-}
-
 module Language.Haskell.Brittany.Internal.LayoutBasics
   ( processDefault
   , layoutByExact
@@ -210,7 +196,7 @@ descToMinMax _ _                                                 =
 rdrNameToText :: RdrName -> Text
 -- rdrNameToText = Text.pack . show . flip runSDoc unsafeGlobalDynFlags . ppr
 rdrNameToText ( Unqual occname     ) = Text.pack $ occNameString occname
-rdrNameToText ( Qual mname occname ) = Text.pack $ moduleNameString mname 
+rdrNameToText ( Qual mname occname ) = Text.pack $ moduleNameString mname
                                                 ++ "."
                                                 ++ occNameString occname
 rdrNameToText ( Orig modul occname ) = Text.pack $ moduleNameString (moduleName modul)
@@ -264,7 +250,7 @@ calcLayoutMin indent linePre (LayoutDesc line block) = case (line, block) of
   (Just s, _)                                  -> indent + _lColumns_min s
   _ -> error "bad LayoutDesc mnasdoiucxvlkjasd"
 
--- see 
+-- see
 calcLayoutMax :: Int -- basic indentation amount
               -> Int -- currently used width in current line (after indent)
                      -- used to accurately calc placing of the current-line

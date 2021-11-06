@@ -31,7 +31,6 @@
 - ignore: { name: Redundant if }
 - ignore: { name: Redundant lambda }
 - ignore: { name: Replace case with fromMaybe }
-- ignore: { name: Unused LANGUAGE pragma }
 - ignore: { name: Use <=< }
 - ignore: { name: Use <$> }
 - ignore: { name: Use all }
@@ -42,7 +41,6 @@
 - ignore: { name: Use elem }
 - ignore: { name: Use elemIndex }
 - ignore: { name: Use fewer imports }
-- ignore: { name: Use fewer LANGUAGE pragmas }
 - ignore: { name: Use first }
 - ignore: { name: Use fromLeft }
 - ignore: { name: Use getContents }

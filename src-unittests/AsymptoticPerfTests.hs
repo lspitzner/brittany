@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module AsymptoticPerfTests
   ( asymptoticPerfTest
   )
