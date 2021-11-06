@@ -26,7 +26,6 @@ extra-doc-files: {
 }
 extra-source-files: {
   src-literatetests/*.blt
-  srcinc/prelude.inc
 }
 
 source-repository head {
@@ -49,8 +48,6 @@ library {
     Haskell2010
   hs-source-dirs:
     src
-  include-dirs:
-    srcinc
   exposed-modules: {
     Language.Haskell.Brittany
     Language.Haskell.Brittany.Main
@@ -206,7 +203,6 @@ test-suite unittests
   other-modules:    TestUtils
                     AsymptoticPerfTests
   hs-source-dirs:   src-unittests
-  include-dirs:     srcinc
   default-extensions: {
     CPP
 
@@ -278,7 +274,6 @@ test-suite littests
   main-is:          Main.hs
   other-modules:
   hs-source-dirs:   src-literatetests
-  include-dirs:     srcinc
   default-extensions: {
     CPP
 
@@ -320,7 +315,6 @@ test-suite libinterfacetests
   main-is:          Main.hs
   other-modules:
   hs-source-dirs:   src-libinterfacetests
-  include-dirs:     srcinc
   default-extensions: {
     FlexibleContexts
     FlexibleInstances

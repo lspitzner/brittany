@@ -8,8 +8,7 @@
 # Specify additional command line arguments
 
 - arguments:
-    [ "--cpp-include=srcinc"
-    , "--language=GADTs"
+    [ "--language=GADTs"
     , "--language=LambdaCase"
     , "--language=MultiWayIf"
     , "--language=KindSignatures"
