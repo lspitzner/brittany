@@ -96,7 +96,7 @@ _randomRange lo hi = do
   setStdGen gen'
   pure x
 
-randomFrom :: Random a => [a] -> IO a
+randomFrom :: [a] -> IO a
 randomFrom l = do
   let hi = length l - 1
   gen <- getStdGen

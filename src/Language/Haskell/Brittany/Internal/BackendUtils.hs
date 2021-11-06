@@ -57,7 +57,7 @@ import           GHC ( Located )
 
 
 traceLocal
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m, Show a)
+  :: (MonadMultiState LayoutState m)
   => a
   -> m ()
 traceLocal _ = return ()
@@ -66,7 +66,6 @@ traceLocal _ = return ()
 layoutWriteAppend
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Text
   -> m ()
@@ -93,7 +92,6 @@ layoutWriteAppend t = do
 layoutWriteAppendSpaces
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Int
   -> m ()
@@ -108,7 +106,6 @@ layoutWriteAppendSpaces i = do
 layoutWriteAppendMultiline
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => [Text]
   -> m ()
@@ -126,7 +123,6 @@ layoutWriteAppendMultiline ts = do
 layoutWriteNewlineBlock
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
 layoutWriteNewlineBlock = do
@@ -151,7 +147,7 @@ layoutWriteNewlineBlock = do
 --     }
 
 layoutSetCommentCol
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutSetCommentCol = do
   state <- mGet
   let col = case _lstate_curYOrAddNewline state of
@@ -166,7 +162,6 @@ layoutSetCommentCol = do
 layoutMoveToCommentPos
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Int
   -> Int
@@ -199,7 +194,6 @@ layoutMoveToCommentPos y x commentLines = do
 layoutWriteNewline
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
 layoutWriteNewline = do
@@ -219,7 +213,6 @@ _layoutResetCommentNewlines = do
 layoutWriteEnsureNewlineBlock
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
 layoutWriteEnsureNewlineBlock = do
@@ -236,7 +229,6 @@ layoutWriteEnsureNewlineBlock = do
 layoutWriteEnsureAbsoluteN
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Int
   -> m ()
@@ -255,7 +247,7 @@ layoutWriteEnsureAbsoluteN n = do
                  }
 
 layoutBaseYPushInternal
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m)
+  :: (MonadMultiState LayoutState m)
   => Int
   -> m ()
 layoutBaseYPushInternal i = do
@@ -263,13 +255,13 @@ layoutBaseYPushInternal i = do
   mModify $ \s -> s { _lstate_baseYs = i : _lstate_baseYs s }
 
 layoutBaseYPopInternal
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutBaseYPopInternal = do
   traceLocal ("layoutBaseYPopInternal")
   mModify $ \s -> s { _lstate_baseYs = List.tail $ _lstate_baseYs s }
 
 layoutIndentLevelPushInternal
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m)
+  :: (MonadMultiState LayoutState m)
   => Int
   -> m ()
 layoutIndentLevelPushInternal i = do
@@ -279,16 +271,14 @@ layoutIndentLevelPushInternal i = do
                     }
 
 layoutIndentLevelPopInternal
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutIndentLevelPopInternal = do
   traceLocal ("layoutIndentLevelPopInternal")
   mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
                     , _lstate_indLevels      = List.tail $ _lstate_indLevels s
                     }
 
-layoutRemoveIndentLevelLinger :: ( MonadMultiState LayoutState m
-             , MonadMultiWriter (Seq String) m
-             ) => m ()
+layoutRemoveIndentLevelLinger :: ( MonadMultiState LayoutState m) => m ()
 layoutRemoveIndentLevelLinger = do
   mModify $ \s -> s { _lstate_indLevelLinger = lstate_indLevel s
                     }
@@ -297,7 +287,6 @@ layoutWithAddBaseCol
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
      , MonadMultiReader Config m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
   -> m ()
@@ -312,7 +301,6 @@ layoutWithAddBaseColBlock
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
      , MonadMultiReader Config m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
   -> m ()
@@ -327,7 +315,6 @@ layoutWithAddBaseColBlock m = do
 layoutWithAddBaseColNBlock
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Int
   -> m ()
@@ -343,7 +330,6 @@ layoutWithAddBaseColNBlock amount m = do
 layoutWriteEnsureBlock
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
 layoutWriteEnsureBlock = do
@@ -362,7 +348,6 @@ layoutWriteEnsureBlock = do
 layoutWithAddBaseColN
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Int
   -> m ()
@@ -374,7 +359,7 @@ layoutWithAddBaseColN amount m = do
   layoutBaseYPopInternal
 
 layoutBaseYPushCur
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutBaseYPushCur = do
   traceLocal ("layoutBaseYPushCur")
   state <- mGet
@@ -387,13 +372,13 @@ layoutBaseYPushCur = do
     Just cCol -> layoutBaseYPushInternal cCol
 
 layoutBaseYPop
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutBaseYPop = do
   traceLocal ("layoutBaseYPop")
   layoutBaseYPopInternal
 
 layoutIndentLevelPushCur
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutIndentLevelPushCur = do
   traceLocal ("layoutIndentLevelPushCur")
   state <- mGet
@@ -405,7 +390,7 @@ layoutIndentLevelPushCur = do
   layoutIndentLevelPushInternal y
 
 layoutIndentLevelPop
-  :: (MonadMultiState LayoutState m, MonadMultiWriter (Seq String) m) => m ()
+  :: (MonadMultiState LayoutState m) => m ()
 layoutIndentLevelPop = do
   traceLocal ("layoutIndentLevelPop")
   layoutIndentLevelPopInternal
@@ -415,8 +400,7 @@ layoutIndentLevelPop = do
   -- make sense.
   layoutRemoveIndentLevelLinger
 
-layoutAddSepSpace :: (MonadMultiState LayoutState m
-  , MonadMultiWriter (Seq String) m)
+layoutAddSepSpace :: (MonadMultiState LayoutState m)
    => m ()
 layoutAddSepSpace = do
   state <- mGet
@@ -429,7 +413,6 @@ moveToExactAnn
   :: ( MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
      , MonadMultiReader (Map AnnKey Annotation) m
-     , MonadMultiWriter (Seq String) m
      )
   => AnnKey
   -> m ()
@@ -480,7 +463,6 @@ layoutWritePriorComments
   :: ( Data.Data.Data ast
      , MonadMultiWriter Text.Builder.Builder m
      , MonadMultiState LayoutState m
-     , MonadMultiWriter (Seq String) m
      )
   => Located ast
   -> m ()
@@ -512,8 +494,7 @@ layoutWritePriorComments ast = do
 -- "..`annFollowingComments` are only added by AST transformations ..".
 layoutWritePostComments :: (Data.Data.Data ast,
                                                MonadMultiWriter Text.Builder.Builder m,
-                                               MonadMultiState LayoutState m
-                                               , MonadMultiWriter (Seq String) m)
+                                               MonadMultiState LayoutState m)
                          => Located ast -> m ()
 layoutWritePostComments ast = do
   mAnn <- do
@@ -543,7 +524,6 @@ layoutWritePostComments ast = do
 layoutIndentRestorePostComment
   :: ( MonadMultiState LayoutState m
      , MonadMultiWriter Text.Builder.Builder m
-     , MonadMultiWriter (Seq String) m
      )
   => m ()
 layoutIndentRestorePostComment = do

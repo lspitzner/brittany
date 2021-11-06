@@ -177,7 +177,7 @@ briDocByExactNoComment ast = do
 -- not contain any newlines. If this property is not met, the semantics
 -- depend on the @econf_AllowRiskyExactPrintUse@ config flag.
 briDocByExactInlineOnly
-  :: (ExactPrint.Annotate.Annotate ast, Data ast)
+  :: (ExactPrint.Annotate.Annotate ast)
   => String
   -> Located ast
   -> ToBriDocM BriDocNumbered

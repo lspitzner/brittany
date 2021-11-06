@@ -94,7 +94,6 @@ library {
     -Wno-missing-safe-haskell-mode
     -Wno-monomorphism-restriction
     -Wno-prepositive-qualified-module
-    -Wno-redundant-constraints
     -Wno-unsafe
   }
   build-depends:
