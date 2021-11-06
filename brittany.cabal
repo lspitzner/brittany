@@ -96,8 +96,8 @@ common executable
 library
   import: library
 
-  hs-source-dirs:
-    src
+  autogen-modules: Paths_brittany
+  hs-source-dirs: source/library
   exposed-modules:
     Language.Haskell.Brittany
     Language.Haskell.Brittany.Internal
@@ -129,7 +129,6 @@ library
     Language.Haskell.Brittany.Internal.Utils
     Language.Haskell.Brittany.Main
     Paths_brittany
-  autogen-modules: Paths_brittany
 
 executable brittany
   import: executable
