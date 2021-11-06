@@ -55,7 +55,7 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
             (layoutWrapped lie x)
             (layoutItems (splitFirstLast sortedNs))
    where
-    nameDoc = (docLit =<<) . lrdrNameToTextAnn . prepareName
+    nameDoc = docLit <=< lrdrNameToTextAnn . prepareName
     layoutItem n = docSeq [docCommaSep, docWrapNode n $ nameDoc n]
     layoutItems FirstLastEmpty = docSetBaseY $ docLines
       [docSeq [docParenLSep, docNodeAnnKW lie (Just AnnOpenP) docEmpty], docParenR]
@@ -208,9 +208,9 @@ lieToText = \case
   -- Need to check, and either put them at the top (for module) or do some
   -- other clever thing.
   L _ (IEModuleContents _ n) -> moduleNameToText n
-  L _ (IEGroup _ _ _         ) -> Text.pack "@IEGroup"
-  L _ (IEDoc      _ _        ) -> Text.pack "@IEDoc"
-  L _ (IEDocNamed _ _        ) -> Text.pack "@IEDocNamed"
+  L _ IEGroup{}              -> Text.pack "@IEGroup"
+  L _ IEDoc{}                -> Text.pack "@IEDoc"
+  L _ IEDocNamed{}           -> Text.pack "@IEDocNamed"
  where
   moduleNameToText :: Located ModuleName -> Text
   moduleNameToText (L _ name) = Text.pack ("@IEModuleContents" ++ moduleNameString name)

@@ -49,9 +49,7 @@ layoutWriteAppend t = do
       replicateM_ i $ mTell $ Text.Builder.fromString $ "\n"
     Left{} -> do
       return ()
-  let spaces = case _lstate_addSepSpace state of
-        Just i -> i
-        Nothing -> 0
+  let spaces = fromMaybe 0 $ _lstate_addSepSpace state
   mTell $ Text.Builder.fromText $ Text.pack (replicate spaces ' ')
   mTell $ Text.Builder.fromText $ t
   mModify $ \s -> s
@@ -452,7 +450,7 @@ layoutWritePriorComments ast = do
   case mAnn of
     Nothing -> return ()
     Just priors -> do
-      when (not $ null priors) $ layoutSetCommentCol
+      unless (null priors) $ layoutSetCommentCol
       priors `forM_` \( ExactPrint.Comment comment _ _
                       , ExactPrint.DP (x, y)
                       ) -> do
@@ -484,7 +482,7 @@ layoutWritePostComments ast = do
   case mAnn of
     Nothing -> return ()
     Just posts -> do
-      when (not $ null posts) $ layoutSetCommentCol
+      unless (null posts) $ layoutSetCommentCol
       posts `forM_` \( ExactPrint.Comment comment _ _
                       , ExactPrint.DP (x, y)
                       ) -> do

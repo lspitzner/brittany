@@ -595,7 +595,7 @@ layoutExpr lexpr@(L _ expr) = do
       expDoc1     <- docSharedWrapper layoutExpr exp1
       -- We jump through some ugly hoops here to ensure proper sharing.
       hasComments <- hasAnyCommentsBelow lexpr
-      mBindDocs   <- fmap (fmap (fmap pure)) $ layoutLocalBinds binds
+      mBindDocs   <- fmap (fmap pure) <$> layoutLocalBinds binds
       let
         ifIndentFreeElse :: a -> a -> a
         ifIndentFreeElse x y =

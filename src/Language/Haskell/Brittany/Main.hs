@@ -240,7 +240,7 @@ mainCmdParser helpDesc = do
                         outputPaths
 
     if checkMode
-      then when (any (== Changes) (Data.Either.rights results))
+      then when (Changes `elem` (Data.Either.rights results))
         $ System.Exit.exitWith (System.Exit.ExitFailure 1)
       else case results of
         xs | all Data.Either.isRight xs -> pure ()
@@ -310,7 +310,7 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
         let hackTransform = if hackAroundIncludes && not exactprintOnly
               then List.intercalate "\n" . fmap hackF . lines'
               else id
-        inputString <- liftIO $ System.IO.hGetContents System.IO.stdin
+        inputString <- liftIO System.IO.getContents
         parseRes <- liftIO $ parseModuleFromString ghcOptions
                                                    "stdin"
                                                    cppCheckFunc
@@ -376,8 +376,8 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
               let out = TextL.toStrict $ if hackAroundIncludes
                     then
                       TextL.intercalate (TextL.pack "\n")
-                      $ fmap hackF
-                      $ TextL.splitOn (TextL.pack "\n") outRaw
+                      $ hackF
+                      <$> TextL.splitOn (TextL.pack "\n") outRaw
                     else outRaw
               out' <- if moduleConf & _conf_obfuscate & confUnpack
                 then lift $ obfuscate out
@@ -389,7 +389,7 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
             customErrOrder ErrorUnusedComment{} = 2
             customErrOrder ErrorUnknownNode{}   = -2 :: Int
             customErrOrder ErrorMacroConfig{}   = 5
-        when (not $ null errsWarns) $ do
+        unless (null errsWarns) $ do
           let groupedErrsWarns =
                 Data.List.Extra.groupOn customErrOrder
                   $ List.sortOn customErrOrder
@@ -442,9 +442,9 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
         -- adds some override?
         let
           hasErrors =
-            case config & _conf_errorHandling & _econf_Werror & confUnpack of
-              False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
-              True  -> not $ null errsWarns
+            if config & _conf_errorHandling & _econf_Werror & confUnpack
+            then not $ null errsWarns
+            else 0 < maximum (-1 : fmap customErrOrder errsWarns)
           outputOnErrs =
             config
               & _conf_errorHandling

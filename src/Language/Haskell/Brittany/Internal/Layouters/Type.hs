@@ -645,7 +645,7 @@ getBinders x = case x of
   XHsForAllTelescope _ -> []
 
 withoutSpecificity :: LHsTyVarBndr flag pass -> LHsTyVarBndr () pass
-withoutSpecificity = fmap $ \ x -> case x of
+withoutSpecificity = fmap $ \case
   UserTyVar a _ c -> UserTyVar a () c
   KindedTyVar a _ c d -> KindedTyVar a () c d
   XTyVarBndr a -> XTyVarBndr a

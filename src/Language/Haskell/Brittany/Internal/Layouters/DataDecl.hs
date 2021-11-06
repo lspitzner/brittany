@@ -37,13 +37,13 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
       docWrapNode ltycl $ do
         nameStr     <- lrdrNameToTextAnn name
         consNameStr <- lrdrNameToTextAnn consName
-        tyVarLine   <- fmap return $ createBndrDoc bndrs
+        tyVarLine   <- return <$> createBndrDoc bndrs
         -- headDoc     <- fmap return $ docSeq
         --   [ appSep $ docLitS "newtype")
         --   , appSep $ docLit nameStr
         --   , appSep tyVarLine
         --   ]
-        rhsDoc      <- fmap return $ createDetailsDoc consNameStr details
+        rhsDoc      <- return <$> createDetailsDoc consNameStr details
         createDerivingPar mDerivs $ docSeq
           [ appSep $ docLitS "newtype"
           , appSep $ docLit nameStr
@@ -62,7 +62,7 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
     docWrapNode ltycl $ do
       lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
       nameStr       <- lrdrNameToTextAnn name
-      tyVarLine     <- fmap return $ createBndrDoc bndrs
+      tyVarLine     <- return <$> createBndrDoc bndrs
       createDerivingPar mDerivs $ docSeq
         [ appSep $ docLitS "data"
         , lhsContextDoc
@@ -79,14 +79,14 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
           lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
           nameStr       <- lrdrNameToTextAnn name
           consNameStr   <- lrdrNameToTextAnn consName
-          tyVarLine     <- fmap return $ createBndrDoc bndrs
+          tyVarLine     <- return <$> createBndrDoc bndrs
           forallDocMay  <- case createForallDoc qvars of
             Nothing -> pure Nothing
             Just x -> Just . pure <$> x
           rhsContextDocMay <- case mRhsContext of
             Nothing         -> pure Nothing
             Just (L _ ctxt) -> Just . pure <$> createContextDoc ctxt
-          rhsDoc        <- fmap return $ createDetailsDoc consNameStr details
+          rhsDoc        <- return <$> createDetailsDoc consNameStr details
           consDoc <- fmap pure
             $ docNonBottomSpacing
             $ case (forallDocMay, rhsContextDocMay) of

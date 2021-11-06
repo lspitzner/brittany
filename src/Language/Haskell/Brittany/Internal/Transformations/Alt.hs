@@ -206,8 +206,7 @@ transformAlts =
                             (zip spacings alts
                              <&> \(vs, bd) -> -- trace ("spacing=" ++ show vs ++ ",hasSpace=" ++ show (hasSpace lconf acp vs) ++ ",lineCheck=" ++ show (lineCheck vs))
                                ( hasSpace1 lconf acp vs && lineCheck vs, bd))
-              id -- - $ (fmap $ \x -> traceShow (briDocToDoc x) x)
-                 $ rec
+              rec
                  $ fromMaybe (-- trace ("choosing last") $
                               List.last alts)
                  $ Data.List.Extra.firstJust (\(_i::Int, (b,x)) ->
@@ -233,8 +232,7 @@ transformAlts =
                                && any lineCheck vs, bd))
               let checkedOptions :: [Maybe (Int, BriDocNumbered)] =
                     zip [1..] options <&> (\(i, (b,x)) -> [ (i, x) | b ])
-              id -- - $ (fmap $ \x -> traceShow (briDocToDoc x) x)
-                 $ rec
+              rec
                  $ fromMaybe (-- trace ("choosing last") $
                               List.last alts)
                  $ Data.List.Extra.firstJust (fmap snd) checkedOptions
@@ -325,7 +323,7 @@ transformAlts =
       LineModeValid (VerticalSpacing i VerticalSpacingParNone _) -> do
         acp <- mGet
         mSet $ acp { _acp_line = _acp_line acp + i }
-      LineModeValid (VerticalSpacing _ _ _)  -> error "processSpacingSimple par"
+      LineModeValid VerticalSpacing{}  -> error "processSpacingSimple par"
       _ -> error "ghc exhaustive check is insufficient"
     hasSpace1 :: LayoutConfig -> AltCurPos -> LineModeValidity VerticalSpacing -> Bool
     hasSpace1 _ _ LineModeInvalid = False
@@ -630,9 +628,9 @@ getSpacings limit bridoc = preFilterLimit <$> rec bridoc
         BDFLit t ->
           return $ [VerticalSpacing (Text.length t) VerticalSpacingParNone False]
         BDFSeq list ->
-          fmap sumVs . sequence . fmap filterAndLimit <$> rec `mapM` list
+          fmap sumVs . mapM filterAndLimit <$> rec `mapM` list
         BDFCols _sig list ->
-          fmap sumVs . sequence . fmap filterAndLimit <$> rec `mapM` list
+          fmap sumVs . mapM filterAndLimit <$> rec `mapM` list
         BDFSeparator ->
           return $ [VerticalSpacing 1 VerticalSpacingParNone False]
         BDFAddBaseY indent bd -> do

@@ -162,7 +162,7 @@ layoutBind lbind@(L _ bind) = case bind of
     patDocs    <- colsWrapPat =<< layoutPat pat
     clauseDocs <- layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
-    let mWhereArg = mWhereDocs <&> \d -> (mkAnnKey lbind, d) -- TODO: is this the right AnnKey?
+    let mWhereArg = mWhereDocs <&> (,) (mkAnnKey lbind) -- TODO: is this the right AnnKey?
     binderDoc  <- docLit $ Text.pack "="
     hasComments <- hasAnyCommentsBelow lbind
     fmap Right $ docWrapNode lbind $ layoutPatternBindFinal Nothing
@@ -206,7 +206,7 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
     let unordered =
           [ BagBind b | b <- Data.Foldable.toList bindlrs ]
             ++ [ BagSig s | s <- sigs ]
-        ordered = sortBy (comparing $ ExactPrint.rs . bindOrSigtoSrcSpan) unordered
+        ordered = List.sortOn (ExactPrint.rs . bindOrSigtoSrcSpan) unordered
     docs <- docWrapNode lbinds $ join <$> ordered `forM` \case
       BagBind b -> either id return <$> layoutBind b
       BagSig  s -> return <$> layoutSig s
@@ -271,7 +271,7 @@ layoutPatternBind funId binderDoc lmatch@(L _ match) = do
         $ (List.intersperse docSeparator $ docForceSingleline <$> ps)
   clauseDocs <- docWrapNodeRest lmatch $ layoutGrhs `mapM` grhss
   mWhereDocs <- layoutLocalBinds whereBinds
-  let mWhereArg = mWhereDocs <&> \d -> (mkAnnKey lmatch, d)
+  let mWhereArg = mWhereDocs <&> (,) (mkAnnKey lmatch)
   let alignmentToken = if null pats then Nothing else funId
   hasComments <- hasAnyCommentsBelow lmatch
   layoutPatternBindFinal alignmentToken
@@ -331,7 +331,7 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
   --       be shared between alternatives.
   wherePartMultiLine :: [ToBriDocM BriDocNumbered] <- case mWhereDocs of
     Nothing  -> return $ []
-    Just (annKeyWhere, [w]) -> fmap (pure . pure) $ docAlt
+    Just (annKeyWhere, [w]) -> pure . pure <$> docAlt
       [ docEnsureIndent BrIndentRegular
         $ docSeq
             [ docLit $ Text.pack "where"

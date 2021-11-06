@@ -60,7 +60,7 @@ import           Language.Haskell.Brittany.Internal.Transformations.Par
 import           Language.Haskell.Brittany.Internal.Transformations.Columns
 import           Language.Haskell.Brittany.Internal.Transformations.Indent
 
-import qualified GHC                           as GHC
+import qualified GHC
                                                    hiding ( parseModule )
 import           GHC.Parser.Annotation                            ( AnnKeywordId(..) )
 import           GHC                                      ( GenLocated(L)
@@ -130,7 +130,7 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
         , \s -> "{" `isPrefixOf` dropWhile (== ' ') s
         , Butcher.addCmdPart (Butcher.varPartDesc "yaml-config-document")
         $ fmap (\lconf -> (mempty { _conf_layout = lconf }, ""))
-        . either (\_ -> Nothing) Just
+        . either (const Nothing) Just
         . Data.Yaml.decodeEither'
         . Data.ByteString.Char8.pack
           -- TODO: use some proper utf8 encoder instead?
@@ -299,7 +299,7 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
         pure $ if hackAroundIncludes
           then
             ( ews
-            , TextL.intercalate (TextL.pack "\n") $ fmap hackF $ TextL.splitOn
+            , TextL.intercalate (TextL.pack "\n") $ hackF <$> TextL.splitOn
               (TextL.pack "\n")
               outRaw
             )
@@ -311,11 +311,9 @@ parsePrintModule configWithDebugs inputText = runExceptT $ do
           customErrOrder ErrorUnknownNode{}   = 3
           customErrOrder ErrorMacroConfig{}   = 5
       let hasErrors =
-            case
-                moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack
-              of
-                False -> 0 < maximum (-1 : fmap customErrOrder errsWarns)
-                True  -> not $ null errsWarns
+            if moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack
+            then not $ null errsWarns
+            else 0 < maximum (-1 : fmap customErrOrder errsWarns)
       if hasErrors
         then throwE $ errsWarns
         else pure $ TextL.toStrict outputTextL
@@ -402,7 +400,7 @@ parsePrintModuleTests conf filename input = do
         then return $ pPrintModule moduleConf perItemConf anns parsedModule
         else lift
           $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
-      if null $ filter (not . isErrorUnusedComment) errs
+      if all isErrorUnusedComment errs
         then pure $ TextL.toStrict $ ltext
         else
           let
@@ -533,7 +531,7 @@ getDeclBindingNames (L _ decl) = case decl of
 ppPreamble
   :: GenLocated SrcSpan HsModule
   -> PPM [(ExactPrint.KeywordId, ExactPrint.DeltaPos)]
-ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _ _)) = do
+ppPreamble lmod@(L loc m@HsModule{}) = do
   filteredAnns <- mAsk <&> \annMap ->
     Map.findWithDefault Map.empty (ExactPrint.mkAnnKey lmod) annMap
     -- Since ghc-exactprint adds annotations following (implicit)

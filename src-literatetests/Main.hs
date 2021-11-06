@@ -94,8 +94,8 @@ main = do
     fmap groupProcessor
       $ groupBy grouperG
       $ filter (not . lineIsSpace)
-      $ fmap lineMapper
-      $ Text.lines input
+      $ lineMapper
+      <$> Text.lines input
    where
     groupProcessor :: [InputLine] -> (Text, [TestCase])
     groupProcessor = \case

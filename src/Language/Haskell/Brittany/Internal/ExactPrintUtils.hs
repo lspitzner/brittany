@@ -27,7 +27,7 @@ import           Data.HList.HList
 
 import           GHC ( GenLocated(L) )
 import qualified GHC.Driver.Session      as GHC
-import qualified GHC           as GHC hiding (parseModule)
+import qualified GHC hiding (parseModule)
 import qualified GHC.Types.SrcLoc        as GHC
 import qualified GHC.Driver.CmdLine as GHC
 
@@ -78,11 +78,11 @@ parseModuleWithCpp cpp opts args fp dynCheck =
       -- harmless. See commit 1b7576dcd1823e1c685a44927b1fcaade1319063.
     void $ lift $ GHC.setSessionDynFlags dflags1
     dflags2 <- lift $ ExactPrint.initDynFlags fp
-    when (not $ null leftover)
+    unless (null leftover)
       $  ExceptT.throwE
       $  "when parsing ghc flags: leftover flags: "
       ++ show (leftover <&> \(L _ s) -> s)
-    when (not $ null warnings)
+    unless (null warnings)
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> warnExtractorCompat)
@@ -110,11 +110,11 @@ parseModuleFromString args fp dynCheck str =
     dflags0                       <- lift $ ExactPrint.initDynFlagsPure fp str
     (dflags1, leftover, warnings) <- lift
       $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
-    when (not $ null leftover)
+    unless (null leftover)
       $  ExceptT.throwE
       $  "when parsing ghc flags: leftover flags: "
       ++ show (leftover <&> \(L _ s) -> s)
-    when (not $ null warnings)
+    unless (null warnings)
       $  ExceptT.throwE
       $  "when parsing ghc flags: encountered warnings: "
       ++ show (warnings <&> warnExtractorCompat)
@@ -135,7 +135,7 @@ commentAnnFixTransformGlob ast = do
   let nodes = SYB.everything (<>) extract ast
   let annsMap :: Map GHC.RealSrcLoc ExactPrint.AnnKey
       annsMap = Map.fromListWith
-        (flip const)
+        (const id)
         [ (GHC.realSrcSpanEnd span, annKey)
         | (GHC.RealSrcSpan span _, annKey) <- Foldable.toList nodes
         ]
@@ -174,8 +174,8 @@ commentAnnFixTransformGlob ast = do
                   in
                     Map.insert annKey2 ann2' anns
               _ -> return True -- retain comment at current node.
-      priors'  <- flip filterM priors processCom
-      follows' <- flip filterM follows $ processCom
+      priors'  <- filterM processCom priors
+      follows' <- filterM processCom follows
       assocs'  <- flip filterM assocs $ \case
         (ExactPrint.AnnComment com, dp) -> processCom (com, dp)
         _                               -> return True
@@ -286,7 +286,7 @@ foldedAnnKeys ast = SYB.everything
   ( \x -> maybe
     Set.empty
     Set.singleton
-    [ SYB.gmapQi 1 (\t -> ExactPrint.mkAnnKey $ L l t) x
+    [ SYB.gmapQi 1 (ExactPrint.mkAnnKey . L l) x
     | locTyCon == SYB.typeRepTyCon (SYB.typeOf x)
     , l :: SrcSpan <- SYB.gmapQi 0 SYB.cast x
       -- for some reason, ghc-8.8 has forgotten how to infer the type of l,

@@ -11,10 +11,12 @@ module Language.Haskell.Brittany.Internal.Backend where
 import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Control.Monad.Trans.State.Strict as StateS
+import qualified Data.Either as Either
 import qualified Data.Foldable as Foldable
 import qualified Data.IntMap.Lazy as IntMapL
 import qualified Data.IntMap.Strict as IntMapS
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -171,7 +173,7 @@ layoutBriDocM = \case
         -- layoutResetSepSpace
         priors
           `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-                    when (not $ comment == "(" || comment == ")") $ do
+                    when (comment /= "(" && comment /= ")") $ do
                       let commentLines = Text.lines $ Text.pack $ comment
                       case comment of
                         ('#':_) -> layoutMoveToCommentPos y (-999) (length commentLines)
@@ -191,7 +193,7 @@ layoutBriDocM = \case
       let m    = _lstate_comments state
       let mAnn = ExactPrint.annsDP <$> Map.lookup annKey m
       let mToSpan = case mAnn of
-            Just anns | keyword == Nothing -> Just anns
+            Just anns | Maybe.isNothing keyword -> Just anns
             Just ((ExactPrint.Types.G kw1, _):annR) | keyword == Just kw1 -> Just
               annR
             _ -> Nothing
@@ -212,7 +214,7 @@ layoutBriDocM = \case
       Nothing -> pure ()
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-          when (not $ comment == "(" || comment == ")") $ do
+          when (comment /= "(" && comment /= ")") $ do
             let commentLines = Text.lines $ Text.pack $ comment
             -- evil hack for CPP:
             case comment of
@@ -229,7 +231,7 @@ layoutBriDocM = \case
       state <- mGet
       let m = _lstate_comments state
       pure $ Map.lookup annKey m
-    let mComments = nonEmpty =<< extractAllComments <$> annMay
+    let mComments = nonEmpty . extractAllComments =<< annMay
     let semiCount = length [ ()
                 | Just ann <- [ annMay ]
                 , (ExactPrint.Types.AnnSemiSep, _) <- ExactPrint.Types.annsDP ann
@@ -252,10 +254,10 @@ layoutBriDocM = \case
     case mComments of
       Nothing -> do
         when shouldAddSemicolonNewlines $ do
-          [1..semiCount] `forM_` \_ -> layoutWriteNewline
+          [1..semiCount] `forM_` const layoutWriteNewline
       Just comments -> do
         comments `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-          when (not $ comment == "(" || comment == ")") $ do
+          when (comment /= "(" && comment /= ")") $ do
             let commentLines = Text.lines $ Text.pack comment
             case comment of
               ('#':_) -> layoutMoveToCommentPos y (-999) 1
@@ -351,13 +353,13 @@ briDocIsMultiLine briDoc = rec briDoc
     BDBaseYPop           bd                  -> rec bd
     BDIndentLevelPushCur bd                  -> rec bd
     BDIndentLevelPop     bd                  -> rec bd
-    BDPar _ _ _                              -> True
+    BDPar{}                                  -> True
     BDAlt{}                                  -> error "briDocIsMultiLine BDAlt"
     BDForceMultiline  _                      -> True
     BDForceSingleline bd                     -> rec bd
     BDForwardLineMode bd                     -> rec bd
     BDExternal _ _ _ t | [_] <- Text.lines t -> False
-    BDExternal _ _ _ _                       -> True
+    BDExternal{}                             -> True
     BDPlain t | [_] <- Text.lines t          -> False
     BDPlain _                                -> True
     BDAnnotationPrior _ bd                   -> rec bd
@@ -453,7 +455,7 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
   -- tellDebugMess ("alignColsLines: at " ++ take 100 (show $ briDocToDoc $ head bridocs))
   curX <- do
     state <- mGet
-    return $ either id (const 0) (_lstate_curYOrAddNewline state) + fromMaybe
+    return $ Either.fromLeft 0 (_lstate_curYOrAddNewline state) + fromMaybe
       0
       (_lstate_addSepSpace state)
   colMax     <- mAsk <&> _conf_layout .> _lconfig_cols .> confUnpack
@@ -543,8 +545,8 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
       -- personal preference to not break alignment for those, even if
       -- multiline. Really, this should be configurable.. (TODO)
       shouldBreakAfter :: BriDoc -> Bool
-      shouldBreakAfter bd = if alignBreak
-        then briDocIsMultiLine bd && case bd of
+      shouldBreakAfter bd = alignBreak &&
+        briDocIsMultiLine bd && case bd of
           (BDCols ColTyOpPrefix         _) -> False
           (BDCols ColPatternsFuncPrefix _) -> True
           (BDCols ColPatternsFuncInfix  _) -> True
@@ -565,7 +567,6 @@ alignColsLines bridocs = do -- colInfos `forM_` \colInfo -> do
           (BDCols ColTuples             _) -> False
           (BDCols ColOpPrefix           _) -> False
           _                                -> True
-        else False
 
       mergeInfoBriDoc
         :: Bool
@@ -644,9 +645,7 @@ processInfo maxSpace m = \case
     curX      <- do
       state <- mGet
       -- tellDebugMess ("processInfo: " ++ show (_lstate_curYOrAddNewline state) ++ " - " ++ show ((_lstate_addSepSpace state)))
-      let spaceAdd = case _lstate_addSepSpace state of
-            Nothing -> 0
-            Just i -> i
+      let spaceAdd = fromMaybe 0 $ _lstate_addSepSpace state
       return $ case _lstate_curYOrAddNewline state of
         Left i -> case _lstate_commentCol state of
           Nothing -> spaceAdd + i
@@ -655,7 +654,7 @@ processInfo maxSpace m = \case
     let colMax = min colMaxConf (curX + maxSpace)
     -- tellDebugMess $ show curX
     let Just (ratio, maxCols1, _colss) = IntMapS.lookup ind m
-    let maxCols2 = list <&> \e -> case e of
+    let maxCols2 = list <&> \case
           (_, ColInfo i _ _) ->
             let Just (_, ms, _) = IntMapS.lookup i m in sum ms
           (l, _) -> l

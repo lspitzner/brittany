@@ -36,11 +36,10 @@ import Language.Haskell.Brittany.Internal.Utils
 import Language.Haskell.Brittany.Internal.ExactPrintUtils
 
 import           GHC.Types.Name.Reader ( RdrName(..) )
-import           GHC ( Located, GenLocated(L), moduleNameString )
+import           GHC ( Located, GenLocated(L), moduleName, moduleNameString )
 import qualified GHC.Types.SrcLoc        as GHC
 import           GHC.Types.Name.Occurrence ( occNameString )
 import           GHC.Types.Name ( getOccString )
-import           GHC ( moduleName )
 import           GHC.Parser.Annotation ( AnnKeywordId(..) )
 
 import           Data.Data

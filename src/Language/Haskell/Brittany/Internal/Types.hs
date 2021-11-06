@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -19,7 +18,7 @@ import Language.Haskell.Brittany.Internal.Prelude
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
 import qualified Data.Data
 import qualified Data.Strict.Maybe as Strict
-import qualified Safe as Safe
+import qualified Safe
 
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
@@ -423,7 +422,7 @@ briDocSeqSpine = \case
   BDIndentLevelPushCur bd        -> briDocSeqSpine bd
   BDIndentLevelPop     bd        -> briDocSeqSpine bd
   BDPar _ind line indented -> briDocSeqSpine line `seq` briDocSeqSpine indented
-  BDAlt             alts         -> foldl' (\(!()) -> briDocSeqSpine) () alts
+  BDAlt             alts         -> foldl' (\() -> briDocSeqSpine) () alts
   BDForwardLineMode bd           -> briDocSeqSpine bd
   BDExternal{}                   -> ()
   BDPlain{}                      -> ()
@@ -431,7 +430,7 @@ briDocSeqSpine = \case
   BDAnnotationKW _annKey _kw bd  -> briDocSeqSpine bd
   BDAnnotationRest _annKey bd    -> briDocSeqSpine bd
   BDMoveToKWDP _annKey _kw _b bd -> briDocSeqSpine bd
-  BDLines lines                  -> foldl' (\(!()) -> briDocSeqSpine) () lines
+  BDLines lines                  -> foldl' (\() -> briDocSeqSpine) () lines
   BDEnsureIndent _ind bd         -> briDocSeqSpine bd
   BDForceMultiline  bd           -> briDocSeqSpine bd
   BDForceSingleline bd           -> briDocSeqSpine bd

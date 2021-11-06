@@ -14,44 +14,22 @@ import GHC.Types.Name.Reader          as E ( RdrName )
 
 import Data.Functor.Identity         as E ( Identity(..) )
 import Control.Concurrent.Chan       as E ( Chan )
-import Control.Concurrent.MVar       as E ( MVar )
+import Control.Concurrent.MVar       as E ( MVar
+                                          , newEmptyMVar
+                                          , newMVar
+                                          , putMVar
+                                          , readMVar
+                                          , takeMVar
+                                          , swapMVar
+                                          )
 import Data.Int                      as E ( Int )
-import Data.Word                     as E ( Word )
+import Data.Word                     as E ( Word
+                                          , Word32
+                                          )
 import Prelude                       as E ( Integer
                                           , Float
                                           , Double
-                                          )
-import Control.Monad.ST              as E ( ST )
-import Data.Bool                     as E ( Bool(..) )
-import Data.Char                     as E ( Char )
-import Data.Either                   as E ( Either(..) )
-import Data.IORef                    as E ( IORef )
-import Data.Maybe                    as E ( Maybe(..) )
-import Data.Monoid                   as E ( Endo(..)
-                                          , All(..)
-                                          , Any(..)
-                                          , Sum(..)
-                                          , Product(..)
-                                          , Alt(..)
-                                          )
-import Data.Ord                      as E ( Ordering(..)
-                                          , Down(..)
-                                          )
-import Data.Ratio                    as E ( Ratio
-                                          , Rational
-                                          )
-import Data.String                   as E ( String )
-import Data.Void                     as E ( Void )
-import System.IO                     as E ( IO )
-import Data.Proxy                    as E ( Proxy(..) )
-import Data.Sequence                 as E ( Seq )
-
-import Data.Map                      as E ( Map )
-import Data.Set                      as E ( Set )
-
-import Data.Text                     as E ( Text )
-
-import Prelude                       as E ( undefined
+                                          , undefined
                                           , Eq (..)
                                           , Ord (..)
                                           , Enum (..)
@@ -101,8 +79,58 @@ import Prelude                       as E ( undefined
                                           , Foldable
                                           , Traversable
                                           )
+import Control.Monad.ST              as E ( ST )
+import Data.Bool                     as E ( Bool(..) )
+import Data.Char                     as E ( Char
+                                          , ord
+                                          , chr
+                                          )
+import Data.Either                   as E ( Either(..)
+                                          , either
+                                          )
+import Data.IORef                    as E ( IORef )
+import Data.Maybe                    as E ( Maybe(..)
+                                          , fromMaybe
+                                          , maybe
+                                          , listToMaybe
+                                          , maybeToList
+                                          , catMaybes
+                                          )
+import Data.Monoid                   as E ( Endo(..)
+                                          , All(..)
+                                          , Any(..)
+                                          , Sum(..)
+                                          , Product(..)
+                                          , Alt(..)
+                                          , mconcat
+                                          , Monoid (..)
+                                          )
+import Data.Ord                      as E ( Ordering(..)
+                                          , Down(..)
+                                          , comparing
+                                          )
+import Data.Ratio                    as E ( Ratio
+                                          , Rational
+                                          , (%)
+                                          , numerator
+                                          , denominator
+                                          )
+import Data.String                   as E ( String )
+import Data.Void                     as E ( Void )
+import System.IO                     as E ( IO
+                                          , hFlush
+                                          , stdout
+                                          )
+import Data.Proxy                    as E ( Proxy(..) )
+import Data.Sequence                 as E ( Seq )
+
+import Data.Map                      as E ( Map )
+import Data.Set                      as E ( Set )
+
+import Data.Text                     as E ( Text )
 
 import Data.Function                 as E ( fix
+                                          , (&)
                                           )
 
 import Data.Foldable                 as E ( foldl'
@@ -153,31 +181,6 @@ import Data.List.NonEmpty            as E ( NonEmpty(..)
 import Data.Tuple                    as E ( swap
                                           )
 
-import Data.Char                     as E ( ord
-                                          , chr
-                                          )
-
-import Data.Maybe                    as E ( fromMaybe
-                                          , maybe
-                                          , listToMaybe
-                                          , maybeToList
-                                          , catMaybes
-                                          )
-
-import Data.Word                     as E ( Word32
-                                          )
-
-import Data.Ord                      as E ( comparing
-                                          )
-
-import Data.Either                   as E ( either
-                                          )
-
-import Data.Ratio                    as E ( (%)
-                                          , numerator
-                                          , denominator
-                                          )
-
 import Text.Read                     as E ( readMaybe
                                           )
 
@@ -222,14 +225,6 @@ import Control.Concurrent            as E ( threadDelay
                                           , forkOS
                                           )
 
-import Control.Concurrent.MVar       as E ( newEmptyMVar
-                                          , newMVar
-                                          , putMVar
-                                          , readMVar
-                                          , takeMVar
-                                          , swapMVar
-                                          )
-
 import Control.Exception             as E ( evaluate
                                           , bracket
                                           , assert
@@ -249,18 +244,10 @@ import Debug.Trace                   as E ( trace
 import Foreign.ForeignPtr            as E ( ForeignPtr
                                           )
 
-import Data.Monoid                   as E ( mconcat
-                                          , Monoid (..)
-                                          )
-
 import Data.Bifunctor                as E ( bimap )
 import Data.Functor                  as E ( ($>) )
-import Data.Function                 as E ( (&) )
 import Data.Semigroup                as E ( (<>)
                                           , Semigroup(..)
-                                          )
-import System.IO                     as E ( hFlush
-                                          , stdout
                                           )
 
 import Data.Typeable                 as E ( Typeable
