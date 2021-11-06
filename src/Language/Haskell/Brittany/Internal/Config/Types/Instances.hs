@@ -36,56 +36,73 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
   , Aeson.fieldLabelModifier = dropWhile (=='_')
   }
 
-#define makeFromJSON(type)\
-  instance FromJSON (type) where\
-    parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany;\
-    {-# NOINLINE parseJSON #-}
-#define makeToJSON(type)\
-  instance ToJSON (type) where\
-    toJSON     = Aeson.genericToJSON aesonDecodeOptionsBrittany;\
-    {-# NOINLINE toJSON #-};\
-    toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany;\
-    {-# NOINLINE toEncoding #-}
+instance FromJSON (CDebugConfig Maybe) where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
 
-#define makeFromJSONMaybe(type)\
-  instance FromJSON (type Maybe) where\
-    parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany;\
-    {-# NOINLINE parseJSON #-}
-#define makeToJSONMaybe(type)\
-  instance ToJSON (type Maybe) where\
-    toJSON     = Aeson.genericToJSON aesonDecodeOptionsBrittany;\
-    {-# NOINLINE toJSON #-};\
-    toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany;\
-    {-# NOINLINE toEncoding #-}
+instance ToJSON (CDebugConfig Maybe) where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
 
+instance FromJSON IndentPolicy where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
 
-makeFromJSONMaybe(CDebugConfig)
-makeToJSONMaybe(CDebugConfig)
+instance ToJSON IndentPolicy where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+  toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
-makeFromJSON(IndentPolicy)
-makeToJSON(IndentPolicy)
-makeFromJSON(AltChooser)
-makeToJSON(AltChooser)
-makeFromJSON(ColumnAlignMode)
-makeToJSON(ColumnAlignMode)
-makeFromJSON(CPPMode)
-makeToJSON(CPPMode)
-makeFromJSON(ExactPrintFallbackMode)
-makeToJSON(ExactPrintFallbackMode)
+instance FromJSON AltChooser where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
 
-makeFromJSONMaybe(CLayoutConfig)
-makeToJSONMaybe(CLayoutConfig)
+instance ToJSON AltChooser where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+  toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
-makeFromJSONMaybe(CErrorHandlingConfig)
-makeToJSONMaybe(CErrorHandlingConfig)
+instance FromJSON ColumnAlignMode where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
 
-makeFromJSONMaybe(CForwardOptions)
-makeToJSONMaybe(CForwardOptions)
+instance ToJSON ColumnAlignMode where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+  toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
 
-makeFromJSONMaybe(CPreProcessorConfig)
-makeToJSONMaybe(CPreProcessorConfig)
+instance FromJSON CPPMode where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
 
-makeToJSONMaybe(CConfig)
+instance ToJSON CPPMode where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+  toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
+
+instance FromJSON ExactPrintFallbackMode where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+
+instance ToJSON ExactPrintFallbackMode where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+  toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany
+
+instance FromJSON (CLayoutConfig Maybe) where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+
+instance ToJSON (CLayoutConfig Maybe) where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+
+instance FromJSON (CErrorHandlingConfig Maybe) where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+
+instance ToJSON (CErrorHandlingConfig Maybe) where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+
+instance FromJSON (CForwardOptions Maybe) where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+
+instance ToJSON (CForwardOptions Maybe) where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+
+instance FromJSON (CPreProcessorConfig Maybe) where
+  parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany
+
+instance ToJSON (CPreProcessorConfig Maybe) where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
+
+instance ToJSON (CConfig Maybe) where
+  toJSON = Aeson.genericToJSON aesonDecodeOptionsBrittany
 
 -- This custom instance ensures the "omitNothingFields" behaviour not only for
 -- leafs, but for nodes of the config as well. This way e.g. "{}" is valid
