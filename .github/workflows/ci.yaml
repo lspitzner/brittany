@@ -43,7 +43,6 @@ jobs:
       - uses: svenstaro/upx-action@v2
         with:
           file: artifact/${{ matrix.os }}/brittany${{ matrix.ext }}
-          args: --best
       - uses: actions/upload-artifact@v2
         with:
           path: artifact
