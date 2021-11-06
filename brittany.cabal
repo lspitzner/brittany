@@ -93,7 +93,6 @@ library {
     -Wno-missing-local-signatures
     -Wno-missing-safe-haskell-mode
     -Wno-monomorphism-restriction
-    -Wno-noncanonical-monad-instances
     -Wno-noncanonical-monoid-instances
     -Wno-prepositive-qualified-module
     -Wno-redundant-constraints

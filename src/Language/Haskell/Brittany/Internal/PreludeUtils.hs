@@ -23,7 +23,6 @@ instance Applicative Strict.Maybe where
   _ <*> _ = Strict.Nothing
 
 instance Monad Strict.Maybe where
-  return = Strict.Just
   Strict.Nothing >>= _ = Strict.Nothing
   Strict.Just x >>= f = f x
 
