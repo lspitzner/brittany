@@ -131,10 +131,9 @@ executable brittany
 test-suite brittany-test-suite
   import: executable
 
-  type:             exitcode-stdio-1.0
-  default-language: Haskell2010
   build-depends:
     , hspec ^>= 2.8.3
     , parsec ^>= 3.1.14
-  main-is:          Main.hs
-  hs-source-dirs:   src-literatetests
+  hs-source-dirs: source/test-suite
+  main-is: Main.hs
+  type: exitcode-stdio-1.0
