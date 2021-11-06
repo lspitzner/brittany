@@ -264,22 +264,16 @@ instance Semigroup.Semigroup (CConfig Identity) where
 
 instance Monoid (CDebugConfig Maybe) where
   mempty = gmempty
-  mappend = gmappend
 instance Monoid (CLayoutConfig Maybe) where
   mempty = gmempty
-  mappend = gmappend
 instance Monoid (CErrorHandlingConfig Maybe) where
   mempty = gmempty
-  mappend = gmappend
 instance Monoid (CForwardOptions Maybe) where
   mempty = gmempty
-  mappend = gmappend
 instance Monoid (CPreProcessorConfig Maybe) where
   mempty = gmempty
-  mappend = gmappend
 instance Monoid (CConfig Maybe) where
   mempty = gmempty
-  mappend = gmappend
 
 
 data IndentPolicy = IndentPolicyLeft -- never create a new indentation at more
