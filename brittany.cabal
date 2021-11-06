@@ -1,3 +1,5 @@
+cabal-version: 2.2
+
 name:                 brittany
 version:              0.13.1.2
 synopsis:             Haskell source code formatter
@@ -7,7 +9,7 @@ description:
   If you are interested in the implementation, have a look at <https://github.com/lspitzner/brittany/blob/master/doc/implementation/theory.md this document>;
   .
   The implementation is documented in more detail <https://github.com/lspitzner/brittany/blob/master/doc/implementation/index.md here>.
-license:              AGPL-3
+license:              AGPL-3.0-only
 license-file:         LICENSE
 author:               Lennart Spitzner
 maintainer:           Lennart Spitzner <hexagoxel@hexagoxel.de>
@@ -15,7 +17,6 @@ copyright:            Copyright (C) 2016-2019 Lennart Spitzner
                       Copyright (C) 2019 PRODA LTD
 category:             Language
 build-type:           Simple
-cabal-version:        2.0
 homepage:             https://github.com/lspitzner/brittany/
 bug-reports:          https://github.com/lspitzner/brittany/issues
 extra-doc-files:
@@ -39,9 +40,62 @@ flag brittany-test-perf
   default: False
   manual: True
 
+common library
+  build-depends:
+    , aeson ^>= 2.0.1
+    , base ^>= 4.15.0
+    , butcher ^>= 1.3.3
+    , bytestring ^>= 0.10.12
+    , cmdargs ^>= 0.10.21
+    , containers ^>= 0.6.4
+    , czipwith ^>= 1.0.1
+    , data-tree-print ^>= 0.1.0
+    , deepseq ^>= 1.4.5
+    , directory ^>= 1.3.6
+    , extra ^>= 1.7.10
+    , filepath ^>= 1.4.2
+    , ghc ^>= 9.0.1
+    , ghc-boot-th ^>= 9.0.1
+    , ghc-exactprint ^>= 0.6.4
+    , monad-memo ^>= 0.5.3
+    , mtl ^>= 2.2.2
+    , multistate ^>= 0.8.0
+    , pretty ^>= 1.1.3
+    , random ^>= 1.2.1
+    , safe ^>= 0.3.19
+    , semigroups ^>= 0.19.2
+    , strict ^>= 0.4.0
+    , syb ^>= 0.7.2
+    , text ^>= 1.2.5
+    , transformers ^>= 0.5.6
+    , uniplate ^>= 1.6.13
+    , yaml ^>= 0.11.7
+  default-language: Haskell2010
+  ghc-options:
+    -Weverything
+    -Wno-incomplete-uni-patterns
+    -Wno-missing-deriving-strategies
+    -Wno-missing-export-lists
+    -Wno-missing-import-lists
+    -Wno-missing-local-signatures
+    -Wno-missing-safe-haskell-mode
+    -Wno-monomorphism-restriction
+    -Wno-prepositive-qualified-module
+    -Wno-unsafe
+
+common executable
+  import: library
+
+  build-depends: brittany
+  ghc-options:
+    -rtsopts
+    -threaded
+    -Wno-implicit-prelude
+    -Wno-unused-packages
+
 library
-  default-language:
-    Haskell2010
+  import: library
+
   hs-source-dirs:
     src
   exposed-modules:
@@ -77,226 +131,52 @@ library
     Language.Haskell.Brittany.Internal.Transformations.Par
     Language.Haskell.Brittany.Internal.Transformations.Columns
     Language.Haskell.Brittany.Internal.Transformations.Indent
-  ghc-options:
-    -Weverything
-    -Wno-incomplete-uni-patterns
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-import-lists
-    -Wno-missing-local-signatures
-    -Wno-missing-safe-haskell-mode
-    -Wno-monomorphism-restriction
-    -Wno-prepositive-qualified-module
-    -Wno-unsafe
-  build-depends:
-    base ^>= 4.15.0
-    , aeson ^>= 2.0.1
-    , butcher ^>= 1.3.3
-    , bytestring ^>= 0.10.12
-    , cmdargs ^>= 0.10.21
-    , containers ^>= 0.6.4
-    , czipwith ^>= 1.0.1
-    , data-tree-print ^>= 0.1.0
-    , deepseq ^>= 1.4.5
-    , directory ^>= 1.3.6
-    , extra ^>= 1.7.10
-    , filepath ^>= 1.4.2
-    , ghc ^>= 9.0.1
-    , ghc-boot-th ^>= 9.0.1
-    , ghc-exactprint ^>= 0.6.4
-    , monad-memo ^>= 0.5.3
-    , mtl ^>= 2.2.2
-    , multistate ^>= 0.8.0
-    , pretty ^>= 1.1.3
-    , random ^>= 1.2.1
-    , safe ^>= 0.3.19
-    , semigroups ^>= 0.19.2
-    , strict ^>= 0.4.0
-    , syb ^>= 0.7.2
-    , text ^>= 1.2.5
-    , transformers ^>= 0.5.6
-    , uniplate ^>= 1.6.13
-    , yaml ^>= 0.11.7
 
 executable brittany
+  import: executable
+
   if flag(brittany-dev-lib)
     buildable: False
-  else
-    buildable: True
+
   main-is:             Main.hs
   hs-source-dirs:      src-brittany
-  build-depends:
-    base
-    , brittany
-  default-language:    Haskell2010
-  ghc-options:
-    -Wall
-    -fno-spec-constr
-    -fno-warn-unused-imports
-    -fno-warn-redundant-constraints
-    -rtsopts
-    -with-rtsopts "-M2G"
 
 test-suite unittests
+  import: executable
+
   if flag(brittany-dev-lib) || !flag(brittany-test-perf)
     buildable: False
-  else
-    buildable: True
+
   type:             exitcode-stdio-1.0
-  default-language: Haskell2010
   build-depends:
-    brittany
-    , base
-    , ghc
-    , ghc-paths
-    , ghc-exactprint
-    , transformers
-    , containers
-    , mtl
-    , text
-    , multistate
-    , syb
-    , data-tree-print
-    , pretty
-    , bytestring
-    , directory
-    , butcher
-    , yaml
-    , aeson
-    , extra
-    , uniplate
-    , strict
-    , monad-memo
-    , unsafe
-    , safe
-    , deepseq
-    , semigroups
-    , cmdargs
-    , czipwith
-    , ghc-boot-th
-    , hspec >=2.4.1 && <2.9
+    , hspec ^>= 2.8.3
   main-is:          TestMain.hs
   other-modules:    TestUtils
                     AsymptoticPerfTests
   hs-source-dirs:   src-unittests
-  default-extensions:
-    CPP
-
-    NoImplicitPrelude
-
-    GADTs
-
-    FlexibleContexts
-    FlexibleInstances
-    ScopedTypeVariables
-    MonadComprehensions
-    LambdaCase
-    MultiWayIf
-    KindSignatures
-  ghc-options:
-    -Wall
-    -fno-warn-unused-imports
-    -rtsopts
-    -with-rtsopts "-M2G"
-    -threaded
-    -- ^ threaded is not necessary at all, but our CI trusts on being able
-    --   to pass -N1, which is not possible without threaded :-/
-    --   (plus -no-threaded is not a thing, afaict)
 
 test-suite littests
+  import: executable
+
   if flag(brittany-dev-lib)
     buildable: False
-  else
-    buildable: True
+
   type:             exitcode-stdio-1.0
   default-language: Haskell2010
   build-depends:
-    brittany
-    , base
-    , ghc
-    , ghc-paths
-    , ghc-exactprint
-    , transformers
-    , containers
-    , mtl
-    , text
-    , multistate
-    , syb
-    , data-tree-print
-    , pretty
-    , bytestring
-    , directory
-    , butcher
-    , yaml
-    , aeson
-    , extra
-    , uniplate
-    , strict
-    , monad-memo
-    , unsafe
-    , safe
-    , deepseq
-    , semigroups
-    , cmdargs
-    , czipwith
-    , ghc-boot-th
-    , hspec >=2.4.1 && <2.9
-    , filepath
-    , parsec >=3.1.11 && <3.2
+    , hspec ^>= 2.8.3
+    , parsec ^>= 3.1.14
   main-is:          Main.hs
-  other-modules:
   hs-source-dirs:   src-literatetests
-  default-extensions:
-    CPP
-
-    NoImplicitPrelude
-
-    GADTs
-
-    FlexibleContexts
-    FlexibleInstances
-    ScopedTypeVariables
-    MonadComprehensions
-    LambdaCase
-    MultiWayIf
-    KindSignatures
-  ghc-options:
-    -Wall
-    -fno-warn-unused-imports
-    -threaded
-    -rtsopts
-    -with-rtsopts "-M2G -N"
 
 test-suite libinterfacetests
+  import: executable
+
   if flag(brittany-dev-lib)
     buildable: False
-  else
-    buildable: True
+
   type:             exitcode-stdio-1.0
-  default-language: Haskell2010
   build-depends:
-    brittany
-    , base
-    , text
-    , transformers
-    , hspec >=2.4.1 && <2.9
+    , hspec ^>= 2.8.3
   main-is:          Main.hs
-  other-modules:
   hs-source-dirs:   src-libinterfacetests
-  default-extensions:
-    FlexibleContexts
-    FlexibleInstances
-    ScopedTypeVariables
-    MonadComprehensions
-    LambdaCase
-    MultiWayIf
-    KindSignatures
-  ghc-options:
-    -Wall
-    -fno-warn-unused-imports
-    -rtsopts
-    -with-rtsopts "-M2G"
-    -threaded
-    -- ^ threaded is not necessary at all, but our CI trusts on being able
-    --   to pass -N1, which is not possible without threaded :-/
-    --   (plus -no-threaded is not a thing, afaict)
