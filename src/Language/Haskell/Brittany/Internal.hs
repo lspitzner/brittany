@@ -398,7 +398,7 @@ parsePrintModuleTests conf filename input = do
         else lift
           $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
       if null errs
-        then pure $ TextL.toStrict ltext
+        then pure $ TextL.toStrict $ ltext
         else
           let
             errStrs = errs <&> \case
@@ -542,10 +542,15 @@ ppPreamble lmod@(L loc m@(HsModule _ _ _ _ _ _ _)) = do
             modAnnsDp = ExactPrint.annsDP mAnn
             isWhere (ExactPrint.G AnnWhere) = True
             isWhere _                       = False
+            isEof (ExactPrint.AnnEofPos) = True
+            isEof _                        = False
             whereInd     = List.findIndex (isWhere . fst) modAnnsDp
-            (pre, post') = case whereInd of
-              Nothing -> ([], modAnnsDp)
-              Just i -> List.splitAt (i + 1) modAnnsDp
+            eofInd       = List.findIndex (isEof . fst) modAnnsDp
+            (pre, post') = case (whereInd, eofInd) of
+              (Nothing, Nothing) -> ([], modAnnsDp)
+              (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
+              (Nothing, Just _i) -> ([], modAnnsDp)
+              (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
             mAnn' = mAnn { ExactPrint.annsDP = pre }
             filteredAnns'' =
               Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
