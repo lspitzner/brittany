@@ -137,8 +137,8 @@ executable brittany
   if flag(brittany-dev-lib)
     buildable: False
 
-  main-is:             Main.hs
-  hs-source-dirs:      src-brittany
+  hs-source-dirs: source/executable
+  main-is: Main.hs
 
 test-suite unittests
   import: executable
