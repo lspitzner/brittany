@@ -26,6 +26,8 @@ import           Language.Haskell.Brittany.Internal.Config.Types
 
 import           Data.Generics.Uniplate.Direct as Uniplate
 
+import qualified Data.Kind as Kind
+
 
 
 data PerItemConfig = PerItemConfig
@@ -218,7 +220,7 @@ type ToBriDocM = MultiRWSS.MultiRWS
                    '[[BrittanyError], Seq String] -- writer
                    '[NodeAllocIndex] -- state
 
-type ToBriDoc (sym :: * -> *) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
+type ToBriDoc (sym :: Kind.Type -> Kind.Type) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
 type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
 type ToBriDocC sym c          = Located sym         -> ToBriDocM c
 
