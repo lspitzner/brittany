@@ -99,7 +99,6 @@ library {
     -Wno-prepositive-qualified-module
     -Wno-redundant-constraints
     -Wno-unsafe
-    -Wno-unused-packages
   }
   build-depends:
     { base ^>= 4.15.0
@@ -117,7 +116,6 @@ library {
     , ghc ^>= 9.0.1
     , ghc-boot-th ^>= 9.0.1
     , ghc-exactprint ^>= 0.6.4
-    , ghc-paths ^>= 0.1.0
     , monad-memo ^>= 0.5.3
     , mtl ^>= 2.2.2
     , multistate ^>= 0.8.0
@@ -130,7 +128,6 @@ library {
     , text ^>= 1.2.5
     , transformers ^>= 0.5.6
     , uniplate ^>= 1.6.13
-    , unsafe ^>= 0.0
     , yaml ^>= 0.11.7
     }
   default-extensions: {
