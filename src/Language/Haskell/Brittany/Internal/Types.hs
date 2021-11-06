@@ -29,8 +29,8 @@ import           Data.Generics.Uniplate.Direct as Uniplate
 
 
 data PerItemConfig = PerItemConfig
-  { _icd_perBinding :: Map String (CConfig Option)
-  , _icd_perKey :: Map ExactPrint.Types.AnnKey (CConfig Option)
+  { _icd_perBinding :: Map String (CConfig Maybe)
+  , _icd_perKey :: Map ExactPrint.Types.AnnKey (CConfig Maybe)
   }
   deriving Data.Data.Data
 

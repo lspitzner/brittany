@@ -23,7 +23,7 @@ import Data.Data ( Data )
 import Data.Coerce ( Coercible, coerce )
 
 import Data.Semigroup.Generic
-import Data.Semigroup ( Last, Option )
+import Data.Semigroup ( Last )
 
 import Data.CZipWith
 
@@ -215,12 +215,12 @@ deriving instance Show (CForwardOptions Identity)
 deriving instance Show (CPreProcessorConfig Identity)
 deriving instance Show (CConfig Identity)
 
-deriving instance Show (CDebugConfig Option)
-deriving instance Show (CLayoutConfig Option)
-deriving instance Show (CErrorHandlingConfig Option)
-deriving instance Show (CForwardOptions Option)
-deriving instance Show (CPreProcessorConfig Option)
-deriving instance Show (CConfig Option)
+deriving instance Show (CDebugConfig Maybe)
+deriving instance Show (CLayoutConfig Maybe)
+deriving instance Show (CErrorHandlingConfig Maybe)
+deriving instance Show (CForwardOptions Maybe)
+deriving instance Show (CPreProcessorConfig Maybe)
+deriving instance Show (CConfig Maybe)
 
 deriving instance Data (CDebugConfig Identity)
 deriving instance Data (CLayoutConfig Identity)
@@ -229,24 +229,24 @@ deriving instance Data (CForwardOptions Identity)
 deriving instance Data (CPreProcessorConfig Identity)
 deriving instance Data (CConfig Identity)
 
-deriving instance Data (CDebugConfig Option)
-deriving instance Data (CLayoutConfig Option)
-deriving instance Data (CErrorHandlingConfig Option)
-deriving instance Data (CForwardOptions Option)
-deriving instance Data (CPreProcessorConfig Option)
-deriving instance Data (CConfig Option)
+deriving instance Data (CDebugConfig Maybe)
+deriving instance Data (CLayoutConfig Maybe)
+deriving instance Data (CErrorHandlingConfig Maybe)
+deriving instance Data (CForwardOptions Maybe)
+deriving instance Data (CPreProcessorConfig Maybe)
+deriving instance Data (CConfig Maybe)
 
-instance Semigroup.Semigroup (CDebugConfig Option) where
+instance Semigroup.Semigroup (CDebugConfig Maybe) where
   (<>) = gmappend
-instance Semigroup.Semigroup (CLayoutConfig Option) where
+instance Semigroup.Semigroup (CLayoutConfig Maybe) where
   (<>) = gmappend
-instance Semigroup.Semigroup (CErrorHandlingConfig Option) where
+instance Semigroup.Semigroup (CErrorHandlingConfig Maybe) where
   (<>) = gmappend
-instance Semigroup.Semigroup (CForwardOptions Option) where
+instance Semigroup.Semigroup (CForwardOptions Maybe) where
   (<>) = gmappend
-instance Semigroup.Semigroup (CPreProcessorConfig Option) where
+instance Semigroup.Semigroup (CPreProcessorConfig Maybe) where
   (<>) = gmappend
-instance Semigroup.Semigroup (CConfig Option) where
+instance Semigroup.Semigroup (CConfig Maybe) where
   (<>) = gmappend
 
 instance Semigroup.Semigroup (CDebugConfig Identity) where
@@ -262,22 +262,22 @@ instance Semigroup.Semigroup (CPreProcessorConfig Identity) where
 instance Semigroup.Semigroup (CConfig Identity) where
   (<>) = gmappend
 
-instance Monoid (CDebugConfig Option) where
+instance Monoid (CDebugConfig Maybe) where
   mempty = gmempty
   mappend = gmappend
-instance Monoid (CLayoutConfig Option) where
+instance Monoid (CLayoutConfig Maybe) where
   mempty = gmempty
   mappend = gmappend
-instance Monoid (CErrorHandlingConfig Option) where
+instance Monoid (CErrorHandlingConfig Maybe) where
   mempty = gmempty
   mappend = gmappend
-instance Monoid (CForwardOptions Option) where
+instance Monoid (CForwardOptions Maybe) where
   mempty = gmempty
   mappend = gmappend
-instance Monoid (CPreProcessorConfig Option) where
+instance Monoid (CPreProcessorConfig Maybe) where
   mempty = gmempty
   mappend = gmappend
-instance Monoid (CConfig Option) where
+instance Monoid (CConfig Maybe) where
   mempty = gmempty
   mappend = gmappend
 

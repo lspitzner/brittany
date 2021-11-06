@@ -118,7 +118,7 @@ forwardOptionsSyntaxExtsEnabled = ForwardOptions
   }
 
 -- brittany-next-binding { lconfig_indentPolicy: IndentPolicyLeft, lconfig_cols: 200 }
-cmdlineConfigParser :: CmdParser Identity out (CConfig Option)
+cmdlineConfigParser :: CmdParser Identity out (CConfig Maybe)
 cmdlineConfigParser = do
   -- TODO: why does the default not trigger; ind never should be []!!
   ind                <- addFlagReadParams "" ["indent"] "AMOUNT" (flagHelpStr "spaces per indentation level")
@@ -196,10 +196,10 @@ cmdlineConfigParser = do
     , _conf_obfuscate                 = wrapLast $ falseToNothing obfuscate
     }
  where
-  falseToNothing = Option . Bool.bool Nothing (Just True)
-  wrapLast :: Option a -> Option (Semigroup.Last a)
+  falseToNothing = Bool.bool Nothing (Just True)
+  wrapLast :: Maybe a -> Maybe (Semigroup.Last a)
   wrapLast = fmap Semigroup.Last
-  optionConcat :: (Semigroup.Semigroup (f a), Applicative f) => [a] -> Option (f a)
+  optionConcat :: (Semigroup.Semigroup (f a), Applicative f) => [a] -> Maybe (f a)
   optionConcat = mconcat . fmap (pure . pure)
 
 -- configParser :: Parser Config
@@ -230,7 +230,7 @@ cmdlineConfigParser = do
 -- If the second parameter is True and the file does not exist, writes the
 -- staticDefaultConfig to the file.
 readConfig
-  :: MonadIO m => System.IO.FilePath -> MaybeT m (Maybe (CConfig Option))
+  :: MonadIO m => System.IO.FilePath -> MaybeT m (Maybe (CConfig Maybe))
 readConfig path = do
   -- TODO: probably should catch IOErrors and then omit the existence check.
   exists <- liftIO $ System.Directory.doesFileExist path
@@ -278,7 +278,7 @@ findLocalConfigPath dir = do
 
 -- | Reads specified configs.
 readConfigs
-  :: CConfig Option        -- ^ Explicit options, take highest priority
+  :: CConfig Maybe        -- ^ Explicit options, take highest priority
   -> [System.IO.FilePath]  -- ^ List of config files to load and merge, highest priority first
   -> MaybeT IO Config
 readConfigs cmdlineConfig configPaths = do
@@ -290,7 +290,7 @@ readConfigs cmdlineConfig configPaths = do
 -- | Reads provided configs
 -- but also applies the user default configuration (with lowest priority)
 readConfigsWithUserConfig
-  :: CConfig Option        -- ^ Explicit options, take highest priority
+  :: CConfig Maybe        -- ^ Explicit options, take highest priority
   -> [System.IO.FilePath]  -- ^ List of config files to load and merge, highest priority first
   -> MaybeT IO Config
 readConfigsWithUserConfig cmdlineConfig configPaths = do
@@ -300,10 +300,9 @@ readConfigsWithUserConfig cmdlineConfig configPaths = do
 writeDefaultConfig :: MonadIO m => System.IO.FilePath -> m ()
 writeDefaultConfig path =
   liftIO $ ByteString.writeFile path $ Data.Yaml.encode $ cMap
-    (Option . Just . runIdentity)
+    (Just . runIdentity)
     staticDefaultConfig
 
 showConfigYaml :: Config -> String
 showConfigYaml = Data.ByteString.Char8.unpack . Data.Yaml.encode . cMap
   (\(Identity x) -> Just x)
-

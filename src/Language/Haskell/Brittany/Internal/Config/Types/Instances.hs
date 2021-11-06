@@ -51,27 +51,15 @@ aesonDecodeOptionsBrittany = Aeson.defaultOptions
   instance FromJSON (type Maybe) where\
     parseJSON = Aeson.genericParseJSON aesonDecodeOptionsBrittany;\
     {-# NOINLINE parseJSON #-}
-#define makeFromJSONOption(type)\
-  instance FromJSON (type Option) where\
-    parseJSON = fmap (cMap Option) . parseJSON;\
-    {-# NOINLINE parseJSON #-}
 #define makeToJSONMaybe(type)\
   instance ToJSON (type Maybe) where\
     toJSON     = Aeson.genericToJSON aesonDecodeOptionsBrittany;\
     {-# NOINLINE toJSON #-};\
     toEncoding = Aeson.genericToEncoding aesonDecodeOptionsBrittany;\
     {-# NOINLINE toEncoding #-}
-#define makeToJSONOption(type)\
-  instance ToJSON (type Option) where\
-    toJSON     = toJSON     . cMap getOption;\
-    {-# NOINLINE toJSON #-};\
-    toEncoding = toEncoding . cMap getOption;\
-    {-# NOINLINE toEncoding #-}
 
 
-makeFromJSONOption(CDebugConfig)
 makeFromJSONMaybe(CDebugConfig)
-makeToJSONOption(CDebugConfig)
 makeToJSONMaybe(CDebugConfig)
 
 makeFromJSON(IndentPolicy)
@@ -85,28 +73,18 @@ makeToJSON(CPPMode)
 makeFromJSON(ExactPrintFallbackMode)
 makeToJSON(ExactPrintFallbackMode)
 
-makeFromJSONOption(CLayoutConfig)
 makeFromJSONMaybe(CLayoutConfig)
-makeToJSONOption(CLayoutConfig)
 makeToJSONMaybe(CLayoutConfig)
 
-makeFromJSONOption(CErrorHandlingConfig)
 makeFromJSONMaybe(CErrorHandlingConfig)
-makeToJSONOption(CErrorHandlingConfig)
 makeToJSONMaybe(CErrorHandlingConfig)
 
-makeFromJSONOption(CForwardOptions)
 makeFromJSONMaybe(CForwardOptions)
-makeToJSONOption(CForwardOptions)
 makeToJSONMaybe(CForwardOptions)
 
-makeFromJSONOption(CPreProcessorConfig)
 makeFromJSONMaybe(CPreProcessorConfig)
-makeToJSONOption(CPreProcessorConfig)
 makeToJSONMaybe(CPreProcessorConfig)
 
-makeFromJSONOption(CConfig)
-makeToJSONOption(CConfig)
 makeToJSONMaybe(CConfig)
 
 -- This custom instance ensures the "omitNothingFields" behaviour not only for

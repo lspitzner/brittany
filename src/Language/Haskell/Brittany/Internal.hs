@@ -79,7 +79,7 @@ data InlineConfigTarget
 extractCommentConfigs
   :: ExactPrint.Anns
   -> TopLevelDeclNameMap
-  -> Either (String, String) (CConfig Option, PerItemConfig)
+  -> Either (String, String) (CConfig Maybe, PerItemConfig)
 extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
   let
     commentLiness =
