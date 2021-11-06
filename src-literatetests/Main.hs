@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonadComprehensions #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import Language.Haskell.Brittany.Internal.Prelude
 import qualified Data.Maybe
@@ -25,6 +26,43 @@ import           Data.Coerce                    ( coerce )
 import qualified Data.Text.IO                  as Text.IO
 import           System.FilePath                ( (</>) )
 
+import System.Timeout ( timeout )
+
+
+
+import Language.Haskell.Brittany.Internal.PreludeUtils
+
+
+
+asymptoticPerfTest :: Spec
+asymptoticPerfTest = do
+  it "10 do statements"
+    $  roundTripEqualWithTimeout 1500000
+    $  (Text.pack "func = do\n")
+    <> Text.replicate 10 (Text.pack "  statement\n")
+  it "10 do nestings"
+    $  roundTripEqualWithTimeout 4000000
+    $  (Text.pack "func = ")
+    <> mconcat
+         (   [1 .. 10]
+         <&> \(i :: Int) ->
+               (Text.replicate (2 * i) (Text.pack " ") <> Text.pack "do\n")
+         )
+    <> Text.replicate 2000 (Text.pack " ")
+    <> Text.pack "return\n"
+    <> Text.replicate 2002 (Text.pack " ")
+    <> Text.pack "()"
+  it "10 AppOps"
+    $  roundTripEqualWithTimeout 1000000
+    $  (Text.pack "func = expr")
+    <> Text.replicate 10 (Text.pack "\n     . expr") --TODO
+
+roundTripEqualWithTimeout :: Int -> Text -> Expectation
+roundTripEqualWithTimeout time t =
+  timeout time (action >>= evaluate) >>= (`shouldSatisfy`Data.Maybe.isJust)
+ where
+  action = fmap (fmap PPTextWrapper)
+                (parsePrintModuleTests defaultTestConfig "TestFakeFileName.hs" t)
 
 
 data InputLine
@@ -53,6 +91,7 @@ main = do
   inputCtxFree <- Text.IO.readFile "src-literatetests/30-tests-context-free.blt"
   let groupsCtxFree = createChunks inputCtxFree
   hspec $ do
+    describe "asymptotic perf roundtrips" $ asymptoticPerfTest
     groups `forM_` \(groupname, tests) -> do
       describe (Text.unpack groupname) $ do
         tests `forM_` \test -> do

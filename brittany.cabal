@@ -128,15 +128,6 @@ executable brittany
   hs-source-dirs: source/executable
   main-is: Main.hs
 
-test-suite unittests
-  import: executable
-
-  type:             exitcode-stdio-1.0
-  build-depends:
-    , hspec ^>= 2.8.3
-  main-is:          TestMain.hs
-  hs-source-dirs:   src-unittests
-
 test-suite littests
   import: executable
 
