@@ -3,27 +3,34 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Module where
 
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
-import GHC (AnnKeywordId(..), GenLocated(L), moduleNameString, unLoc)
-import GHC.Hs
 import qualified GHC.OldList as List
-import Language.Haskell.Brittany.Internal.Config.Types
-import Language.Haskell.Brittany.Internal.LayouterBasics
-import Language.Haskell.Brittany.Internal.Layouters.IE
-import Language.Haskell.Brittany.Internal.Layouters.Import
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
-import Language.Haskell.Brittany.Internal.Types
-import Language.Haskell.GHC.ExactPrint as ExactPrint
-import Language.Haskell.GHC.ExactPrint.Types
-  (DeltaPos(..), commentContents, deltaRow)
+
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.LayouterBasics
+import           Language.Haskell.Brittany.Internal.Layouters.IE
+import           Language.Haskell.Brittany.Internal.Layouters.Import
+import           Language.Haskell.Brittany.Internal.Config.Types
+
+import GHC (unLoc, GenLocated(L), moduleNameString, AnnKeywordId(..))
+import           GHC.Hs
+import           Language.Haskell.GHC.ExactPrint as ExactPrint
+import           Language.Haskell.GHC.ExactPrint.Types
+                                                ( DeltaPos(..)
+                                                , deltaRow
+                                                , commentContents
+                                                )
+
+
 
 layoutModule :: ToBriDoc' HsModule
 layoutModule lmod@(L _ mod') = case mod' of
     -- Implicit module Main
-  HsModule _ Nothing _ imports _ _ _ -> do
+  HsModule _ Nothing  _   imports _ _ _ -> do
     commentedImports <- transformToCommentedImport imports
     -- groupify commentedImports `forM_` tellDebugMessShow
     docLines (commentedImportsToDoc <$> sortCommentedImports commentedImports)
@@ -34,38 +41,43 @@ layoutModule lmod@(L _ mod') = case mod' of
     -- groupify commentedImports `forM_` tellDebugMessShow
     -- sortedImports <- sortImports imports
     let tn = Text.pack $ moduleNameString $ unLoc n
-    allowSingleLineExportList <-
-      mAsk <&> _conf_layout .> _lconfig_allowSingleLineExportList .> confUnpack
+    allowSingleLineExportList <- mAsk
+      <&> _conf_layout
+      .>  _lconfig_allowSingleLineExportList
+      .>  confUnpack
     -- the config should not prevent single-line layout when there is no
     -- export list
-    let
-      allowSingleLine = allowSingleLineExportList || Data.Maybe.isNothing les
+    let allowSingleLine = allowSingleLineExportList || Data.Maybe.isNothing les
     docLines
       $ docSeq
           [ docNodeAnnKW lmod Nothing docEmpty
              -- A pseudo node that serves merely to force documentation
              -- before the node
           , docNodeMoveToKWDP lmod AnnModule True $ runFilteredAlternative $ do
-            addAlternativeCond allowSingleLine $ docForceSingleline $ docSeq
-              [ appSep $ docLit $ Text.pack "module"
-              , appSep $ docLit tn
-              , docWrapNode lmod $ appSep $ case les of
-                Nothing -> docEmpty
-                Just x -> layoutLLIEs True KeepItemsUnsorted x
-              , docSeparator
-              , docLit $ Text.pack "where"
-              ]
-            addAlternative $ docLines
+            addAlternativeCond allowSingleLine $
+              docForceSingleline
+                $ docSeq
+                [ appSep $ docLit $ Text.pack "module"
+                , appSep $ docLit tn
+                , docWrapNode lmod $ appSep $ case les of
+                  Nothing -> docEmpty
+                  Just x  -> layoutLLIEs True KeepItemsUnsorted x
+                , docSeparator
+                , docLit $ Text.pack "where"
+                ]
+            addAlternative
+              $ docLines
               [ docAddBaseY BrIndentRegular $ docPar
-                  (docSeq [appSep $ docLit $ Text.pack "module", docLit tn])
-                  (docSeq
-                    [ docWrapNode lmod $ case les of
-                      Nothing -> docEmpty
-                      Just x -> layoutLLIEs False KeepItemsUnsorted x
-                    , docSeparator
-                    , docLit $ Text.pack "where"
-                    ]
-                  )
+                (docSeq [appSep $ docLit $ Text.pack "module", docLit tn]
+                )
+                (docSeq [
+                          docWrapNode lmod $ case les of
+                           Nothing -> docEmpty
+                           Just x  -> layoutLLIEs False KeepItemsUnsorted x
+                        , docSeparator
+                        , docLit $ Text.pack "where"
+                        ]
+                )
               ]
           ]
       : (commentedImportsToDoc <$> sortCommentedImports commentedImports) -- [layoutImport y i | (y, i) <- sortedImports]
@@ -77,7 +89,7 @@ data CommentedImport
 
 instance Show CommentedImport where
   show = \case
-    EmptyLine -> "EmptyLine"
+    EmptyLine            -> "EmptyLine"
     IndependentComment _ -> "IndependentComment"
     ImportStatement r ->
       "ImportStatement " ++ show (length $ commentsBefore r) ++ " " ++ show
@@ -90,9 +102,8 @@ data ImportStatementRecord = ImportStatementRecord
   }
 
 instance Show ImportStatementRecord where
-  show r =
-    "ImportStatement " ++ show (length $ commentsBefore r) ++ " " ++ show
-      (length $ commentsAfter r)
+  show r = "ImportStatement " ++ show (length $ commentsBefore r) ++ " " ++ show
+        (length $ commentsAfter r)
 
 transformToCommentedImport
   :: [LImportDecl GhcPs] -> ToBriDocM [CommentedImport]
@@ -110,11 +121,10 @@ transformToCommentedImport is = do
     accumF accConnectedComm (annMay, decl) = case annMay of
       Nothing ->
         ( []
-        , [ ImportStatement ImportStatementRecord
-              { commentsBefore = []
-              , commentsAfter = []
-              , importStatement = decl
-              }
+        , [ ImportStatement ImportStatementRecord { commentsBefore  = []
+                                                  , commentsAfter   = []
+                                                  , importStatement = decl
+                                                  }
           ]
         )
       Just ann ->
@@ -126,7 +136,7 @@ transformToCommentedImport is = do
             :: [(Comment, DeltaPos)]
             -> [(Comment, DeltaPos)]
             -> ([CommentedImport], [(Comment, DeltaPos)], Int)
-          go acc [] = ([], acc, 0)
+          go acc []                       = ([], acc, 0)
           go acc [c1@(_, DP (y, _))] = ([], c1 : acc, y - 1)
           go acc (c1@(_, DP (1, _)) : xs) = go (c1 : acc) xs
           go acc ((c1, DP (y, x)) : xs) =
@@ -143,8 +153,8 @@ transformToCommentedImport is = do
           , convertedIndependentComments
           ++ replicate (blanksBeforeImportDecl + initialBlanks) EmptyLine
           ++ [ ImportStatement ImportStatementRecord
-                 { commentsBefore = beforeComments
-                 , commentsAfter = accConnectedComm
+                 { commentsBefore  = beforeComments
+                 , commentsAfter   = accConnectedComm
                  , importStatement = decl
                  }
              ]
@@ -158,14 +168,14 @@ sortCommentedImports =
  where
   unpackImports :: [CommentedImport] -> [CommentedImport]
   unpackImports xs = xs >>= \case
-    l@EmptyLine -> [l]
+    l@EmptyLine            -> [l]
     l@IndependentComment{} -> [l]
     ImportStatement r ->
       map IndependentComment (commentsBefore r) ++ [ImportStatement r]
   mergeGroups
     :: [Either CommentedImport [ImportStatementRecord]] -> [CommentedImport]
   mergeGroups xs = xs >>= \case
-    Left x -> [x]
+    Left  x -> [x]
     Right y -> ImportStatement <$> y
   sortGroups :: [ImportStatementRecord] -> [ImportStatementRecord]
   sortGroups =
@@ -175,23 +185,25 @@ sortCommentedImports =
   groupify cs = go [] cs
    where
     go [] = \case
-      (l@EmptyLine : rest) -> Left l : go [] rest
+      (l@EmptyLine            : rest) -> Left l : go [] rest
       (l@IndependentComment{} : rest) -> Left l : go [] rest
-      (ImportStatement r : rest) -> go [r] rest
-      [] -> []
+      (ImportStatement r      : rest) -> go [r] rest
+      []                              -> []
     go acc = \case
       (l@EmptyLine : rest) -> Right (reverse acc) : Left l : go [] rest
       (l@IndependentComment{} : rest) ->
         Left l : Right (reverse acc) : go [] rest
       (ImportStatement r : rest) -> go (r : acc) rest
-      [] -> [Right (reverse acc)]
+      []                         -> [Right (reverse acc)]
 
 commentedImportsToDoc :: CommentedImport -> ToBriDocM BriDocNumbered
 commentedImportsToDoc = \case
   EmptyLine -> docLitS ""
   IndependentComment c -> commentToDoc c
-  ImportStatement r -> docSeq
-    (layoutImport (importStatement r) : map commentToDoc (commentsAfter r))
+  ImportStatement r ->
+    docSeq
+      ( layoutImport (importStatement r)
+      : map commentToDoc (commentsAfter r)
+      )
  where
-  commentToDoc (c, DP (_y, x)) =
-    docLitS (replicate x ' ' ++ commentContents c)
+  commentToDoc (c, DP (_y, x)) = docLitS (replicate x ' ' ++ commentContents c)

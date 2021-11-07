@@ -2,24 +2,28 @@
 
 module Language.Haskell.Brittany.Internal.Obfuscation where
 
-import Data.Char
+
+
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified GHC.OldList as List
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
-import System.Random
+
+import           Data.Char
+import           System.Random
+
+
 
 obfuscate :: Text -> IO Text
 obfuscate input = do
   let predi x = isAlphaNum x || x `elem` "_'"
   let groups = List.groupBy (\a b -> predi a && predi b) (Text.unpack input)
   let idents = Set.toList $ Set.fromList $ filter (all predi) groups
-  let
-    exceptionFilter x | x `elem` keywords = False
-    exceptionFilter x | x `elem` extraKWs = False
-    exceptionFilter x = not $ null $ drop 1 x
+  let exceptionFilter x | x `elem` keywords = False
+      exceptionFilter x | x `elem` extraKWs = False
+      exceptionFilter x                     = not $ null $ drop 1 x
   let filtered = filter exceptionFilter idents
   mappings <- fmap Map.fromList $ filtered `forM` \x -> do
     r <- createAlias x
@@ -71,14 +75,14 @@ extraKWs = ["return", "pure", "Int", "True", "False", "otherwise"]
 createAlias :: String -> IO String
 createAlias xs = go NoHint xs
  where
-  go _hint "" = pure ""
-  go hint (c : cr) = do
+  go _hint ""       = pure ""
+  go hint (c : cr)  = do
     c' <- case hint of
       VocalHint | isUpper c -> randomFrom $ "AAAEEEOOOIIIUUU" ++ ['A' .. 'Z']
-      _ | isUpper c -> randomFrom ['A' .. 'Z']
+      _ | isUpper c         -> randomFrom ['A' .. 'Z']
       VocalHint | isLower c -> randomFrom $ "aaaeeeoooiiiuuu" ++ ['a' .. 'z']
-      _ | isLower c -> randomFrom ['a' .. 'z']
-      _ -> pure c
+      _ | isLower c         -> randomFrom ['a' .. 'z']
+      _                     -> pure c
     cr' <- go (if c' `elem` "aeuioAEUIO" then NoVocalHint else VocalHint) cr
     pure (c' : cr')
 

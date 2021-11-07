@@ -1,14 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Language.Haskell.Brittany.Internal.PreludeUtils where
 
-import Control.Applicative
-import Control.DeepSeq (NFData, force)
-import Control.Exception.Base (evaluate)
-import Control.Monad
+
+
+import Prelude
 import qualified Data.Strict.Maybe as Strict
 import Debug.Trace
-import Prelude
+import Control.Monad
 import System.IO
+
+import Control.DeepSeq ( NFData, force )
+import Control.Exception.Base ( evaluate )
+
+import Control.Applicative
+
+
 
 instance Applicative Strict.Maybe where
   pure = Strict.Just
@@ -24,12 +30,12 @@ instance Alternative Strict.Maybe where
   x <|> Strict.Nothing = x
   _ <|> x = x
 
-traceFunctionWith
-  :: String -> (a -> String) -> (b -> String) -> (a -> b) -> (a -> b)
+traceFunctionWith :: String -> (a -> String) -> (b -> String) -> (a -> b) -> (a -> b)
 traceFunctionWith name s1 s2 f x = trace traceStr y
  where
   y = f x
-  traceStr = name ++ "\nBEFORE:\n" ++ s1 x ++ "\nAFTER:\n" ++ s2 y
+  traceStr =
+    name ++ "\nBEFORE:\n" ++ s1 x ++ "\nAFTER:\n" ++ s2 y
 
 (<&!>) :: Monad m => m a -> (a -> b) -> m b
 (<&!>) = flip (<$!>)
@@ -45,10 +51,10 @@ printErr = putStrErrLn . show
 
 errorIf :: Bool -> a -> a
 errorIf False = id
-errorIf True = error "errorIf"
+errorIf True  = error "errorIf"
 
 errorIfNote :: Maybe String -> a -> a
-errorIfNote Nothing = id
+errorIfNote Nothing  = id
 errorIfNote (Just x) = error x
 
 (<&>) :: Functor f => f a -> (a -> b) -> f b

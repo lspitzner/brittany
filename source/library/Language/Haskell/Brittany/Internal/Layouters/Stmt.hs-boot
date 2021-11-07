@@ -2,7 +2,14 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Stmt where
 
-import GHC.Hs
-import Language.Haskell.Brittany.Internal.Types
+
+
+import Language.Haskell.Brittany.Internal.Prelude
+
+import           Language.Haskell.Brittany.Internal.Types
+
+import           GHC.Hs
+
+
 
 layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))

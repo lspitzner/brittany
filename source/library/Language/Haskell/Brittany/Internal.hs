@@ -12,52 +12,68 @@ module Language.Haskell.Brittany.Internal
   , parseModuleFromString
   , extractCommentConfigs
   , getTopLevelDeclNameMap
-  ) where
+  )
+where
 
-import Control.Monad.Trans.Except
+
+
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
 import qualified Data.ByteString.Char8
-import Data.CZipWith
-import Data.Char (isSpace)
-import Data.HList.HList
 import qualified Data.Map as Map
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TextL
-import qualified Data.Text.Lazy.Builder as Text.Builder
-import qualified Data.Yaml
-import qualified GHC hiding (parseModule)
-import GHC (GenLocated(L))
-import GHC.Data.Bag
-import qualified GHC.Driver.Session as GHC
-import GHC.Hs
-import qualified GHC.LanguageExtensions.Type as GHC
 import qualified GHC.OldList as List
-import GHC.Parser.Annotation (AnnKeywordId(..))
-import GHC.Types.SrcLoc (SrcSpan)
-import Language.Haskell.Brittany.Internal.Backend
-import Language.Haskell.Brittany.Internal.BackendUtils
-import Language.Haskell.Brittany.Internal.Config
-import Language.Haskell.Brittany.Internal.Config.Types
-import Language.Haskell.Brittany.Internal.ExactPrintUtils
-import Language.Haskell.Brittany.Internal.LayouterBasics
-import Language.Haskell.Brittany.Internal.Layouters.Decl
-import Language.Haskell.Brittany.Internal.Layouters.Module
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
-import Language.Haskell.Brittany.Internal.Transformations.Alt
-import Language.Haskell.Brittany.Internal.Transformations.Columns
-import Language.Haskell.Brittany.Internal.Transformations.Floating
-import Language.Haskell.Brittany.Internal.Transformations.Indent
-import Language.Haskell.Brittany.Internal.Transformations.Par
-import Language.Haskell.Brittany.Internal.Types
-import Language.Haskell.Brittany.Internal.Utils
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+
+-- brittany { lconfig_importAsColumn: 60, lconfig_importColumn: 60 }
+import qualified Language.Haskell.GHC.ExactPrint         as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Types   as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
-import qualified UI.Butcher.Monadic as Butcher
+
+import           Control.Monad.Trans.Except
+import           Data.HList.HList
+import qualified Data.Yaml
+import           Data.CZipWith
+import qualified UI.Butcher.Monadic                      as Butcher
+
+import qualified Data.Text.Lazy.Builder                  as Text.Builder
+
+import           Language.Haskell.Brittany.Internal.Types
+import           Language.Haskell.Brittany.Internal.Config.Types
+import           Language.Haskell.Brittany.Internal.Config
+import           Language.Haskell.Brittany.Internal.LayouterBasics
+
+import           Language.Haskell.Brittany.Internal.Layouters.Decl
+import           Language.Haskell.Brittany.Internal.Layouters.Module
+import           Language.Haskell.Brittany.Internal.Utils
+import           Language.Haskell.Brittany.Internal.Backend
+import           Language.Haskell.Brittany.Internal.BackendUtils
+import           Language.Haskell.Brittany.Internal.ExactPrintUtils
+
+import           Language.Haskell.Brittany.Internal.Transformations.Alt
+import           Language.Haskell.Brittany.Internal.Transformations.Floating
+import           Language.Haskell.Brittany.Internal.Transformations.Par
+import           Language.Haskell.Brittany.Internal.Transformations.Columns
+import           Language.Haskell.Brittany.Internal.Transformations.Indent
+
+import qualified GHC
+                                                   hiding ( parseModule )
+import           GHC.Parser.Annotation                            ( AnnKeywordId(..) )
+import           GHC                                      ( GenLocated(L)
+                                                          )
+import           GHC.Types.SrcLoc                                   ( SrcSpan )
+import           GHC.Hs
+import           GHC.Data.Bag
+import qualified GHC.Driver.Session                                as GHC
+import qualified GHC.LanguageExtensions.Type             as GHC
+
+import           Data.Char                                ( isSpace )
+
+
 
 data InlineConfigTarget
     = InlineConfigTargetModule
@@ -75,36 +91,35 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
       [ ( k
         , [ x
           | (ExactPrint.Comment x _ _, _) <-
-            (ExactPrint.annPriorComments ann
+            (  ExactPrint.annPriorComments ann
             ++ ExactPrint.annFollowingComments ann
             )
           ]
-        ++ [ x
-           | (ExactPrint.AnnComment (ExactPrint.Comment x _ _), _) <-
-             ExactPrint.annsDP ann
-           ]
+          ++ [ x
+             | (ExactPrint.AnnComment (ExactPrint.Comment x _ _), _) <-
+               ExactPrint.annsDP ann
+             ]
         )
       | (k, ann) <- Map.toList anns
       ]
-  let
-    configLiness = commentLiness <&> second
-      (Data.Maybe.mapMaybe $ \line -> do
-        l1 <-
-          List.stripPrefix "-- BRITTANY" line
-          <|> List.stripPrefix "--BRITTANY" line
-          <|> List.stripPrefix "-- brittany" line
-          <|> List.stripPrefix "--brittany" line
-          <|> (List.stripPrefix "{- BRITTANY" line >>= stripSuffix "-}")
-        let l2 = dropWhile isSpace l1
-        guard
-          (("@" `isPrefixOf` l2)
-          || ("-disable" `isPrefixOf` l2)
-          || ("-next" `isPrefixOf` l2)
-          || ("{" `isPrefixOf` l2)
-          || ("--" `isPrefixOf` l2)
-          )
-        pure l2
-      )
+  let configLiness = commentLiness <&> second
+        (Data.Maybe.mapMaybe $ \line -> do
+          l1 <-
+            List.stripPrefix "-- BRITTANY" line
+            <|> List.stripPrefix "--BRITTANY" line
+            <|> List.stripPrefix "-- brittany" line
+            <|> List.stripPrefix "--brittany" line
+            <|> (List.stripPrefix "{- BRITTANY" line >>= stripSuffix "-}")
+          let l2 = dropWhile isSpace l1
+          guard
+            (  ("@" `isPrefixOf` l2)
+            || ("-disable" `isPrefixOf` l2)
+            || ("-next" `isPrefixOf` l2)
+            || ("{" `isPrefixOf` l2)
+            || ("--" `isPrefixOf` l2)
+            )
+          pure l2
+        )
   let
     configParser = Butcher.addAlternatives
       [ ( "commandline-config"
@@ -123,44 +138,39 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
       ]
     parser = do -- we will (mis?)use butcher here to parse the inline config
                 -- line.
-      let
-        nextDecl = do
-          conf <- configParser
-          Butcher.addCmdImpl (InlineConfigTargetNextDecl, conf)
+      let nextDecl = do
+            conf <- configParser
+            Butcher.addCmdImpl (InlineConfigTargetNextDecl, conf)
       Butcher.addCmd "-next-declaration" nextDecl
       Butcher.addCmd "-Next-Declaration" nextDecl
       Butcher.addCmd "-NEXT-DECLARATION" nextDecl
-      let
-        nextBinding = do
-          conf <- configParser
-          Butcher.addCmdImpl (InlineConfigTargetNextBinding, conf)
+      let nextBinding = do
+            conf <- configParser
+            Butcher.addCmdImpl (InlineConfigTargetNextBinding, conf)
       Butcher.addCmd "-next-binding" nextBinding
       Butcher.addCmd "-Next-Binding" nextBinding
       Butcher.addCmd "-NEXT-BINDING" nextBinding
-      let
-        disableNextBinding = do
-          Butcher.addCmdImpl
-            ( InlineConfigTargetNextBinding
-            , mempty { _conf_roundtrip_exactprint_only = pure $ pure True }
-            )
+      let disableNextBinding = do
+            Butcher.addCmdImpl
+              ( InlineConfigTargetNextBinding
+              , mempty { _conf_roundtrip_exactprint_only = pure $ pure True }
+              )
       Butcher.addCmd "-disable-next-binding" disableNextBinding
       Butcher.addCmd "-Disable-Next-Binding" disableNextBinding
       Butcher.addCmd "-DISABLE-NEXT-BINDING" disableNextBinding
-      let
-        disableNextDecl = do
-          Butcher.addCmdImpl
-            ( InlineConfigTargetNextDecl
-            , mempty { _conf_roundtrip_exactprint_only = pure $ pure True }
-            )
+      let disableNextDecl = do
+            Butcher.addCmdImpl
+              ( InlineConfigTargetNextDecl
+              , mempty { _conf_roundtrip_exactprint_only = pure $ pure True }
+              )
       Butcher.addCmd "-disable-next-declaration" disableNextDecl
       Butcher.addCmd "-Disable-Next-Declaration" disableNextDecl
       Butcher.addCmd "-DISABLE-NEXT-DECLARATION" disableNextDecl
-      let
-        disableFormatting = do
-          Butcher.addCmdImpl
-            ( InlineConfigTargetModule
-            , mempty { _conf_disable_formatting = pure $ pure True }
-            )
+      let disableFormatting = do
+            Butcher.addCmdImpl
+              ( InlineConfigTargetModule
+              , mempty { _conf_disable_formatting = pure $ pure True }
+              )
       Butcher.addCmd "-disable" disableFormatting
       Butcher.addCmd "@" $ do
         -- Butcher.addCmd "module" $ do
@@ -168,42 +178,41 @@ extractCommentConfigs anns (TopLevelDeclNameMap declNameMap) = do
         --   Butcher.addCmdImpl (InlineConfigTargetModule, conf)
         Butcher.addNullCmd $ do
           bindingName <- Butcher.addParamString "BINDING" mempty
-          conf <- configParser
+          conf        <- configParser
           Butcher.addCmdImpl (InlineConfigTargetBinding bindingName, conf)
       conf <- configParser
       Butcher.addCmdImpl (InlineConfigTargetModule, conf)
   lineConfigss <- configLiness `forM` \(k, ss) -> do
     r <- ss `forM` \s -> case Butcher.runCmdParserSimple s parser of
-      Left err -> Left $ (err, s)
-      Right c -> Right $ c
+      Left  err -> Left $ (err, s)
+      Right c   -> Right $ c
     pure (k, r)
 
-  let
-    perModule = foldl'
-      (<>)
-      mempty
-      [ conf
-      | (_, lineConfigs) <- lineConfigss
-      , (InlineConfigTargetModule, conf) <- lineConfigs
-      ]
+  let perModule = foldl'
+        (<>)
+        mempty
+        [ conf
+        | (_                       , lineConfigs) <- lineConfigss
+        , (InlineConfigTargetModule, conf       ) <- lineConfigs
+        ]
   let
     perBinding = Map.fromListWith
       (<>)
       [ (n, conf)
-      | (k, lineConfigs) <- lineConfigss
-      , (target, conf) <- lineConfigs
-      , n <- case target of
+      | (k     , lineConfigs) <- lineConfigss
+      , (target, conf       ) <- lineConfigs
+      , n                     <- case target of
         InlineConfigTargetBinding s -> [s]
-        InlineConfigTargetNextBinding
-          | Just name <- Map.lookup k declNameMap -> [name]
+        InlineConfigTargetNextBinding | Just name <- Map.lookup k declNameMap ->
+          [name]
         _ -> []
       ]
   let
     perKey = Map.fromListWith
       (<>)
       [ (k, conf)
-      | (k, lineConfigs) <- lineConfigss
-      , (target, conf) <- lineConfigs
+      | (k     , lineConfigs) <- lineConfigss
+      , (target, conf       ) <- lineConfigs
       , case target of
         InlineConfigTargetNextDecl -> True
         InlineConfigTargetNextBinding | Nothing <- Map.lookup k declNameMap ->
@@ -221,7 +230,7 @@ getTopLevelDeclNameMap :: GHC.ParsedSource -> TopLevelDeclNameMap
 getTopLevelDeclNameMap (L _ (HsModule _ _name _exports _ decls _ _)) =
   TopLevelDeclNameMap $ Map.fromList
     [ (ExactPrint.mkAnnKey decl, name)
-    | decl <- decls
+    | decl       <- decls
     , (name : _) <- [getDeclBindingNames decl]
     ]
 
@@ -239,78 +248,70 @@ getTopLevelDeclNameMap (L _ (HsModule _ _name _exports _ decls _ _)) =
 -- won't do.
 parsePrintModule :: Config -> Text -> IO (Either [BrittanyError] Text)
 parsePrintModule configWithDebugs inputText = runExceptT $ do
-  let
-    config =
-      configWithDebugs { _conf_debug = _conf_debug staticDefaultConfig }
-  let ghcOptions = config & _conf_forward & _options_ghc & runIdentity
-  let config_pp = config & _conf_preprocessor
-  let cppMode = config_pp & _ppconf_CPPMode & confUnpack
+  let config =
+        configWithDebugs { _conf_debug = _conf_debug staticDefaultConfig }
+  let ghcOptions         = config & _conf_forward & _options_ghc & runIdentity
+  let config_pp          = config & _conf_preprocessor
+  let cppMode            = config_pp & _ppconf_CPPMode & confUnpack
   let hackAroundIncludes = config_pp & _ppconf_hackAroundIncludes & confUnpack
   (anns, parsedSource, hasCPP) <- do
-    let
-      hackF s = if "#include" `isPrefixOf` s
-        then "-- BRITANY_INCLUDE_HACK " ++ s
-        else s
-    let
-      hackTransform = if hackAroundIncludes
-        then List.intercalate "\n" . fmap hackF . lines'
-        else id
-    let
-      cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
-        then case cppMode of
-          CPPModeAbort -> return $ Left "Encountered -XCPP. Aborting."
-          CPPModeWarn -> return $ Right True
-          CPPModeNowarn -> return $ Right True
-        else return $ Right False
+    let hackF s = if "#include" `isPrefixOf` s
+          then "-- BRITANY_INCLUDE_HACK " ++ s
+          else s
+    let hackTransform = if hackAroundIncludes
+          then List.intercalate "\n" . fmap hackF . lines'
+          else id
+    let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+          then case cppMode of
+            CPPModeAbort  -> return $ Left "Encountered -XCPP. Aborting."
+            CPPModeWarn   -> return $ Right True
+            CPPModeNowarn -> return $ Right True
+          else return $ Right False
     parseResult <- lift $ parseModuleFromString
       ghcOptions
       "stdin"
       cppCheckFunc
       (hackTransform $ Text.unpack inputText)
     case parseResult of
-      Left err -> throwE [ErrorInput err]
-      Right x -> pure x
+      Left  err -> throwE [ErrorInput err]
+      Right x   -> pure x
   (inlineConf, perItemConf) <-
     either (throwE . (: []) . uncurry ErrorMacroConfig) pure
       $ extractCommentConfigs anns (getTopLevelDeclNameMap parsedSource)
-  let moduleConfig = cZipWith fromOptionIdentity config inlineConf
+  let moduleConfig      = cZipWith fromOptionIdentity config inlineConf
   let disableFormatting = moduleConfig & _conf_disable_formatting & confUnpack
   if disableFormatting
     then do
       return inputText
     else do
       (errsWarns, outputTextL) <- do
-        let
-          omitCheck =
-            moduleConfig
-              & _conf_errorHandling
-              & _econf_omit_output_valid_check
-              & confUnpack
+        let omitCheck =
+              moduleConfig
+                & _conf_errorHandling
+                & _econf_omit_output_valid_check
+                & confUnpack
         (ews, outRaw) <- if hasCPP || omitCheck
           then return $ pPrintModule moduleConfig perItemConf anns parsedSource
           else lift
             $ pPrintModuleAndCheck moduleConfig perItemConf anns parsedSource
-        let
-          hackF s = fromMaybe s
-            $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
+        let hackF s = fromMaybe s
+              $ TextL.stripPrefix (TextL.pack "-- BRITANY_INCLUDE_HACK ") s
         pure $ if hackAroundIncludes
           then
             ( ews
-            , TextL.intercalate (TextL.pack "\n")
-            $ hackF
-            <$> TextL.splitOn (TextL.pack "\n") outRaw
+            , TextL.intercalate (TextL.pack "\n") $ hackF <$> TextL.splitOn
+              (TextL.pack "\n")
+              outRaw
             )
           else (ews, outRaw)
-      let
-        customErrOrder ErrorInput{} = 4
-        customErrOrder LayoutWarning{} = 0 :: Int
-        customErrOrder ErrorOutputCheck{} = 1
-        customErrOrder ErrorUnusedComment{} = 2
-        customErrOrder ErrorUnknownNode{} = 3
-        customErrOrder ErrorMacroConfig{} = 5
-      let
-        hasErrors =
-          if moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack
+      let customErrOrder ErrorInput{}         = 4
+          customErrOrder LayoutWarning{}      = 0 :: Int
+          customErrOrder ErrorOutputCheck{}   = 1
+          customErrOrder ErrorUnusedComment{} = 2
+          customErrOrder ErrorUnknownNode{}   = 3
+          customErrOrder ErrorMacroConfig{}   = 5
+      let hasErrors =
+            if moduleConfig & _conf_errorHandling & _econf_Werror & confUnpack
             then not $ null errsWarns
             else 0 < maximum (-1 : fmap customErrOrder errsWarns)
       if hasErrors
@@ -330,27 +331,26 @@ pPrintModule
   -> GHC.ParsedSource
   -> ([BrittanyError], TextL.Text)
 pPrintModule conf inlineConf anns parsedModule =
-  let
-    ((out, errs), debugStrings) =
-      runIdentity
-        $ MultiRWSS.runMultiRWSTNil
-        $ MultiRWSS.withMultiWriterAW
-        $ MultiRWSS.withMultiWriterAW
-        $ MultiRWSS.withMultiWriterW
-        $ MultiRWSS.withMultiReader anns
-        $ MultiRWSS.withMultiReader conf
-        $ MultiRWSS.withMultiReader inlineConf
-        $ MultiRWSS.withMultiReader (extractToplevelAnns parsedModule anns)
-        $ do
-            traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
-              $ annsDoc anns
-            ppModule parsedModule
-    tracer = if Seq.null debugStrings
-      then id
-      else
-        trace ("---- DEBUGMESSAGES ---- ")
-          . foldr (seq . join trace) id debugStrings
-  in tracer $ (errs, Text.Builder.toLazyText out)
+  let ((out, errs), debugStrings) =
+        runIdentity
+          $ MultiRWSS.runMultiRWSTNil
+          $ MultiRWSS.withMultiWriterAW
+          $ MultiRWSS.withMultiWriterAW
+          $ MultiRWSS.withMultiWriterW
+          $ MultiRWSS.withMultiReader anns
+          $ MultiRWSS.withMultiReader conf
+          $ MultiRWSS.withMultiReader inlineConf
+          $ MultiRWSS.withMultiReader (extractToplevelAnns parsedModule anns)
+          $ do
+              traceIfDumpConf "bridoc annotations raw" _dconf_dump_annotations
+                $ annsDoc anns
+              ppModule parsedModule
+      tracer = if Seq.null debugStrings
+        then id
+        else
+          trace ("---- DEBUGMESSAGES ---- ")
+            . foldr (seq . join trace) id debugStrings
+  in  tracer $ (errs, Text.Builder.toLazyText out)
   -- unless () $ do
   --
   --   debugStrings `forM_` \s ->
@@ -365,17 +365,15 @@ pPrintModuleAndCheck
   -> GHC.ParsedSource
   -> IO ([BrittanyError], TextL.Text)
 pPrintModuleAndCheck conf inlineConf anns parsedModule = do
-  let ghcOptions = conf & _conf_forward & _options_ghc & runIdentity
+  let ghcOptions     = conf & _conf_forward & _options_ghc & runIdentity
   let (errs, output) = pPrintModule conf inlineConf anns parsedModule
-  parseResult <- parseModuleFromString
-    ghcOptions
-    "output"
-    (\_ -> return $ Right ())
-    (TextL.unpack output)
-  let
-    errs' = errs ++ case parseResult of
-      Left{} -> [ErrorOutputCheck]
-      Right{} -> []
+  parseResult <- parseModuleFromString ghcOptions
+                                       "output"
+                                       (\_ -> return $ Right ())
+                                       (TextL.unpack output)
+  let errs' = errs ++ case parseResult of
+        Left{}  -> [ErrorOutputCheck]
+        Right{} -> []
   return (errs', output)
 
 
@@ -386,22 +384,18 @@ parsePrintModuleTests conf filename input = do
   let inputStr = Text.unpack input
   parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
   case parseResult of
-    Left err ->
-      return $ Left $ "parsing error: " ++ show (bagToList (show <$> err))
+    Left  err                  -> return $ Left $ "parsing error: " ++ show (bagToList (show <$> err))
     Right (anns, parsedModule) -> runExceptT $ do
       (inlineConf, perItemConf) <-
-        case
-          extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule)
-        of
-          Left err -> throwE $ "error in inline config: " ++ show err
-          Right x -> pure x
+        case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
+          Left  err -> throwE $ "error in inline config: " ++ show err
+          Right x   -> pure x
       let moduleConf = cZipWith fromOptionIdentity conf inlineConf
-      let
-        omitCheck =
-          conf
-            & _conf_errorHandling
-            .> _econf_omit_output_valid_check
-            .> confUnpack
+      let omitCheck =
+            conf
+              &  _conf_errorHandling
+              .> _econf_omit_output_valid_check
+              .> confUnpack
       (errs, ltext) <- if omitCheck
         then return $ pPrintModule moduleConf perItemConf anns parsedModule
         else lift
@@ -411,13 +405,13 @@ parsePrintModuleTests conf filename input = do
         else
           let
             errStrs = errs <&> \case
-              ErrorInput str -> str
+              ErrorInput         str -> str
               ErrorUnusedComment str -> str
-              LayoutWarning str -> str
+              LayoutWarning      str -> str
               ErrorUnknownNode str _ -> str
               ErrorMacroConfig str _ -> "when parsing inline config: " ++ str
-              ErrorOutputCheck -> "Output is not syntactically valid."
-          in throwE $ "pretty printing error(s):\n" ++ List.unlines errStrs
+              ErrorOutputCheck       -> "Output is not syntactically valid."
+          in  throwE $ "pretty printing error(s):\n" ++ List.unlines errStrs
 
 isErrorUnusedComment :: BrittanyError -> Bool
 isErrorUnusedComment x = case x of
@@ -470,30 +464,27 @@ ppModule lmod@(L _loc _m@(HsModule _ _name _exports _ decls _ _)) = do
   let annKey = ExactPrint.mkAnnKey lmod
   post <- ppPreamble lmod
   decls `forM_` \decl -> do
-    let declAnnKey = ExactPrint.mkAnnKey decl
+    let declAnnKey       = ExactPrint.mkAnnKey decl
     let declBindingNames = getDeclBindingNames decl
     inlineConf <- mAsk
     let mDeclConf = Map.lookup declAnnKey $ _icd_perKey inlineConf
-    let
-      mBindingConfs =
-        declBindingNames <&> \n -> Map.lookup n $ _icd_perBinding inlineConf
-    filteredAnns <- mAsk <&> \annMap ->
-      Map.union (Map.findWithDefault Map.empty annKey annMap)
-        $ Map.findWithDefault Map.empty declAnnKey annMap
+    let mBindingConfs =
+          declBindingNames <&> \n -> Map.lookup n $ _icd_perBinding inlineConf
+    filteredAnns <- mAsk
+      <&> \annMap ->
+        Map.union (Map.findWithDefault Map.empty annKey annMap) $
+        Map.findWithDefault Map.empty declAnnKey annMap
 
-    traceIfDumpConf
-        "bridoc annotations filtered/transformed"
-        _dconf_dump_annotations
+    traceIfDumpConf "bridoc annotations filtered/transformed"
+                    _dconf_dump_annotations
       $ annsDoc filteredAnns
 
     config <- mAsk
 
-    let
-      config' = cZipWith fromOptionIdentity config
-        $ mconcat (catMaybes (mBindingConfs ++ [mDeclConf]))
+    let config' = cZipWith fromOptionIdentity config
+          $ mconcat (catMaybes (mBindingConfs ++ [mDeclConf]))
 
-    let
-      exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
+    let exactprintOnly = config' & _conf_roundtrip_exactprint_only & confUnpack
     toLocal config' filteredAnns $ do
       bd <- if exactprintOnly
         then briDocMToPPM $ briDocByExactNoComment decl
@@ -506,34 +497,33 @@ ppModule lmod@(L _loc _m@(HsModule _ _name _exports _ decls _ _)) = do
             else briDocMToPPM $ briDocByExactNoComment decl
       layoutBriDoc bd
 
-  let
-    finalComments = filter
-      (fst .> \case
-        ExactPrint.AnnComment{} -> True
-        _ -> False
-      )
-      post
+  let finalComments = filter
+        (fst .> \case
+          ExactPrint.AnnComment{} -> True
+          _                       -> False
+        )
+        post
   post `forM_` \case
     (ExactPrint.AnnComment (ExactPrint.Comment cmStr _ _), l) -> do
       ppmMoveToExactLoc l
       mTell $ Text.Builder.fromString cmStr
     (ExactPrint.AnnEofPos, (ExactPrint.DP (eofZ, eofX))) ->
-      let
-        folder (acc, _) (kw, ExactPrint.DP (y, x)) = case kw of
-          ExactPrint.AnnComment cm | span <- ExactPrint.commentIdentifier cm ->
-            ( acc + y + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
-            , x + GHC.srcSpanEndCol span - GHC.srcSpanStartCol span
-            )
-          _ -> (acc + y, x)
-        (cmY, cmX) = foldl' folder (0, 0) finalComments
-      in ppmMoveToExactLoc $ ExactPrint.DP (eofZ - cmY, eofX - cmX)
+      let folder (acc, _) (kw, ExactPrint.DP (y, x)) = case kw of
+            ExactPrint.AnnComment cm
+              | span <- ExactPrint.commentIdentifier cm
+              -> ( acc + y + GHC.srcSpanEndLine span - GHC.srcSpanStartLine span
+                 , x + GHC.srcSpanEndCol span - GHC.srcSpanStartCol span
+                 )
+            _ -> (acc + y, x)
+          (cmY, cmX) = foldl' folder (0, 0) finalComments
+      in  ppmMoveToExactLoc $ ExactPrint.DP (eofZ - cmY, eofX - cmX)
     _ -> return ()
 
 getDeclBindingNames :: LHsDecl GhcPs -> [String]
 getDeclBindingNames (L _ decl) = case decl of
   SigD _ (TypeSig _ ns _) -> ns <&> \(L _ n) -> Text.unpack (rdrNameToText n)
   ValD _ (FunBind _ (L _ n) _ _) -> [Text.unpack $ rdrNameToText n]
-  _ -> []
+  _                              -> []
 
 
 -- Prints the information associated with the module annotation
@@ -550,9 +540,8 @@ ppPreamble lmod@(L loc m@HsModule{}) = do
     -- attached annotations that come after the module's where
     -- from the module node
   config <- mAsk
-  let
-    shouldReformatPreamble =
-      config & _conf_layout & _lconfig_reformatModulePreamble & confUnpack
+  let shouldReformatPreamble =
+        config & _conf_layout & _lconfig_reformatModulePreamble & confUnpack
 
   let
     (filteredAnns', post) =
@@ -562,23 +551,23 @@ ppPreamble lmod@(L loc m@HsModule{}) = do
           let
             modAnnsDp = ExactPrint.annsDP mAnn
             isWhere (ExactPrint.G AnnWhere) = True
-            isWhere _ = False
+            isWhere _                       = False
             isEof (ExactPrint.AnnEofPos) = True
-            isEof _ = False
-            whereInd = List.findIndex (isWhere . fst) modAnnsDp
-            eofInd = List.findIndex (isEof . fst) modAnnsDp
+            isEof _                        = False
+            whereInd     = List.findIndex (isWhere . fst) modAnnsDp
+            eofInd       = List.findIndex (isEof . fst) modAnnsDp
             (pre, post') = case (whereInd, eofInd) of
               (Nothing, Nothing) -> ([], modAnnsDp)
-              (Just i, Nothing) -> List.splitAt (i + 1) modAnnsDp
+              (Just i , Nothing) -> List.splitAt (i + 1) modAnnsDp
               (Nothing, Just _i) -> ([], modAnnsDp)
-              (Just i, Just j) -> List.splitAt (min (i + 1) j) modAnnsDp
+              (Just i , Just j ) -> List.splitAt (min (i + 1) j) modAnnsDp
             mAnn' = mAnn { ExactPrint.annsDP = pre }
             filteredAnns'' =
               Map.insert (ExactPrint.mkAnnKey lmod) mAnn' filteredAnns
-          in (filteredAnns'', post')
-  traceIfDumpConf
-      "bridoc annotations filtered/transformed"
-      _dconf_dump_annotations
+          in
+            (filteredAnns'', post')
+  traceIfDumpConf "bridoc annotations filtered/transformed"
+                  _dconf_dump_annotations
     $ annsDoc filteredAnns'
 
   if shouldReformatPreamble
@@ -587,7 +576,7 @@ ppPreamble lmod@(L loc m@HsModule{}) = do
       layoutBriDoc briDoc
     else
       let emptyModule = L loc m { hsmodDecls = [] }
-      in MultiRWSS.withMultiReader filteredAnns' $ processDefault emptyModule
+      in  MultiRWSS.withMultiReader filteredAnns' $ processDefault emptyModule
   return post
 
 _sigHead :: Sig GhcPs -> String
@@ -600,7 +589,7 @@ _bindHead :: HsBind GhcPs -> String
 _bindHead = \case
   FunBind _ fId _ [] -> "FunBind " ++ (Text.unpack $ lrdrNameToText $ fId)
   PatBind _ _pat _ ([], []) -> "PatBind smth"
-  _ -> "unknown bind"
+  _                           -> "unknown bind"
 
 
 
@@ -618,67 +607,63 @@ layoutBriDoc briDoc = do
     transformAlts briDoc >>= mSet
     mGet
       >>= briDocToDoc
-      .> traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt
+      .>  traceIfDumpConf "bridoc post-alt" _dconf_dump_bridoc_simpl_alt
     -- bridoc transformation: float stuff in
     mGet >>= transformSimplifyFloating .> mSet
     mGet
       >>= briDocToDoc
-      .> traceIfDumpConf
-           "bridoc post-floating"
-           _dconf_dump_bridoc_simpl_floating
+      .>  traceIfDumpConf "bridoc post-floating"
+                          _dconf_dump_bridoc_simpl_floating
     -- bridoc transformation: par removal
     mGet >>= transformSimplifyPar .> mSet
     mGet
       >>= briDocToDoc
-      .> traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par
+      .>  traceIfDumpConf "bridoc post-par" _dconf_dump_bridoc_simpl_par
     -- bridoc transformation: float stuff in
     mGet >>= transformSimplifyColumns .> mSet
     mGet
       >>= briDocToDoc
-      .> traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns
+      .>  traceIfDumpConf "bridoc post-columns" _dconf_dump_bridoc_simpl_columns
     -- bridoc transformation: indent
     mGet >>= transformSimplifyIndent .> mSet
     mGet
       >>= briDocToDoc
-      .> traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent
+      .>  traceIfDumpConf "bridoc post-indent" _dconf_dump_bridoc_simpl_indent
     mGet
       >>= briDocToDoc
-      .> traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final
+      .>  traceIfDumpConf "bridoc final" _dconf_dump_bridoc_final
     -- -- convert to Simple type
     -- simpl <- mGet <&> transformToSimple
     -- return simpl
 
   anns :: ExactPrint.Anns <- mAsk
 
-  let
-    state = LayoutState
-      { _lstate_baseYs = [0]
-      , _lstate_curYOrAddNewline = Right 0 -- important that we dont use left
-                                           -- here because moveToAnn stuff
-                                           -- of the first node needs to do
-                                           -- its thing properly.
-      , _lstate_indLevels = [0]
-      , _lstate_indLevelLinger = 0
-      , _lstate_comments = anns
-      , _lstate_commentCol = Nothing
-      , _lstate_addSepSpace = Nothing
-      , _lstate_commentNewlines = 0
-      }
+  let state = LayoutState { _lstate_baseYs           = [0]
+                          , _lstate_curYOrAddNewline = Right 0 -- important that we dont use left
+                                             -- here because moveToAnn stuff
+                                             -- of the first node needs to do
+                                             -- its thing properly.
+                          , _lstate_indLevels        = [0]
+                          , _lstate_indLevelLinger   = 0
+                          , _lstate_comments         = anns
+                          , _lstate_commentCol       = Nothing
+                          , _lstate_addSepSpace      = Nothing
+                          , _lstate_commentNewlines  = 0
+                          }
 
   state' <- MultiRWSS.withMultiStateS state $ layoutBriDocM briDoc'
 
-  let
-    remainingComments =
-      [ c
-      | (ExactPrint.AnnKey _ con, elemAnns) <- Map.toList
-        (_lstate_comments state')
-    -- With the new import layouter, we manually process comments
-    -- without relying on the backend to consume the comments out of
-    -- the state/map. So they will end up here, and we need to ignore
-    -- them.
-      , ExactPrint.unConName con /= "ImportDecl"
-      , c <- extractAllComments elemAnns
-      ]
+  let remainingComments =
+        [ c
+        | (ExactPrint.AnnKey _ con, elemAnns) <- Map.toList
+          (_lstate_comments state')
+          -- With the new import layouter, we manually process comments
+          -- without relying on the backend to consume the comments out of
+          -- the state/map. So they will end up here, and we need to ignore
+          -- them.
+        , ExactPrint.unConName con /= "ImportDecl"
+        , c <- extractAllComments elemAnns
+        ]
   remainingComments
     `forM_` (fst .> show .> ErrorUnusedComment .> (: []) .> mTell)
 

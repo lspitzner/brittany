@@ -12,20 +12,31 @@
 
 module Language.Haskell.Brittany.Internal.Types where
 
+
+
+import Language.Haskell.Brittany.Internal.Prelude
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
 import qualified Data.Data
-import Data.Generics.Uniplate.Direct as Uniplate
-import qualified Data.Kind as Kind
 import qualified Data.Strict.Maybe as Strict
-import qualified Data.Text.Lazy.Builder as Text.Builder
-import GHC (AnnKeywordId, GenLocated, Located, SrcSpan)
-import Language.Haskell.Brittany.Internal.Config.Types
-import Language.Haskell.Brittany.Internal.Prelude
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import Language.Haskell.GHC.ExactPrint (AnnKey)
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
-import Language.Haskell.GHC.ExactPrint.Types (Anns)
 import qualified Safe
+
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+
+import qualified Data.Text.Lazy.Builder as Text.Builder
+
+import           GHC ( Located, GenLocated, AnnKeywordId, SrcSpan )
+
+import           Language.Haskell.GHC.ExactPrint ( AnnKey )
+import           Language.Haskell.GHC.ExactPrint.Types ( Anns )
+
+import           Language.Haskell.Brittany.Internal.Config.Types
+
+import           Data.Generics.Uniplate.Direct as Uniplate
+
+import qualified Data.Kind as Kind
+
+
 
 data PerItemConfig = PerItemConfig
   { _icd_perBinding :: Map String (CConfig Maybe)
@@ -33,26 +44,20 @@ data PerItemConfig = PerItemConfig
   }
   deriving Data.Data.Data
 
-type PPM
-  = MultiRWSS.MultiRWS
-      '[ Map ExactPrint.AnnKey ExactPrint.Anns
-       , PerItemConfig
-       , Config
-       , ExactPrint.Anns
-       ]
-      '[Text.Builder.Builder , [BrittanyError] , Seq String]
-      '[]
+type PPM = MultiRWSS.MultiRWS
+  '[Map ExactPrint.AnnKey ExactPrint.Anns, PerItemConfig, Config, ExactPrint.Anns]
+  '[Text.Builder.Builder, [BrittanyError], Seq String]
+  '[]
 
-type PPMLocal
-  = MultiRWSS.MultiRWS
-      '[Config , ExactPrint.Anns]
-      '[Text.Builder.Builder , [BrittanyError] , Seq String]
-      '[]
+type PPMLocal = MultiRWSS.MultiRWS
+  '[Config, ExactPrint.Anns]
+  '[Text.Builder.Builder, [BrittanyError], Seq String]
+  '[]
 
 newtype TopLevelDeclNameMap = TopLevelDeclNameMap (Map ExactPrint.AnnKey String)
 
 data LayoutState = LayoutState
-  { _lstate_baseYs :: [Int]
+  { _lstate_baseYs         :: [Int]
      -- ^ stack of number of current indentation columns
      -- (not number of indentations).
   , _lstate_curYOrAddNewline :: Either Int Int
@@ -60,7 +65,7 @@ data LayoutState = LayoutState
              -- 1) number of chars in the current line.
              -- 2) number of newlines to be inserted before inserting any
              --    non-space elements.
-  , _lstate_indLevels :: [Int]
+  , _lstate_indLevels      :: [Int]
     -- ^ stack of current indentation levels. set for
     -- any layout-affected elements such as
     -- let/do/case/where elements.
@@ -73,14 +78,14 @@ data LayoutState = LayoutState
                                   -- on the first indented element have an
                                   -- annotation offset relative to the last
                                   -- non-indented element, which is confusing.
-  , _lstate_comments :: Anns
-  , _lstate_commentCol :: Maybe Int -- this communicates two things:
+  , _lstate_comments      :: Anns
+  , _lstate_commentCol    :: Maybe Int -- this communicates two things:
                                        -- firstly, that cursor is currently
                                        -- at the end of a comment (so needs
                                        -- newline before any actual content).
                                        -- secondly, the column at which
                                        -- insertion of comments started.
-  , _lstate_addSepSpace :: Maybe Int -- number of spaces to insert if anyone
+  , _lstate_addSepSpace   :: Maybe Int -- number of spaces to insert if anyone
                                        -- writes (any non-spaces) in the
                                        -- current line.
   -- , _lstate_isNewline     :: NewLineState
@@ -110,21 +115,14 @@ lstate_indLevel = Safe.headNote "lstate_baseY" . _lstate_indLevels
 instance Show LayoutState where
   show state =
     "LayoutState"
-      ++ "{baseYs="
-      ++ show (_lstate_baseYs state)
-      ++ ",curYOrAddNewline="
-      ++ show (_lstate_curYOrAddNewline state)
-      ++ ",indLevels="
-      ++ show (_lstate_indLevels state)
-      ++ ",indLevelLinger="
-      ++ show (_lstate_indLevelLinger state)
-      ++ ",commentCol="
-      ++ show (_lstate_commentCol state)
-      ++ ",addSepSpace="
-      ++ show (_lstate_addSepSpace state)
-      ++ ",commentNewlines="
-      ++ show (_lstate_commentNewlines state)
-      ++ "}"
+    ++ "{baseYs=" ++ show (_lstate_baseYs state)
+    ++ ",curYOrAddNewline=" ++ show (_lstate_curYOrAddNewline state)
+    ++ ",indLevels=" ++ show (_lstate_indLevels state)
+    ++ ",indLevelLinger=" ++ show (_lstate_indLevelLinger state)
+    ++ ",commentCol=" ++ show (_lstate_commentCol state)
+    ++ ",addSepSpace=" ++ show (_lstate_addSepSpace state)
+    ++ ",commentNewlines=" ++ show (_lstate_commentNewlines state)
+    ++ "}"
 
 -- data NewLineState = NewLineStateInit -- initial state. we do not know if in a
 --                                      -- newline, really. by special-casing
@@ -225,16 +223,14 @@ data BrIndent = BrIndentNone
               | BrIndentSpecial Int
   deriving (Eq, Ord, Data.Data.Data, Show)
 
-type ToBriDocM
-  = MultiRWSS.MultiRWS
-      '[Config , Anns] -- reader
-      '[[BrittanyError] , Seq String] -- writer
-      '[NodeAllocIndex] -- state
+type ToBriDocM = MultiRWSS.MultiRWS
+                   '[Config, Anns] -- reader
+                   '[[BrittanyError], Seq String] -- writer
+                   '[NodeAllocIndex] -- state
 
-type ToBriDoc (sym :: Kind.Type -> Kind.Type)
-  = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
-type ToBriDoc' sym = Located sym -> ToBriDocM BriDocNumbered
-type ToBriDocC sym c = Located sym -> ToBriDocM c
+type ToBriDoc (sym :: Kind.Type -> Kind.Type) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
+type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
+type ToBriDocC sym c          = Located sym         -> ToBriDocM c
 
 data DocMultiLine
   = MultiLineNo
@@ -342,21 +338,21 @@ type BriDocFInt = BriDocF ((,) Int)
 type BriDocNumbered = (Int, BriDocFInt)
 
 instance Uniplate.Uniplate BriDoc where
-  uniplate x@BDEmpty{} = plate x
-  uniplate x@BDLit{} = plate x
-  uniplate (BDSeq list) = plate BDSeq ||* list
-  uniplate (BDCols sig list) = plate BDCols |- sig ||* list
-  uniplate x@BDSeparator = plate x
-  uniplate (BDAddBaseY ind bd) = plate BDAddBaseY |- ind |* bd
-  uniplate (BDBaseYPushCur bd) = plate BDBaseYPushCur |* bd
-  uniplate (BDBaseYPop bd) = plate BDBaseYPop |* bd
+  uniplate x@BDEmpty{}               = plate x
+  uniplate x@BDLit{}                 = plate x
+  uniplate (BDSeq list     )         = plate BDSeq ||* list
+  uniplate (BDCols sig list)         = plate BDCols |- sig ||* list
+  uniplate x@BDSeparator             = plate x
+  uniplate (BDAddBaseY ind bd      ) = plate BDAddBaseY |- ind |* bd
+  uniplate (BDBaseYPushCur       bd) = plate BDBaseYPushCur |* bd
+  uniplate (BDBaseYPop           bd) = plate BDBaseYPop |* bd
   uniplate (BDIndentLevelPushCur bd) = plate BDIndentLevelPushCur |* bd
-  uniplate (BDIndentLevelPop bd) = plate BDIndentLevelPop |* bd
+  uniplate (BDIndentLevelPop     bd) = plate BDIndentLevelPop |* bd
   uniplate (BDPar ind line indented) = plate BDPar |- ind |* line |* indented
-  uniplate (BDAlt alts) = plate BDAlt ||* alts
-  uniplate (BDForwardLineMode bd) = plate BDForwardLineMode |* bd
-  uniplate x@BDExternal{} = plate x
-  uniplate x@BDPlain{} = plate x
+  uniplate (BDAlt             alts ) = plate BDAlt ||* alts
+  uniplate (BDForwardLineMode bd   ) = plate BDForwardLineMode |* bd
+  uniplate x@BDExternal{}            = plate x
+  uniplate x@BDPlain{}               = plate x
   uniplate (BDAnnotationPrior annKey bd) =
     plate BDAnnotationPrior |- annKey |* bd
   uniplate (BDAnnotationKW annKey kw bd) =
@@ -365,84 +361,83 @@ instance Uniplate.Uniplate BriDoc where
     plate BDAnnotationRest |- annKey |* bd
   uniplate (BDMoveToKWDP annKey kw b bd) =
     plate BDMoveToKWDP |- annKey |- kw |- b |* bd
-  uniplate (BDLines lines) = plate BDLines ||* lines
-  uniplate (BDEnsureIndent ind bd) = plate BDEnsureIndent |- ind |* bd
-  uniplate (BDForceMultiline bd) = plate BDForceMultiline |* bd
-  uniplate (BDForceSingleline bd) = plate BDForceSingleline |* bd
+  uniplate (BDLines lines          ) = plate BDLines ||* lines
+  uniplate (BDEnsureIndent ind bd  ) = plate BDEnsureIndent |- ind |* bd
+  uniplate (BDForceMultiline  bd   ) = plate BDForceMultiline |* bd
+  uniplate (BDForceSingleline bd   ) = plate BDForceSingleline |* bd
   uniplate (BDNonBottomSpacing b bd) = plate BDNonBottomSpacing |- b |* bd
-  uniplate (BDSetParSpacing bd) = plate BDSetParSpacing |* bd
-  uniplate (BDForceParSpacing bd) = plate BDForceParSpacing |* bd
-  uniplate (BDDebug s bd) = plate BDDebug |- s |* bd
+  uniplate (BDSetParSpacing   bd   ) = plate BDSetParSpacing |* bd
+  uniplate (BDForceParSpacing bd   ) = plate BDForceParSpacing |* bd
+  uniplate (BDDebug s bd           ) = plate BDDebug |- s |* bd
 
 newtype NodeAllocIndex = NodeAllocIndex Int
 
 -- TODO: rename to "dropLabels" ?
 unwrapBriDocNumbered :: BriDocNumbered -> BriDoc
 unwrapBriDocNumbered tpl = case snd tpl of
-  BDFEmpty -> BDEmpty
-  BDFLit t -> BDLit t
-  BDFSeq list -> BDSeq $ rec <$> list
-  BDFCols sig list -> BDCols sig $ rec <$> list
-  BDFSeparator -> BDSeparator
-  BDFAddBaseY ind bd -> BDAddBaseY ind $ rec bd
-  BDFBaseYPushCur bd -> BDBaseYPushCur $ rec bd
-  BDFBaseYPop bd -> BDBaseYPop $ rec bd
-  BDFIndentLevelPushCur bd -> BDIndentLevelPushCur $ rec bd
-  BDFIndentLevelPop bd -> BDIndentLevelPop $ rec bd
-  BDFPar ind line indented -> BDPar ind (rec line) (rec indented)
-  BDFAlt alts -> BDAlt $ rec <$> alts -- not that this will happen
-  BDFForwardLineMode bd -> BDForwardLineMode $ rec bd
-  BDFExternal k ks c t -> BDExternal k ks c t
-  BDFPlain t -> BDPlain t
+  BDFEmpty                     -> BDEmpty
+  BDFLit t                     -> BDLit t
+  BDFSeq list                  -> BDSeq $ rec <$> list
+  BDFCols sig list             -> BDCols sig $ rec <$> list
+  BDFSeparator                 -> BDSeparator
+  BDFAddBaseY ind bd           -> BDAddBaseY ind $ rec bd
+  BDFBaseYPushCur       bd     -> BDBaseYPushCur $ rec bd
+  BDFBaseYPop           bd     -> BDBaseYPop $ rec bd
+  BDFIndentLevelPushCur bd     -> BDIndentLevelPushCur $ rec bd
+  BDFIndentLevelPop     bd     -> BDIndentLevelPop $ rec bd
+  BDFPar ind line indented     -> BDPar ind (rec line) (rec indented)
+  BDFAlt             alts      -> BDAlt $ rec <$> alts -- not that this will happen
+  BDFForwardLineMode bd        -> BDForwardLineMode $ rec bd
+  BDFExternal k ks c t         -> BDExternal k ks c t
+  BDFPlain t                   -> BDPlain t
   BDFAnnotationPrior annKey bd -> BDAnnotationPrior annKey $ rec bd
   BDFAnnotationKW annKey kw bd -> BDAnnotationKW annKey kw $ rec bd
-  BDFAnnotationRest annKey bd -> BDAnnotationRest annKey $ rec bd
+  BDFAnnotationRest annKey bd  -> BDAnnotationRest annKey $ rec bd
   BDFMoveToKWDP annKey kw b bd -> BDMoveToKWDP annKey kw b $ rec bd
-  BDFLines lines -> BDLines $ rec <$> lines
-  BDFEnsureIndent ind bd -> BDEnsureIndent ind $ rec bd
-  BDFForceMultiline bd -> BDForceMultiline $ rec bd
-  BDFForceSingleline bd -> BDForceSingleline $ rec bd
-  BDFNonBottomSpacing b bd -> BDNonBottomSpacing b $ rec bd
-  BDFSetParSpacing bd -> BDSetParSpacing $ rec bd
-  BDFForceParSpacing bd -> BDForceParSpacing $ rec bd
-  BDFDebug s bd -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
+  BDFLines lines               -> BDLines $ rec <$> lines
+  BDFEnsureIndent ind bd       -> BDEnsureIndent ind $ rec bd
+  BDFForceMultiline  bd        -> BDForceMultiline $ rec bd
+  BDFForceSingleline bd        -> BDForceSingleline $ rec bd
+  BDFNonBottomSpacing b bd     -> BDNonBottomSpacing b $ rec bd
+  BDFSetParSpacing   bd        -> BDSetParSpacing $ rec bd
+  BDFForceParSpacing bd        -> BDForceParSpacing $ rec bd
+  BDFDebug s bd                -> BDDebug (s ++ "@" ++ show (fst tpl)) $ rec bd
   where rec = unwrapBriDocNumbered
 
 isNotEmpty :: BriDoc -> Bool
 isNotEmpty BDEmpty = False
-isNotEmpty _ = True
+isNotEmpty _       = True
 
 -- this might not work. is not used anywhere either.
 briDocSeqSpine :: BriDoc -> ()
 briDocSeqSpine = \case
-  BDEmpty -> ()
-  BDLit _t -> ()
-  BDSeq list -> foldl' ((briDocSeqSpine .) . seq) () list
-  BDCols _sig list -> foldl' ((briDocSeqSpine .) . seq) () list
-  BDSeparator -> ()
-  BDAddBaseY _ind bd -> briDocSeqSpine bd
-  BDBaseYPushCur bd -> briDocSeqSpine bd
-  BDBaseYPop bd -> briDocSeqSpine bd
-  BDIndentLevelPushCur bd -> briDocSeqSpine bd
-  BDIndentLevelPop bd -> briDocSeqSpine bd
-  BDPar _ind line indented ->
-    briDocSeqSpine line `seq` briDocSeqSpine indented
-  BDAlt alts -> foldl' (\() -> briDocSeqSpine) () alts
-  BDForwardLineMode bd -> briDocSeqSpine bd
-  BDExternal{} -> ()
-  BDPlain{} -> ()
-  BDAnnotationPrior _annKey bd -> briDocSeqSpine bd
-  BDAnnotationKW _annKey _kw bd -> briDocSeqSpine bd
-  BDAnnotationRest _annKey bd -> briDocSeqSpine bd
+  BDEmpty                        -> ()
+  BDLit _t                       -> ()
+  BDSeq list                     -> foldl' ((briDocSeqSpine .) . seq) () list
+  BDCols _sig list               -> foldl' ((briDocSeqSpine .) . seq) () list
+  BDSeparator                    -> ()
+  BDAddBaseY _ind bd             -> briDocSeqSpine bd
+  BDBaseYPushCur       bd        -> briDocSeqSpine bd
+  BDBaseYPop           bd        -> briDocSeqSpine bd
+  BDIndentLevelPushCur bd        -> briDocSeqSpine bd
+  BDIndentLevelPop     bd        -> briDocSeqSpine bd
+  BDPar _ind line indented -> briDocSeqSpine line `seq` briDocSeqSpine indented
+  BDAlt             alts         -> foldl' (\() -> briDocSeqSpine) () alts
+  BDForwardLineMode bd           -> briDocSeqSpine bd
+  BDExternal{}                   -> ()
+  BDPlain{}                      -> ()
+  BDAnnotationPrior _annKey bd   -> briDocSeqSpine bd
+  BDAnnotationKW _annKey _kw bd  -> briDocSeqSpine bd
+  BDAnnotationRest _annKey bd    -> briDocSeqSpine bd
   BDMoveToKWDP _annKey _kw _b bd -> briDocSeqSpine bd
-  BDLines lines -> foldl' (\() -> briDocSeqSpine) () lines
-  BDEnsureIndent _ind bd -> briDocSeqSpine bd
-  BDForceMultiline bd -> briDocSeqSpine bd
-  BDForceSingleline bd -> briDocSeqSpine bd
-  BDNonBottomSpacing _ bd -> briDocSeqSpine bd
-  BDSetParSpacing bd -> briDocSeqSpine bd
-  BDForceParSpacing bd -> briDocSeqSpine bd
-  BDDebug _s bd -> briDocSeqSpine bd
+  BDLines lines                  -> foldl' (\() -> briDocSeqSpine) () lines
+  BDEnsureIndent _ind bd         -> briDocSeqSpine bd
+  BDForceMultiline  bd           -> briDocSeqSpine bd
+  BDForceSingleline bd           -> briDocSeqSpine bd
+  BDNonBottomSpacing _ bd        -> briDocSeqSpine bd
+  BDSetParSpacing   bd           -> briDocSeqSpine bd
+  BDForceParSpacing bd           -> briDocSeqSpine bd
+  BDDebug _s bd                  -> briDocSeqSpine bd
 
 briDocForceSpine :: BriDoc -> BriDoc
 briDocForceSpine bd = briDocSeqSpine bd `seq` bd
@@ -461,19 +456,18 @@ data VerticalSpacingPar
     -- product like (Normal|Always, None|Some Int).
   deriving (Eq, Show)
 
-data VerticalSpacing = VerticalSpacing
-  { _vs_sameLine :: !Int
-  , _vs_paragraph :: !VerticalSpacingPar
-  , _vs_parFlag :: !Bool
-  }
+data VerticalSpacing
+  = VerticalSpacing
+    { _vs_sameLine  :: !Int
+    , _vs_paragraph :: !VerticalSpacingPar
+    , _vs_parFlag   :: !Bool
+    }
   deriving (Eq, Show)
 
 newtype LineModeValidity a = LineModeValidity (Strict.Maybe a)
   deriving (Functor, Applicative, Monad, Show, Alternative)
 
-pattern LineModeValid :: forall t . t -> LineModeValidity t
-pattern LineModeValid x =
-  LineModeValidity (Strict.Just x) :: LineModeValidity t
-pattern LineModeInvalid :: forall t . LineModeValidity t
-pattern LineModeInvalid =
-  LineModeValidity Strict.Nothing :: LineModeValidity t
+pattern LineModeValid :: forall t. t -> LineModeValidity t
+pattern LineModeValid x = LineModeValidity (Strict.Just x) :: LineModeValidity t
+pattern LineModeInvalid :: forall t. LineModeValidity t
+pattern LineModeInvalid = LineModeValidity Strict.Nothing :: LineModeValidity t

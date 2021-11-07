@@ -7,54 +7,63 @@
 
 module Language.Haskell.Brittany.Internal.Config.Types where
 
-import Data.CZipWith
-import Data.Coerce (Coercible, coerce)
-import Data.Data (Data)
-import qualified Data.Semigroup as Semigroup
-import Data.Semigroup (Last)
-import Data.Semigroup.Generic
-import GHC.Generics
+
+
 import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils ()
+import qualified Data.Semigroup as Semigroup
+
+import GHC.Generics
+
+import Data.Data ( Data )
+
+import Data.Coerce ( Coercible, coerce )
+
+import Data.Semigroup.Generic
+import Data.Semigroup ( Last )
+
+import Data.CZipWith
+
+
 
 confUnpack :: Coercible a b => Identity a -> b
 confUnpack (Identity x) = coerce x
 
 data CDebugConfig f = DebugConfig
-  { _dconf_dump_config :: f (Semigroup.Last Bool)
-  , _dconf_dump_annotations :: f (Semigroup.Last Bool)
-  , _dconf_dump_ast_unknown :: f (Semigroup.Last Bool)
-  , _dconf_dump_ast_full :: f (Semigroup.Last Bool)
-  , _dconf_dump_bridoc_raw :: f (Semigroup.Last Bool)
-  , _dconf_dump_bridoc_simpl_alt :: f (Semigroup.Last Bool)
+  { _dconf_dump_config                :: f (Semigroup.Last Bool)
+  , _dconf_dump_annotations           :: f (Semigroup.Last Bool)
+  , _dconf_dump_ast_unknown           :: f (Semigroup.Last Bool)
+  , _dconf_dump_ast_full              :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_raw            :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_alt      :: f (Semigroup.Last Bool)
   , _dconf_dump_bridoc_simpl_floating :: f (Semigroup.Last Bool)
-  , _dconf_dump_bridoc_simpl_par :: f (Semigroup.Last Bool)
-  , _dconf_dump_bridoc_simpl_columns :: f (Semigroup.Last Bool)
-  , _dconf_dump_bridoc_simpl_indent :: f (Semigroup.Last Bool)
-  , _dconf_dump_bridoc_final :: f (Semigroup.Last Bool)
-  , _dconf_roundtrip_exactprint_only :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_par      :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_columns  :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_simpl_indent   :: f (Semigroup.Last Bool)
+  , _dconf_dump_bridoc_final          :: f (Semigroup.Last Bool)
+  , _dconf_roundtrip_exactprint_only  :: f (Semigroup.Last Bool)
   }
-  deriving Generic
+  deriving (Generic)
 
 data CLayoutConfig f = LayoutConfig
-  { _lconfig_cols :: f (Last Int) -- the thing that has default 80.
+  { _lconfig_cols         :: f (Last Int) -- the thing that has default 80.
   , _lconfig_indentPolicy :: f (Last IndentPolicy)
   , _lconfig_indentAmount :: f (Last Int)
   , _lconfig_indentWhereSpecial :: f (Last Bool) -- indent where only 1 sometimes (TODO).
-  , _lconfig_indentListSpecial :: f (Last Bool) -- use some special indentation for ","
+  , _lconfig_indentListSpecial  :: f (Last Bool) -- use some special indentation for ","
                                                  -- when creating zero-indentation
                                                  -- multi-line list literals.
-  , _lconfig_importColumn :: f (Last Int)
+  , _lconfig_importColumn    :: f (Last Int)
     -- ^ for import statement layouting, column at which to align the
     -- elements to be imported from a module.
     -- It is expected that importAsColumn >= importCol.
-  , _lconfig_importAsColumn :: f (Last Int)
+  , _lconfig_importAsColumn  :: f (Last Int)
     -- ^ for import statement layouting, column at which put the module's
     -- "as" name (which also affects the positioning of the "as" keyword).
     -- It is expected that importAsColumn >= importCol.
-  , _lconfig_altChooser :: f (Last AltChooser)
+  , _lconfig_altChooser      :: f (Last AltChooser)
   , _lconfig_columnAlignMode :: f (Last ColumnAlignMode)
-  , _lconfig_alignmentLimit :: f (Last Int)
+  , _lconfig_alignmentLimit  :: f (Last Int)
     -- roughly speaking, this sets an upper bound to the number of spaces
     -- inserted to create horizontal alignment.
     -- More specifically, if 'xs' are the widths of the columns in some
@@ -139,17 +148,17 @@ data CLayoutConfig f = LayoutConfig
   --   -- >   , y :: Double
   --   -- >   }
   }
-  deriving Generic
+  deriving (Generic)
 
 data CForwardOptions f = ForwardOptions
   { _options_ghc :: f [String]
   }
-  deriving Generic
+  deriving (Generic)
 
 data CErrorHandlingConfig f = ErrorHandlingConfig
-  { _econf_produceOutputOnErrors :: f (Semigroup.Last Bool)
-  , _econf_Werror :: f (Semigroup.Last Bool)
-  , _econf_ExactPrintFallback :: f (Semigroup.Last ExactPrintFallbackMode)
+  { _econf_produceOutputOnErrors   :: f (Semigroup.Last Bool)
+  , _econf_Werror                  :: f (Semigroup.Last Bool)
+  , _econf_ExactPrintFallback      :: f (Semigroup.Last ExactPrintFallbackMode)
     -- ^ Determines when to fall back on the exactprint'ed output when
     -- syntactical constructs are encountered which are not yet handled by
     -- brittany.
@@ -159,21 +168,21 @@ data CErrorHandlingConfig f = ErrorHandlingConfig
     -- has different semantics than the code pre-transformation.
   , _econf_omit_output_valid_check :: f (Semigroup.Last Bool)
   }
-  deriving Generic
+  deriving (Generic)
 
 data CPreProcessorConfig f = PreProcessorConfig
   { _ppconf_CPPMode :: f (Semigroup.Last CPPMode)
   , _ppconf_hackAroundIncludes :: f (Semigroup.Last Bool)
   }
-  deriving Generic
+  deriving (Generic)
 
 data CConfig f = Config
-  { _conf_version :: f (Semigroup.Last Int)
-  , _conf_debug :: CDebugConfig f
-  , _conf_layout :: CLayoutConfig f
+  { _conf_version       :: f (Semigroup.Last Int)
+  , _conf_debug         :: CDebugConfig f
+  , _conf_layout        :: CLayoutConfig f
   , _conf_errorHandling :: CErrorHandlingConfig f
-  , _conf_forward :: CForwardOptions f
-  , _conf_preprocessor :: CPreProcessorConfig f
+  , _conf_forward       :: CForwardOptions f
+  , _conf_preprocessor  :: CPreProcessorConfig f
   , _conf_roundtrip_exactprint_only :: f (Semigroup.Last Bool)
     -- ^ this field is somewhat of a duplicate of the one in DebugConfig.
     -- It is used for per-declaration disabling by the inline config
@@ -184,9 +193,10 @@ data CConfig f = Config
     -- module. Useful for wildcard application
     -- (`find -name "*.hs" | xargs brittany --write-mode inplace` or something
     -- in that direction).
-  , _conf_obfuscate :: f (Semigroup.Last Bool)
+  , _conf_obfuscate     :: f (Semigroup.Last Bool)
+
   }
-  deriving Generic
+  deriving (Generic)
 
 type DebugConfig = CDebugConfig Identity
 type LayoutConfig = CLayoutConfig Identity
