@@ -1568,6 +1568,13 @@ type instance F Int = IO Int
 type family F a
 type instance F Int = IO Int -- x
 
+#test type-instance-with-module-header
+
+{-# language TypeFamilies #-}
+module M where
+type family F a
+type instance F Int = IO Int
+
 #test newtype-instance-without-comment
 
 {-# language TypeFamilies #-}
@@ -1580,6 +1587,13 @@ newtype instance F Int = N Int
 data family F a
 newtype instance F Int = N Int -- x
 
+#test newtype-instance-with-module-header
+
+{-# language TypeFamilies #-}
+module M where
+data family F a
+newtype instance F Int = N Int
+
 #test data-instance-without-comment
 
 {-# language TypeFamilies #-}
@@ -1591,6 +1605,13 @@ data instance F Int = D Int
 {-# language TypeFamilies #-}
 data family F a
 data instance F Int = D Int -- x
+
+#test data-instance-with-module-header
+
+{-# language TypeFamilies #-}
+module M where
+data family F a
+data instance F Int = D Int
 
 #test instance-type-without-comment
 
@@ -1608,6 +1629,15 @@ class C a where
 instance C Int where
   type F Int = IO Int -- x
 
+#test instance-type-with-module-header
+
+{-# language TypeFamilies #-}
+module M where
+class C a where
+  type family F a
+instance C Int where
+  type F Int = IO Int
+
 #test instance-newtype-without-comment
 
 {-# language TypeFamilies #-}
@@ -1624,6 +1654,15 @@ class C a where
 instance C Int where
   newtype F Int = N Int -- x
 
+#test instance-newtype-with-module-header
+
+{-# language TypeFamilies #-}
+module M where
+class C a where
+  data family F a
+instance C Int where
+  newtype F Int = N Int
+
 #test instance-data-without-comment
 
 {-# language TypeFamilies #-}
@@ -1639,6 +1678,15 @@ class C a where
   data family F a
 instance C Int where
   data F Int = D Int -- x
+
+#test instance-data-with-module-header
+
+{-# language TypeFamilies #-}
+module M where
+class C a where
+  data family F a
+instance C Int where
+  data F Int = D Int
 
 ###############################################################################
 ###############################################################################

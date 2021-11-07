@@ -400,7 +400,7 @@ parsePrintModuleTests conf filename input = do
         then return $ pPrintModule moduleConf perItemConf anns parsedModule
         else lift
           $ pPrintModuleAndCheck moduleConf perItemConf anns parsedModule
-      if all isErrorUnusedComment errs
+      if null errs
         then pure $ TextL.toStrict $ ltext
         else
           let
@@ -412,11 +412,6 @@ parsePrintModuleTests conf filename input = do
               ErrorMacroConfig str _ -> "when parsing inline config: " ++ str
               ErrorOutputCheck       -> "Output is not syntactically valid."
           in  throwE $ "pretty printing error(s):\n" ++ List.unlines errStrs
-
-isErrorUnusedComment :: BrittanyError -> Bool
-isErrorUnusedComment x = case x of
-  ErrorUnusedComment _ -> True
-  _ -> False
 
 -- this approach would for if there was a pure GHC.parseDynamicFilePragma.
 -- Unfortunately that does not exist yet, so we cannot provide a nominally
@@ -461,7 +456,14 @@ toLocal conf anns m = do
 
 ppModule :: GenLocated SrcSpan HsModule -> PPM ()
 ppModule lmod@(L _loc _m@(HsModule _ _name _exports _ decls _ _)) = do
-  let annKey = ExactPrint.mkAnnKey lmod
+  defaultAnns <- do
+    anns <- mAsk
+    let annKey = ExactPrint.mkAnnKey lmod
+    let annMap = Map.findWithDefault Map.empty annKey anns
+    let isEof = (== ExactPrint.AnnEofPos)
+    let overAnnsDP f a = a { ExactPrint.annsDP = f $ ExactPrint.annsDP a }
+    pure $ fmap (overAnnsDP . filter $ isEof . fst) annMap
+
   post <- ppPreamble lmod
   decls `forM_` \decl -> do
     let declAnnKey       = ExactPrint.mkAnnKey decl
@@ -472,7 +474,7 @@ ppModule lmod@(L _loc _m@(HsModule _ _name _exports _ decls _ _)) = do
           declBindingNames <&> \n -> Map.lookup n $ _icd_perBinding inlineConf
     filteredAnns <- mAsk
       <&> \annMap ->
-        Map.union (Map.findWithDefault Map.empty annKey annMap) $
+        Map.union defaultAnns $
         Map.findWithDefault Map.empty declAnnKey annMap
 
     traceIfDumpConf "bridoc annotations filtered/transformed"
