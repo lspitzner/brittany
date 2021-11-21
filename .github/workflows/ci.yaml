@@ -52,7 +52,7 @@ jobs:
           name: brittany-${{ github.sha }}
 
   release:
-    needs: ci
+    needs: build
     if: github.event_name == 'release'
     runs-on: ubuntu-20.04
     steps:
