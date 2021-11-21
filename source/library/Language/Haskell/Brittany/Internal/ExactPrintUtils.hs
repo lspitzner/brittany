@@ -7,9 +7,7 @@
 
 module Language.Haskell.Brittany.Internal.ExactPrintUtils where
 
-import Control.Exception
 import qualified Control.Monad.State.Class as State.Class
-import qualified Control.Monad.Trans.Except as ExceptT
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
 import Data.Data
 import qualified Data.Foldable as Foldable
@@ -21,18 +19,15 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import GHC (GenLocated(L))
 import qualified GHC hiding (parseModule)
-import GHC.Data.Bag
 import qualified GHC.Driver.CmdLine as GHC
-import qualified GHC.Driver.Session as GHC
 import GHC.Hs
 import qualified GHC.Types.SrcLoc as GHC
 import GHC.Types.SrcLoc (Located, SrcSpan)
 import Language.Haskell.Brittany.Internal.Config.Types
+import qualified Language.Haskell.Brittany.Internal.ParseModule as ParseModule
 import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Delta as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import qualified System.IO
 
@@ -43,43 +38,9 @@ parseModule
   -> System.IO.FilePath
   -> (GHC.DynFlags -> IO (Either String a))
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
-parseModule =
-  parseModuleWithCpp ExactPrint.defaultCppOptions ExactPrint.normalLayout
-
--- | Parse a module with specific instructions for the C pre-processor.
-parseModuleWithCpp
-  :: ExactPrint.CppOptions
-  -> ExactPrint.DeltaOptions
-  -> [String]
-  -> System.IO.FilePath
-  -> (GHC.DynFlags -> IO (Either String a))
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
-parseModuleWithCpp cpp opts args fp dynCheck =
-  ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
-    dflags0                       <- lift $ GHC.getSessionDynFlags
-    (dflags1, leftover, warnings) <- lift $ GHC.parseDynamicFlagsCmdLine
-      dflags0
-      (GHC.noLoc <$> ("-hide-all-packages" : args))
-      -- that we pass -hide-all-packages here is a duplication, because
-      -- ExactPrint.initDynFlags also does it, but necessary because of
-      -- stupid and careless GHC API design. We explicitly want to pass
-      -- our args before calling that, so this is what we do. Should be
-      -- harmless. See commit 1b7576dcd1823e1c685a44927b1fcaade1319063.
-    void $ lift $ GHC.setSessionDynFlags dflags1
-    dflags2 <- lift $ ExactPrint.initDynFlags fp
-    unless (null leftover)
-      $  ExceptT.throwE
-      $  "when parsing ghc flags: leftover flags: "
-      ++ show (leftover <&> \(L _ s) -> s)
-    unless (null warnings)
-      $  ExceptT.throwE
-      $  "when parsing ghc flags: encountered warnings: "
-      ++ show (warnings <&> warnExtractorCompat)
-    x   <- ExceptT.ExceptT $ liftIO $ dynCheck dflags2
-    res <- lift $ ExactPrint.parseModuleApiAnnsWithCppInternal cpp dflags2 fp
-    either (\err -> ExceptT.throwE $ "transform error: " ++ show (bagToList (show <$> err)))
-           (\(a, m) -> pure (a, m, x))
-      $ ExactPrint.postParseTransform res opts
+parseModule args fp dynCheck = do
+  str <- System.IO.readFile fp
+  parseModuleFromString args fp dynCheck str
 
 parseModuleFromString
   :: [String]
@@ -87,31 +48,7 @@ parseModuleFromString
   -> (GHC.DynFlags -> IO (Either String a))
   -> String
   -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
-parseModuleFromString args fp dynCheck str =
-  -- We mask here because otherwise using `throwTo` (i.e. for a timeout) will
-  -- produce nasty looking errors ("ghc panic"). The `mask_` makes it so we
-  -- cannot kill the parsing thread - not very nice. But i'll
-  -- optimistically assume that most of the time brittany uses noticable or
-  -- longer time, the majority of the time is not spend in parsing, but in
-  -- bridoc transformation stuff.
-  -- (reminder to update note on `parsePrintModule` if this changes.)
-  mask_ $ ExactPrint.ghcWrapper $ ExceptT.runExceptT $ do
-    dflags0                       <- lift $ ExactPrint.initDynFlagsPure fp str
-    (dflags1, leftover, warnings) <- lift
-      $ GHC.parseDynamicFlagsCmdLine dflags0 (GHC.noLoc <$> args)
-    unless (null leftover)
-      $  ExceptT.throwE
-      $  "when parsing ghc flags: leftover flags: "
-      ++ show (leftover <&> \(L _ s) -> s)
-    unless (null warnings)
-      $  ExceptT.throwE
-      $  "when parsing ghc flags: encountered warnings: "
-      ++ show (warnings <&> warnExtractorCompat)
-    dynCheckRes <- ExceptT.ExceptT $ liftIO $ dynCheck dflags1
-    let res = ExactPrint.parseModuleFromStringInternal dflags1 fp str
-    case res of
-      Left  err -> ExceptT.throwE $ "parse error: " ++ show (bagToList (show <$> err))
-      Right (a   , m  ) -> pure (a, m, dynCheckRes)
+parseModuleFromString = ParseModule.parseModule
 
 
 commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()

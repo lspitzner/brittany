@@ -50,6 +50,7 @@ common library
     , extra ^>= 1.7.10
     , filepath ^>= 1.4.2
     , ghc ^>= 9.0.1
+    , ghc-boot ^>= 9.0.1
     , ghc-boot-th ^>= 9.0.1
     , ghc-exactprint ^>= 0.6.4
     , monad-memo ^>= 0.5.3
@@ -118,6 +119,7 @@ library
     Language.Haskell.Brittany.Internal.Layouters.Stmt
     Language.Haskell.Brittany.Internal.Layouters.Type
     Language.Haskell.Brittany.Internal.Obfuscation
+    Language.Haskell.Brittany.Internal.ParseModule
     Language.Haskell.Brittany.Internal.Prelude
     Language.Haskell.Brittany.Internal.PreludeUtils
     Language.Haskell.Brittany.Internal.Transformations.Alt

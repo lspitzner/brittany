@@ -30,7 +30,6 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Yaml
 import qualified GHC hiding (parseModule)
 import GHC (GenLocated(L))
-import GHC.Data.Bag
 import qualified GHC.Driver.Session as GHC
 import GHC.Hs
 import qualified GHC.LanguageExtensions.Type as GHC
@@ -55,7 +54,6 @@ import Language.Haskell.Brittany.Internal.Transformations.Par
 import Language.Haskell.Brittany.Internal.Types
 import Language.Haskell.Brittany.Internal.Utils
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import qualified UI.Butcher.Monadic as Butcher
 
@@ -368,10 +366,14 @@ pPrintModuleAndCheck conf inlineConf anns parsedModule = do
 parsePrintModuleTests :: Config -> String -> Text -> IO (Either String Text)
 parsePrintModuleTests conf filename input = do
   let inputStr = Text.unpack input
-  parseResult <- ExactPrint.Parsers.parseModuleFromString filename inputStr
+  parseResult <- parseModuleFromString
+    (conf & _conf_forward & _options_ghc & runIdentity)
+    filename
+    (const . pure $ Right ())
+    inputStr
   case parseResult of
-    Left  err                  -> return $ Left $ "parsing error: " ++ show (bagToList (show <$> err))
-    Right (anns, parsedModule) -> runExceptT $ do
+    Left  err                     -> return $ Left err
+    Right (anns, parsedModule, _) -> runExceptT $ do
       (inlineConf, perItemConf) <-
         case extractCommentConfigs anns (getTopLevelDeclNameMap parsedModule) of
           Left  err -> throwE $ "error in inline config: " ++ show err

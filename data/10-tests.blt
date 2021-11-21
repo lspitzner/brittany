@@ -363,6 +363,7 @@ data MyRecord = MyConstructor
   }
 
 #test record with DataTypeContexts
+#pending data type contexts are deprecated in ghc 9.0
 {-# LANGUAGE DatatypeContexts #-}
 data
   ( LooooooooooooooooooooongConstraint a
@@ -1348,6 +1349,8 @@ type MySynonym3 b a
   -> MySynonym2 b a
 
 #test synonym-with-kind-sig
+
+{-# LANGUAGE StarIsType #-}
 
 type MySynonym (a :: * -> *)
   =  MySynonym a b
