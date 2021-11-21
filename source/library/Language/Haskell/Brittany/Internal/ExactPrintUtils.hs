@@ -7,45 +7,34 @@
 
 module Language.Haskell.Brittany.Internal.ExactPrintUtils where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
+import Control.Exception
 import qualified Control.Monad.State.Class as State.Class
 import qualified Control.Monad.Trans.Except as ExceptT
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
+import Data.Data
 import qualified Data.Foldable as Foldable
+import qualified Data.Generics as SYB
+import Data.HList.HList
 import qualified Data.Map as Map
 import qualified Data.Maybe
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import qualified System.IO
-
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Data.Data
-import           Data.HList.HList
-
-import           GHC ( GenLocated(L) )
-import qualified GHC.Driver.Session      as GHC
+import GHC (GenLocated(L))
 import qualified GHC hiding (parseModule)
-import qualified GHC.Types.SrcLoc        as GHC
+import GHC.Data.Bag
 import qualified GHC.Driver.CmdLine as GHC
-
-import           GHC.Hs
-import           GHC.Data.Bag
-
-import           GHC.Types.SrcLoc ( SrcSpan, Located )
-
-
-import qualified Language.Haskell.GHC.ExactPrint            as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types      as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Parsers    as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Delta      as ExactPrint
-
-import qualified Data.Generics as SYB
-
-import           Control.Exception
--- import           Data.Generics.Schemes
+import qualified GHC.Driver.Session as GHC
+import GHC.Hs
+import qualified GHC.Types.SrcLoc as GHC
+import GHC.Types.SrcLoc (Located, SrcSpan)
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Delta as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
+import qualified System.IO
 
 
 

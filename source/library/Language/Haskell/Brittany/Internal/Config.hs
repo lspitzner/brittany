@@ -3,36 +3,26 @@
 
 module Language.Haskell.Brittany.Internal.Config where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Bool as Bool
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8
+import Data.CZipWith
+import Data.Coerce (coerce)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Semigroup as Semigroup
-import qualified GHC.OldList as List
-import qualified System.Directory
-import qualified System.IO
-
 import qualified Data.Yaml
-import           Data.CZipWith
-
-import           UI.Butcher.Monadic
-
-import qualified System.Console.CmdArgs.Explicit
-                                               as CmdArgs
-
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Config.Types.Instances ()
-import           Language.Haskell.Brittany.Internal.Utils
-
-import           Data.Coerce                    ( coerce
-                                                )
-import qualified Data.List.NonEmpty            as NonEmpty
-
-import qualified System.Directory              as Directory
-import qualified System.FilePath.Posix         as FilePath
+import qualified GHC.OldList as List
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Config.Types.Instances ()
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Utils
+import qualified System.Console.CmdArgs.Explicit as CmdArgs
+import qualified System.Directory
+import qualified System.Directory as Directory
+import qualified System.FilePath.Posix as FilePath
+import qualified System.IO
+import UI.Butcher.Monadic
 
 -- brittany-next-binding { lconfig_indentPolicy: IndentPolicyLeft }
 staticDefaultConfig :: Config

@@ -4,31 +4,26 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Expr where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Data
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import           GHC ( GenLocated(L), SrcSpan, AnnKeywordId(..), RdrName(..) )
-import           GHC.Hs
-import           GHC.Types.Name
+import GHC (AnnKeywordId(..), GenLocated(L), RdrName(..), SrcSpan)
 import qualified GHC.Data.FastString as FastString
-import           GHC.Types.Basic
-
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Layouters.Pattern
-import           Language.Haskell.Brittany.Internal.Layouters.Decl
-import           Language.Haskell.Brittany.Internal.Layouters.Stmt
-import           Language.Haskell.Brittany.Internal.Layouters.Type
+import GHC.Hs
+import qualified GHC.OldList as List
+import GHC.Types.Basic
+import GHC.Types.Name
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.Decl
+import Language.Haskell.Brittany.Internal.Layouters.Pattern
+import Language.Haskell.Brittany.Internal.Layouters.Stmt
+import Language.Haskell.Brittany.Internal.Layouters.Type
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 
 

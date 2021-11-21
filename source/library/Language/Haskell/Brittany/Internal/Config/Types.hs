@@ -7,22 +7,15 @@
 
 module Language.Haskell.Brittany.Internal.Config.Types where
 
-
-
+import Data.CZipWith
+import Data.Coerce (Coercible, coerce)
+import Data.Data (Data)
+import qualified Data.Semigroup as Semigroup
+import Data.Semigroup (Last)
+import Data.Semigroup.Generic
+import GHC.Generics
 import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils ()
-import qualified Data.Semigroup as Semigroup
-
-import GHC.Generics
-
-import Data.Data ( Data )
-
-import Data.Coerce ( Coercible, coerce )
-
-import Data.Semigroup.Generic
-import Data.Semigroup ( Last )
-
-import Data.CZipWith
 
 
 

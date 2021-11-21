@@ -3,12 +3,9 @@
 
 module Language.Haskell.Brittany.Internal.Transformations.Par where
 
-
-
 import Language.Haskell.Brittany.Internal.Prelude
-
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 
 

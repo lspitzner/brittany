@@ -7,37 +7,28 @@
 
 module Language.Haskell.Brittany.Internal.Utils where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
+import qualified Data.ByteString as B
 import qualified Data.Coerce
+import Data.Data
+import Data.Generics.Aliases
+import qualified Data.Generics.Uniplate.Direct as Uniplate
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
+import DataTreePrint
+import qualified GHC.Data.FastString as GHC
+import qualified GHC.Driver.Session as GHC
+import qualified GHC.Hs.Extension as HsExtension
 import qualified GHC.OldList as List
-
+import GHC.Types.Name.Occurrence as OccName (occNameString)
+import qualified GHC.Types.SrcLoc as GHC
+import qualified GHC.Utils.Outputable as GHC
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint.Utils
-
-import           Data.Data
-import           Data.Generics.Aliases
-
 import qualified Text.PrettyPrint as PP
-
-import qualified GHC.Utils.Outputable as GHC
-import qualified GHC.Driver.Session   as GHC
-import qualified GHC.Data.FastString  as GHC
-import qualified GHC.Types.SrcLoc     as GHC
-import           GHC.Types.Name.Occurrence as OccName ( occNameString )
-import qualified Data.ByteString as B
-
-import           DataTreePrint
-
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Types
-
-import qualified Data.Generics.Uniplate.Direct as Uniplate
-import qualified GHC.Hs.Extension as HsExtension
 
 
 

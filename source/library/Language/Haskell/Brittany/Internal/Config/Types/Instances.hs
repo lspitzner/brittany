@@ -18,15 +18,11 @@
 
 module Language.Haskell.Brittany.Internal.Config.Types.Instances where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-
-import Data.Yaml
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.Types as Aeson
-
+import Data.Yaml
 import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
 
 
 

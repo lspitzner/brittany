@@ -2,35 +2,24 @@
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-import Language.Haskell.Brittany.Internal.Prelude
+import Data.Coerce (coerce)
+import Data.List (groupBy)
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text.IO
 import qualified GHC.OldList as List
-import qualified System.Directory
-
-import           Test.Hspec
-
-import qualified Text.Parsec                   as Parsec
-import           Text.Parsec.Text               ( Parser )
-
-import           Data.List                      ( groupBy )
-
-import           Language.Haskell.Brittany.Internal
-
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Config
-
-import           Data.Coerce                    ( coerce )
-
-import qualified Data.Text.IO                  as Text.IO
-import           System.FilePath                ( (</>) )
-
-import System.Timeout ( timeout )
-
-
-
+import Language.Haskell.Brittany.Internal
+import Language.Haskell.Brittany.Internal.Config
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
+import qualified System.Directory
+import System.FilePath ((</>))
+import System.Timeout (timeout)
+import Test.Hspec
+import qualified Text.Parsec as Parsec
+import Text.Parsec.Text (Parser)
 
 hush :: Either a b -> Maybe b
 hush = either (const Nothing) Just

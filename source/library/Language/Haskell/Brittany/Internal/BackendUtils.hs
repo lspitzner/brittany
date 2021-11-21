@@ -3,28 +3,22 @@
 
 module Language.Haskell.Brittany.Internal.BackendUtils where
 
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Data
 import qualified Data.Either
 import qualified Data.Map as Map
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.GHC.ExactPrint.Types ( AnnKey
-                                                       , Annotation
-                                                       )
-
 import qualified Data.Text.Lazy.Builder as Text.Builder
+import GHC (Located)
+import qualified GHC.OldList as List
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
+import Language.Haskell.GHC.ExactPrint.Types (AnnKey, Annotation)
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
-import           Language.Haskell.Brittany.Internal.Utils
-
-import           GHC ( Located )
 
 
 

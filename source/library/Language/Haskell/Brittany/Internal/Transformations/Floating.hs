@@ -3,16 +3,12 @@
 
 module Language.Haskell.Brittany.Internal.Transformations.Floating where
 
-
-
+import qualified Data.Generics.Uniplate.Direct as Uniplate
+import qualified GHC.OldList as List
 import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Types
-
-import qualified Data.Generics.Uniplate.Direct as Uniplate
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 
 

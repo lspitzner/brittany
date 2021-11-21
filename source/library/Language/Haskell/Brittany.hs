@@ -16,13 +16,9 @@ module Language.Haskell.Brittany
   , CForwardOptions(..)
   , CPreProcessorConfig(..)
   , BrittanyError(..)
-  )
-where
+  ) where
 
-
-
-
-import           Language.Haskell.Brittany.Internal
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Config
+import Language.Haskell.Brittany.Internal
+import Language.Haskell.Brittany.Internal.Config
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Types

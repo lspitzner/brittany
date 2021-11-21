@@ -6,10 +6,6 @@
 
 module Language.Haskell.Brittany.Internal.Backend where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Control.Monad.Trans.State.Strict as StateS
 import qualified Data.Either as Either
 import qualified Data.Foldable as Foldable
@@ -21,19 +17,17 @@ import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified GHC.OldList as List
-
+import Language.Haskell.Brittany.Internal.BackendUtils
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
-
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.BackendUtils
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Types
-
-
-import qualified Data.Text.Lazy.Builder as Text.Builder
 
 
 

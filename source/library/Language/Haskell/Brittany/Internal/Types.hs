@@ -12,30 +12,20 @@
 
 module Language.Haskell.Brittany.Internal.Types where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
 import qualified Data.Data
-import qualified Data.Strict.Maybe as Strict
-import qualified Safe
-
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
-
-import qualified Data.Text.Lazy.Builder as Text.Builder
-
-import           GHC ( Located, GenLocated, AnnKeywordId, SrcSpan )
-
-import           Language.Haskell.GHC.ExactPrint ( AnnKey )
-import           Language.Haskell.GHC.ExactPrint.Types ( Anns )
-
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import           Data.Generics.Uniplate.Direct as Uniplate
-
+import Data.Generics.Uniplate.Direct as Uniplate
 import qualified Data.Kind as Kind
-
+import qualified Data.Strict.Maybe as Strict
+import qualified Data.Text.Lazy.Builder as Text.Builder
+import GHC (AnnKeywordId, GenLocated, Located, SrcSpan)
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import Language.Haskell.GHC.ExactPrint (AnnKey)
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
+import Language.Haskell.GHC.ExactPrint.Types (Anns)
+import qualified Safe
 
 
 data PerItemConfig = PerItemConfig

@@ -12,66 +12,52 @@ module Language.Haskell.Brittany.Internal
   , parseModuleFromString
   , extractCommentConfigs
   , getTopLevelDeclNameMap
-  )
-where
+  ) where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
+import Control.Monad.Trans.Except
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
 import qualified Data.ByteString.Char8
+import Data.CZipWith
+import Data.Char (isSpace)
+import Data.HList.HList
 import qualified Data.Map as Map
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TextL
-import qualified GHC.OldList as List
-
--- brittany { lconfig_importAsColumn: 60, lconfig_importColumn: 60 }
-import qualified Language.Haskell.GHC.ExactPrint         as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types   as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
-
-import           Control.Monad.Trans.Except
-import           Data.HList.HList
+import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Yaml
-import           Data.CZipWith
-import qualified UI.Butcher.Monadic                      as Butcher
-
-import qualified Data.Text.Lazy.Builder                  as Text.Builder
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Config
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-
-import           Language.Haskell.Brittany.Internal.Layouters.Decl
-import           Language.Haskell.Brittany.Internal.Layouters.Module
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Backend
-import           Language.Haskell.Brittany.Internal.BackendUtils
-import           Language.Haskell.Brittany.Internal.ExactPrintUtils
-
-import           Language.Haskell.Brittany.Internal.Transformations.Alt
-import           Language.Haskell.Brittany.Internal.Transformations.Floating
-import           Language.Haskell.Brittany.Internal.Transformations.Par
-import           Language.Haskell.Brittany.Internal.Transformations.Columns
-import           Language.Haskell.Brittany.Internal.Transformations.Indent
-
-import qualified GHC
-                                                   hiding ( parseModule )
-import           GHC.Parser.Annotation                            ( AnnKeywordId(..) )
-import           GHC                                      ( GenLocated(L)
-                                                          )
-import           GHC.Types.SrcLoc                                   ( SrcSpan )
-import           GHC.Hs
-import           GHC.Data.Bag
-import qualified GHC.Driver.Session                                as GHC
-import qualified GHC.LanguageExtensions.Type             as GHC
-
-import           Data.Char                                ( isSpace )
+import qualified GHC hiding (parseModule)
+import GHC (GenLocated(L))
+import GHC.Data.Bag
+import qualified GHC.Driver.Session as GHC
+import GHC.Hs
+import qualified GHC.LanguageExtensions.Type as GHC
+import qualified GHC.OldList as List
+import GHC.Parser.Annotation (AnnKeywordId(..))
+import GHC.Types.SrcLoc (SrcSpan)
+import Language.Haskell.Brittany.Internal.Backend
+import Language.Haskell.Brittany.Internal.BackendUtils
+import Language.Haskell.Brittany.Internal.Config
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.ExactPrintUtils
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.Decl
+import Language.Haskell.Brittany.Internal.Layouters.Module
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Transformations.Alt
+import Language.Haskell.Brittany.Internal.Transformations.Columns
+import Language.Haskell.Brittany.Internal.Transformations.Floating
+import Language.Haskell.Brittany.Internal.Transformations.Indent
+import Language.Haskell.Brittany.Internal.Transformations.Par
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint.Parsers
+import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
+import qualified UI.Butcher.Monadic as Butcher
 
 
 

@@ -5,46 +5,38 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Decl where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Data
 import qualified Data.Foldable
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Layouters.Type
-
-import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint
-import           Language.Haskell.Brittany.Internal.ExactPrintUtils
-
-import           GHC                            ( GenLocated(L)
-                                                , AnnKeywordId(..)
-                                                )
-import           GHC.Types.SrcLoc ( SrcSpan, Located , getLoc, unLoc )
+import GHC (AnnKeywordId(..), GenLocated(L))
+import GHC.Data.Bag (bagToList, emptyBag)
 import qualified GHC.Data.FastString as FastString
-import           GHC.Hs
-import           GHC.Types.Basic ( InlinePragma(..)
-                            , Activation(..)
-                            , InlineSpec(..)
-                            , RuleMatchInfo(..)
-                            , LexicalFixity(..)
-                            )
-import           Language.Haskell.GHC.ExactPrint.Types ( mkAnnKey )
-
+import GHC.Hs
+import qualified GHC.OldList as List
+import GHC.Types.Basic
+  ( Activation(..)
+  , InlinePragma(..)
+  , InlineSpec(..)
+  , LexicalFixity(..)
+  , RuleMatchInfo(..)
+  )
+import GHC.Types.SrcLoc (Located, SrcSpan, getLoc, unLoc)
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.ExactPrintUtils
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.DataDecl
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
+import Language.Haskell.Brittany.Internal.Layouters.Pattern
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Stmt
-import           Language.Haskell.Brittany.Internal.Layouters.Pattern
-import           Language.Haskell.Brittany.Internal.Layouters.DataDecl
-
-import           GHC.Data.Bag ( bagToList, emptyBag )
+import Language.Haskell.Brittany.Internal.Layouters.Type
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import Language.Haskell.GHC.ExactPrint.Types (mkAnnKey)
+import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint
 
 
 

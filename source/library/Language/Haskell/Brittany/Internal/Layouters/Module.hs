@@ -3,27 +3,22 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Module where
 
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Maybe
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
+import GHC (AnnKeywordId(..), GenLocated(L), moduleNameString, unLoc)
+import GHC.Hs
 import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Layouters.IE
-import           Language.Haskell.Brittany.Internal.Layouters.Import
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import GHC (unLoc, GenLocated(L), moduleNameString, AnnKeywordId(..))
-import           GHC.Hs
-import           Language.Haskell.GHC.ExactPrint as ExactPrint
-import           Language.Haskell.GHC.ExactPrint.Types
-                                                ( DeltaPos(..)
-                                                , deltaRow
-                                                , commentContents
-                                                )
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.IE
+import Language.Haskell.Brittany.Internal.Layouters.Import
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.GHC.ExactPrint as ExactPrint
+import Language.Haskell.GHC.ExactPrint.Types
+  (DeltaPos(..), commentContents, deltaRow)
 
 
 

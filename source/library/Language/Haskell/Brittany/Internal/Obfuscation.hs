@@ -2,17 +2,14 @@
 
 module Language.Haskell.Brittany.Internal.Obfuscation where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
+import Data.Char
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified GHC.OldList as List
-
-import           Data.Char
-import           System.Random
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import System.Random
 
 
 

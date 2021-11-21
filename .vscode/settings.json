@@ -1,5 +1,5 @@
 {
-    "purple-yolk.brittany.command": "false",
+    "purple-yolk.brittany.command": "cabal exec -- brittany --write-mode inplace",
     "purple-yolk.ghci.command": "cabal repl --repl-options -ddump-json",
     "purple-yolk.hlint.command": "false",
     "purple-yolk.hlint.onSave": false

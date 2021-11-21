@@ -1,18 +1,15 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Language.Haskell.Brittany.Internal.PreludeUtils where
 
-
-
-import Prelude
+import Control.Applicative
+import Control.DeepSeq (NFData, force)
+import Control.Exception.Base (evaluate)
+import Control.Monad
 import qualified Data.Strict.Maybe as Strict
 import Debug.Trace
-import Control.Monad
+import Prelude
 import System.IO
-
-import Control.DeepSeq ( NFData, force )
-import Control.Exception.Base ( evaluate )
-
-import Control.Applicative
 
 
 

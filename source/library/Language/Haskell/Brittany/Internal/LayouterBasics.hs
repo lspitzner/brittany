@@ -6,47 +6,36 @@
 
 module Language.Haskell.Brittany.Internal.LayouterBasics where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
+import qualified Control.Monad.Writer.Strict as Writer
+import qualified Data.Char as Char
+import Data.Data
 import qualified Data.Map as Map
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy.Builder as Text.Builder
+import DataTreePrint
+import GHC (GenLocated(L), Located, moduleName, moduleNameString)
 import qualified GHC.OldList as List
-
-import qualified Control.Monad.Writer.Strict as Writer
-
+import GHC.Parser.Annotation (AnnKeywordId(..))
+import GHC.Types.Name (getOccString)
+import GHC.Types.Name.Occurrence (occNameString)
+import GHC.Types.Name.Reader (RdrName(..))
+import qualified GHC.Types.SrcLoc as GHC
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.ExactPrintUtils
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Annotate as ExactPrint.Annotate
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
+import Language.Haskell.GHC.ExactPrint.Types (AnnKey, Annotation)
 import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint.Utils
-
-import Language.Haskell.GHC.ExactPrint.Types ( AnnKey, Annotation )
-
-import qualified Data.Text.Lazy.Builder as Text.Builder
-
-import Language.Haskell.Brittany.Internal.Config.Types
-import Language.Haskell.Brittany.Internal.Types
-import Language.Haskell.Brittany.Internal.Utils
-import Language.Haskell.Brittany.Internal.ExactPrintUtils
-
-import           GHC.Types.Name.Reader ( RdrName(..) )
-import           GHC ( Located, GenLocated(L), moduleName, moduleNameString )
-import qualified GHC.Types.SrcLoc        as GHC
-import           GHC.Types.Name.Occurrence ( occNameString )
-import           GHC.Types.Name ( getOccString )
-import           GHC.Parser.Annotation ( AnnKeywordId(..) )
-
-import           Data.Data
-
-import qualified Data.Char as Char
-
-import           DataTreePrint
 
 
 

@@ -4,24 +4,18 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Stmt where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import           GHC                            ( GenLocated(L)
-                                                )
-import           GHC.Hs
-
-import           Language.Haskell.Brittany.Internal.Layouters.Pattern
-import           Language.Haskell.Brittany.Internal.Layouters.Decl
+import GHC (GenLocated(L))
+import GHC.Hs
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.Decl
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
+import Language.Haskell.Brittany.Internal.Layouters.Pattern
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
 
 
 

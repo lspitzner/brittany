@@ -3,26 +3,19 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Pattern where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Foldable as Foldable
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
+import GHC (GenLocated(L), ol_val)
+import GHC.Hs
 import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-
-import           GHC                            ( GenLocated(L)
-                                                , ol_val
-                                                )
-import           GHC.Hs
-import           GHC.Types.Basic
-
+import GHC.Types.Basic
+import Language.Haskell.Brittany.Internal.LayouterBasics
 import {-# SOURCE #-} Language.Haskell.Brittany.Internal.Layouters.Expr
-import           Language.Haskell.Brittany.Internal.Layouters.Type
+import Language.Haskell.Brittany.Internal.Layouters.Type
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
 
 
 

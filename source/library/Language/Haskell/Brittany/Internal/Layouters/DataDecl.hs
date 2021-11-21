@@ -3,24 +3,19 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.DataDecl where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Data
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import           GHC ( Located, GenLocated(L) )
+import GHC (GenLocated(L), Located)
 import qualified GHC
-import           GHC.Hs
-
-import           Language.Haskell.Brittany.Internal.Layouters.Type
+import GHC.Hs
+import qualified GHC.OldList as List
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.Type
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
 
 
 

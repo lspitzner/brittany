@@ -2,24 +2,18 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Import where
 
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Layouters.IE
-import           Language.Haskell.Brittany.Internal.Config.Types
-
-import           GHC                                      ( unLoc
-                                                          , GenLocated(L)
-                                                          , moduleNameString
-                                                          , Located
-                                                          )
-import           GHC.Hs
-import           GHC.Types.Basic
+import GHC (GenLocated(L), Located, moduleNameString, unLoc)
+import GHC.Hs
+import GHC.Types.Basic
 import GHC.Unit.Types (IsBootInterface(..))
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Layouters.IE
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
 
 
 

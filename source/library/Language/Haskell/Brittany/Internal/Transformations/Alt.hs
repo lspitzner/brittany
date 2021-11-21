@@ -9,23 +9,18 @@
 
 module Language.Haskell.Brittany.Internal.Transformations.Alt where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
+import qualified Control.Monad.Memo as Memo
 import qualified Control.Monad.Trans.MultiRWS.Strict as MultiRWSS
+import Data.HList.ContainsType
 import qualified Data.List.Extra
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
 import qualified GHC.OldList as List
-
-import           Data.HList.ContainsType
-
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Types
-
-import qualified Control.Monad.Memo as Memo
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 
 

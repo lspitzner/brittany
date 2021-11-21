@@ -4,24 +4,22 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.IE where
 
-import Language.Haskell.Brittany.Internal.Prelude
 import qualified Data.List.Extra
 import qualified Data.Text as Text
+import GHC
+  ( AnnKeywordId(..)
+  , GenLocated(L)
+  , Located
+  , ModuleName
+  , moduleNameString
+  , unLoc
+  )
+import GHC.Hs
 import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-
-import           GHC     ( unLoc
-                         , GenLocated(L)
-                         , moduleNameString
-                         , AnnKeywordId(..)
-                         , Located
-                         , ModuleName
-                         )
-import           GHC.Hs
-
-import           Language.Haskell.Brittany.Internal.Utils
+import Language.Haskell.Brittany.Internal.LayouterBasics
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
 
 
 

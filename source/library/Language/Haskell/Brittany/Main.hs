@@ -4,56 +4,41 @@
 
 module Language.Haskell.Brittany.Main where
 
-
-
-import Language.Haskell.Brittany.Internal.Prelude
-import Language.Haskell.Brittany.Internal.PreludeUtils
+import Control.Monad (zipWithM)
 import qualified Control.Monad.Trans.Except as ExceptT
+import Data.CZipWith
 import qualified Data.Either
 import qualified Data.List.Extra
+import qualified Data.Monoid
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text.IO
 import qualified Data.Text.Lazy as TextL
+import DataTreePrint
+import GHC (GenLocated(L))
+import qualified GHC.Driver.Session as GHC
+import qualified GHC.LanguageExtensions.Type as GHC
 import qualified GHC.OldList as List
-import qualified System.IO
-
--- brittany { lconfig_importAsColumn: 60, lconfig_importColumn: 60 }
-import qualified Language.Haskell.GHC.ExactPrint         as ExactPrint
-import qualified Data.Monoid
-
-import           GHC                                      ( GenLocated(L) )
-import           GHC.Utils.Outputable                               ( Outputable(..)
-                                                          , showSDocUnsafe
-                                                          )
-
-import           Text.Read                                ( Read(..) )
-import qualified Text.ParserCombinators.ReadP            as ReadP
-import qualified Text.ParserCombinators.ReadPrec         as ReadPrec
-
-import           Control.Monad                            ( zipWithM )
-import           Data.CZipWith
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal
-import           Language.Haskell.Brittany.Internal.Config
-import           Language.Haskell.Brittany.Internal.Config.Types
-import           Language.Haskell.Brittany.Internal.Utils
-import           Language.Haskell.Brittany.Internal.Obfuscation
-
-import qualified Text.PrettyPrint                        as PP
-
-import           DataTreePrint
-import           UI.Butcher.Monadic
-
+import GHC.Utils.Outputable (Outputable(..), showSDocUnsafe)
+import Language.Haskell.Brittany.Internal
+import Language.Haskell.Brittany.Internal.Config
+import Language.Haskell.Brittany.Internal.Config.Types
+import Language.Haskell.Brittany.Internal.Obfuscation
+import Language.Haskell.Brittany.Internal.Prelude
+import Language.Haskell.Brittany.Internal.PreludeUtils
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
+import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
+import Paths_brittany
+import qualified System.Directory as Directory
 import qualified System.Exit
-import qualified System.Directory                        as Directory
-import qualified System.FilePath.Posix                   as FilePath
-
-import qualified GHC.Driver.Session                                as GHC
-import qualified GHC.LanguageExtensions.Type             as GHC
-
-import           Paths_brittany
+import qualified System.FilePath.Posix as FilePath
+import qualified System.IO
+import qualified Text.ParserCombinators.ReadP as ReadP
+import qualified Text.ParserCombinators.ReadPrec as ReadPrec
+import qualified Text.PrettyPrint as PP
+import Text.Read (Read(..))
+import UI.Butcher.Monadic
 
 
 

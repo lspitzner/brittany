@@ -3,26 +3,18 @@
 
 module Language.Haskell.Brittany.Internal.Layouters.Type where
 
-
-
+import qualified Data.Text as Text
+import GHC (AnnKeywordId(..), GenLocated(L))
+import GHC.Hs
+import qualified GHC.OldList as List
+import GHC.Types.Basic
+import GHC.Utils.Outputable (ftext, showSDocUnsafe)
+import Language.Haskell.Brittany.Internal.LayouterBasics
 import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
-import qualified Data.Text as Text
-import qualified GHC.OldList as List
-
-import           Language.Haskell.Brittany.Internal.Types
-import           Language.Haskell.Brittany.Internal.LayouterBasics
-import           Language.Haskell.Brittany.Internal.Utils
-                                                ( splitFirstLast
-                                                , FirstLastView(..)
-                                                )
-
-import           GHC ( GenLocated(L)
-                     , AnnKeywordId (..)
-                     )
-import           GHC.Hs
-import           GHC.Utils.Outputable ( ftext, showSDocUnsafe )
-import           GHC.Types.Basic
+import Language.Haskell.Brittany.Internal.Types
+import Language.Haskell.Brittany.Internal.Utils
+  (FirstLastView(..), splitFirstLast)
 
 
 
