@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main
+  release:
+    types:
+      - created
 jobs:
   build:
     strategy:
@@ -47,3 +50,54 @@ jobs:
         with:
           path: artifact
           name: brittany-${{ github.sha }}
+
+  release:
+    needs: ci
+    if: github.event_name == 'release'
+    runs-on: ubuntu-20.04
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: brittany-${{ github.sha }}
+          path: artifact
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_content_type: application/octet-stream
+          asset_name: brittany-${{ github.event.release.tag_name }}-ubuntu
+          asset_path: artifact/ubuntu-20.04/brittany
+          upload_url: ${{ github.event.release.upload_url }}
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_content_type: application/octet-stream
+          asset_name: brittany-${{ github.event.release.tag_name }}-macos
+          asset_path: artifact/macos-11/brittany
+          upload_url: ${{ github.event.release.upload_url }}
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_content_type: application/octet-stream
+          asset_name: brittany-${{ github.event.release.tag_name }}-windows.exe
+          asset_path: artifact/windows-2019/brittany.exe
+          upload_url: ${{ github.event.release.upload_url }}
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_content_type: application/gzip
+          asset_name: brittany-${{ github.event.release.tag_name }}.tar.gz
+          asset_path: artifact/ubuntu-20.04/brittany-${{ github.event.release.tag_name }}.tar.gz
+          upload_url: ${{ github.event.release.upload_url }}
+
+      - run: cabal upload --publish --username '${{ secrets.HACKAGE_USERNAME }}' --password '${{ secrets.HACKAGE_PASSWORD }}' artifact/ubuntu-20.04/brittany-${{ github.event.release.tag_name }}.tar.gz
