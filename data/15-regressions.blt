@@ -497,15 +497,12 @@ v = A { .. } where b = 2
 v = A { a = 1, b = 2, c = 3 }
 
 #test issue 63 a
-#pending fix does not work on 8.0.2
 test :: Proxy 'Int
 
 #test issue 63 b
-#pending fix does not work on 8.0.2
 test :: Proxy '[ 'True]
 
 #test issue 63 c
-#pending fix does not work on 8.0.2
 test :: Proxy '[Bool]
 
 #test issue 64
