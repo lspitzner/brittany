@@ -65,8 +65,7 @@ log the size of the input, but _not_ the full input/output of requests.)
     ~~~~
 
     If you use an lts that includes brittany this should just work; otherwise
-    you may want to clone the repo and try again (there are several stack.yamls
-    included).
+    you may want to clone the repo and try again.
 
 - via `cabal`
 
