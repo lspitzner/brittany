@@ -11,7 +11,6 @@ import qualified GHC.ByteOrder
 import qualified GHC.Data.Bag
 import qualified GHC.Data.EnumSet
 import qualified GHC.Data.StringBuffer
-import qualified GHC.Driver.CmdLine
 import qualified GHC.Driver.Session
 import qualified GHC.Parser.Header
 import qualified GHC.Platform
@@ -48,18 +47,17 @@ parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
         { GHC.Driver.Session.safeHaskell = GHC.Driver.Session.Sf_Unsafe
         }
       GHC.Driver.Session.Opt_KeepRawTokenStream
-  (dynFlags2, leftovers1, warnings1) <-
+  (dynFlags2, leftovers1, _) <-
     GHC.Driver.Session.parseDynamicFlagsCmdLine dynFlags1
       $ fmap GHC.Types.SrcLoc.noLoc arguments1
   handleLeftovers leftovers1
-  handleWarnings warnings1
   let
     stringBuffer = GHC.Data.StringBuffer.stringToStringBuffer string
     arguments2 = GHC.Parser.Header.getOptions dynFlags2 stringBuffer filePath
-  (dynFlags3, leftovers2, warnings2) <-
-    GHC.Driver.Session.parseDynamicFilePragma dynFlags2 arguments2
+  (dynFlags3, leftovers2, _) <- GHC.Driver.Session.parseDynamicFilePragma
+    dynFlags2
+    arguments2
   handleLeftovers leftovers2
-  handleWarnings warnings2
   dynFlagsResult <- Except.ExceptT $ checkDynFlags dynFlags3
   let
     parseResult =
@@ -73,12 +71,6 @@ handleLeftovers
 handleLeftovers leftovers =
   Monad.unless (null leftovers) . Except.throwE $ "leftovers: " <> show
     (fmap GHC.Types.SrcLoc.unLoc leftovers)
-
-handleWarnings
-  :: Monad m => [GHC.Driver.CmdLine.Warn] -> Except.ExceptT String m ()
-handleWarnings warnings =
-  Monad.unless (null warnings) . Except.throwE $ "warnings: " <> show
-    (fmap (GHC.Types.SrcLoc.unLoc . GHC.Driver.CmdLine.warnMsg) warnings)
 
 handleErrorMessages
   :: Monad m => GHC.Utils.Error.ErrorMessages -> Except.ExceptT String m a

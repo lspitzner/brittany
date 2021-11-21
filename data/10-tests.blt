@@ -35,7 +35,7 @@ func :: (((((((((())))))))))
 
 -- current output is.. funny. wonder if that can/needs to be improved..
 #test give me more!
-#pending
+#pending nested tuples over line length
 func :: ((((((((((((((((((((((((((((((((((((((((((()))))))))))))))))))))))))))))))))))))))))))
 
 #test unit
@@ -196,7 +196,7 @@ func
      ]
 ###############################################################################
 #test type operator stuff
-#pending
+#pending HsOpTy
 test050 :: a :+: b
 test051 ::  lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
         :+: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
@@ -258,19 +258,17 @@ funcA :: a -> b -- comment A
 funcB :: a -> b -- comment B
 
 #test comments all
-#pending
 -- a
 func -- b
   :: -- c
-  a -- d
+     a -- d
   -> -- e
-  ( -- f
-  c -- g
-  , -- h
-  d -- i
-  ) -- j
+     ( -- f
+      c -- g
+       , -- h
+         d -- i
+          ) -- j
 -- k
-
 
 ###############################################################################
 ###############################################################################
@@ -303,10 +301,9 @@ func = f
 func :: Int
 
 #test inline pragma 4
-#pending this does not work with the compiler version we currently use yet (i think). should work with ghc-8.0.2.
 func = f
  where
-  {-# INLINE [~] f #-}
+  {-# INLINE [~1] f #-}
   f = id
 
 
@@ -363,7 +360,6 @@ data MyRecord = MyConstructor
   }
 
 #test record with DataTypeContexts
-#pending data type contexts are deprecated in ghc 9.0
 {-# LANGUAGE DatatypeContexts #-}
 data
   ( LooooooooooooooooooooongConstraint a
@@ -647,21 +643,15 @@ x *** y = x
 func _ = x
 
 #test simple long pattern
-#pending
-func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
-  = x
+func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable =
+  x
 
 #test simple multiline pattern
-#pending
-func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
-     reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
+func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
   = x
 
 #test another multiline pattern
-#pending
-func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable
-     a
-     b
+func reallyreallyreallyreallyreallyreallyreallyreallyreallyreallylongvariable a b
   = x
 
 #test simple constructor
@@ -671,7 +661,6 @@ func (A a) = a
 func (x : xr) = x
 
 #test some other constructor symbol
-#pending
 func (x :+: xr) = x
 
 #test normal infix constructor
@@ -738,21 +727,21 @@ describe "infix op" $ do
 func = x + x
 
 #test long
-#pending
-func = mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
-     + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+func =
+  mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+    + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
 
 #test long keep linemode 1
-#pending
-func = mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
-     + mweroiuxlskdfjlksj
-     + mweroiuxlskdfjlksj
+func =
+  mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+    + mweroiuxlskdfjlksj
+    + mweroiuxlskdfjlksj
 
 #test long keep linemode 2
-#pending
-func = mweroiuxlskdfjlksj
-     + mweroiuxlskdfjlksj
-     + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+func =
+  mweroiuxlskdfjlksj
+    + mweroiuxlskdfjlksj
+    + mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
 
 #test literals
 func = 1
@@ -816,9 +805,10 @@ myTupleSection =
   )
 
 #test 2
-#pending
-func = (lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
-  , lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd)
+func =
+  ( lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+  , lakjsdlajsdljasdlkjasldjasldjasldjalsdjlaskjd
+  )
 
 #test comment-after-then
 foo = if True
@@ -1400,12 +1390,10 @@ type Foo a -- fancy type comment
     Int
 
 #test synonym-type-operators
-#pending
-
 type (a :+: b) = (a, b)
 
 #test synonym-multi-parens
-#pending
+#pending loses extra parens
 
 type ((a :+: b) c) = (a, c)
 
