@@ -1,0 +1,1 @@
+test :: Proxy '[ 'True]

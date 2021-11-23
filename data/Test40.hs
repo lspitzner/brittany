@@ -1,0 +1,4 @@
+func = ($)
+ where
+  {-# INLINE ($) #-}
+  ($) = id

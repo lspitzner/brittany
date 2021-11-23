@@ -31,6 +31,7 @@ import Language.Haskell.Brittany.Internal.Utils
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import Paths_brittany
 import qualified System.Directory as Directory
+import qualified System.Environment as Environment
 import qualified System.Exit
 import qualified System.FilePath.Posix as FilePath
 import qualified System.IO
@@ -54,7 +55,16 @@ instance Show WriteMode where
 
 
 main :: IO ()
-main = mainFromCmdParserWithHelpDesc mainCmdParser
+main = do
+  progName <- Environment.getProgName
+  args <- Environment.getArgs
+  mainWith progName args
+
+mainWith :: String -> [String] -> IO ()
+mainWith progName args =
+  Environment.withProgName progName
+    . Environment.withArgs args
+    $ mainFromCmdParserWithHelpDesc mainCmdParser
 
 helpDoc :: PP.Doc
 helpDoc = PP.vcat $ List.intersperse

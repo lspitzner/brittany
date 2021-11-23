@@ -24,7 +24,8 @@ extra-doc-files:
   README.md
   doc/implementation/*.md
 extra-source-files:
-  data/*.blt
+  data/brittany.yaml
+  data/*.hs
 
 source-repository head
   type: git
@@ -143,7 +144,6 @@ test-suite brittany-test-suite
 
   build-depends:
     , hspec ^>= 2.8.3
-    , parsec ^>= 3.1.14
   hs-source-dirs: source/test-suite
   main-is: Main.hs
   type: exitcode-stdio-1.0

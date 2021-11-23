@@ -1,0 +1,3 @@
+func
+  :: lkasdlkjalsdjlakjsdlkjasldkjalskdjlkajsd
+  -> (lakjsdlkjasldkj -> lakjsdlkjasldkj)
