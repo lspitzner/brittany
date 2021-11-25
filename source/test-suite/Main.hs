@@ -8,7 +8,7 @@ import qualified System.IO as IO
 import qualified Test.Hspec as Hspec
 
 main :: IO ()
-main = Hspec.hspec . Hspec.parallel $ do
+main = Hspec.hspec $ do
   let directory = "data"
   entries <- Hspec.runIO $ Directory.listDirectory directory
   Monad.forM_ (List.sort entries) $ \entry ->
