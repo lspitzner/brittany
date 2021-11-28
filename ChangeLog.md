@@ -1,5 +1,12 @@
 # Revision history for brittany
 
+## 0.14.0.0 -- November 2021
+
+* #357: Added support for GHC 9.0. Dropped support for all other versions of GHC.
+  * ab59e9acc3069551ac4132321b285d000f5f5691: Removed runtime dependency on `ghc-paths`.
+  * fa8365a7fa9372043d5a1018f2f7669ce3853edd: Started providing pre-built binaries for Linux, MacOS, and Windows.
+  * Many other changes to Brittany's internals and exposed Haskell interface, but (hopefully) no changes to its command-line interface.
+
 ## 0.13.1.2 -- May 2021
 
 * #347: Allowed hspec 2.8. Thanks @felixonmars!

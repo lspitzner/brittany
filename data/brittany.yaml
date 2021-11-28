@@ -1,0 +1,4 @@
+conf_layout:
+  lconfig_allowSingleLineExportList: true
+  lconfig_importAsColumn: 60
+  lconfig_importColumn: 60

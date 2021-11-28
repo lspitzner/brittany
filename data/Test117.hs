@@ -1,0 +1,1 @@
+func = case x of {}

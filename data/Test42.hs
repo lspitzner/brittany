@@ -1,0 +1,2 @@
+{-# NOINLINE func #-}
+func :: Int

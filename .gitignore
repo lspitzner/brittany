@@ -8,9 +8,8 @@ dist/
 dist-newstyle/
 local/
 .cabal-sandbox/
-.stack-work/
 cabal.sandbox.config
-cabal.project.local
+cabal.project.local*
+cabal.project.freeze
 .ghc.environment.*
 result
-.stack-work*

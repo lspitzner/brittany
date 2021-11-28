@@ -1,4 +1,0 @@
-resolver: nightly-2020-12-09
-
-extra-deps:
-  - data-tree-print-0.1.0.2

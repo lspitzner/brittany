@@ -1,0 +1,4 @@
+func =
+  mweroiuxlskdfjlksjdflkjsdfljksldkjflkjsdflkj
+    + mweroiuxlskdfjlksj
+    + mweroiuxlskdfjlksj

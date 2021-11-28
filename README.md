@@ -48,7 +48,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 
 # Other usage notes
 
-- Supports GHC versions `8.6`, `8.8`, `8.10`.
+- Supports GHC version `9.0.x`.
 - included in stackage with lts>=10.0 (or nightlies dating to >=2017-11-15)
 - config (file) documentation is lacking.
 - some config values can not be configured via commandline yet.
@@ -65,14 +65,7 @@ log the size of the input, but _not_ the full input/output of requests.)
     ~~~~
 
     If you use an lts that includes brittany this should just work; otherwise
-    you may want to clone the repo and try again (there are several stack.yamls
-    included).
-
-- via `nix`:
-    ~~~.sh
-    nix build
-    nix-env -i ./result
-    ~~~
+    you may want to clone the repo and try again.
 
 - via `cabal`
 
@@ -102,18 +95,6 @@ log the size of the input, but _not_ the full input/output of requests.)
     ~~~~
 
 # Development tips
-
-## Run a hoogle server
-
-To host a local Hoogle server with all of Brittany's dependencies run:
-
-```sh
-echo brittany.cabal |
-  $(nix-build '<nixpkgs>' --no-link -A entr)/bin/entr -r -- \
-    sh -c "nix-shell --run 'hoogle server --local'"
-```
-
-This will watch `brittany.cabal` for changes and restart the server when new dependencies are added there.
 
 # Editor Integration
 

@@ -5,20 +5,12 @@
 # This file contains a template configuration file, which is typically
 # placed as .hlint.yaml in the root of your project
 
-# Specify additional command line arguments
-
-- arguments:
-    [ "--cpp-include=srcinc"
-    , "--language=GADTs"
-    , "--language=LambdaCase"
-    , "--language=MultiWayIf"
-    , "--language=KindSignatures"
-    , "--cross"
-    , "--threads=0"
-    ]
-
-- ignore: {name: "Use camelCase"}
-- ignore: {name: "Redundant as"}
+- ignore: { name: 'Use :' }
+- ignore: { name: Eta reduce }
+- ignore: { name: Move brackets to avoid $ }
+- ignore: { name: Redundant $ }
+- ignore: { name: Redundant bracket }
+- ignore: { name: Use newtype instead of data }
 - ignore: {name: "Redundant do"}
 - ignore: {name: "Redundant return"}
-- ignore: {name: "Redundant guard", whithin: "lrdrNameToTextAnn"}
+- ignore: {name: "Use camelCase"}

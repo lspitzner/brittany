@@ -1,0 +1,2 @@
+-- test
+module MyModule where
