@@ -29,7 +29,7 @@ import Language.Haskell.Brittany.Internal.Prelude
 aesonDecodeOptionsBrittany :: Aeson.Options
 aesonDecodeOptionsBrittany = Aeson.defaultOptions
   { Aeson.omitNothingFields = True
-  , Aeson.fieldLabelModifier = dropWhile (=='_')
+  , Aeson.fieldLabelModifier = dropWhile (== '_')
   }
 
 instance FromJSON (CDebugConfig Maybe) where
@@ -104,17 +104,27 @@ instance ToJSON (CConfig Maybe) where
 -- leafs, but for nodes of the config as well. This way e.g. "{}" is valid
 -- config file content.
 instance FromJSON (CConfig Maybe) where
-  parseJSON (Object v) = Config
-    <$> v .:?  Key.fromString "conf_version"
-    <*> v .:?= Key.fromString "conf_debug"
-    <*> v .:?= Key.fromString "conf_layout"
-    <*> v .:?= Key.fromString "conf_errorHandling"
-    <*> v .:?= Key.fromString "conf_forward"
-    <*> v .:?= Key.fromString "conf_preprocessor"
-    <*> v .:?  Key.fromString "conf_roundtrip_exactprint_only"
-    <*> v .:?  Key.fromString "conf_disable_formatting"
-    <*> v .:?  Key.fromString "conf_obfuscate"
-  parseJSON invalid    = Aeson.typeMismatch "Config" invalid
+  parseJSON (Object v) =
+    Config
+      <$> v
+      .:? Key.fromString "conf_version"
+      <*> v
+      .:?= Key.fromString "conf_debug"
+      <*> v
+      .:?= Key.fromString "conf_layout"
+      <*> v
+      .:?= Key.fromString "conf_errorHandling"
+      <*> v
+      .:?= Key.fromString "conf_forward"
+      <*> v
+      .:?= Key.fromString "conf_preprocessor"
+      <*> v
+      .:? Key.fromString "conf_roundtrip_exactprint_only"
+      <*> v
+      .:? Key.fromString "conf_disable_formatting"
+      <*> v
+      .:? Key.fromString "conf_obfuscate"
+  parseJSON invalid = Aeson.typeMismatch "Config" invalid
 
 -- Pretends that the value is {} when the key is not present.
 (.:?=) :: FromJSON a => Object -> Key.Key -> Parser a

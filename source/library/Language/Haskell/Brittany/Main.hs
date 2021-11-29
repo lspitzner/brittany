@@ -105,7 +105,7 @@ helpDoc = PP.vcat $ List.intersperse
     ]
   , parDoc $ "See https://github.com/lspitzner/brittany"
   , parDoc
-  $  "Please report bugs at"
+  $ "Please report bugs at"
   ++ " https://github.com/lspitzner/brittany/issues"
   ]
 
@@ -142,15 +142,16 @@ mainCmdParser helpDesc = do
   addCmd "license" $ addCmdImpl $ print $ licenseDoc
   -- addButcherDebugCommand
   reorderStart
-  printHelp    <- addSimpleBoolFlag "h" ["help"] mempty
+  printHelp <- addSimpleBoolFlag "h" ["help"] mempty
   printVersion <- addSimpleBoolFlag "" ["version"] mempty
   printLicense <- addSimpleBoolFlag "" ["license"] mempty
   noUserConfig <- addSimpleBoolFlag "" ["no-user-config"] mempty
-  configPaths  <- addFlagStringParams ""
-                                      ["config-file"]
-                                      "PATH"
-                                      (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
-  cmdlineConfig  <- cmdlineConfigParser
+  configPaths <- addFlagStringParams
+    ""
+    ["config-file"]
+    "PATH"
+    (flagHelpStr "path to config file") -- TODO: allow default on addFlagStringParam ?
+  cmdlineConfig <- cmdlineConfigParser
   suppressOutput <- addSimpleBoolFlag
     ""
     ["suppress-output"]
@@ -176,7 +177,7 @@ mainCmdParser helpDesc = do
     ""
     ["write-mode"]
     "(display|inplace)"
-    (              flagHelp
+    (flagHelp
         (PP.vcat
           [ PP.text "display: output for any input(s) goes to stdout"
           , PP.text "inplace: override respective input file (without backup!)"
@@ -206,11 +207,12 @@ mainCmdParser helpDesc = do
         $ ppHelpShallow helpDesc
       System.Exit.exitSuccess
 
-    let inputPaths =
-          if null inputParams then [Nothing] else map Just inputParams
-    let outputPaths = case writeMode of
-          Display -> repeat Nothing
-          Inplace -> inputPaths
+    let
+      inputPaths = if null inputParams then [Nothing] else map Just inputParams
+    let
+      outputPaths = case writeMode of
+        Display -> repeat Nothing
+        Inplace -> inputPaths
 
     configsToLoad <- liftIO $ if null configPaths
       then
@@ -225,14 +227,15 @@ mainCmdParser helpDesc = do
           )
         >>= \case
               Nothing -> System.Exit.exitWith (System.Exit.ExitFailure 53)
-              Just x  -> return x
+              Just x -> return x
     when (config & _conf_debug & _dconf_dump_config & confUnpack)
       $ trace (showConfigYaml config)
       $ return ()
 
-    results <- zipWithM (coreIO putStrErrLn config suppressOutput checkMode)
-                        inputPaths
-                        outputPaths
+    results <- zipWithM
+      (coreIO putStrErrLn config suppressOutput checkMode)
+      inputPaths
+      outputPaths
 
     if checkMode
       then when (Changes `elem` (Data.Either.rights results))
@@ -268,51 +271,57 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
     -- amount of slight differences: This module is a bit more verbose, and
     -- it tries to use the full-blown `parseModule` function which supports
     -- CPP (but requires the input to be a file..).
-    let cppMode    = config & _conf_preprocessor & _ppconf_CPPMode & confUnpack
+    let cppMode = config & _conf_preprocessor & _ppconf_CPPMode & confUnpack
     -- the flag will do the following: insert a marker string
     -- ("-- BRITANY_INCLUDE_HACK ") right before any lines starting with
     -- "#include" before processing (parsing) input; and remove that marker
     -- string from the transformation output.
     -- The flag is intentionally misspelled to prevent clashing with
     -- inline-config stuff.
-    let hackAroundIncludes =
-          config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
-    let exactprintOnly = viaGlobal || viaDebug
-         where
-          viaGlobal = config & _conf_roundtrip_exactprint_only & confUnpack
-          viaDebug =
-            config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
+    let
+      hackAroundIncludes =
+        config & _conf_preprocessor & _ppconf_hackAroundIncludes & confUnpack
+    let
+      exactprintOnly = viaGlobal || viaDebug
+       where
+        viaGlobal = config & _conf_roundtrip_exactprint_only & confUnpack
+        viaDebug =
+          config & _conf_debug & _dconf_roundtrip_exactprint_only & confUnpack
 
-    let cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
-          then case cppMode of
-            CPPModeAbort -> do
-              return $ Left "Encountered -XCPP. Aborting."
-            CPPModeWarn -> do
-              putErrorLnIO
-                $  "Warning: Encountered -XCPP."
-                ++ " Be warned that -XCPP is not supported and that"
-                ++ " brittany cannot check that its output is syntactically"
-                ++ " valid in its presence."
-              return $ Right True
-            CPPModeNowarn -> return $ Right True
-          else return $ Right False
+    let
+      cppCheckFunc dynFlags = if GHC.xopt GHC.Cpp dynFlags
+        then case cppMode of
+          CPPModeAbort -> do
+            return $ Left "Encountered -XCPP. Aborting."
+          CPPModeWarn -> do
+            putErrorLnIO
+              $ "Warning: Encountered -XCPP."
+              ++ " Be warned that -XCPP is not supported and that"
+              ++ " brittany cannot check that its output is syntactically"
+              ++ " valid in its presence."
+            return $ Right True
+          CPPModeNowarn -> return $ Right True
+        else return $ Right False
     (parseResult, originalContents) <- case inputPathM of
       Nothing -> do
         -- TODO: refactor this hack to not be mixed into parsing logic
-        let hackF s = if "#include" `isPrefixOf` s
-              then "-- BRITANY_INCLUDE_HACK " ++ s
-              else s
-        let hackTransform = if hackAroundIncludes && not exactprintOnly
-              then List.intercalate "\n" . fmap hackF . lines'
-              else id
+        let
+          hackF s = if "#include" `isPrefixOf` s
+            then "-- BRITANY_INCLUDE_HACK " ++ s
+            else s
+        let
+          hackTransform = if hackAroundIncludes && not exactprintOnly
+            then List.intercalate "\n" . fmap hackF . lines'
+            else id
         inputString <- liftIO System.IO.getContents
-        parseRes <- liftIO $ parseModuleFromString ghcOptions
-                                                   "stdin"
-                                                   cppCheckFunc
-                                                   (hackTransform inputString)
+        parseRes <- liftIO $ parseModuleFromString
+          ghcOptions
+          "stdin"
+          cppCheckFunc
+          (hackTransform inputString)
         return (parseRes, Text.pack inputString)
       Just p -> liftIO $ do
-        parseRes  <- parseModule ghcOptions p cppCheckFunc
+        parseRes <- parseModule ghcOptions p cppCheckFunc
         inputText <- Text.IO.readFile p
         -- The above means we read the file twice, but the
         -- GHC API does not really expose the source it
@@ -343,8 +352,9 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
         when (config & _conf_debug & _dconf_dump_ast_full & confUnpack) $ do
           let val = printTreeWithCustom 100 (customLayouterF anns) parsedSource
           trace ("---- ast ----\n" ++ show val) $ return ()
-        let disableFormatting =
-              moduleConf & _conf_disable_formatting & confUnpack
+        let
+          disableFormatting =
+            moduleConf & _conf_disable_formatting & confUnpack
         (errsWarns, outSText, hasChanges) <- do
           if
             | disableFormatting -> do
@@ -353,46 +363,52 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
               let r = Text.pack $ ExactPrint.exactPrint parsedSource anns
               pure ([], r, r /= originalContents)
             | otherwise -> do
-              let omitCheck =
-                    moduleConf
-                      &  _conf_errorHandling
-                      .> _econf_omit_output_valid_check
-                      .> confUnpack
+              let
+                omitCheck =
+                  moduleConf
+                    & _conf_errorHandling
+                    .> _econf_omit_output_valid_check
+                    .> confUnpack
               (ews, outRaw) <- if hasCPP || omitCheck
                 then return
                   $ pPrintModule moduleConf perItemConf anns parsedSource
-                else liftIO $ pPrintModuleAndCheck moduleConf
-                                                   perItemConf
-                                                   anns
-                                                   parsedSource
-              let hackF s = fromMaybe s $ TextL.stripPrefix
-                    (TextL.pack "-- BRITANY_INCLUDE_HACK ")
-                    s
-              let out = TextL.toStrict $ if hackAroundIncludes
-                    then
-                      TextL.intercalate (TextL.pack "\n")
-                      $ hackF
-                      <$> TextL.splitOn (TextL.pack "\n") outRaw
-                    else outRaw
+                else liftIO $ pPrintModuleAndCheck
+                  moduleConf
+                  perItemConf
+                  anns
+                  parsedSource
+              let
+                hackF s = fromMaybe s $ TextL.stripPrefix
+                  (TextL.pack "-- BRITANY_INCLUDE_HACK ")
+                  s
+              let
+                out = TextL.toStrict $ if hackAroundIncludes
+                  then
+                    TextL.intercalate (TextL.pack "\n")
+                    $ hackF
+                    <$> TextL.splitOn (TextL.pack "\n") outRaw
+                  else outRaw
               out' <- if moduleConf & _conf_obfuscate & confUnpack
                 then lift $ obfuscate out
                 else pure out
               pure $ (ews, out', out' /= originalContents)
-        let customErrOrder ErrorInput{}         = 4
-            customErrOrder LayoutWarning{}      = -1 :: Int
-            customErrOrder ErrorOutputCheck{}   = 1
-            customErrOrder ErrorUnusedComment{} = 2
-            customErrOrder ErrorUnknownNode{}   = -2 :: Int
-            customErrOrder ErrorMacroConfig{}   = 5
+        let
+          customErrOrder ErrorInput{} = 4
+          customErrOrder LayoutWarning{} = -1 :: Int
+          customErrOrder ErrorOutputCheck{} = 1
+          customErrOrder ErrorUnusedComment{} = 2
+          customErrOrder ErrorUnknownNode{} = -2 :: Int
+          customErrOrder ErrorMacroConfig{} = 5
         unless (null errsWarns) $ do
-          let groupedErrsWarns =
-                Data.List.Extra.groupOn customErrOrder
-                  $ List.sortOn customErrOrder
-                  $ errsWarns
+          let
+            groupedErrsWarns =
+              Data.List.Extra.groupOn customErrOrder
+                $ List.sortOn customErrOrder
+                $ errsWarns
           groupedErrsWarns `forM_` \case
             (ErrorOutputCheck{} : _) -> do
               putErrorLn
-                $  "ERROR: brittany pretty printer"
+                $ "ERROR: brittany pretty printer"
                 ++ " returned syntactically invalid result."
             (ErrorInput str : _) -> do
               putErrorLn $ "ERROR: parse error: " ++ str
@@ -403,7 +419,7 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
                 ErrorUnknownNode str ast@(L loc _) -> do
                   putErrorLn $ "  " <> str <> " at " <> showSDocUnsafe (ppr loc)
                   when
-                      ( config
+                      (config
                       & _conf_debug
                       & _dconf_dump_ast_unknown
                       & confUnpack
@@ -417,17 +433,17 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
               putErrorLn $ "WARNINGS:"
               warns `forM_` \case
                 LayoutWarning str -> putErrorLn str
-                _                 -> error "cannot happen (TM)"
+                _ -> error "cannot happen (TM)"
             unused@(ErrorUnusedComment{} : _) -> do
               putErrorLn
-                $  "Error: detected unprocessed comments."
+                $ "Error: detected unprocessed comments."
                 ++ " The transformation output will most likely"
                 ++ " not contain some of the comments"
                 ++ " present in the input haskell source file."
               putErrorLn $ "Affected are the following comments:"
               unused `forM_` \case
                 ErrorUnusedComment str -> putErrorLn str
-                _                      -> error "cannot happen (TM)"
+                _ -> error "cannot happen (TM)"
             (ErrorMacroConfig err input : _) -> do
               putErrorLn $ "Error: parse error in inline configuration:"
               putErrorLn err
@@ -438,8 +454,8 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
         let
           hasErrors =
             if config & _conf_errorHandling & _econf_Werror & confUnpack
-            then not $ null errsWarns
-            else 0 < maximum (-1 : fmap customErrOrder errsWarns)
+              then not $ null errsWarns
+              else 0 < maximum (-1 : fmap customErrOrder errsWarns)
           outputOnErrs =
             config
               & _conf_errorHandling
@@ -454,10 +470,11 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
           $ addTraceSep (_conf_debug config)
           $ case outputPathM of
               Nothing -> liftIO $ Text.IO.putStr $ outSText
-              Just p  -> liftIO $ do
-                let isIdentical = case inputPathM of
-                      Nothing -> False
-                      Just _  -> not hasChanges
+              Just p -> liftIO $ do
+                let
+                  isIdentical = case inputPathM of
+                    Nothing -> False
+                    Just _ -> not hasChanges
                 unless isIdentical $ Text.IO.writeFile p $ outSText
 
         when (checkMode && hasChanges) $ case inputPathM of
@@ -469,15 +486,15 @@ coreIO putErrorLnIO config suppressOutput checkMode inputPathM outputPathM =
  where
   addTraceSep conf =
     if or
-         [ confUnpack $ _dconf_dump_annotations conf
-         , confUnpack $ _dconf_dump_ast_unknown conf
-         , confUnpack $ _dconf_dump_ast_full conf
-         , confUnpack $ _dconf_dump_bridoc_raw conf
-         , confUnpack $ _dconf_dump_bridoc_simpl_alt conf
-         , confUnpack $ _dconf_dump_bridoc_simpl_floating conf
-         , confUnpack $ _dconf_dump_bridoc_simpl_columns conf
-         , confUnpack $ _dconf_dump_bridoc_simpl_indent conf
-         , confUnpack $ _dconf_dump_bridoc_final conf
-         ]
+        [ confUnpack $ _dconf_dump_annotations conf
+        , confUnpack $ _dconf_dump_ast_unknown conf
+        , confUnpack $ _dconf_dump_ast_full conf
+        , confUnpack $ _dconf_dump_bridoc_raw conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_alt conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_floating conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_columns conf
+        , confUnpack $ _dconf_dump_bridoc_simpl_indent conf
+        , confUnpack $ _dconf_dump_bridoc_final conf
+        ]
       then trace "----"
       else id

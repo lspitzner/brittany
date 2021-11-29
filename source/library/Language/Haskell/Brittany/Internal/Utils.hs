@@ -61,24 +61,26 @@ instance (Num a, Ord a) => Semigroup (Max a) where
   (<>) = Data.Coerce.coerce (max :: a -> a -> a)
 
 instance (Num a, Ord a) => Monoid (Max a) where
-  mempty  = Max 0
+  mempty = Max 0
   mappend = (<>)
 
 newtype ShowIsId = ShowIsId String deriving Data
 
-instance Show ShowIsId where show (ShowIsId x) = x
+instance Show ShowIsId where
+  show (ShowIsId x) = x
 
-data A x = A ShowIsId x deriving Data
+data A x = A ShowIsId x
+  deriving Data
 
 customLayouterF :: ExactPrint.Types.Anns -> LayouterF
 customLayouterF anns layoutF =
   DataToLayouter
-    $       f
-    `extQ`  showIsId
-    `extQ`  fastString
-    `extQ`  bytestring
-    `extQ`  occName
-    `extQ`  srcSpan
+    $ f
+    `extQ` showIsId
+    `extQ` fastString
+    `extQ` bytestring
+    `extQ` occName
+    `extQ` srcSpan
     `ext2Q` located
  where
   DataToLayouter f = defaultLayouterF layoutF
@@ -86,18 +88,22 @@ customLayouterF anns layoutF =
   simpleLayouter s = NodeLayouter (length s) False (const $ PP.text s)
   showIsId :: ShowIsId -> NodeLayouter
   showIsId (ShowIsId s) = NodeLayouter (length s + 2) True $ \case
-    Left  True -> PP.parens $ PP.text s
-    Left  False -> PP.text s
-    Right _    -> PP.text s
+    Left True -> PP.parens $ PP.text s
+    Left False -> PP.text s
+    Right _ -> PP.text s
   fastString =
-    simpleLayouter . ("{FastString: "++) . (++"}") . show :: GHC.FastString
+    simpleLayouter . ("{FastString: " ++) . (++ "}") . show :: GHC.FastString
       -> NodeLayouter
   bytestring = simpleLayouter . show :: B.ByteString -> NodeLayouter
-  occName = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
+  occName =
+    simpleLayouter . ("{OccName: " ++) . (++ "}") . OccName.occNameString
   srcSpan :: GHC.SrcSpan -> NodeLayouter
-  srcSpan ss = simpleLayouter
+  srcSpan ss =
+    simpleLayouter
              -- - $ "{"++ showSDoc_ (GHC.ppr ss)++"}"
-                              $ "{" ++ showOutputable ss ++ "}"
+      $ "{"
+      ++ showOutputable ss
+      ++ "}"
   located :: (Data b, Data loc) => GHC.GenLocated loc b -> NodeLayouter
   located (GHC.L ss a) = runDataToLayouter layoutF $ A annStr a
    where
@@ -109,12 +115,12 @@ customLayouterF anns layoutF =
 customLayouterNoAnnsF :: LayouterF
 customLayouterNoAnnsF layoutF =
   DataToLayouter
-    $       f
-    `extQ`  showIsId
-    `extQ`  fastString
-    `extQ`  bytestring
-    `extQ`  occName
-    `extQ`  srcSpan
+    $ f
+    `extQ` showIsId
+    `extQ` fastString
+    `extQ` bytestring
+    `extQ` occName
+    `extQ` srcSpan
     `ext2Q` located
  where
   DataToLayouter f = defaultLayouterF layoutF
@@ -122,14 +128,15 @@ customLayouterNoAnnsF layoutF =
   simpleLayouter s = NodeLayouter (length s) False (const $ PP.text s)
   showIsId :: ShowIsId -> NodeLayouter
   showIsId (ShowIsId s) = NodeLayouter (length s + 2) True $ \case
-    Left  True -> PP.parens $ PP.text s
-    Left  False -> PP.text s
-    Right _    -> PP.text s
+    Left True -> PP.parens $ PP.text s
+    Left False -> PP.text s
+    Right _ -> PP.text s
   fastString =
-    simpleLayouter . ("{FastString: "++) . (++"}") . show :: GHC.FastString
+    simpleLayouter . ("{FastString: " ++) . (++ "}") . show :: GHC.FastString
       -> NodeLayouter
   bytestring = simpleLayouter . show :: B.ByteString -> NodeLayouter
-  occName = simpleLayouter . ("{OccName: "++) . (++"}") . OccName.occNameString
+  occName =
+    simpleLayouter . ("{OccName: " ++) . (++ "}") . OccName.occNameString
   srcSpan :: GHC.SrcSpan -> NodeLayouter
   srcSpan ss = simpleLayouter $ "{" ++ showSDoc_ (GHC.ppr ss) ++ "}"
   located :: (Data b) => GHC.GenLocated loc b -> NodeLayouter
@@ -193,12 +200,11 @@ traceIfDumpConf s accessor val = do
   whenM (mAsk <&> _conf_debug .> accessor .> confUnpack) $ do
     trace ("---- " ++ s ++ " ----\n" ++ show val) $ return ()
 
-tellDebugMess :: MonadMultiWriter
-  (Seq String) m => String -> m ()
+tellDebugMess :: MonadMultiWriter (Seq String) m => String -> m ()
 tellDebugMess s = mTell $ Seq.singleton s
 
-tellDebugMessShow :: forall a m . (MonadMultiWriter
-  (Seq String) m, Show a) => a -> m ()
+tellDebugMessShow
+  :: forall a m . (MonadMultiWriter (Seq String) m, Show a) => a -> m ()
 tellDebugMessShow = tellDebugMess . show
 
 -- i should really put that into multistate..
@@ -213,29 +219,28 @@ briDocToDoc = astToDoc . removeAnnotations
  where
   removeAnnotations = Uniplate.transform $ \case
     BDAnnotationPrior _ x -> x
-    BDAnnotationKW _ _ x  -> x
-    BDAnnotationRest _ x  -> x
-    x                     -> x
+    BDAnnotationKW _ _ x -> x
+    BDAnnotationRest _ x -> x
+    x -> x
 
 briDocToDocWithAnns :: BriDoc -> PP.Doc
 briDocToDocWithAnns = astToDoc
 
 annsDoc :: ExactPrint.Types.Anns -> PP.Doc
-annsDoc = printTreeWithCustom 100 customLayouterNoAnnsF . fmap (ShowIsId . show)
+annsDoc =
+  printTreeWithCustom 100 customLayouterNoAnnsF . fmap (ShowIsId . show)
 
 breakEither :: (a -> Either b c) -> [a] -> ([b], [c])
-breakEither _  []      = ([], [])
-breakEither fn (a1:aR) = case fn a1 of
-  Left  b -> (b : bs, cs)
+breakEither _ [] = ([], [])
+breakEither fn (a1 : aR) = case fn a1 of
+  Left b -> (b : bs, cs)
   Right c -> (bs, c : cs)
- where
-  (bs, cs) = breakEither fn aR
+  where (bs, cs) = breakEither fn aR
 
 spanMaybe :: (a -> Maybe b) -> [a] -> ([b], [a])
-spanMaybe f (x1:xR) | Just y <- f x1 = (y : ys, xs)
- where
-  (ys, xs) = spanMaybe f xR
-spanMaybe _ xs                       = ([], xs)
+spanMaybe f (x1 : xR) | Just y <- f x1 = (y : ys, xs)
+  where (ys, xs) = spanMaybe f xR
+spanMaybe _ xs = ([], xs)
 
 data FirstLastView a
   = FirstLastEmpty
@@ -245,7 +250,7 @@ data FirstLastView a
 splitFirstLast :: [a] -> FirstLastView a
 splitFirstLast [] = FirstLastEmpty
 splitFirstLast [x] = FirstLastSingleton x
-splitFirstLast (x1:xr) = FirstLast x1 (List.init xr) (List.last xr)
+splitFirstLast (x1 : xr) = FirstLast x1 (List.init xr) (List.last xr)
 
 -- TODO: move to uniplate upstream?
 -- aka `transform`
@@ -264,7 +269,7 @@ lines' :: String -> [String]
 lines' s = case break (== '\n') s of
   (s1, []) -> [s1]
   (s1, [_]) -> [s1, ""]
-  (s1, (_:r)) -> s1 : lines' r
+  (s1, (_ : r)) -> s1 : lines' r
 
 absurdExt :: HsExtension.NoExtCon -> a
 absurdExt = HsExtension.noExtCon
