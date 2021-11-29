@@ -27,15 +27,17 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
   --     [ BDAddBaseY ind x
   --     , BDEnsureIndent ind indented
   --     ]
-  BDLines lines | any ( \case
-                        BDLines{} -> True
-                        BDEmpty{} -> True
-                        _         -> False
-                      )
-                      lines ->
-    Just $ BDLines $ filter isNotEmpty $ lines >>= \case
+  BDLines lines
+    | any
+      (\case
+        BDLines{} -> True
+        BDEmpty{} -> True
+        _ -> False
+      )
+      lines
+    -> Just $ BDLines $ filter isNotEmpty $ lines >>= \case
       BDLines l -> l
-      x         -> [x]
+      x -> [x]
   BDLines [l] -> Just l
   BDAddBaseY i (BDAnnotationPrior k x) ->
     Just $ BDAnnotationPrior k (BDAddBaseY i x)
@@ -49,4 +51,4 @@ transformSimplifyIndent = Uniplate.rewrite $ \case
     Just $ BDCols sig $ List.init l ++ [BDAddBaseY i $ List.last l]
   BDAddBaseY _ lit@BDLit{} -> Just lit
 
-  _                        -> Nothing
+  _ -> Nothing
