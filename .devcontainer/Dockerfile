@@ -6,7 +6,7 @@ RUN \
     apt-get update && \
     apt-get install --assume-yes curl gcc git libgmp-dev libtinfo-dev make sudo
 
-ARG GHCUP_VERSION=0.1.17.3
+ARG GHCUP_VERSION=0.1.17.4
 RUN \
     curl --output /usr/local/bin/ghcup "https://downloads.haskell.org/~ghcup/$GHCUP_VERSION/x86_64-linux-ghcup-$GHCUP_VERSION" && \
     chmod +x /usr/local/bin/ghcup && \
