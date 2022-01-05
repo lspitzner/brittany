@@ -61,7 +61,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 - via `stack`
 
     ~~~~.sh
-    stack install brittany # --resolver lts-10.0
+    stack install brittany # --resolver lts-16.31
     ~~~~
 
     If you use an lts that includes brittany this should just work; otherwise
