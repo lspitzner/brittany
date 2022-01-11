@@ -61,7 +61,7 @@ log the size of the input, but _not_ the full input/output of requests.)
 - via `stack`
 
     ~~~~.sh
-    stack install brittany # --resolver lts-10.0
+    stack install brittany # --resolver lts-16.31
     ~~~~
 
     If you use an lts that includes brittany this should just work; otherwise
@@ -104,8 +104,8 @@ log the size of the input, but _not_ the full input/output of requests.)
 #### VSCode
   [This extension](https://marketplace.visualstudio.com/items?itemName=MaxGabriel.brittany)
   connects commandline `brittany` to VSCode formatting API. Thanks to @MaxGabriel.
-#### Via HIE
-  [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
+#### Via HLS
+  [haskell-language-server](https://github.com/haskell/haskell-language-server)
   includes a `brittany` plugin that directly uses the brittany library.
   Relevant for any editors that properly support the language-server-protocol.
 #### Neovim / Vim 8
