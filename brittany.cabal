@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                 brittany
-version:              0.14.0.1
+version:              0.14.0.2
 synopsis:             Haskell source code formatter
 description:
   See <https://github.com/lspitzner/brittany/blob/master/README.md the README>.
