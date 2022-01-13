@@ -1,6 +1,6 @@
 import qualified Control.Monad as Monad
 import qualified Data.List as List
-import qualified Brittany.Main as Brittany
+import qualified Language.Haskell.Brittany.Main as Brittany
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified Test.Hspec as Hspec
