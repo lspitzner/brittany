@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-implicit-prelude #-}
 
 module Language.Haskell.Brittany.Internal.ParseModule where
@@ -253,11 +254,19 @@ initialPlatformConstants = PlatformSettings.PlatformConstants
   , PlatformSettings.pc_WORD_SIZE = 0
   }
 
+#if MIN_VERSION_ghc(9,2,1)
+initialPlatformArchOS :: GHC.Platform.ArchOS
+initialPlatformArchOS = GHC.Platform.ArchOS
+  { GHC.Platform.archOS_arch = GHC.Platform.ArchX86_64
+  , GHC.Platform.archOS_OS = GHC.Platform.OSLinux
+  }
+#else
 initialPlatformMini :: GHC.Settings.PlatformMini
 initialPlatformMini = GHC.Settings.PlatformMini
   { GHC.Settings.platformMini_arch = GHC.Platform.ArchX86_64
   , GHC.Settings.platformMini_os = GHC.Platform.OSLinux
   }
+#endif
 
 initialTargetPlatform :: GHC.Settings.Platform
 initialTargetPlatform = GHC.Settings.Platform
@@ -267,7 +276,11 @@ initialTargetPlatform = GHC.Settings.Platform
   , GHC.Settings.platformHasSubsectionsViaSymbols = False
   , GHC.Settings.platformIsCrossCompiling = False
   , GHC.Settings.platformLeadingUnderscore = False
+#if MIN_VERSION_ghc(9,2,1)
+  , GHC.Settings.platformArchOS = initialPlatformArchOS
+#else
   , GHC.Settings.platformMini = initialPlatformMini
+#endif
   , GHC.Settings.platformTablesNextToCode = False
   , GHC.Settings.platformUnregisterised = False
   , GHC.Settings.platformWordSize = GHC.Platform.PW8
