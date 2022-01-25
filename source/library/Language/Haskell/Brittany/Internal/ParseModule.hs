@@ -34,7 +34,11 @@ parseModule
   -> FilePath
   -> (GHC.Driver.Session.DynFlags -> io (Either String a))
   -> String
+#if MIN_VERSION_ghc(9,2,1)
+  -> io (Either String (GHC.ParsedSource, a))
+#else 
   -> io (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+#endif
 parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
   let
     dynFlags1 = GHC.Driver.Session.gopt_set
@@ -68,7 +72,11 @@ parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
       ExactPrint.parseModuleFromStringInternal dynFlags3 filePath string
   case parseResult of
     Left errorMessages -> handleErrorMessages errorMessages
+#if MIN_VERSION_ghc(9,2,1)
+    Right parsedSource -> pure (parsedSource, dynFlagsResult)
+#else
     Right (anns, parsedSource) -> pure (anns, parsedSource, dynFlagsResult)
+#endif
 
 handleLeftovers
   :: Monad m => [GHC.Types.SrcLoc.Located String] -> Except.ExceptT String m ()
@@ -293,6 +301,7 @@ initialTargetPlatform = GHC.Settings.Platform
   , GHC.Settings.platformLeadingUnderscore = False
 #if MIN_VERSION_ghc(9,2,1)
   , GHC.Settings.platformArchOS = initialPlatformArchOS
+  , GHC.Settings.platform_constants = Just initialPlatformConstants
 #else
   , GHC.Settings.platformMini = initialPlatformMini
 #endif
