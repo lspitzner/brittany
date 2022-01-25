@@ -15,6 +15,7 @@ import qualified GHC.Parser.Header
 import qualified GHC.Platform
 import qualified GHC.Settings
 #if MIN_VERSION_ghc(9,2,1)
+import qualified GHC.Types.SafeHaskell
 import qualified GHC.Platform as PlatformSettings
 #else
 import qualified GHC.Settings as PlatformSettings
@@ -42,7 +43,12 @@ parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
       -- Neither passing in @"-XUnsafe"@ as a command line argument nor having
       -- @{-# LANGUAGE Unsafe #-}@ in the source file seem to help.
       initialDynFlags
-        { GHC.Driver.Session.safeHaskell = GHC.Driver.Session.Sf_Unsafe
+        { GHC.Driver.Session.safeHaskell = 
+#if MIN_VERSION_ghc(9,2,1)
+            GHC.Types.SafeHaskell.Sf_Unsafe
+#else
+            GHC.Driver.Session.Sf_Unsafe
+#endif
         }
       GHC.Driver.Session.Opt_KeepRawTokenStream
   (dynFlags2, leftovers1, _) <-
@@ -85,7 +91,9 @@ initialSettings = GHC.Driver.Session.Settings
   , GHC.Driver.Session.sTargetPlatform = initialTargetPlatform
   , GHC.Driver.Session.sToolSettings = initialToolSettings
   , GHC.Driver.Session.sPlatformMisc = initialPlatformMisc
+#if !MIN_VERSION_ghc(9,2,1)
   , GHC.Driver.Session.sPlatformConstants = initialPlatformConstants
+#endif
   , GHC.Driver.Session.sRawSettings = []
   }
 
@@ -107,10 +115,12 @@ initialGhcNameVersion = GHC.Driver.Session.GhcNameVersion
 
 initialPlatformMisc :: GHC.Driver.Session.PlatformMisc
 initialPlatformMisc = GHC.Driver.Session.PlatformMisc
-  { GHC.Driver.Session.platformMisc_ghcDebugged = False
-  , GHC.Driver.Session.platformMisc_ghcRTSWays = ""
+  { GHC.Driver.Session.platformMisc_ghcRTSWays = ""
   , GHC.Driver.Session.platformMisc_ghcRtsWithLibdw = False
+#if !MIN_VERSION_ghc(9,2,1)
   , GHC.Driver.Session.platformMisc_ghcThreaded = False
+  , GHC.Driver.Session.platformMisc_ghcDebugged = False
+#endif
   , GHC.Driver.Session.platformMisc_ghcWithInterpreter = False
   , GHC.Driver.Session.platformMisc_ghcWithSMP = False
   , GHC.Driver.Session.platformMisc_libFFI = False
@@ -134,7 +144,9 @@ initialPlatformConstants = PlatformSettings.PlatformConstants
   , PlatformSettings.pc_CLONG_LONG_SIZE = 0
   , PlatformSettings.pc_CLONG_SIZE = 0
   , PlatformSettings.pc_CONTROL_GROUP_CONST_291 = 0
+#if !MIN_VERSION_ghc(9,2,1)
   , PlatformSettings.pc_DYNAMIC_BY_DEFAULT = False
+#endif
   , PlatformSettings.pc_ILDV_CREATE_MASK = 0
   , PlatformSettings.pc_ILDV_STATE_CREATE = 0
   , PlatformSettings.pc_ILDV_STATE_USE = 0
