@@ -14,8 +14,11 @@ import qualified GHC.Driver.Session
 import qualified GHC.Parser.Header
 import qualified GHC.Platform
 import qualified GHC.Settings
+#if MIN_VERSION_ghc(9,2,1)
 import qualified GHC.Platform as PlatformSettings
+#else
 import qualified GHC.Settings as PlatformSettings
+#endif
 import qualified GHC.Types.SrcLoc
 import qualified GHC.Utils.Error
 import qualified GHC.Utils.Fingerprint
@@ -286,46 +289,46 @@ initialTargetPlatform = GHC.Settings.Platform
   , GHC.Settings.platformWordSize = GHC.Platform.PW8
   }
 
-initialToolSettings :: PlatformSettings.ToolSettings
-initialToolSettings = PlatformSettings.ToolSettings
-  { PlatformSettings.toolSettings_ccSupportsNoPie = False
-  , PlatformSettings.toolSettings_extraGccViaCFlags = []
-  , PlatformSettings.toolSettings_ldIsGnuLd = False
-  , PlatformSettings.toolSettings_ldSupportsBuildId = False
-  , PlatformSettings.toolSettings_ldSupportsCompactUnwind = False
-  , PlatformSettings.toolSettings_ldSupportsFilelist = False
-  , PlatformSettings.toolSettings_opt_a = []
-  , PlatformSettings.toolSettings_opt_c = []
-  , PlatformSettings.toolSettings_opt_cxx = []
-  , PlatformSettings.toolSettings_opt_F = []
-  , PlatformSettings.toolSettings_opt_i = []
-  , PlatformSettings.toolSettings_opt_l = []
-  , PlatformSettings.toolSettings_opt_L = []
-  , PlatformSettings.toolSettings_opt_lc = []
-  , PlatformSettings.toolSettings_opt_lcc = []
-  , PlatformSettings.toolSettings_opt_lm = []
-  , PlatformSettings.toolSettings_opt_lo = []
-  , PlatformSettings.toolSettings_opt_P = []
-  , PlatformSettings.toolSettings_opt_P_fingerprint =
+initialToolSettings :: GHC.Settings.ToolSettings
+initialToolSettings = GHC.Settings.ToolSettings
+  { GHC.Settings.toolSettings_ccSupportsNoPie = False
+  , GHC.Settings.toolSettings_extraGccViaCFlags = []
+  , GHC.Settings.toolSettings_ldIsGnuLd = False
+  , GHC.Settings.toolSettings_ldSupportsBuildId = False
+  , GHC.Settings.toolSettings_ldSupportsCompactUnwind = False
+  , GHC.Settings.toolSettings_ldSupportsFilelist = False
+  , GHC.Settings.toolSettings_opt_a = []
+  , GHC.Settings.toolSettings_opt_c = []
+  , GHC.Settings.toolSettings_opt_cxx = []
+  , GHC.Settings.toolSettings_opt_F = []
+  , GHC.Settings.toolSettings_opt_i = []
+  , GHC.Settings.toolSettings_opt_l = []
+  , GHC.Settings.toolSettings_opt_L = []
+  , GHC.Settings.toolSettings_opt_lc = []
+  , GHC.Settings.toolSettings_opt_lcc = []
+  , GHC.Settings.toolSettings_opt_lm = []
+  , GHC.Settings.toolSettings_opt_lo = []
+  , GHC.Settings.toolSettings_opt_P = []
+  , GHC.Settings.toolSettings_opt_P_fingerprint =
     GHC.Utils.Fingerprint.fingerprint0
-  , PlatformSettings.toolSettings_opt_windres = []
-  , PlatformSettings.toolSettings_pgm_a = ("", [])
-  , PlatformSettings.toolSettings_pgm_ar = ""
-  , PlatformSettings.toolSettings_pgm_c = ""
-  , PlatformSettings.toolSettings_pgm_dll = ("", [])
-  , PlatformSettings.toolSettings_pgm_F = ""
-  , PlatformSettings.toolSettings_pgm_i = ""
-  , PlatformSettings.toolSettings_pgm_install_name_tool = ""
-  , PlatformSettings.toolSettings_pgm_l = ("", [])
-  , PlatformSettings.toolSettings_pgm_L = ""
-  , PlatformSettings.toolSettings_pgm_lc = ("", [])
-  , PlatformSettings.toolSettings_pgm_lcc = ("", [])
-  , PlatformSettings.toolSettings_pgm_libtool = ""
-  , PlatformSettings.toolSettings_pgm_lm = ("", [])
-  , PlatformSettings.toolSettings_pgm_lo = ("", [])
-  , PlatformSettings.toolSettings_pgm_otool = ""
-  , PlatformSettings.toolSettings_pgm_P = ("", [])
-  , PlatformSettings.toolSettings_pgm_ranlib = ""
-  , PlatformSettings.toolSettings_pgm_T = ""
-  , PlatformSettings.toolSettings_pgm_windres = ""
+  , GHC.Settings.toolSettings_opt_windres = []
+  , GHC.Settings.toolSettings_pgm_a = ("", [])
+  , GHC.Settings.toolSettings_pgm_ar = ""
+  , GHC.Settings.toolSettings_pgm_c = ""
+  , GHC.Settings.toolSettings_pgm_dll = ("", [])
+  , GHC.Settings.toolSettings_pgm_F = ""
+  , GHC.Settings.toolSettings_pgm_i = ""
+  , GHC.Settings.toolSettings_pgm_install_name_tool = ""
+  , GHC.Settings.toolSettings_pgm_l = ("", [])
+  , GHC.Settings.toolSettings_pgm_L = ""
+  , GHC.Settings.toolSettings_pgm_lc = ("", [])
+  , GHC.Settings.toolSettings_pgm_lcc = ("", [])
+  , GHC.Settings.toolSettings_pgm_libtool = ""
+  , GHC.Settings.toolSettings_pgm_lm = ("", [])
+  , GHC.Settings.toolSettings_pgm_lo = ("", [])
+  , GHC.Settings.toolSettings_pgm_otool = ""
+  , GHC.Settings.toolSettings_pgm_P = ("", [])
+  , GHC.Settings.toolSettings_pgm_ranlib = ""
+  , GHC.Settings.toolSettings_pgm_T = ""
+  , GHC.Settings.toolSettings_pgm_windres = ""
   }
