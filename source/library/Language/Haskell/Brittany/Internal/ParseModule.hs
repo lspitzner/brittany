@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-implicit-prelude #-}
 
 module Language.Haskell.Brittany.Internal.ParseModule where
@@ -14,17 +13,11 @@ import qualified GHC.Driver.Session
 import qualified GHC.Parser.Header
 import qualified GHC.Platform
 import qualified GHC.Settings
-#if MIN_VERSION_ghc(9,2,1)
 import qualified GHC.Types.SafeHaskell
-import qualified GHC.Platform as PlatformSettings
-#else
-import qualified GHC.Settings as PlatformSettings
-#endif
 import qualified GHC.Types.SrcLoc
 import qualified GHC.Utils.Error
 import qualified GHC.Utils.Fingerprint
 import qualified Language.Haskell.GHC.ExactPrint.Parsers as ExactPrint
-import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 
 -- | Parses a Haskell module. Although this nominally requires IO, it is
 -- morally pure. It should have no observable effects.
@@ -34,11 +27,7 @@ parseModule
   -> FilePath
   -> (GHC.Driver.Session.DynFlags -> io (Either String a))
   -> String
-#if MIN_VERSION_ghc(9,2,1)
   -> io (Either String (GHC.ParsedSource, a))
-#else 
-  -> io (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
-#endif
 parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
   let
     dynFlags1 = GHC.Driver.Session.gopt_set
@@ -47,12 +36,7 @@ parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
       -- Neither passing in @"-XUnsafe"@ as a command line argument nor having
       -- @{-# LANGUAGE Unsafe #-}@ in the source file seem to help.
       initialDynFlags
-        { GHC.Driver.Session.safeHaskell = 
-#if MIN_VERSION_ghc(9,2,1)
-            GHC.Types.SafeHaskell.Sf_Unsafe
-#else
-            GHC.Driver.Session.Sf_Unsafe
-#endif
+        { GHC.Driver.Session.safeHaskell = GHC.Types.SafeHaskell.Sf_Unsafe
         }
       GHC.Driver.Session.Opt_KeepRawTokenStream
   (dynFlags2, leftovers1, _) <-
@@ -72,11 +56,7 @@ parseModule arguments1 filePath checkDynFlags string = Except.runExceptT $ do
       ExactPrint.parseModuleFromStringInternal dynFlags3 filePath string
   case parseResult of
     Left errorMessages -> handleErrorMessages errorMessages
-#if MIN_VERSION_ghc(9,2,1)
     Right parsedSource -> pure (parsedSource, dynFlagsResult)
-#else
-    Right (anns, parsedSource) -> pure (anns, parsedSource, dynFlagsResult)
-#endif
 
 handleLeftovers
   :: Monad m => [GHC.Types.SrcLoc.Located String] -> Except.ExceptT String m ()
@@ -99,9 +79,6 @@ initialSettings = GHC.Driver.Session.Settings
   , GHC.Driver.Session.sTargetPlatform = initialTargetPlatform
   , GHC.Driver.Session.sToolSettings = initialToolSettings
   , GHC.Driver.Session.sPlatformMisc = initialPlatformMisc
-#if !MIN_VERSION_ghc(9,2,1)
-  , GHC.Driver.Session.sPlatformConstants = initialPlatformConstants
-#endif
   , GHC.Driver.Session.sRawSettings = []
   }
 
@@ -125,10 +102,6 @@ initialPlatformMisc :: GHC.Driver.Session.PlatformMisc
 initialPlatformMisc = GHC.Driver.Session.PlatformMisc
   { GHC.Driver.Session.platformMisc_ghcRTSWays = ""
   , GHC.Driver.Session.platformMisc_ghcRtsWithLibdw = False
-#if !MIN_VERSION_ghc(9,2,1)
-  , GHC.Driver.Session.platformMisc_ghcThreaded = False
-  , GHC.Driver.Session.platformMisc_ghcDebugged = False
-#endif
   , GHC.Driver.Session.platformMisc_ghcWithInterpreter = False
   , GHC.Driver.Session.platformMisc_ghcWithSMP = False
   , GHC.Driver.Session.platformMisc_libFFI = False
@@ -142,154 +115,143 @@ initialLlvmConfig = GHC.Driver.Session.LlvmConfig
   , GHC.Driver.Session.llvmTargets = []
   }
 
-initialPlatformConstants :: PlatformSettings.PlatformConstants
-initialPlatformConstants = PlatformSettings.PlatformConstants
-  { PlatformSettings.pc_AP_STACK_SPLIM = 0
-  , PlatformSettings.pc_BITMAP_BITS_SHIFT = 0
-  , PlatformSettings.pc_BLOCK_SIZE = 0
-  , PlatformSettings.pc_BLOCKS_PER_MBLOCK = 0
-  , PlatformSettings.pc_CINT_SIZE = 0
-  , PlatformSettings.pc_CLONG_LONG_SIZE = 0
-  , PlatformSettings.pc_CLONG_SIZE = 0
-  , PlatformSettings.pc_CONTROL_GROUP_CONST_291 = 0
-#if !MIN_VERSION_ghc(9,2,1)
-  , PlatformSettings.pc_DYNAMIC_BY_DEFAULT = False
-#endif
-  , PlatformSettings.pc_ILDV_CREATE_MASK = 0
-  , PlatformSettings.pc_ILDV_STATE_CREATE = 0
-  , PlatformSettings.pc_ILDV_STATE_USE = 0
-  , PlatformSettings.pc_LDV_SHIFT = 0
-  , PlatformSettings.pc_MAX_CHARLIKE = 0
-  , PlatformSettings.pc_MAX_Double_REG = 0
-  , PlatformSettings.pc_MAX_Float_REG = 0
-  , PlatformSettings.pc_MAX_INTLIKE = 0
-  , PlatformSettings.pc_MAX_Long_REG = 0
-  , PlatformSettings.pc_MAX_Real_Double_REG = 0
-  , PlatformSettings.pc_MAX_Real_Float_REG = 0
-  , PlatformSettings.pc_MAX_Real_Long_REG = 0
-  , PlatformSettings.pc_MAX_Real_Vanilla_REG = 0
-  , PlatformSettings.pc_MAX_Real_XMM_REG = 0
-  , PlatformSettings.pc_MAX_SPEC_AP_SIZE = 0
-  , PlatformSettings.pc_MAX_SPEC_SELECTEE_SIZE = 0
-  , PlatformSettings.pc_MAX_Vanilla_REG = 0
-  , PlatformSettings.pc_MAX_XMM_REG = 0
-  , PlatformSettings.pc_MIN_CHARLIKE = 0
-  , PlatformSettings.pc_MIN_INTLIKE = 0
-  , PlatformSettings.pc_MIN_PAYLOAD_SIZE = 0
-  , PlatformSettings.pc_MUT_ARR_PTRS_CARD_BITS = 0
-  , PlatformSettings.pc_OFFSET_bdescr_blocks = 0
-  , PlatformSettings.pc_OFFSET_bdescr_flags = 0
-  , PlatformSettings.pc_OFFSET_bdescr_free = 0
-  , PlatformSettings.pc_OFFSET_bdescr_start = 0
-  , PlatformSettings.pc_OFFSET_Capability_r = 0
-  , PlatformSettings.pc_OFFSET_CostCentreStack_mem_alloc = 0
-  , PlatformSettings.pc_OFFSET_CostCentreStack_scc_count = 0
-  , PlatformSettings.pc_OFFSET_StgArrBytes_bytes = 0
-  , PlatformSettings.pc_OFFSET_stgEagerBlackholeInfo = 0
-  , PlatformSettings.pc_OFFSET_StgEntCounter_allocd = 0
-  , PlatformSettings.pc_OFFSET_StgEntCounter_allocs = 0
-  , PlatformSettings.pc_OFFSET_StgEntCounter_entry_count = 0
-  , PlatformSettings.pc_OFFSET_StgEntCounter_link = 0
-  , PlatformSettings.pc_OFFSET_StgEntCounter_registeredp = 0
-  , PlatformSettings.pc_OFFSET_StgFunInfoExtraFwd_arity = 0
-  , PlatformSettings.pc_OFFSET_StgFunInfoExtraRev_arity = 0
-  , PlatformSettings.pc_OFFSET_stgGCEnter1 = 0
-  , PlatformSettings.pc_OFFSET_stgGCFun = 0
-  , PlatformSettings.pc_OFFSET_StgHeader_ccs = 0
-  , PlatformSettings.pc_OFFSET_StgHeader_ldvw = 0
-  , PlatformSettings.pc_OFFSET_StgMutArrPtrs_ptrs = 0
-  , PlatformSettings.pc_OFFSET_StgMutArrPtrs_size = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rCCCS = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rCurrentNursery = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rCurrentTSO = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rD1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rD2 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rD3 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rD4 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rD5 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rD6 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rF1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rF2 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rF3 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rF4 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rF5 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rF6 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rHp = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rHpAlloc = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rHpLim = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rL1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR10 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR2 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR3 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR4 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR5 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR6 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR7 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR8 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rR9 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rSp = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rSpLim = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rXMM1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rXMM2 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rXMM3 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rXMM4 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rXMM5 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rXMM6 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rYMM1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rYMM2 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rYMM3 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rYMM4 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rYMM5 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rYMM6 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rZMM1 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rZMM2 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rZMM3 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rZMM4 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rZMM5 = 0
-  , PlatformSettings.pc_OFFSET_StgRegTable_rZMM6 = 0
-  , PlatformSettings.pc_OFFSET_StgSmallMutArrPtrs_ptrs = 0
-  , PlatformSettings.pc_OFFSET_StgStack_sp = 0
-  , PlatformSettings.pc_OFFSET_StgStack_stack = 0
-  , PlatformSettings.pc_OFFSET_StgTSO_alloc_limit = 0
-  , PlatformSettings.pc_OFFSET_StgTSO_cccs = 0
-  , PlatformSettings.pc_OFFSET_StgTSO_stackobj = 0
-  , PlatformSettings.pc_OFFSET_StgUpdateFrame_updatee = 0
-  , PlatformSettings.pc_PROF_HDR_SIZE = 0
-  , PlatformSettings.pc_REP_CostCentreStack_mem_alloc = 0
-  , PlatformSettings.pc_REP_CostCentreStack_scc_count = 0
-  , PlatformSettings.pc_REP_StgEntCounter_allocd = 0
-  , PlatformSettings.pc_REP_StgEntCounter_allocs = 0
-  , PlatformSettings.pc_REP_StgFunInfoExtraFwd_arity = 0
-  , PlatformSettings.pc_REP_StgFunInfoExtraRev_arity = 0
-  , PlatformSettings.pc_RESERVED_C_STACK_BYTES = 0
-  , PlatformSettings.pc_RESERVED_STACK_WORDS = 0
-  , PlatformSettings.pc_SIZEOF_CostCentreStack = 0
-  , PlatformSettings.pc_SIZEOF_StgArrBytes_NoHdr = 0
-  , PlatformSettings.pc_SIZEOF_StgFunInfoExtraRev = 0
-  , PlatformSettings.pc_SIZEOF_StgMutArrPtrs_NoHdr = 0
-  , PlatformSettings.pc_SIZEOF_StgSmallMutArrPtrs_NoHdr = 0
-  , PlatformSettings.pc_SIZEOF_StgSMPThunkHeader = 0
-  , PlatformSettings.pc_SIZEOF_StgUpdateFrame_NoHdr = 0
-  , PlatformSettings.pc_STD_HDR_SIZE = 0
-  , PlatformSettings.pc_TAG_BITS = 0
-  , PlatformSettings.pc_TICKY_BIN_COUNT = 0
-  , PlatformSettings.pc_WORD_SIZE = 0
+initialPlatformConstants :: GHC.Platform.PlatformConstants
+initialPlatformConstants = GHC.Platform.PlatformConstants
+  { GHC.Platform.pc_AP_STACK_SPLIM = 0
+  , GHC.Platform.pc_BITMAP_BITS_SHIFT = 0
+  , GHC.Platform.pc_BLOCK_SIZE = 0
+  , GHC.Platform.pc_BLOCKS_PER_MBLOCK = 0
+  , GHC.Platform.pc_CINT_SIZE = 0
+  , GHC.Platform.pc_CLONG_LONG_SIZE = 0
+  , GHC.Platform.pc_CLONG_SIZE = 0
+  , GHC.Platform.pc_CONTROL_GROUP_CONST_291 = 0
+  , GHC.Platform.pc_ILDV_CREATE_MASK = 0
+  , GHC.Platform.pc_ILDV_STATE_CREATE = 0
+  , GHC.Platform.pc_ILDV_STATE_USE = 0
+  , GHC.Platform.pc_LDV_SHIFT = 0
+  , GHC.Platform.pc_MAX_CHARLIKE = 0
+  , GHC.Platform.pc_MAX_Double_REG = 0
+  , GHC.Platform.pc_MAX_Float_REG = 0
+  , GHC.Platform.pc_MAX_INTLIKE = 0
+  , GHC.Platform.pc_MAX_Long_REG = 0
+  , GHC.Platform.pc_MAX_Real_Double_REG = 0
+  , GHC.Platform.pc_MAX_Real_Float_REG = 0
+  , GHC.Platform.pc_MAX_Real_Long_REG = 0
+  , GHC.Platform.pc_MAX_Real_Vanilla_REG = 0
+  , GHC.Platform.pc_MAX_Real_XMM_REG = 0
+  , GHC.Platform.pc_MAX_SPEC_AP_SIZE = 0
+  , GHC.Platform.pc_MAX_SPEC_SELECTEE_SIZE = 0
+  , GHC.Platform.pc_MAX_Vanilla_REG = 0
+  , GHC.Platform.pc_MAX_XMM_REG = 0
+  , GHC.Platform.pc_MIN_CHARLIKE = 0
+  , GHC.Platform.pc_MIN_INTLIKE = 0
+  , GHC.Platform.pc_MIN_PAYLOAD_SIZE = 0
+  , GHC.Platform.pc_MUT_ARR_PTRS_CARD_BITS = 0
+  , GHC.Platform.pc_OFFSET_bdescr_blocks = 0
+  , GHC.Platform.pc_OFFSET_bdescr_flags = 0
+  , GHC.Platform.pc_OFFSET_bdescr_free = 0
+  , GHC.Platform.pc_OFFSET_bdescr_start = 0
+  , GHC.Platform.pc_OFFSET_Capability_r = 0
+  , GHC.Platform.pc_OFFSET_CostCentreStack_mem_alloc = 0
+  , GHC.Platform.pc_OFFSET_CostCentreStack_scc_count = 0
+  , GHC.Platform.pc_OFFSET_StgArrBytes_bytes = 0
+  , GHC.Platform.pc_OFFSET_stgEagerBlackholeInfo = 0
+  , GHC.Platform.pc_OFFSET_StgEntCounter_allocd = 0
+  , GHC.Platform.pc_OFFSET_StgEntCounter_allocs = 0
+  , GHC.Platform.pc_OFFSET_StgEntCounter_entry_count = 0
+  , GHC.Platform.pc_OFFSET_StgEntCounter_link = 0
+  , GHC.Platform.pc_OFFSET_StgEntCounter_registeredp = 0
+  , GHC.Platform.pc_OFFSET_StgFunInfoExtraFwd_arity = 0
+  , GHC.Platform.pc_OFFSET_StgFunInfoExtraRev_arity = 0
+  , GHC.Platform.pc_OFFSET_stgGCEnter1 = 0
+  , GHC.Platform.pc_OFFSET_stgGCFun = 0
+  , GHC.Platform.pc_OFFSET_StgHeader_ccs = 0
+  , GHC.Platform.pc_OFFSET_StgHeader_ldvw = 0
+  , GHC.Platform.pc_OFFSET_StgMutArrPtrs_ptrs = 0
+  , GHC.Platform.pc_OFFSET_StgMutArrPtrs_size = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rCCCS = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rCurrentNursery = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rCurrentTSO = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rD1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rD2 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rD3 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rD4 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rD5 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rD6 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rF1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rF2 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rF3 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rF4 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rF5 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rF6 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rHp = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rHpAlloc = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rHpLim = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rL1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR10 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR2 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR3 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR4 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR5 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR6 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR7 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR8 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rR9 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rSp = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rSpLim = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rXMM1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rXMM2 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rXMM3 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rXMM4 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rXMM5 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rXMM6 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rYMM1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rYMM2 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rYMM3 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rYMM4 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rYMM5 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rYMM6 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rZMM1 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rZMM2 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rZMM3 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rZMM4 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rZMM5 = 0
+  , GHC.Platform.pc_OFFSET_StgRegTable_rZMM6 = 0
+  , GHC.Platform.pc_OFFSET_StgSmallMutArrPtrs_ptrs = 0
+  , GHC.Platform.pc_OFFSET_StgStack_sp = 0
+  , GHC.Platform.pc_OFFSET_StgStack_stack = 0
+  , GHC.Platform.pc_OFFSET_StgTSO_alloc_limit = 0
+  , GHC.Platform.pc_OFFSET_StgTSO_cccs = 0
+  , GHC.Platform.pc_OFFSET_StgTSO_stackobj = 0
+  , GHC.Platform.pc_OFFSET_StgUpdateFrame_updatee = 0
+  , GHC.Platform.pc_PROF_HDR_SIZE = 0
+  , GHC.Platform.pc_REP_CostCentreStack_mem_alloc = 0
+  , GHC.Platform.pc_REP_CostCentreStack_scc_count = 0
+  , GHC.Platform.pc_REP_StgEntCounter_allocd = 0
+  , GHC.Platform.pc_REP_StgEntCounter_allocs = 0
+  , GHC.Platform.pc_REP_StgFunInfoExtraFwd_arity = 0
+  , GHC.Platform.pc_REP_StgFunInfoExtraRev_arity = 0
+  , GHC.Platform.pc_RESERVED_C_STACK_BYTES = 0
+  , GHC.Platform.pc_RESERVED_STACK_WORDS = 0
+  , GHC.Platform.pc_SIZEOF_CostCentreStack = 0
+  , GHC.Platform.pc_SIZEOF_StgArrBytes_NoHdr = 0
+  , GHC.Platform.pc_SIZEOF_StgFunInfoExtraRev = 0
+  , GHC.Platform.pc_SIZEOF_StgMutArrPtrs_NoHdr = 0
+  , GHC.Platform.pc_SIZEOF_StgSmallMutArrPtrs_NoHdr = 0
+  , GHC.Platform.pc_SIZEOF_StgSMPThunkHeader = 0
+  , GHC.Platform.pc_SIZEOF_StgUpdateFrame_NoHdr = 0
+  , GHC.Platform.pc_STD_HDR_SIZE = 0
+  , GHC.Platform.pc_TAG_BITS = 0
+  , GHC.Platform.pc_TICKY_BIN_COUNT = 0
+  , GHC.Platform.pc_WORD_SIZE = 0
   }
 
-#if MIN_VERSION_ghc(9,2,1)
 initialPlatformArchOS :: GHC.Platform.ArchOS
 initialPlatformArchOS = GHC.Platform.ArchOS
   { GHC.Platform.archOS_arch = GHC.Platform.ArchX86_64
   , GHC.Platform.archOS_OS = GHC.Platform.OSLinux
   }
-#else
-initialPlatformMini :: GHC.Settings.PlatformMini
-initialPlatformMini = GHC.Settings.PlatformMini
-  { GHC.Settings.platformMini_arch = GHC.Platform.ArchX86_64
-  , GHC.Settings.platformMini_os = GHC.Platform.OSLinux
-  }
-#endif
 
 initialTargetPlatform :: GHC.Settings.Platform
 initialTargetPlatform = GHC.Settings.Platform
@@ -299,12 +261,8 @@ initialTargetPlatform = GHC.Settings.Platform
   , GHC.Settings.platformHasSubsectionsViaSymbols = False
   , GHC.Settings.platformIsCrossCompiling = False
   , GHC.Settings.platformLeadingUnderscore = False
-#if MIN_VERSION_ghc(9,2,1)
   , GHC.Settings.platformArchOS = initialPlatformArchOS
   , GHC.Settings.platform_constants = Just initialPlatformConstants
-#else
-  , GHC.Settings.platformMini = initialPlatformMini
-#endif
   , GHC.Settings.platformTablesNextToCode = False
   , GHC.Settings.platformUnregisterised = False
   , GHC.Settings.platformWordSize = GHC.Platform.PW8
