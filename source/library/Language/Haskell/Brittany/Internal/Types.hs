@@ -22,29 +22,31 @@ import GHC (AnnKeywordId, GenLocated, Located, SrcSpan)
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.Prelude
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import Language.Haskell.GHC.ExactPrint (AnnKey)
+-- import Language.Haskell.GHC.ExactPrint (AnnKey)
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
-import Language.Haskell.GHC.ExactPrint.Types (Anns)
+-- import Language.Haskell.GHC.ExactPrint.Types (Anns)
 import qualified Safe
 
+type Anns = ()
+type AnnKey = ()
 
 data PerItemConfig = PerItemConfig
   { _icd_perBinding :: Map String (CConfig Maybe)
-  , _icd_perKey :: Map ExactPrint.Types.AnnKey (CConfig Maybe)
+  , _icd_perKey :: Map AnnKey (CConfig Maybe)
   }
   deriving Data.Data.Data
 
 type PPM = MultiRWSS.MultiRWS
-  '[Map ExactPrint.AnnKey ExactPrint.Anns, PerItemConfig, Config, ExactPrint.Anns]
+  '[Map AnnKey Anns, PerItemConfig, Config, Anns]
   '[Text.Builder.Builder, [BrittanyError], Seq String]
   '[]
 
 type PPMLocal = MultiRWSS.MultiRWS
-  '[Config, ExactPrint.Anns]
+  '[Config, Anns]
   '[Text.Builder.Builder, [BrittanyError], Seq String]
   '[]
 
-newtype TopLevelDeclNameMap = TopLevelDeclNameMap (Map ExactPrint.AnnKey String)
+newtype TopLevelDeclNameMap = TopLevelDeclNameMap (Map AnnKey String)
 
 data LayoutState = LayoutState
   { _lstate_baseYs         :: [Int]
@@ -131,7 +133,7 @@ instance Show LayoutState where
 --                                           -- when creating zero-indentation
 --                                           -- multi-line list literals.
 --   , _lsettings_importColumn :: Int
---   , _lsettings_initialAnns :: ExactPrint.Anns
+--   , _lsettings_initialAnns :: Anns
 --   }
 
 data BrittanyError
