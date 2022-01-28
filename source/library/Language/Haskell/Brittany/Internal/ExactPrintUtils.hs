@@ -37,7 +37,7 @@ parseModule
   :: [String]
   -> System.IO.FilePath
   -> (GHC.DynFlags -> IO (Either String a))
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+  -> IO (Either String (GHC.ParsedSource, a))
 parseModule args fp dynCheck = do
   str <- System.IO.readFile fp
   parseModuleFromString args fp dynCheck str
@@ -47,10 +47,10 @@ parseModuleFromString
   -> System.IO.FilePath
   -> (GHC.DynFlags -> IO (Either String a))
   -> String
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+  -> IO (Either String (GHC.ParsedSource, a))
 parseModuleFromString = ParseModule.parseModule
 
-
+{-
 commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()
 commentAnnFixTransformGlob ast = do
   let
@@ -115,7 +115,7 @@ commentAnnFixTransformGlob ast = do
           , ExactPrint.annsDP = assocs'
           }
       ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
-
+-}
 
 -- TODO: this is unused by now, but it contains one detail that
 --       commentAnnFixTransformGlob does not include: Moving of comments for
@@ -181,6 +181,8 @@ commentAnnFixTransformGlob ast = do
 
 --   ExactPrint.modifyAnnsT moveComments
 
+{--
+
 -- | split a set of annotations in a module into a map from top-level module
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
 -- implementation would have.
@@ -229,7 +231,8 @@ foldedAnnKeys ast = SYB.everything
   ast
   where locTyCon = SYB.typeRepTyCon (SYB.typeOf (L () ()))
 
-
+-}
+{-
 withTransformedAnns
   :: Data ast
   => ast
@@ -248,7 +251,7 @@ withTransformedAnns ast m = MultiRWSS.mGetRawR >>= \case
       ((), (annsBalanced, _), _) =
         ExactPrint.runTransform anns (commentAnnFixTransformGlob ast)
     in annsBalanced
-
+-}
 
 warnExtractorCompat :: GHC.Warn -> String
 warnExtractorCompat (GHC.Warn _ (L _ s)) = s
