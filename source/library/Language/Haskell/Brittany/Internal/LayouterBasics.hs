@@ -103,9 +103,9 @@ briDocByExactNoComment ast = do
 briDocByExactInlineOnly
   :: 
   -- (ExactPrint.Annotate.Annotate ast)
-  (Data ast, ExactPrint.ExactPrint ast)
+  (Data ast, ExactPrint.ExactPrint (LocatedAn an ast), Data an)
   => String
-  -> Located ast
+  -> LocatedAn an ast
   -> ToBriDocM BriDocNumbered
 briDocByExactInlineOnly infoStr ast = do
   -- anns <- mAsk
@@ -781,7 +781,7 @@ docEnsureIndent ind mbd = mbd >>= \bd -> allocateNode $ BDFEnsureIndent ind bd
 unknownNodeError
   :: Data.Data.Data ast
   => String
-  -> GenLocated GHC.SrcSpan ast
+  -> LocatedAn an ast
   -> ToBriDocM BriDocNumbered
 unknownNodeError infoStr ast = do
   mTell [ErrorUnknownNode infoStr ast]

@@ -145,7 +145,7 @@ data BrittanyError
     --   output and second the corresponding, ill-formed input.
   | LayoutWarning String
     -- ^ some warning
-  | forall ast . Data.Data.Data ast => ErrorUnknownNode String (GenLocated SrcSpan ast)
+  | forall ast an. Data.Data.Data ast => ErrorUnknownNode String (LocatedAn an ast)
     -- ^ internal error: pretty-printing is not implemented for type of node
     --   in the syntax-tree
   | ErrorOutputCheck
