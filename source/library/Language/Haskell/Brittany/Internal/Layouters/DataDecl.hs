@@ -275,29 +275,33 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
       $ List.intersperse docCommaSep
       $ ts
       <&> \case
-            HsIB _ t -> layoutType t
+            _ -> undefined
+            -- HsIB _ t -> layoutType t
       , whenMoreThan1Type ")"
       , rhsStrategy
       ]
  where
+  strategyLeftRight 
+    :: GenLocated (SrcAnn ann) (DerivStrategy GhcPs) 
+    -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
   strategyLeftRight = \case
-    (L _ StockStrategy) -> (docLitS " stock", docEmpty)
-    (L _ AnyclassStrategy) -> (docLitS " anyclass", docEmpty)
-    (L _ NewtypeStrategy) -> (docLitS " newtype", docEmpty)
+    (L _ (StockStrategy _)) -> (docLitS " stock", docEmpty)
+    (L _ (AnyclassStrategy _)) -> (docLitS " anyclass", docEmpty)
+    (L _ (NewtypeStrategy _)) -> (docLitS " newtype", docEmpty)
     lVia@(L _ (ViaStrategy viaTypes)) ->
       ( docEmpty
       , case viaTypes of
-        HsIB _ext t ->
-          docSeq [docWrapNode lVia $ docLitS " via", docSeparator, layoutType t]
+          XViaStrategyPs _epann (L _span (HsSig _sig _bndrs t)) -> 
+            docSeq [docWrapNode lVia $ docLitS " via", docSeparator, layoutType t]
       )
 
 docDeriving :: ToBriDocM BriDocNumbered
 docDeriving = docLitS "deriving"
 
 createDetailsDoc
-  :: Text -> HsConDeclDetails GhcPs -> (ToBriDocM BriDocNumbered)
+  :: Text -> HsConDeclH98Details GhcPs -> (ToBriDocM BriDocNumbered)
 createDetailsDoc consNameStr details = case details of
-  PrefixCon args -> do
+  PrefixCon _ args -> do
     indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
     let
       singleLine = docSeq

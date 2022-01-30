@@ -17,7 +17,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import DataTreePrint
-import GHC (GenLocated(L), Located, moduleName, moduleNameString)
+import GHC (GenLocated(L), Located, LocatedAn, moduleName, moduleNameString)
 import qualified GHC.OldList as List
 import GHC.Parser.Annotation (AnnKeywordId(..))
 import GHC.Types.Name (getOccString)
@@ -639,15 +639,15 @@ docNodeMoveToKWDP ast kw shouldRestoreIndent bdm =
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)
-              => Located ast
+              => LocatedAn an ast
               -> a
               -> a
   docWrapNodePrior :: ( Data.Data.Data ast)
-                   => Located ast
+                   => LocatedAn an ast
                    -> a
                    -> a
   docWrapNodeRest  :: ( Data.Data.Data ast)
-                   => Located ast
+                   => LocatedAn an ast
                    -> a
                    -> a
 
