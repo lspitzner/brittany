@@ -20,16 +20,16 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 layoutDataDecl
-  :: Located (TyClDecl GhcPs)
-  -> Located RdrName
+  :: LocatedAn an1 (TyClDecl GhcPs)
+  -> LocatedAn an2 RdrName
   -> LHsQTyVars GhcPs
   -> HsDataDefn GhcPs
   -> ToBriDocM BriDocNumbered
 layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
   -- newtype MyType a b = MyType ..
-  HsDataDefn _ext NewType (L _ []) _ctype Nothing [cons] mDerivs ->
+  HsDataDefn _ext NewType _ctxt _ctype Nothing [cons] mDerivs ->
     case cons of
-      (L _ (ConDeclH98 _ext consName (L _ False) _qvars (Just (L _ [])) details _conDoc))
+      (L _ (ConDeclH98 _ext consName False _qvars (Just (L _ [])) details _conDoc))
         -> docWrapNode ltycl $ do
           nameStr <- lrdrNameToTextAnn name
           consNameStr <- lrdrNameToTextAnn consName
@@ -54,9 +54,9 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 
   -- data MyData a b
   -- (zero constructors)
-  HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [] mDerivs ->
+  HsDataDefn _ext DataType mLhsContext _ctype Nothing [] mDerivs ->
     docWrapNode ltycl $ do
-      lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
+      lhsContextDoc <- docSharedWrapper createContextDoc mLhsContext
       nameStr <- lrdrNameToTextAnn name
       tyVarLine <- return <$> createBndrDoc bndrs
       createDerivingPar mDerivs $ docSeq
@@ -68,11 +68,11 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 
   -- data MyData = MyData ..
   -- data MyData = MyData { .. }
-  HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
+  HsDataDefn _ext DataType mLhsContext _ctype Nothing [cons] mDerivs ->
     case cons of
-      (L _ (ConDeclH98 _ext consName (L _ _hasExt) qvars mRhsContext details _conDoc))
+      (L _ (ConDeclH98 _ext consName _hasExt qvars mRhsContext details _conDoc))
         -> docWrapNode ltycl $ do
-          lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
+          lhsContextDoc <- docSharedWrapper createContextDoc mLhsContext
           nameStr <- lrdrNameToTextAnn name
           consNameStr <- lrdrNameToTextAnn consName
           tyVarLine <- return <$> createBndrDoc bndrs
@@ -81,7 +81,7 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
             Just x -> Just . pure <$> x
           rhsContextDocMay <- case mRhsContext of
             Nothing -> pure Nothing
-            Just (L _ ctxt) -> Just . pure <$> createContextDoc ctxt
+            Just lctxt -> Just . pure <$> createContextDoc (Just lctxt)
           rhsDoc <- return <$> createDetailsDoc consNameStr details
           consDoc <-
             fmap pure
@@ -200,28 +200,29 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 
   _ -> briDocByExactNoComment ltycl
 
-createContextDoc :: HsContext GhcPs -> ToBriDocM BriDocNumbered
-createContextDoc [] = docEmpty
-createContextDoc [t] =
-  docSeq [layoutType t, docSeparator, docLitS "=>", docSeparator]
-createContextDoc (t1 : tR) = do
-  t1Doc <- docSharedWrapper layoutType t1
-  tRDocs <- tR `forM` docSharedWrapper layoutType
-  docAlt
-    [ docSeq
-      [ docLitS "("
-      , docForceSingleline $ docSeq $ List.intersperse
-        docCommaSep
-        (t1Doc : tRDocs)
-      , docLitS ") =>"
-      , docSeparator
+createContextDoc :: Maybe (LHsContext GhcPs) -> ToBriDocM BriDocNumbered
+createContextDoc Nothing = docEmpty
+createContextDoc (Just (L _ lhsContext)) = case lhsContext of
+  [] -> docEmpty
+  [t] -> docSeq [layoutType t, docSeparator, docLitS "=>", docSeparator]
+  (t1 : tR) -> do
+    t1Doc <- docSharedWrapper layoutType t1
+    tRDocs <- tR `forM` docSharedWrapper layoutType
+    docAlt
+      [ docSeq
+        [ docLitS "("
+        , docForceSingleline $ docSeq $ List.intersperse
+          docCommaSep
+          (t1Doc : tRDocs)
+        , docLitS ") =>"
+        , docSeparator
+        ]
+      , docLines $ join
+        [ [docSeq [docLitS "(", docSeparator, t1Doc]]
+        , tRDocs <&> \tRDoc -> docSeq [docLitS ",", docSeparator, tRDoc]
+        , [docLitS ") =>", docSeparator]
+        ]
       ]
-    , docLines $ join
-      [ [docSeq [docLitS "(", docSeparator, t1Doc]]
-      , tRDocs <&> \tRDoc -> docSeq [docLitS ",", docSeparator, tRDoc]
-      , [docLitS ") =>", docSeparator]
-      ]
-    ]
 
 createBndrDoc :: [LHsTyVarBndr flag GhcPs] -> ToBriDocM BriDocNumbered
 createBndrDoc bs = do

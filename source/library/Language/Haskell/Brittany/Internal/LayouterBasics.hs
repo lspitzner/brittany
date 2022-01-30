@@ -67,8 +67,8 @@ processDefault x = do
 briDocByExact
   :: 
   -- (ExactPrint.Annotate.Annotate ast)
-  Data ast
-  => Located ast
+  (Data ast, Data an)
+  => LocatedAn an ast
   -> ToBriDocM BriDocNumbered
 briDocByExact ast = do
   -- anns <- mAsk
@@ -86,8 +86,8 @@ briDocByExact ast = do
 briDocByExactNoComment
   :: 
   -- (ExactPrint.Annotate.Annotate ast)
-  Data ast
-  => Located ast
+  (Data ast, Data an)
+  => LocatedAn an ast
   -> ToBriDocM BriDocNumbered
 briDocByExactNoComment ast = do
   -- anns <- mAsk
@@ -477,7 +477,7 @@ docLitS s = allocateNode $ BDFLit $ Text.pack s
 docExt
   :: 
   -- (ExactPrint.Annotate.Annotate ast)
-  Located ast
+  LocatedAn an ast
   -- -> ExactPrint.Types.Anns
   -> Bool
   -> ToBriDocM BriDocNumbered
@@ -639,15 +639,15 @@ docNodeMoveToKWDP ast kw shouldRestoreIndent bdm =
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)
-              => Located ast
+              => LocatedAn an ast
               -> a
               -> a
   docWrapNodePrior :: ( Data.Data.Data ast)
-                   => Located ast
+                   => LocatedAn an ast
                    -> a
                    -> a
   docWrapNodeRest  :: ( Data.Data.Data ast)
-                   => Located ast
+                   => LocatedAn an ast
                    -> a
                    -> a
 
