@@ -152,7 +152,7 @@ lrdrNameToTextAnnGen
   -- , MonadMultiReader (Map AnnKey Annotation) m
   )
   => (Text -> Text)
-  -> Located RdrName
+  -> LocatedAn an RdrName
   -> m Text
 lrdrNameToTextAnnGen f ast@(L _ n) = do
   -- anns <- mAsk
@@ -181,7 +181,7 @@ lrdrNameToTextAnn
   :: (MonadMultiReader Config m
   -- , MonadMultiReader (Map AnnKey Annotation) m
   )
-  => Located RdrName
+  => LocatedAn an RdrName
   -> m Text
 lrdrNameToTextAnn = lrdrNameToTextAnnGen id
 
@@ -189,7 +189,7 @@ lrdrNameToTextAnnTypeEqualityIsSpecial
   :: (MonadMultiReader Config m
   -- , MonadMultiReader (Map AnnKey Annotation) m
   )
-  => Located RdrName
+  => LocatedAn an RdrName
   -> m Text
 lrdrNameToTextAnnTypeEqualityIsSpecial ast = do
   let
@@ -209,7 +209,7 @@ lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick
     --  , MonadMultiReader (Map AnnKey Annotation) m
      )
   => Located ast
-  -> Located RdrName
+  -> LocatedAn an RdrName
   -> m Text
 lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick ast1 ast2 = do
   hasQuote <- hasAnnKeyword ast1 AnnSimpleQuote
