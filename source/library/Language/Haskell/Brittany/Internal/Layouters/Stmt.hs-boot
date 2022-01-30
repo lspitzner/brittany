@@ -7,4 +7,4 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 
-layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))
+layoutStmt :: ToBriDoc' an (StmtLR GhcPs GhcPs (LHsExpr GhcPs))

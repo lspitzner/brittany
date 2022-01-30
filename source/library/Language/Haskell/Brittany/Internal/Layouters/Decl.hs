@@ -19,9 +19,9 @@ import GHC.Types.Basic
   ( Activation(..)
   , InlinePragma(..)
   , InlineSpec(..)
-  , LexicalFixity(..)
   , RuleMatchInfo(..)
   )
+import GHC.Types.Fixity (LexicalFixity(..))
 import GHC.Types.SrcLoc (Located, SrcSpan, getLoc, unLoc)
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.ExactPrintUtils
@@ -35,12 +35,12 @@ import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
 import Language.Haskell.Brittany.Internal.Types
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import Language.Haskell.GHC.ExactPrint.Types (mkAnnKey)
+-- import Language.Haskell.GHC.ExactPrint.Types (mkAnnKey)
 import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint
 
+import Language.Haskell.Brittany.Internal.EPCompat
 
-
-layoutDecl :: ToBriDoc HsDecl
+layoutDecl :: ToBriDoc an HsDecl
 layoutDecl d@(L loc decl) = case decl of
   SigD _ sig -> withTransformedAnns d $ layoutSig (L loc sig)
   ValD _ bind -> withTransformedAnns d $ layoutBind (L loc bind) >>= \case
@@ -57,9 +57,9 @@ layoutDecl d@(L loc decl) = case decl of
 -- Sig
 --------------------------------------------------------------------------------
 
-layoutSig :: ToBriDoc Sig
+layoutSig :: ToBriDoc an Sig
 layoutSig lsig@(L _loc sig) = case sig of
-  TypeSig _ names (HsWC _ (HsIB _ typ)) -> layoutNamesAndType Nothing names typ
+  TypeSig _ names (HsWC _ (L _ typ)) -> layoutNamesAndType Nothing names typ
   InlineSig _ name (InlinePragma _ spec _arity phaseAct conlike) ->
     docWrapNode lsig $ do
       nameStr <- lrdrNameToTextAnn name
@@ -80,8 +80,8 @@ layoutSig lsig@(L _loc sig) = case sig of
         $ Text.pack ("{-# " ++ specStr ++ conlikeStr ++ phaseStr)
         <> nameStr
         <> Text.pack " #-}"
-  ClassOpSig _ False names (HsIB _ typ) -> layoutNamesAndType Nothing names typ
-  PatSynSig _ names (HsIB _ typ) ->
+  ClassOpSig _ False names (L _ typ) -> layoutNamesAndType Nothing names typ
+  PatSynSig _ names (L _ typ) ->
     layoutNamesAndType (Just "pattern") names typ
   _ -> briDocByExactNoComment lsig -- TODO
  where
@@ -121,12 +121,12 @@ layoutSig lsig@(L _loc sig) = case sig of
 specStringCompat
   :: MonadMultiWriter [BrittanyError] m => LSig GhcPs -> InlineSpec -> m String
 specStringCompat ast = \case
-  NoUserInline -> mTell [ErrorUnknownNode "NoUserInline" ast] $> ""
+  NoUserInlinePrag -> mTell [ErrorUnknownNode "NoUserInline" ast] $> ""
   Inline -> pure "INLINE "
   Inlinable -> pure "INLINABLE "
   NoInline -> pure "NOINLINE "
 
-layoutGuardLStmt :: ToBriDoc' (Stmt GhcPs (LHsExpr GhcPs))
+layoutGuardLStmt :: ToBriDoc' an (Stmt GhcPs (LHsExpr GhcPs))
 layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
   BodyStmt _ body _ _ -> layoutExpr body
   BindStmt _ lPat expr -> do
@@ -145,7 +145,7 @@ layoutGuardLStmt lgstmt@(L _ stmtLR) = docWrapNode lgstmt $ case stmtLR of
 --------------------------------------------------------------------------------
 
 layoutBind
-  :: ToBriDocC (HsBindLR GhcPs GhcPs) (Either [BriDocNumbered] BriDocNumbered)
+  :: ToBriDocC an (HsBindLR GhcPs GhcPs) (Either [BriDocNumbered] BriDocNumbered)
 layoutBind lbind@(L _ bind) = case bind of
   FunBind _ fId (MG _ lmatches@(L _ matches) _) [] -> do
     idStr <- lrdrNameToTextAnn fId
@@ -173,7 +173,7 @@ layoutBind lbind@(L _ bind) = case bind of
   PatSynBind _ (PSB _ patID lpat rpat dir) -> do
     fmap Right $ docWrapNode lbind $ layoutPatSynBind patID lpat dir rpat
   _ -> Right <$> unknownNodeError "" lbind
-layoutIPBind :: ToBriDoc IPBind
+layoutIPBind :: ToBriDoc an IPBind
 layoutIPBind lipbind@(L _ bind) = case bind of
   IPBind _ (Right _) _ -> error "brittany internal error: IPBind Right"
   IPBind _ (Left (L _ (HsIPName name))) expr -> do
@@ -198,7 +198,7 @@ bindOrSigtoSrcSpan (BagBind (L l _)) = l
 bindOrSigtoSrcSpan (BagSig (L l _)) = l
 
 layoutLocalBinds
-  :: ToBriDocC (HsLocalBindsLR GhcPs GhcPs) (Maybe [BriDocNumbered])
+  :: ToBriDocC an (HsLocalBindsLR GhcPs GhcPs) (Maybe [BriDocNumbered])
 layoutLocalBinds lbinds@(L _ binds) = case binds of
   -- HsValBinds (ValBindsIn lhsBindsLR []) ->
   --   Just . (>>= either id return) . Data.Foldable.toList <$> mapBagM layoutBind lhsBindsLR -- TODO: fix ordering
@@ -307,7 +307,7 @@ layoutPatternBindFinal
   -> BriDocNumbered
   -> Maybe BriDocNumbered
   -> [([BriDocNumbered], BriDocNumbered, LHsExpr GhcPs)]
-  -> Maybe (ExactPrint.AnnKey, [BriDocNumbered])
+  -> Maybe (AnnKey, [BriDocNumbered])
      -- ^ AnnKey for the node that contains the AnnWhere position annotation
   -> Bool
   -> ToBriDocM BriDocNumbered
@@ -663,10 +663,10 @@ layoutPatSynBind name patSynDetails patDir rpat = do
 
 -- | Helper method for the left hand side of a pattern synonym
 layoutLPatSyn
-  :: Located (IdP GhcPs)
+  :: LocatedAn an (IdP GhcPs)
   -> HsPatSynDetails (Located (IdP GhcPs))
   -> ToBriDocM BriDocNumbered
-layoutLPatSyn name (PrefixCon vars) = do
+layoutLPatSyn name (PrefixCon _ vars) = do
   docName <- lrdrNameToTextAnn name
   names <- mapM lrdrNameToTextAnn vars
   docSeq . fmap appSep $ docLit docName : (docLit <$> names)
@@ -699,7 +699,7 @@ layoutPatSynWhere hs = case hs of
 -- TyClDecl
 --------------------------------------------------------------------------------
 
-layoutTyCl :: ToBriDoc TyClDecl
+layoutTyCl :: ToBriDoc an TyClDecl
 layoutTyCl ltycl@(L _loc tycl) = case tycl of
   SynDecl _ name vars fixity typ -> do
     let
@@ -720,7 +720,7 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
 layoutSynDecl
   :: Bool
   -> (ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered)
-  -> Located (IdP GhcPs)
+  -> LocatedAn an (IdP GhcPs)
   -> [LHsTyVarBndr () GhcPs]
   -> LHsType GhcPs
   -> ToBriDocM BriDocNumbered
@@ -756,7 +756,7 @@ layoutSynDecl isInfix wrapNodeRest name vars typ = do
   hasComments <- hasAnyCommentsConnected typ
   layoutLhsAndType hasComments sharedLhs "=" typeDoc
 
-layoutTyVarBndr :: Bool -> ToBriDoc (HsTyVarBndr ())
+layoutTyVarBndr :: Bool -> ToBriDoc an (HsTyVarBndr ())
 layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
   docWrapNodePrior lbndr $ case bndr of
     UserTyVar _ _ name -> do
@@ -783,12 +783,12 @@ layoutTyVarBndr needsSep lbndr@(L _ bndr) = do
 layoutTyFamInstDecl
   :: Data.Data.Data a
   => Bool
-  -> Located a
+  -> LocatedAn an a
   -> TyFamInstDecl GhcPs
   -> ToBriDocM BriDocNumbered
 layoutTyFamInstDecl inClass outerNode tfid = do
   let
-    FamEqn _ name bndrsMay pats _fixity typ = hsib_body $ tfid_eqn tfid
+    FamEqn _ name bndrsMay pats _fixity typ = L_body $ tfid_eqn tfid
     -- bndrsMay isJust e.g. with
     --   type instance forall a . MyType (Maybe a) = Either () a
     innerNode = outerNode
@@ -842,7 +842,7 @@ layoutHsTyPats pats = pats <&> \case
 --   Layout signatures and bindings using the corresponding layouters from the
 --   top-level. Layout the instance head, type family instances, and data family
 --   instances using ExactPrint.
-layoutClsInst :: ToBriDoc ClsInstDecl
+layoutClsInst :: ToBriDoc an ClsInstDecl
 layoutClsInst lcid@(L _ cid) = docLines
   [ layoutInstanceHead
   , docEnsureIndent BrIndentRegular
@@ -880,10 +880,10 @@ layoutClsInst lcid@(L _ cid) = docLines
       . List.sortOn (ExactPrint.rs . getLoc)
       =<< sequence l
 
-  layoutAndLocateSig :: ToBriDocC (Sig GhcPs) (Located BriDocNumbered)
+  layoutAndLocateSig :: ToBriDocC an (Sig GhcPs) (Located BriDocNumbered)
   layoutAndLocateSig lsig@(L loc _) = L loc <$> layoutSig lsig
 
-  layoutAndLocateBind :: ToBriDocC (HsBind GhcPs) (Located BriDocNumbered)
+  layoutAndLocateBind :: ToBriDocC an (HsBind GhcPs) (Located BriDocNumbered)
   layoutAndLocateBind lbind@(L loc _) =
     L loc <$> (joinBinds =<< layoutBind lbind)
 
@@ -894,17 +894,17 @@ layoutClsInst lcid@(L _ cid) = docLines
     Right n -> return n
 
   layoutAndLocateTyFamInsts
-    :: ToBriDocC (TyFamInstDecl GhcPs) (Located BriDocNumbered)
+    :: ToBriDocC an (TyFamInstDecl GhcPs) (Located BriDocNumbered)
   layoutAndLocateTyFamInsts ltfid@(L loc tfid) =
     L loc <$> layoutTyFamInstDecl True ltfid tfid
 
   layoutAndLocateDataFamInsts
-    :: ToBriDocC (DataFamInstDecl GhcPs) (Located BriDocNumbered)
+    :: ToBriDocC an (DataFamInstDecl GhcPs) (Located BriDocNumbered)
   layoutAndLocateDataFamInsts ldfid@(L loc _) =
     L loc <$> layoutDataFamInstDecl ldfid
 
   -- | Send to ExactPrint then remove unecessary whitespace
-  layoutDataFamInstDecl :: ToBriDoc DataFamInstDecl
+  layoutDataFamInstDecl :: ToBriDoc an DataFamInstDecl
   layoutDataFamInstDecl ldfid =
     fmap stripWhitespace <$> briDocByExactNoComment ldfid
 

@@ -221,7 +221,7 @@ type ToBriDocM = MultiRWSS.MultiRWS
 
 type ToBriDoc an (sym :: Kind.Type -> Kind.Type) = LocatedAn an (sym GhcPs) -> ToBriDocM BriDocNumbered
 type ToBriDoc' an sym            = LocatedAn an sym         -> ToBriDocM BriDocNumbered
-type ToBriDocC sym c          = Located sym         -> ToBriDocM c
+type ToBriDocC an sym c          = LocatedAn an sym         -> ToBriDocM c
 
 data DocMultiLine
   = MultiLineNo
