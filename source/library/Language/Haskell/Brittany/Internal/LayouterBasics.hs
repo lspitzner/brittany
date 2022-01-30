@@ -620,7 +620,7 @@ docTick = docLit $ Text.pack "'"
 
 docNodeAnnKW
   :: Data.Data.Data ast
-  => Located ast
+  => LocatedAn an ast
   -> Maybe AnnKeywordId
   -> ToBriDocM BriDocNumbered
   -> ToBriDocM BriDocNumbered
@@ -639,15 +639,15 @@ docNodeMoveToKWDP ast kw shouldRestoreIndent bdm =
 
 class DocWrapable a where
   docWrapNode :: ( Data.Data.Data ast)
-              => LocatedAn an ast
+              => Located ast
               -> a
               -> a
   docWrapNodePrior :: ( Data.Data.Data ast)
-                   => LocatedAn an ast
+                   => Located ast
                    -> a
                    -> a
   docWrapNodeRest  :: ( Data.Data.Data ast)
-                   => LocatedAn an ast
+                   => Located ast
                    -> a
                    -> a
 

@@ -282,7 +282,7 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
       ]
  where
   strategyLeftRight 
-    :: GenLocated (SrcAnn ann) (DerivStrategy GhcPs) 
+    :: Located (DerivStrategy GhcPs) 
     -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
   strategyLeftRight = \case
     (L _ (StockStrategy _)) -> (docLitS " stock", docEmpty)
