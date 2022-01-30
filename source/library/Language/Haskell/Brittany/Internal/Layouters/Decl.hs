@@ -40,7 +40,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint
 
 import Language.Haskell.Brittany.Internal.EPCompat
 
-layoutDecl :: ToBriDoc an HsDecl
+layoutDecl :: ToBriDoc AnnListItem HsDecl
 layoutDecl d@(L loc decl) = case decl of
   SigD _ sig -> withTransformedAnns d $ layoutSig (L loc sig)
   ValD _ bind -> withTransformedAnns d $ layoutBind (L loc bind) >>= \case
@@ -57,9 +57,9 @@ layoutDecl d@(L loc decl) = case decl of
 -- Sig
 --------------------------------------------------------------------------------
 
-layoutSig :: ToBriDoc an Sig
+layoutSig :: ToBriDoc AnnListItem Sig
 layoutSig lsig@(L _loc sig) = case sig of
-  TypeSig _ names (HsWC _ (L _ typ)) -> layoutNamesAndType Nothing names typ
+  TypeSig _ names (HsWC _ (L _ (HsSig _ _ typ))) -> layoutNamesAndType Nothing names typ
   InlineSig _ name (InlinePragma _ spec _arity phaseAct conlike) ->
     docWrapNode lsig $ do
       nameStr <- lrdrNameToTextAnn name
@@ -80,8 +80,8 @@ layoutSig lsig@(L _loc sig) = case sig of
         $ Text.pack ("{-# " ++ specStr ++ conlikeStr ++ phaseStr)
         <> nameStr
         <> Text.pack " #-}"
-  ClassOpSig _ False names (L _ typ) -> layoutNamesAndType Nothing names typ
-  PatSynSig _ names (L _ typ) ->
+  ClassOpSig _ False names (L _ (HsSig _ _ typ)) -> layoutNamesAndType Nothing names typ
+  PatSynSig _ names (L _ (HsSig _ _ typ)) ->
     layoutNamesAndType (Just "pattern") names typ
   _ -> briDocByExactNoComment lsig -- TODO
  where
@@ -160,7 +160,7 @@ layoutBind lbind@(L _ bind) = case bind of
     patDocs <- colsWrapPat =<< layoutPat pat
     clauseDocs <- layoutGrhs `mapM` grhss
     mWhereDocs <- layoutLocalBinds whereBinds
-    let mWhereArg = mWhereDocs <&> (,) (mkAnnKey lbind) -- TODO: is this the right AnnKey?
+    let mWhereArg = mWhereDocs <&> (,) (undefined lbind) -- TODO: is this the right AnnKey?
     binderDoc <- docLit $ Text.pack "="
     hasComments <- hasAnyCommentsBelow lbind
     fmap Right $ docWrapNode lbind $ layoutPatternBindFinal
@@ -198,8 +198,9 @@ bindOrSigtoSrcSpan (BagBind (L l _)) = l
 bindOrSigtoSrcSpan (BagSig (L l _)) = l
 
 layoutLocalBinds
-  :: ToBriDocC an (HsLocalBindsLR GhcPs GhcPs) (Maybe [BriDocNumbered])
-layoutLocalBinds lbinds@(L _ binds) = case binds of
+  :: HsLocalBindsLR GhcPs GhcPs -> ToBriDocM (Maybe [BriDocNumbered])
+  -- :: ToBriDocC an (HsLocalBindsLR GhcPs GhcPs) (Maybe [BriDocNumbered])
+layoutLocalBinds binds = case binds of
   -- HsValBinds (ValBindsIn lhsBindsLR []) ->
   --   Just . (>>= either id return) . Data.Foldable.toList <$> mapBagM layoutBind lhsBindsLR -- TODO: fix ordering
   -- x@(HsValBinds (ValBindsIn{})) ->
@@ -210,7 +211,7 @@ layoutLocalBinds lbinds@(L _ binds) = case binds of
         [ BagBind b | b <- Data.Foldable.toList bindlrs ]
         ++ [ BagSig s | s <- sigs ]
       ordered = List.sortOn (ExactPrint.rs . bindOrSigtoSrcSpan) unordered
-    docs <- docWrapNode lbinds $ join <$> ordered `forM` \case
+    docs <- docWrapNode (noLocA binds) $ join <$> ordered `forM` \case
       BagBind b -> either id return <$> layoutBind b
       BagSig s -> return <$> layoutSig s
     return $ Just $ docs
@@ -610,8 +611,8 @@ layoutPatternBindFinal alignmentToken binderDoc mPatDoc clauseDocs mWhereDocs ha
 
 -- | Layout a pattern synonym binding
 layoutPatSynBind
-  :: Located (IdP GhcPs)
-  -> HsPatSynDetails (Located (IdP GhcPs))
+  :: LIdP GhcPs
+  -> HsPatSynDetails GhcPs
   -> HsPatSynDir GhcPs
   -> LPat GhcPs
   -> ToBriDocM BriDocNumbered
@@ -663,8 +664,8 @@ layoutPatSynBind name patSynDetails patDir rpat = do
 
 -- | Helper method for the left hand side of a pattern synonym
 layoutLPatSyn
-  :: LocatedAn an (IdP GhcPs)
-  -> HsPatSynDetails (Located (IdP GhcPs))
+  :: LIdP GhcPs
+  -> HsPatSynDetails GhcPs
   -> ToBriDocM BriDocNumbered
 layoutLPatSyn name (PrefixCon _ vars) = do
   docName <- lrdrNameToTextAnn name
