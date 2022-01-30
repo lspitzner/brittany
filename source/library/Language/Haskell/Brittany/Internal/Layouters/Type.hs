@@ -19,7 +19,7 @@ import Language.Haskell.Brittany.Internal.Utils
 
 
 
-layoutType :: ToBriDoc HsType
+layoutType :: ToBriDoc ann HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
   HsTyVar _ promoted name -> do

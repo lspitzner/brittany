@@ -18,7 +18,7 @@ import Data.Generics.Uniplate.Direct as Uniplate
 import qualified Data.Kind as Kind
 import qualified Data.Strict.Maybe as Strict
 import qualified Data.Text.Lazy.Builder as Text.Builder
-import GHC (AnnKeywordId, GenLocated, Located, SrcSpan)
+import GHC (AnnKeywordId, GenLocated, Located, LocatedAn, SrcSpan)
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.Prelude
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
@@ -220,7 +220,7 @@ type ToBriDocM = MultiRWSS.MultiRWS
                    '[[BrittanyError], Seq String] -- writer
                    '[NodeAllocIndex] -- state
 
-type ToBriDoc (sym :: Kind.Type -> Kind.Type) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
+type ToBriDoc an (sym :: Kind.Type -> Kind.Type) = LocatedAn an (sym GhcPs) -> ToBriDocM BriDocNumbered
 type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
 type ToBriDocC sym c          = Located sym         -> ToBriDocM c
 
