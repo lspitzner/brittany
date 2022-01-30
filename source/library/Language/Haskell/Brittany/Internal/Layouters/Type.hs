@@ -8,6 +8,7 @@ import GHC (AnnKeywordId(..), GenLocated(L))
 import GHC.Hs
 import qualified GHC.OldList as List
 import GHC.Types.Basic
+import qualified GHC.Types.SourceText
 import GHC.Utils.Outputable (ftext, showSDocUnsafe)
 import Language.Haskell.Brittany.Internal.LayouterBasics
 import Language.Haskell.Brittany.Internal.Prelude
@@ -291,8 +292,6 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
   HsTupleTy _ tupleSort typs -> case tupleSort of
     HsUnboxedTuple -> unboxed
-    HsBoxedTuple -> simple
-    HsConstraintTuple -> simple
     HsBoxedOrConstraintTuple -> simple
    where
     unboxed = if null typs
@@ -573,11 +572,11 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsExplicitTupleTy{} -> -- TODO
     briDocByExactInlineOnly "HsExplicitTupleTy{}" ltype
   HsTyLit _ lit -> case lit of
-    HsNumTy (SourceText srctext) _ -> docLit $ Text.pack srctext
-    HsNumTy NoSourceText _ ->
+    HsNumTy (GHC.Types.SourceText.SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsNumTy GHC.Types.SourceText.NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
-    HsStrTy (SourceText srctext) _ -> docLit $ Text.pack srctext
-    HsStrTy NoSourceText _ ->
+    HsStrTy (GHC.Types.SourceText.SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsStrTy GHC.Types.SourceText.NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
   HsWildCardTy _ -> docLit $ Text.pack "_"
   HsSumTy{} -> -- TODO
