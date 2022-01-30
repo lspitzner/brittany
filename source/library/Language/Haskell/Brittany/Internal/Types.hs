@@ -27,8 +27,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 -- import Language.Haskell.GHC.ExactPrint.Types (Anns)
 import qualified Safe
 
-type Anns = Map AnnKey ()
-type AnnKey = ()
+import Language.Haskell.Brittany.Internal.EPCompat
 
 data PerItemConfig = PerItemConfig
   { _icd_perBinding :: Map String (CConfig Maybe)

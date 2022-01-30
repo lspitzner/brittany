@@ -37,7 +37,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 -- import Language.Haskell.GHC.ExactPrint.Types (AnnKey, Annotation)
 import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint.Utils
 
-
+import Language.Haskell.Brittany.Internal.EPCompat
 
 processDefault
   :: ( 
@@ -294,9 +294,6 @@ hasAnyRegularCommentsConnected ast =
 -- isRegularComment :: (ExactPrint.Comment, ExactPrint.DeltaPos) -> Bool
 -- isRegularComment = (== Nothing) . ExactPrint.Types.commentOrigin . fst
 
-type DeltaPos = ()
-type Comment = ()
-
 astConnectedComments
   :: Data ast
   => GHC.LocatedAn an ast
@@ -343,8 +340,6 @@ hasAnnKeyword ast annKeyword = {-astAnn-} astAnn' ast <&> \case
   aks = [undefined]
   -- astAnn' :: Functor f => Located a -> f (Maybe b)
   astAnn' = undefined
-
-type Annotation = ()
 
 -- astAnn
 --   :: (Data ast, MonadMultiReader (Map AnnKey Annotation) m)

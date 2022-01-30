@@ -32,6 +32,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint.Utils
 import qualified Language.Haskell.Syntax.Extension as HsExtension
 import qualified Text.PrettyPrint as PP
 
+import Language.Haskell.Brittany.Internal.EPCompat
 
 
 parDoc :: String -> PP.Doc
@@ -73,8 +74,6 @@ instance Show ShowIsId where
 
 data A x = A ShowIsId x
   deriving Data
-
-type EPAnns = ()
 
 customLayouterF :: LayouterF
 customLayouterF layoutF =

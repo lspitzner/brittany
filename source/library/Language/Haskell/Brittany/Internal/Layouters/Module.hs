@@ -18,8 +18,9 @@ import Language.Haskell.Brittany.Internal.PreludeUtils
 import Language.Haskell.Brittany.Internal.Types
 import Language.Haskell.GHC.ExactPrint as ExactPrint
 import Language.Haskell.GHC.ExactPrint.Types
-  (DeltaPos(..), commentContents, deltaRow)
+  (commentContents)
 
+import Language.Haskell.Brittany.Internal.EPCompat (Annotation)
 
 
 layoutModule :: ToBriDoc' HsModule
