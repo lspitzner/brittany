@@ -23,17 +23,17 @@ import Language.Haskell.Brittany.Internal.Utils
 
 
 
-prepareName :: LIEWrappedName name -> Located name
+prepareName :: LIEWrappedName name -> LocatedN name
 prepareName = ieLWrappedName
 
-layoutIE :: ToBriDoc IE
+layoutIE :: ToBriDoc an IE
 layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
   IEVar _ x -> layoutWrapped lie x
   IEThingAbs _ x -> layoutWrapped lie x
   IEThingAll _ x -> docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-  IEThingWith _ x (IEWildcard _) _ _ ->
+  IEThingWith _ x (IEWildcard _) _ ->
     docSeq [layoutWrapped lie x, docLit $ Text.pack "(..)"]
-  IEThingWith _ x _ ns _ -> do
+  IEThingWith _ x _ ns -> do
     hasComments <- orM
       (hasCommentsBetween lie AnnOpenP AnnCloseP
       : hasAnyCommentsBelow x
@@ -78,10 +78,10 @@ layoutIE lie@(L _ ie) = docWrapNode lie $ case ie of
  where
   layoutWrapped _ = \case
     L _ (IEName n) -> docLit =<< lrdrNameToTextAnn n
-    L _ (IEPattern n) -> do
+    L _ (IEPattern _ n) -> do
       name <- lrdrNameToTextAnn n
       docLit $ Text.pack "pattern " <> name
-    L _ (IEType n) -> do
+    L _ (IEType _ n) -> do
       name <- lrdrNameToTextAnn n
       docLit $ Text.pack "type " <> name
 
@@ -95,7 +95,7 @@ data SortItemsFlag = ShouldSortItems | KeepItemsUnsorted
 -- left to the caller since that is context sensitive
 layoutAnnAndSepLLIEs
   :: SortItemsFlag
-  -> Located [LIE GhcPs]
+  -> LocatedAn an [LIE GhcPs]
   -> ToBriDocM [ToBriDocM BriDocNumbered]
 layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
   let makeIENode ie = docSeq [docCommaSep, ie]
@@ -131,7 +131,7 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
   isProperIEThing = \case
     L _ (IEThingAbs _ _wn) -> True
     L _ (IEThingAll _ _wn) -> True
-    L _ (IEThingWith _ _wn NoIEWildcard _ _) -> True
+    L _ (IEThingWith _ _wn NoIEWildcard _) -> True
     _ -> False
   isIEVar :: LIE GhcPs -> Bool
   isIEVar = \case
@@ -143,7 +143,7 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
   thingFolder _ l2@(L _ IEThingAll{}) = l2
   thingFolder l1 (L _ IEThingAbs{}) = l1
   thingFolder (L _ IEThingAbs{}) l2 = l2
-  thingFolder (L l (IEThingWith x wn _ consItems1 fieldLbls1)) (L _ (IEThingWith _ _ _ consItems2 fieldLbls2))
+  thingFolder (L l (IEThingWith x wn _ consItems1)) (L _ (IEThingWith _ _ _ consItems2))
     = L
       l
       (IEThingWith
@@ -151,7 +151,6 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
         wn
         NoIEWildcard
         (consItems1 ++ consItems2)
-        (fieldLbls1 ++ fieldLbls2)
       )
   thingFolder _ _ =
     error "thingFolder should be exhaustive because we have a guard above"
@@ -171,7 +170,7 @@ layoutAnnAndSepLLIEs shouldSort llies@(L _ lies) = do
 -- ( -- a comment
 -- )
 layoutLLIEs
-  :: Bool -> SortItemsFlag -> Located [LIE GhcPs] -> ToBriDocM BriDocNumbered
+  :: Bool -> SortItemsFlag -> LocatedAn an [LIE GhcPs] -> ToBriDocM BriDocNumbered
 layoutLLIEs enableSingleline shouldSort llies = do
   ieDs <- layoutAnnAndSepLLIEs shouldSort llies
   hasComments <- hasAnyCommentsBelow llies
@@ -199,8 +198,8 @@ layoutLLIEs enableSingleline shouldSort llies = do
 wrappedNameToText :: LIEWrappedName RdrName -> Text
 wrappedNameToText = \case
   L _ (IEName n) -> lrdrNameToText n
-  L _ (IEPattern n) -> lrdrNameToText n
-  L _ (IEType n) -> lrdrNameToText n
+  L _ (IEPattern _ n) -> lrdrNameToText n
+  L _ (IEType _ n) -> lrdrNameToText n
 
 -- | Returns a "fingerprint string", not a full text representation, nor even
 -- a source code representation of this syntax node.
@@ -210,7 +209,7 @@ lieToText = \case
   L _ (IEVar _ wn) -> wrappedNameToText wn
   L _ (IEThingAbs _ wn) -> wrappedNameToText wn
   L _ (IEThingAll _ wn) -> wrappedNameToText wn
-  L _ (IEThingWith _ wn _ _ _) -> wrappedNameToText wn
+  L _ (IEThingWith _ wn _ _) -> wrappedNameToText wn
   -- TODO: These _may_ appear in exports!
   -- Need to check, and either put them at the top (for module) or do some
   -- other clever thing.
@@ -219,6 +218,6 @@ lieToText = \case
   L _ IEDoc{} -> Text.pack "@IEDoc"
   L _ IEDocNamed{} -> Text.pack "@IEDocNamed"
  where
-  moduleNameToText :: Located ModuleName -> Text
+  moduleNameToText :: LocatedAn an ModuleName -> Text
   moduleNameToText (L _ name) =
     Text.pack ("@IEModuleContents" ++ moduleNameString name)

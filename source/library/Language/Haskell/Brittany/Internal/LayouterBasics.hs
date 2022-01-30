@@ -246,14 +246,14 @@ extractRestComments ann =
 -- | True if there are any comments that are
 -- a) connected to any node below (in AST sense) the given node AND
 -- b) after (in source code order) the node.
-hasAnyCommentsBelow :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyCommentsBelow :: Data ast => GHC.LocatedAn an ast -> ToBriDocM Bool
 hasAnyCommentsBelow ast@(L l _) =
-  List.any (\(c, _) -> {-ExactPrint.commentIdentifier-} undefined c > ExactPrint.Utils.rs l)
+  List.any (\(c, _) -> {-ExactPrint.commentIdentifier c > ExactPrint.Utils.rs l-} undefined)
     <$> astConnectedComments ast
 
 hasCommentsBetween
   :: Data ast
-  => GHC.Located ast
+  => GHC.LocatedAn an ast
   -> AnnKeywordId
   -> AnnKeywordId
   -> ToBriDocM Bool
@@ -273,12 +273,12 @@ hasCommentsBetween ast leftKey rightKey = do
 
 -- | True if there are any comments that are connected to any node below (in AST
 --   sense) the given node
-hasAnyCommentsConnected :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyCommentsConnected :: Data ast => GHC.LocatedAn an ast -> ToBriDocM Bool
 hasAnyCommentsConnected ast = not . null <$> astConnectedComments ast
 
 -- | True if there are any regular comments connected to any node below (in AST
 --   sense) the given node
-hasAnyRegularCommentsConnected :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyRegularCommentsConnected :: Data ast => GHC.LocatedAn an ast -> ToBriDocM Bool
 hasAnyRegularCommentsConnected ast =
   any {-isRegularComment-} undefined <$> astConnectedComments ast
 
@@ -299,7 +299,7 @@ type Comment = ()
 
 astConnectedComments
   :: Data ast
-  => GHC.Located ast
+  => GHC.LocatedAn an ast
   -> ToBriDocM [(Comment, DeltaPos)]
 astConnectedComments ast = do
   undefined
