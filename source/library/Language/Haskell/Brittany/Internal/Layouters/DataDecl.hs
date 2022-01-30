@@ -20,7 +20,8 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 layoutDataDecl
-  :: LocatedAn an1 (TyClDecl GhcPs)
+  :: Data.Data.Data an1
+  => LocatedAn an1 (TyClDecl GhcPs)
   -> LocatedAn an2 RdrName
   -> LHsQTyVars GhcPs
   -> HsDataDefn GhcPs
@@ -247,20 +248,20 @@ createBndrDoc bs = do
 createDerivingPar
   :: HsDeriving GhcPs -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 createDerivingPar derivs mainDoc = do
-  case derivs of
-    (L _ []) -> mainDoc
-    (L _ types) ->
-      docPar mainDoc
-        $ docEnsureIndent BrIndentRegular
-        $ docLines
-        $ docWrapNode derivs
-        $ derivingClauseDoc
-        <$> types
+    docPar mainDoc
+      $ docEnsureIndent BrIndentRegular
+      $ docLines
+      $ docWrapNode (noLocA derivs)
+      $ derivingClauseDoc
+      <$> derivs
 
 derivingClauseDoc :: LHsDerivingClause GhcPs -> ToBriDocM BriDocNumbered
 derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
-  (L _ []) -> docSeq []
-  (L _ ts) ->
+  (L _ (DctSingle _ t)) -> derivingClauseDoc' [t]
+  (L _ (DctMulti _ ts)) -> derivingClauseDoc' ts
+ where
+  derivingClauseDoc' [] = docSeq []
+  derivingClauseDoc' ts = 
     let
       tsLength = length ts
       whenMoreThan1Type val = if tsLength > 1 then docLitS val else docLitS ""
@@ -281,7 +282,6 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
       , whenMoreThan1Type ")"
       , rhsStrategy
       ]
- where
   strategyLeftRight 
     :: Located (DerivStrategy GhcPs) 
     -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
@@ -293,7 +293,7 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
       ( docEmpty
       , case viaTypes of
           XViaStrategyPs _epann (L _span (HsSig _sig _bndrs t)) -> 
-            docSeq [docWrapNode lVia $ docLitS " via", docSeparator, layoutType t]
+            docSeq [docWrapNode (reLocA lVia) $ docLitS " via", docSeparator, layoutType t]
       )
 
 docDeriving :: ToBriDocM BriDocNumbered
@@ -426,9 +426,9 @@ createForallDoc lhsTyVarBndrs =
 
 createNamesAndTypeDoc
   :: Data.Data.Data ast
-  => Located ast
+  => LocatedAn an1 ast
   -> [GenLocated t (FieldOcc GhcPs)]
-  -> Located (HsType GhcPs)
+  -> LocatedAn an2 (HsType GhcPs)
   -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
 createNamesAndTypeDoc lField names t =
   ( docNodeAnnKW lField Nothing $ docWrapNodePrior lField $ docSeq
