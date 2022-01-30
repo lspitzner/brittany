@@ -23,16 +23,16 @@ import Language.Haskell.GHC.ExactPrint.Types
 import Language.Haskell.Brittany.Internal.EPCompat (Annotation)
 
 
-layoutModule :: ToBriDoc' HsModule
+layoutModule :: ToBriDoc' an HsModule
 layoutModule lmod@(L _ mod') = case mod' of
     -- Implicit module Main
-  HsModule _ Nothing _ imports _ _ _ -> do
+  HsModule _ _ Nothing _ imports _ _ _ -> do
     commentedImports <- transformToCommentedImport imports
     -- groupify commentedImports `forM_` tellDebugMessShow
     docLines (commentedImportsToDoc <$> sortCommentedImports commentedImports)
     -- sortedImports <- sortImports imports
     -- docLines $ [layoutImport y i | (y, i) <- sortedImports]
-  HsModule _ (Just n) les imports _ _ _ -> do
+  HsModule _ _ (Just n) les imports _ _ _ -> do
     commentedImports <- transformToCommentedImport imports
     -- groupify commentedImports `forM_` tellDebugMessShow
     -- sortedImports <- sortImports imports
@@ -100,11 +100,12 @@ transformToCommentedImport
   :: [LImportDecl GhcPs] -> ToBriDocM [CommentedImport]
 transformToCommentedImport is = do
   nodeWithAnnotations <- is `forM` \i@(L _ rawImport) -> do
-    annotionMay <- astAnn i
+    annotionMay <- undefined -- astAnn i
     pure (annotionMay, rawImport)
   let
-    convertComment (c, DP (y, x)) =
-      replicate (y - 1) EmptyLine ++ [IndependentComment (c, DP (1, x))]
+    convertComment (c, _ {-DP (y, x)-}) =
+      undefined
+      -- replicate (y - 1) EmptyLine ++ [IndependentComment (c, DP (1, x))]
     accumF
       :: [(Comment, DeltaPos)]
       -> (Maybe Annotation, ImportDecl GhcPs)
@@ -121,21 +122,22 @@ transformToCommentedImport is = do
         )
       Just ann ->
         let
-          blanksBeforeImportDecl = deltaRow (annEntryDelta ann) - 1
+          blanksBeforeImportDecl = undefined -- deltaRow (annEntryDelta ann) - 1
           (newAccumulator, priorComments') =
-            List.span ((== 0) . deltaRow . snd) (annPriorComments ann)
+            List.span ((== 0) . {-deltaRow-} undefined . snd) ({-annPriorComments-} undefined ann)
           go
             :: [(Comment, DeltaPos)]
             -> [(Comment, DeltaPos)]
             -> ([CommentedImport], [(Comment, DeltaPos)], Int)
           go acc [] = ([], acc, 0)
-          go acc [c1@(_, DP (y, _))] = ([], c1 : acc, y - 1)
-          go acc (c1@(_, DP (1, _)) : xs) = go (c1 : acc) xs
-          go acc ((c1, DP (y, x)) : xs) =
-            ( (convertComment =<< xs) ++ replicate (y - 1) EmptyLine
-            , (c1, DP (1, x)) : acc
-            , 0
-            )
+          go acc _ = undefined
+          -- go acc [c1@(_, {DP (y, _)})] = ([], c1 : acc, y - 1)
+          -- go acc (c1@(_, DP (1, _)) : xs) = go (c1 : acc) xs
+          -- go acc ((c1, DP (y, x)) : xs) =
+          --   ( (convertComment =<< xs) ++ replicate (y - 1) EmptyLine
+          --   , (c1, DP (1, x)) : acc
+          --   , 0
+          --   )
           (convertedIndependentComments, beforeComments, initialBlanks) =
             if blanksBeforeImportDecl /= 0
               then (convertComment =<< priorComments', [], 0)
@@ -195,4 +197,5 @@ commentedImportsToDoc = \case
   ImportStatement r -> docSeq
     (layoutImport (importStatement r) : map commentToDoc (commentsAfter r))
  where
-  commentToDoc (c, DP (_y, x)) = docLitS (replicate x ' ' ++ commentContents c)
+  commentToDoc (c, _ {-DP (_y, x)-}) = undefined
+    -- docLitS (replicate x ' ' ++ commentContents c)

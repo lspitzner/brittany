@@ -220,7 +220,7 @@ type ToBriDocM = MultiRWSS.MultiRWS
                    '[NodeAllocIndex] -- state
 
 type ToBriDoc an (sym :: Kind.Type -> Kind.Type) = LocatedAn an (sym GhcPs) -> ToBriDocM BriDocNumbered
-type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
+type ToBriDoc' an sym            = LocatedAn an sym         -> ToBriDocM BriDocNumbered
 type ToBriDocC sym c          = Located sym         -> ToBriDocM c
 
 data DocMultiLine

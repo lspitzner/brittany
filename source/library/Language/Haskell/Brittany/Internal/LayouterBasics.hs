@@ -624,7 +624,7 @@ docNodeAnnKW ast kw bdm =
 
 docNodeMoveToKWDP
   :: Data.Data.Data ast
-  => Located ast
+  => LocatedAn an ast
   -> AnnKeywordId
   -> Bool
   -> ToBriDocM BriDocNumbered
