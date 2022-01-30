@@ -66,7 +66,7 @@ data ColBuildState = ColBuildState
 
 type LayoutConstraints m
   = ( MonadMultiReader Config m
-    , MonadMultiReader ExactPrint.Types.Anns m
+    -- , MonadMultiReader ExactPrint.Types.Anns m
     , MonadMultiWriter Text.Builder.Builder m
     , MonadMultiWriter (Seq String) m
     , MonadMultiState LayoutState m
@@ -138,12 +138,12 @@ layoutBriDocM = \case
     let
       tlines = Text.lines $ t <> Text.pack "\n"
       tlineCount = length tlines
-    anns :: ExactPrint.Anns <- mAsk
+    -- anns <- mAsk
     when shouldAddComment $ do
       layoutWriteAppend
         $ Text.pack
         $ "{-"
-        ++ show (annKey, Map.lookup annKey anns)
+        ++ show (annKey, Map.lookup annKey {-anns-} undefined :: Maybe String)
         ++ "-}"
     zip [1 ..] tlines `forM_` \(i, l) -> do
       layoutWriteAppend $ l
@@ -152,7 +152,7 @@ layoutBriDocM = \case
       state <- mGet
       let filterF k _ = not $ k `Set.member` subKeys
       mSet $ state
-        { _lstate_comments = Map.filterWithKey filterF $ _lstate_comments state
+        { _lstate_comments = undefined -- Map.filterWithKey filterF $ _lstate_comments state
         }
   BDPlain t -> do
     layoutWriteAppend t
@@ -162,12 +162,12 @@ layoutBriDocM = \case
     let
       moveToExactLocationAction = case _lstate_curYOrAddNewline state of
         Left{} -> pure ()
-        Right{} -> moveToExactAnn annKey
+        Right{} -> undefined -- moveToExactAnn annKey
     mAnn <- do
-      let mAnn = ExactPrint.annPriorComments <$> Map.lookup annKey m
+      let mAnn = {-ExactPrint.annPriorComments-} undefined <$> Map.lookup annKey m
       mSet $ state
         { _lstate_comments = Map.adjust
-          (\ann -> ann { ExactPrint.annPriorComments = [] })
+          (\ann -> ann {- ExactPrint.annPriorComments = [] -})
           annKey
           m
         }
@@ -177,20 +177,20 @@ layoutBriDocM = \case
       Just [] -> moveToExactLocationAction
       Just priors -> do
         -- layoutResetSepSpace
-        priors
-          `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-                    when (comment /= "(" && comment /= ")") $ do
-                      let commentLines = Text.lines $ Text.pack $ comment
-                      case comment of
-                        ('#' : _) ->
-                          layoutMoveToCommentPos y (-999) (length commentLines)
-                                   --  ^ evil hack for CPP
-                        _ -> layoutMoveToCommentPos y x (length commentLines)
-                      -- fixedX <- fixMoveToLineByIsNewline x
-                      -- replicateM_ fixedX layoutWriteNewline
-                      -- layoutMoveToIndentCol y
-                      layoutWriteAppendMultiline commentLines
-          -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
+        -- priors
+        --   `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
+        --             when (comment /= "(" && comment /= ")") $ do
+        --               let commentLines = Text.lines $ Text.pack $ comment
+        --               case comment of
+        --                 ('#' : _) ->
+        --                   layoutMoveToCommentPos y (-999) (length commentLines)
+        --                            --  ^ evil hack for CPP
+        --                 _ -> layoutMoveToCommentPos y x (length commentLines)
+        --               -- fixedX <- fixMoveToLineByIsNewline x
+        --               -- replicateM_ fixedX layoutWriteNewline
+        --               -- layoutMoveToIndentCol y
+        --               layoutWriteAppendMultiline commentLines
+        --   -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
         moveToExactLocationAction
     layoutBriDocM bd
   BDAnnotationKW annKey keyword bd -> do
@@ -198,22 +198,22 @@ layoutBriDocM = \case
     mComments <- do
       state <- mGet
       let m = _lstate_comments state
-      let mAnn = ExactPrint.annsDP <$> Map.lookup annKey m
+      let mAnn = {-ExactPrint.annsDP-} undefined <$> Map.lookup annKey m
       let
         mToSpan = case mAnn of
           Just anns | Maybe.isNothing keyword -> Just anns
-          Just ((ExactPrint.Types.G kw1, _) : annR) | keyword == Just kw1 ->
-            Just annR
+          -- Just ((ExactPrint.Types.G kw1, _) : annR) | keyword == Just kw1 ->
+          --   Just annR
           _ -> Nothing
       case mToSpan of
         Just anns -> do
           let
             (comments, rest) = flip spanMaybe anns $ \case
-              (ExactPrint.Types.AnnComment x, dp) -> Just (x, dp)
+              -- (ExactPrint.Types.AnnComment x, dp) -> Just (x, dp)
               _ -> Nothing
           mSet $ state
             { _lstate_comments = Map.adjust
-              (\ann -> ann { ExactPrint.annsDP = rest })
+              (\ann -> ann {- ExactPrint.annsDP = rest -})
               annKey
               m
             }
@@ -221,21 +221,22 @@ layoutBriDocM = \case
         _ -> return Nothing
     case mComments of
       Nothing -> pure ()
-      Just comments -> do
-        comments
-          `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-                    when (comment /= "(" && comment /= ")") $ do
-                      let commentLines = Text.lines $ Text.pack $ comment
-                      -- evil hack for CPP:
-                      case comment of
-                        ('#' : _) ->
-                          layoutMoveToCommentPos y (-999) (length commentLines)
-                        _ -> layoutMoveToCommentPos y x (length commentLines)
-                      -- fixedX <- fixMoveToLineByIsNewline x
-                      -- replicateM_ fixedX layoutWriteNewline
-                      -- layoutMoveToIndentCol y
-                      layoutWriteAppendMultiline commentLines
-      -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
+      Just comments -> undefined
+      --   do
+      --   comments
+      --     `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
+      --               when (comment /= "(" && comment /= ")") $ do
+      --                 let commentLines = Text.lines $ Text.pack $ comment
+      --                 -- evil hack for CPP:
+      --                 case comment of
+      --                   ('#' : _) ->
+      --                     layoutMoveToCommentPos y (-999) (length commentLines)
+      --                   _ -> layoutMoveToCommentPos y x (length commentLines)
+      --                 -- fixedX <- fixMoveToLineByIsNewline x
+      --                 -- replicateM_ fixedX layoutWriteNewline
+      --                 -- layoutMoveToIndentCol y
+      --                 layoutWriteAppendMultiline commentLines
+      -- -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDAnnotationRest annKey bd -> do
     layoutBriDocM bd
     annMay <- do
@@ -247,7 +248,7 @@ layoutBriDocM = \case
       semiCount = length
         [ ()
         | Just ann <- [annMay]
-        , (ExactPrint.Types.AnnSemiSep, _) <- ExactPrint.Types.annsDP ann
+        -- , (ExactPrint.Types.AnnSemiSep, _) <- ExactPrint.Types.annsDP ann
         ]
     shouldAddSemicolonNewlines <-
       mAsk
@@ -257,12 +258,12 @@ layoutBriDocM = \case
     mModify $ \state -> state
       { _lstate_comments = Map.adjust
         (\ann -> ann
-          { ExactPrint.annFollowingComments = []
-          , ExactPrint.annPriorComments = []
-          , ExactPrint.annsDP = flip filter (ExactPrint.annsDP ann) $ \case
-            (ExactPrint.Types.AnnComment{}, _) -> False
-            _ -> True
-          }
+          -- { ExactPrint.annFollowingComments = []
+          -- , ExactPrint.annPriorComments = []
+          -- , ExactPrint.annsDP = flip filter (ExactPrint.annsDP ann) $ \case
+          --   (ExactPrint.Types.AnnComment{}, _) -> False
+          --   _ -> True
+          -- }
         )
         annKey
         (_lstate_comments state)
@@ -271,41 +272,44 @@ layoutBriDocM = \case
       Nothing -> do
         when shouldAddSemicolonNewlines $ do
           [1 .. semiCount] `forM_` const layoutWriteNewline
-      Just comments -> do
-        comments
-          `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
-                    when (comment /= "(" && comment /= ")") $ do
-                      let commentLines = Text.lines $ Text.pack comment
-                      case comment of
-                        ('#' : _) -> layoutMoveToCommentPos y (-999) 1
-                                   --  ^ evil hack for CPP
-                        ")" -> pure ()
-                                   --  ^ fixes the formatting of parens
-                                   --    on the lhs of type alias defs
-                        _ -> layoutMoveToCommentPos y x (length commentLines)
-                      -- fixedX <- fixMoveToLineByIsNewline x
-                      -- replicateM_ fixedX layoutWriteNewline
-                      -- layoutMoveToIndentCol y
-                      layoutWriteAppendMultiline commentLines
-      -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
+      Just comments -> undefined
+      --   do
+      --   comments
+      --     `forM_` \(ExactPrint.Types.Comment comment _ _, ExactPrint.Types.DP (y, x)) ->
+      --               when (comment /= "(" && comment /= ")") $ do
+      --                 let commentLines = Text.lines $ Text.pack comment
+      --                 case comment of
+      --                   ('#' : _) -> layoutMoveToCommentPos y (-999) 1
+      --                              --  ^ evil hack for CPP
+      --                   ")" -> pure ()
+      --                              --  ^ fixes the formatting of parens
+      --                              --    on the lhs of type alias defs
+      --                   _ -> layoutMoveToCommentPos y x (length commentLines)
+      --                 -- fixedX <- fixMoveToLineByIsNewline x
+      --                 -- replicateM_ fixedX layoutWriteNewline
+      --                 -- layoutMoveToIndentCol y
+      --                 layoutWriteAppendMultiline commentLines
+      -- -- mModify $ \s -> s { _lstate_curYOrAddNewline = Right 0 }
   BDMoveToKWDP annKey keyword shouldRestoreIndent bd -> do
     mDP <- do
       state <- mGet
       let m = _lstate_comments state
-      let mAnn = ExactPrint.annsDP <$> Map.lookup annKey m
+      -- let mAnn = ExactPrint.annsDP <$> Map.lookup annKey m
       let
-        relevant =
-          [ dp
-          | Just ann <- [mAnn]
-          , (ExactPrint.Types.G kw1, dp) <- ann
-          , keyword == kw1
-          ]
+        relevant = undefined
+          -- [ dp
+          -- | Just ann <- [mAnn]
+          -- -- , (ExactPrint.Types.G kw1, dp) <- ann
+
+          -- , keyword == kw1
+          -- ]
       -- mTell $ Seq.fromList [show keyword, "KWDP: " ++ show annKey ++ " " ++ show mAnn, show relevant]
       case relevant of
         [] -> pure Nothing
-        (ExactPrint.Types.DP (y, x) : _) -> do
-          mSet state { _lstate_commentNewlines = 0 }
-          pure $ Just (y - _lstate_commentNewlines state, x)
+        _ -> pure undefined
+        -- (ExactPrint.Types.DP (y, x) : _) -> do
+        --   mSet state { _lstate_commentNewlines = 0 }
+        --   pure $ Just (y - _lstate_commentNewlines state, x)
     case mDP of
       Nothing -> pure ()
       Just (y, x) ->

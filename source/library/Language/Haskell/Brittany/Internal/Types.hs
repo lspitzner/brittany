@@ -27,7 +27,7 @@ import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 -- import Language.Haskell.GHC.ExactPrint.Types (Anns)
 import qualified Safe
 
-type Anns = ()
+type Anns = Map AnnKey ()
 type AnnKey = ()
 
 data PerItemConfig = PerItemConfig
