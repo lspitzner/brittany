@@ -208,7 +208,7 @@ lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick
      , MonadMultiReader Config m
     --  , MonadMultiReader (Map AnnKey Annotation) m
      )
-  => Located ast
+  => LocatedAn an ast
   -> LocatedAn an RdrName
   -> m Text
 lrdrNameToTextAnnTypeEqualityIsSpecialAndRespectTick ast1 ast2 = do
@@ -309,13 +309,13 @@ hasAnyCommentsPrior ast = {-astAnn-} undefined ast <&> \case
   Just _ {-(ExactPrint.Types.Ann _ priors _ _ _ _)-} -> not $ null priors
     where priors = [undefined]
 
-hasAnyRegularCommentsRest :: Data ast => GHC.Located ast -> ToBriDocM Bool
+hasAnyRegularCommentsRest :: Data ast => GHC.LocatedAn an ast -> ToBriDocM Bool
 hasAnyRegularCommentsRest ast = {-astAnn-} undefined ast <&> \case
   Nothing -> False
   Just ann -> undefined -- any isRegularComment (extractRestComments ann)
 
 hasAnnKeywordComment
-  :: Data ast => GHC.Located ast -> AnnKeywordId -> ToBriDocM Bool
+  :: Data ast => GHC.LocatedAn an ast -> AnnKeywordId -> ToBriDocM Bool
 hasAnnKeywordComment ast annKeyword = {-astAnn-} undefined ast <&> \case
   Nothing -> False
   Just ann -> any hasK ({-extractAllComments-} thing ann)
@@ -328,7 +328,7 @@ hasAnnKeyword
   -- , MonadMultiReader (Map AnnKey Annotation) m
   , Functor m
   )
-  => Located a
+  => LocatedAn an a
   -> AnnKeywordId
   -> m Bool
 hasAnnKeyword ast annKeyword = {-astAnn-} astAnn' ast <&> \case

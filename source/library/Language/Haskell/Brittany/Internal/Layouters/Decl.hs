@@ -193,7 +193,7 @@ layoutIPBind lipbind@(L _ bind) = case bind of
 data BagBindOrSig = BagBind (LHsBindLR GhcPs GhcPs)
                   | BagSig (LSig GhcPs)
 
-bindOrSigtoSrcSpan :: BagBindOrSig -> SrcSpan
+bindOrSigtoSrcSpan :: BagBindOrSig -> SrcSpanAnnA
 bindOrSigtoSrcSpan (BagBind (L l _)) = l
 bindOrSigtoSrcSpan (BagSig (L l _)) = l
 
@@ -210,7 +210,7 @@ layoutLocalBinds binds = case binds of
       unordered =
         [ BagBind b | b <- Data.Foldable.toList bindlrs ]
         ++ [ BagSig s | s <- sigs ]
-      ordered = List.sortOn (ExactPrint.rs . bindOrSigtoSrcSpan) unordered
+      ordered = List.sortOn (la2r . bindOrSigtoSrcSpan) unordered
     docs <- docWrapNode (noLocA binds) $ join <$> ordered `forM` \case
       BagBind b -> either id return <$> layoutBind b
       BagSig s -> return <$> layoutSig s
@@ -226,7 +226,7 @@ layoutGrhs
   :: LGRHS GhcPs (LHsExpr GhcPs)
   -> ToBriDocM ([BriDocNumbered], BriDocNumbered, LHsExpr GhcPs)
 layoutGrhs lgrhs@(L _ (GRHS _ guards body)) = do
-  guardDocs <- docWrapNode lgrhs $ layoutStmt `mapM` guards
+  guardDocs <- docWrapNode (reLocA lgrhs) $ layoutStmt `mapM` guards
   bodyDoc <- layoutExpr body
   return (guardDocs, bodyDoc, body)
 
@@ -275,7 +275,7 @@ layoutPatternBind funId binderDoc lmatch@(L _ match) = do
         $ (List.intersperse docSeparator $ docForceSingleline <$> ps)
   clauseDocs <- docWrapNodeRest lmatch $ layoutGrhs `mapM` grhss
   mWhereDocs <- layoutLocalBinds whereBinds
-  let mWhereArg = mWhereDocs <&> (,) (mkAnnKey lmatch)
+  let mWhereArg = mWhereDocs <&> (,) ({-mkAnnKey-} undefined lmatch)
   let alignmentToken = if null pats then Nothing else funId
   hasComments <- hasAnyCommentsBelow lmatch
   layoutPatternBindFinal
@@ -678,7 +678,7 @@ layoutLPatSyn name (InfixCon left right) = do
   docSeq . fmap (appSep . docLit) $ [leftDoc, docName, rightDoc]
 layoutLPatSyn name (RecCon recArgs) = do
   docName <- lrdrNameToTextAnn name
-  args <- mapM (lrdrNameToTextAnn . recordPatSynSelectorId) recArgs
+  args <- mapM (lrdrNameToTextAnn . rdrNameFieldOcc . recordPatSynField) recArgs
   docSeq
     . fmap docLit
     $ [docName, Text.pack " { "]
@@ -700,7 +700,7 @@ layoutPatSynWhere hs = case hs of
 -- TyClDecl
 --------------------------------------------------------------------------------
 
-layoutTyCl :: ToBriDoc an TyClDecl
+layoutTyCl :: Data.Data.Data an => ToBriDoc an TyClDecl
 layoutTyCl ltycl@(L _loc tycl) = case tycl of
   SynDecl _ name vars fixity typ -> do
     let
@@ -721,7 +721,7 @@ layoutTyCl ltycl@(L _loc tycl) = case tycl of
 layoutSynDecl
   :: Bool
   -> (ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered)
-  -> LocatedAn an (IdP GhcPs)
+  -> LIdP GhcPs
   -> [LHsTyVarBndr () GhcPs]
   -> LHsType GhcPs
   -> ToBriDocM BriDocNumbered
@@ -789,8 +789,8 @@ layoutTyFamInstDecl
   -> ToBriDocM BriDocNumbered
 layoutTyFamInstDecl inClass outerNode tfid = do
   let
-    FamEqn _ name bndrsMay pats _fixity typ = L_body $ tfid_eqn tfid
-    -- bndrsMay isJust e.g. with
+    FamEqn _ name bndrs pats _fixity typ = tfid_eqn tfid
+    -- bndrs isJust e.g. with
     --   type instance forall a . MyType (Maybe a) = Either () a
     innerNode = outerNode
   docWrapNodePrior outerNode $ do
@@ -811,7 +811,7 @@ layoutTyFamInstDecl inClass outerNode tfid = do
         docWrapNode innerNode
           . docSeq
           $ [appSep instanceDoc]
-          ++ [ makeForallDoc foralls | Just foralls <- [bndrsMay] ]
+          ++ [ makeForallDoc foralls | HsOuterExplicit _ foralls <- [bndrs] ]
           ++ [ docParenL | needsParens ]
           ++ [appSep $ docWrapNode name $ docLit nameStr]
           ++ intersperse docSeparator (layoutHsTyPats pats)
@@ -843,7 +843,7 @@ layoutHsTyPats pats = pats <&> \case
 --   Layout signatures and bindings using the corresponding layouters from the
 --   top-level. Layout the instance head, type family instances, and data family
 --   instances using ExactPrint.
-layoutClsInst :: ToBriDoc an ClsInstDecl
+layoutClsInst :: Data.Data.Data an => ToBriDoc an ClsInstDecl
 layoutClsInst lcid@(L _ cid) = docLines
   [ layoutInstanceHead
   , docEnsureIndent BrIndentRegular
@@ -873,18 +873,18 @@ layoutClsInst lcid@(L _ cid) = docLines
 
   -- | Like 'docLines', but sorts the lines based on location
   docSortedLines
-    :: [ToBriDocM (Located BriDocNumbered)] -> ToBriDocM BriDocNumbered
+    :: [ToBriDocM (LocatedAn an BriDocNumbered)] -> ToBriDocM BriDocNumbered
   docSortedLines l =
     allocateNode
       . BDFLines
       . fmap unLoc
-      . List.sortOn (ExactPrint.rs . getLoc)
+      . List.sortOn (realSrcSpan . getLocA)
       =<< sequence l
 
-  layoutAndLocateSig :: ToBriDocC an (Sig GhcPs) (Located BriDocNumbered)
+  layoutAndLocateSig :: ToBriDocC AnnListItem (Sig GhcPs) (LocatedA BriDocNumbered)
   layoutAndLocateSig lsig@(L loc _) = L loc <$> layoutSig lsig
 
-  layoutAndLocateBind :: ToBriDocC an (HsBind GhcPs) (Located BriDocNumbered)
+  layoutAndLocateBind :: ToBriDocC an (HsBind GhcPs) (LocatedAn an BriDocNumbered)
   layoutAndLocateBind lbind@(L loc _) =
     L loc <$> (joinBinds =<< layoutBind lbind)
 
@@ -895,17 +895,17 @@ layoutClsInst lcid@(L _ cid) = docLines
     Right n -> return n
 
   layoutAndLocateTyFamInsts
-    :: ToBriDocC an (TyFamInstDecl GhcPs) (Located BriDocNumbered)
+    :: ToBriDocC an (TyFamInstDecl GhcPs) (LocatedAn an BriDocNumbered)
   layoutAndLocateTyFamInsts ltfid@(L loc tfid) =
     L loc <$> layoutTyFamInstDecl True ltfid tfid
 
   layoutAndLocateDataFamInsts
-    :: ToBriDocC an (DataFamInstDecl GhcPs) (Located BriDocNumbered)
+    :: Data.Data.Data an => ToBriDocC an (DataFamInstDecl GhcPs) (LocatedAn an BriDocNumbered)
   layoutAndLocateDataFamInsts ldfid@(L loc _) =
     L loc <$> layoutDataFamInstDecl ldfid
 
   -- | Send to ExactPrint then remove unecessary whitespace
-  layoutDataFamInstDecl :: ToBriDoc an DataFamInstDecl
+  layoutDataFamInstDecl :: Data.Data.Data an => ToBriDoc an DataFamInstDecl
   layoutDataFamInstDecl ldfid =
     fmap stripWhitespace <$> briDocByExactNoComment ldfid
 
