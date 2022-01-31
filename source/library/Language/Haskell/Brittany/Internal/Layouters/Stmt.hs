@@ -19,7 +19,7 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 
-layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))
+layoutStmt :: ToBriDoc' an (StmtLR GhcPs GhcPs (LHsExpr GhcPs))
 layoutStmt lstmt@(L _ stmt) = do
   indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
   indentAmount :: Int <-
