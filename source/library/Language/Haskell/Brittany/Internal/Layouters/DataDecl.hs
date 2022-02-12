@@ -428,7 +428,7 @@ createNamesAndTypeDoc
   :: Data.Data.Data ast
   => LocatedAn an1 ast
   -> [GenLocated t (FieldOcc GhcPs)]
-  -> LocatedAn an2 (HsType GhcPs)
+  -> LocatedAn AnnListItem (HsType GhcPs)
   -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
 createNamesAndTypeDoc lField names t =
   ( docNodeAnnKW lField Nothing $ docWrapNodePrior lField $ docSeq
