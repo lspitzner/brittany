@@ -10,4 +10,4 @@ type Annotation = ()
 type Anns = Map AnnKey ()
 type AnnKey = ()
 
-type EPAnns = ()
+type EPAnns = Map AnnKey ()

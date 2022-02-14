@@ -182,29 +182,29 @@ commentAnnFixTransformGlob ast = undefined
 
 --   ExactPrint.modifyAnnsT moveComments
 
-{--
 
 -- | split a set of annotations in a module into a map from top-level module
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
 -- implementation would have.
 extractToplevelAnns
   :: Located HsModule
-  -> ExactPrint.Anns
-  -> Map ExactPrint.AnnKey ExactPrint.Anns
+  -> Anns
+  -> Map AnnKey Anns
 extractToplevelAnns lmod anns = output
  where
-  (L _ (HsModule _ _ _ _ ldecls _ _)) = lmod
-  declMap1 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+  (L _ (HsModule _ _ _ _ _ ldecls _ _)) = lmod
+  declMap1 :: Map AnnKey AnnKey
   declMap1 = Map.unions $ ldecls <&> \ldecl ->
-    Map.fromSet (const (ExactPrint.mkAnnKey ldecl)) (foldedAnnKeys ldecl)
-  declMap2 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+    Map.fromSet (const ({-ExactPrint.mkAnnKey-} undefined ldecl)) (foldedAnnKeys ldecl)
+  declMap2 :: Map AnnKey AnnKey
   declMap2 =
     Map.fromList
-      $ [ (captured, declMap1 Map.! k)
-        | (k, ExactPrint.Ann _ _ _ _ _ (Just captured)) <- Map.toList anns
+      $ [ 
+        -- (captured, declMap1 Map.! k)
+        -- | (k, ExactPrint.Ann _ _ _ _ _ (Just captured)) <- Map.toList anns
         ]
   declMap = declMap1 `Map.union` declMap2
-  modKey = ExactPrint.mkAnnKey lmod
+  modKey = {-ExactPrint.mkAnnKey-} undefined lmod
   output = groupMap (\k _ -> Map.findWithDefault modKey k declMap) anns
 
 groupMap :: (Ord k, Ord l) => (k -> a -> l) -> Map k a -> Map l (Map k a)
@@ -215,13 +215,13 @@ groupMap f = Map.foldlWithKey'
   insert k a Nothing = Just (Map.singleton k a)
   insert k a (Just m) = Just (Map.insert k a m)
 
-foldedAnnKeys :: Data.Data.Data ast => ast -> Set ExactPrint.AnnKey
+foldedAnnKeys :: Data.Data.Data ast => ast -> Set AnnKey
 foldedAnnKeys ast = SYB.everything
   Set.union
   (\x -> maybe
     Set.empty
     Set.singleton
-    [ SYB.gmapQi 1 (ExactPrint.mkAnnKey . L l) x
+    [ SYB.gmapQi 1 ({-ExactPrint.mkAnnKey-} undefined . L l) x
     | locTyCon == SYB.typeRepTyCon (SYB.typeOf x)
     , l :: SrcSpan <- SYB.gmapQi 0 SYB.cast x
     ]
@@ -232,7 +232,6 @@ foldedAnnKeys ast = SYB.everything
   ast
   where locTyCon = SYB.typeRepTyCon (SYB.typeOf (L () ()))
 
--}
 
 withTransformedAnns
   :: Data ast
