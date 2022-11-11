@@ -17,7 +17,7 @@ import Language.Haskell.Brittany.Internal.Prelude
 import Language.Haskell.Brittany.Internal.PreludeUtils
 import Language.Haskell.Brittany.Internal.Types
 import Language.Haskell.Brittany.Internal.Utils
-import Language.Haskell.GHC.ExactPrint.Types (AnnKey, Annotation)
+-- import Language.Haskell.GHC.ExactPrint.Types (AnnKey, Annotation)
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 
 
@@ -338,23 +338,23 @@ layoutAddSepSpace = do
 
 -- TODO: when refactoring is complete, the other version of this method
 -- can probably be removed.
-moveToExactAnn
-  :: ( MonadMultiWriter Text.Builder.Builder m
-     , MonadMultiState LayoutState m
-     , MonadMultiReader (Map AnnKey Annotation) m
-     )
-  => AnnKey
-  -> m ()
-moveToExactAnn annKey = do
-  traceLocal ("moveToExactAnn", annKey)
-  anns <- mAsk
-  case Map.lookup annKey anns of
-    Nothing -> return ()
-    Just ann -> do
-      -- curY <- mGet <&> _lstate_curY
-      let ExactPrint.DP (y, _x) = ExactPrint.annEntryDelta ann
-      -- mModify $ \state -> state { _lstate_addNewline = Just x }
-      moveToY y
+-- moveToExactAnn
+--   :: ( MonadMultiWriter Text.Builder.Builder m
+--      , MonadMultiState LayoutState m
+--     --  , MonadMultiReader (Map AnnKey Annotation) m
+--      )
+--   => AnnKey
+--   -> m ()
+-- moveToExactAnn annKey = do
+--   traceLocal ("moveToExactAnn", annKey)
+--   anns <- mAsk
+--   case Map.lookup annKey anns of
+--     Nothing -> return ()
+--     Just ann -> do
+--       -- curY <- mGet <&> _lstate_curY
+--       let ExactPrint.DP (y, _x) = ExactPrint.annEntryDelta ann
+--       -- mModify $ \state -> state { _lstate_addNewline = Just x }
+--       moveToY y
 
 moveToY :: MonadMultiState LayoutState m => Int -> m ()
 moveToY y = mModify $ \state ->
@@ -379,77 +379,77 @@ moveToY y = mModify $ \state ->
 --     then x-1
 --     else x
 
-ppmMoveToExactLoc
-  :: MonadMultiWriter Text.Builder.Builder m => ExactPrint.DeltaPos -> m ()
-ppmMoveToExactLoc (ExactPrint.DP (x, y)) = do
-  replicateM_ x $ mTell $ Text.Builder.fromString "\n"
-  replicateM_ y $ mTell $ Text.Builder.fromString " "
+-- ppmMoveToExactLoc
+--   :: MonadMultiWriter Text.Builder.Builder m => ExactPrint.DeltaPos -> m ()
+-- ppmMoveToExactLoc (ExactPrint.DP (x, y)) = do
+--   replicateM_ x $ mTell $ Text.Builder.fromString "\n"
+--   replicateM_ y $ mTell $ Text.Builder.fromString " "
 
 -- TODO: update and use, or clean up. Currently dead code.
-layoutWritePriorComments
-  :: ( Data.Data.Data ast
-     , MonadMultiWriter Text.Builder.Builder m
-     , MonadMultiState LayoutState m
-     )
-  => Located ast
-  -> m ()
-layoutWritePriorComments ast = do
-  mAnn <- do
-    state <- mGet
-    let key = ExactPrint.mkAnnKey ast
-    let anns = _lstate_comments state
-    let mAnn = ExactPrint.annPriorComments <$> Map.lookup key anns
-    mSet $ state
-      { _lstate_comments = Map.adjust
-        (\ann -> ann { ExactPrint.annPriorComments = [] })
-        key
-        anns
-      }
-    return mAnn
-  case mAnn of
-    Nothing -> return ()
-    Just priors -> do
-      unless (null priors) $ layoutSetCommentCol
-      priors `forM_` \(ExactPrint.Comment comment _ _, ExactPrint.DP (x, y)) ->
-        do
-          replicateM_ x layoutWriteNewline
-          layoutWriteAppendSpaces y
-          layoutWriteAppendMultiline $ Text.lines $ Text.pack comment
+-- layoutWritePriorComments
+--   :: ( Data.Data.Data ast
+--      , MonadMultiWriter Text.Builder.Builder m
+--      , MonadMultiState LayoutState m
+--      )
+--   => Located ast
+--   -> m ()
+-- layoutWritePriorComments ast = do
+--   mAnn <- do
+--     state <- mGet
+--     let key = ExactPrint.mkAnnKey ast
+--     let anns = _lstate_comments state
+--     let mAnn = ExactPrint.annPriorComments <$> Map.lookup key anns
+--     mSet $ state
+--       { _lstate_comments = Map.adjust
+--         (\ann -> ann { ExactPrint.annPriorComments = [] })
+--         key
+--         anns
+--       }
+--     return mAnn
+--   case mAnn of
+--     Nothing -> return ()
+--     Just priors -> do
+--       unless (null priors) $ layoutSetCommentCol
+--       priors `forM_` \(ExactPrint.Comment comment _ _, ExactPrint.DP (x, y)) ->
+--         do
+--           replicateM_ x layoutWriteNewline
+--           layoutWriteAppendSpaces y
+--           layoutWriteAppendMultiline $ Text.lines $ Text.pack comment
 
 -- TODO: update and use, or clean up. Currently dead code.
 -- this currently only extracs from the `annsDP` field of Annotations.
 -- per documentation, this seems sufficient, as the
 -- "..`annFollowingComments` are only added by AST transformations ..".
-layoutWritePostComments
-  :: ( Data.Data.Data ast
-     , MonadMultiWriter Text.Builder.Builder m
-     , MonadMultiState LayoutState m
-     )
-  => Located ast
-  -> m ()
-layoutWritePostComments ast = do
-  mAnn <- do
-    state <- mGet
-    let key = ExactPrint.mkAnnKey ast
-    let anns = _lstate_comments state
-    let mAnn = ExactPrint.annFollowingComments <$> Map.lookup key anns
-    mSet $ state
-      { _lstate_comments = Map.adjust
-        (\ann -> ann { ExactPrint.annFollowingComments = [] })
-        key
-        anns
-      }
-    return mAnn
-  case mAnn of
-    Nothing -> return ()
-    Just posts -> do
-      unless (null posts) $ layoutSetCommentCol
-      posts `forM_` \(ExactPrint.Comment comment _ _, ExactPrint.DP (x, y)) ->
-        do
-          replicateM_ x layoutWriteNewline
-          layoutWriteAppend $ Text.pack $ replicate y ' '
-          mModify $ \s -> s { _lstate_addSepSpace = Nothing }
-          layoutWriteAppendMultiline $ Text.lines $ Text.pack $ comment
+-- layoutWritePostComments
+--   :: ( Data.Data.Data ast
+--      , MonadMultiWriter Text.Builder.Builder m
+--      , MonadMultiState LayoutState m
+--      )
+--   => Located ast
+--   -> m ()
+-- layoutWritePostComments ast = do
+--   mAnn <- do
+--     state <- mGet
+--     let key = ExactPrint.mkAnnKey ast
+--     let anns = _lstate_comments state
+--     let mAnn = ExactPrint.annFollowingComments <$> Map.lookup key anns
+--     mSet $ state
+--       { _lstate_comments = Map.adjust
+--         (\ann -> ann { ExactPrint.annFollowingComments = [] })
+--         key
+--         anns
+--       }
+--     return mAnn
+--   case mAnn of
+--     Nothing -> return ()
+--     Just posts -> do
+--       unless (null posts) $ layoutSetCommentCol
+--       posts `forM_` \(ExactPrint.Comment comment _ _, ExactPrint.DP (x, y)) ->
+--         do
+--           replicateM_ x layoutWriteNewline
+--           layoutWriteAppend $ Text.pack $ replicate y ' '
+--           mModify $ \s -> s { _lstate_addSepSpace = Nothing }
+--           layoutWriteAppendMultiline $ Text.lines $ Text.pack $ comment
 
 layoutIndentRestorePostComment
   :: (MonadMultiState LayoutState m, MonadMultiWriter Text.Builder.Builder m)

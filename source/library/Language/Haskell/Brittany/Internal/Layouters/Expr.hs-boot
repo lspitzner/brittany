@@ -7,9 +7,7 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 
-layoutExpr :: ToBriDoc HsExpr
-
--- layoutStmt :: ToBriDoc' (StmtLR GhcPs GhcPs (LHsExpr GhcPs))
+layoutExpr :: ToBriDoc AnnListItem HsExpr
 
 litBriDoc :: HsLit GhcPs -> BriDocFInt
 

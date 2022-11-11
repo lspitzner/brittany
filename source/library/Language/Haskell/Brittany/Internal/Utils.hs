@@ -17,9 +17,10 @@ import qualified Data.Sequence as Seq
 import DataTreePrint
 import qualified GHC.Data.FastString as GHC
 import qualified GHC.Driver.Session as GHC
-import qualified GHC.Hs.Extension as HsExtension
+import qualified GHC.Driver.Ppr as GHC
 import qualified GHC.OldList as List
 import GHC.Types.Name.Occurrence as OccName (occNameString)
+import qualified GHC.Parser.Annotation as GHC
 import qualified GHC.Types.SrcLoc as GHC
 import qualified GHC.Utils.Outputable as GHC
 import Language.Haskell.Brittany.Internal.Config.Types
@@ -28,8 +29,10 @@ import Language.Haskell.Brittany.Internal.PreludeUtils
 import Language.Haskell.Brittany.Internal.Types
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
 import qualified Language.Haskell.GHC.ExactPrint.Utils as ExactPrint.Utils
+import qualified Language.Haskell.Syntax.Extension as HsExtension
 import qualified Text.PrettyPrint as PP
 
+import Language.Haskell.Brittany.Internal.EPCompat
 
 
 parDoc :: String -> PP.Doc
@@ -40,10 +43,10 @@ parDocW = PP.fsep . fmap PP.text . List.words . List.unwords
 
 
 showSDoc_ :: GHC.SDoc -> String
-showSDoc_ = GHC.showSDoc GHC.unsafeGlobalDynFlags
+showSDoc_ = GHC.showSDoc undefined -- GHC.unsafeGlobalDynFlags
 
 showOutputable :: (GHC.Outputable a) => a -> String
-showOutputable = GHC.showPpr GHC.unsafeGlobalDynFlags
+showOutputable = GHC.showPpr undefined -- GHC.unsafeGlobalDynFlags
 
 fromMaybeIdentity :: Identity a -> Maybe a -> Identity a
 fromMaybeIdentity x y = Data.Coerce.coerce $ fromMaybe (Data.Coerce.coerce x) y
@@ -72,8 +75,8 @@ instance Show ShowIsId where
 data A x = A ShowIsId x
   deriving Data
 
-customLayouterF :: ExactPrint.Types.Anns -> LayouterF
-customLayouterF anns layoutF =
+customLayouterF :: LayouterF
+customLayouterF layoutF =
   DataToLayouter
     $ f
     `extQ` showIsId
@@ -104,12 +107,12 @@ customLayouterF anns layoutF =
       $ "{"
       ++ showOutputable ss
       ++ "}"
-  located :: (Data b, Data loc) => GHC.GenLocated loc b -> NodeLayouter
+  located :: (Data b, Data ann) => GHC.GenLocated ann b -> NodeLayouter
   located (GHC.L ss a) = runDataToLayouter layoutF $ A annStr a
    where
     annStr = case cast ss of
-      Just (s :: GHC.SrcSpan) ->
-        ShowIsId $ show (ExactPrint.Utils.getAnnotationEP (GHC.L s a) anns)
+      Just (s :: GHC.SrcLoc) ->
+        ShowIsId $ "printing anns on 9.2.1: not implemented" ++ undefined
       Nothing -> ShowIsId "nnnnnnnn"
 
 customLayouterNoAnnsF :: LayouterF
@@ -226,9 +229,9 @@ briDocToDoc = astToDoc . removeAnnotations
 briDocToDocWithAnns :: BriDoc -> PP.Doc
 briDocToDocWithAnns = astToDoc
 
-annsDoc :: ExactPrint.Types.Anns -> PP.Doc
+annsDoc :: EPAnns -> PP.Doc
 annsDoc =
-  printTreeWithCustom 100 customLayouterNoAnnsF . fmap (ShowIsId . show)
+  printTreeWithCustom 100 customLayouterNoAnnsF
 
 breakEither :: (a -> Either b c) -> [a] -> ([b], [c])
 breakEither _ [] = ([], [])

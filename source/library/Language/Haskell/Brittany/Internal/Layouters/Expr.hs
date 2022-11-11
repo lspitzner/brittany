@@ -8,12 +8,13 @@ import qualified Data.Data
 import qualified Data.Semigroup as Semigroup
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
-import GHC (AnnKeywordId(..), GenLocated(L), RdrName(..), SrcSpan)
+import GHC (GenLocated(L), RdrName(..))
 import qualified GHC.Data.FastString as FastString
 import GHC.Hs
 import qualified GHC.OldList as List
 import GHC.Types.Basic
 import GHC.Types.Name
+import GHC.Types.SourceText
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.LayouterBasics
 import Language.Haskell.Brittany.Internal.Layouters.Decl
@@ -27,7 +28,7 @@ import Language.Haskell.Brittany.Internal.Utils
 
 
 
-layoutExpr :: ToBriDoc HsExpr
+layoutExpr :: ToBriDoc AnnListItem HsExpr
 layoutExpr lexpr@(L _ expr) = do
   indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
   let allowFreeIndent = indentPolicy == IndentPolicyFree
@@ -38,7 +39,7 @@ layoutExpr lexpr@(L _ expr) = do
     HsRecFld{} -> do
       -- TODO
       briDocByExactInlineOnly "HsRecFld" lexpr
-    HsOverLabel _ext _reboundFromLabel name ->
+    HsOverLabel _ext name ->
       let label = FastString.unpackFS name in docLit . Text.pack $ '#' : label
     HsIPVar _ext (HsIPName name) ->
       let label = FastString.unpackFS name in docLit . Text.pack $ '?' : label
@@ -49,7 +50,7 @@ layoutExpr lexpr@(L _ expr) = do
     HsLam _ (MG _ (L _ [lmatch@(L _ match)]) _)
       | pats <- m_pats match
       , GRHSs _ [lgrhs] llocals <- m_grhss match
-      , L _ EmptyLocalBinds{} <- llocals
+      , EmptyLocalBinds{} <- llocals
       , L _ (GRHS _ [] body) <- lgrhs
       -> do
         patDocs <- zip (True : repeat False) pats `forM` \(isFirst, p) ->
@@ -86,7 +87,7 @@ layoutExpr lexpr@(L _ expr) = do
             [ docLit $ Text.pack "\\"
             , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
             , appSep $ docLit $ Text.pack "->"
-            , docWrapNode lgrhs $ docForceSingleline bodyDoc
+            , docWrapNode (reLocA lgrhs) $ docForceSingleline bodyDoc
             ]
             -- double line
           , docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
@@ -97,13 +98,13 @@ layoutExpr lexpr@(L _ expr) = do
               , docLit $ Text.pack "->"
               ]
             )
-            (docWrapNode lgrhs $ docForceSingleline bodyDoc)
+            (docWrapNode (reLocA lgrhs) $ docForceSingleline bodyDoc)
             -- wrapped par spacing
           , docSetParSpacing $ docSeq
             [ docLit $ Text.pack "\\"
             , docWrapNode lmatch $ docForceSingleline funcPatternPartLine
             , appSep $ docLit $ Text.pack "->"
-            , docWrapNode lgrhs $ docForceParSpacing bodyDoc
+            , docWrapNode (reLocA lgrhs) $ docForceParSpacing bodyDoc
             ]
             -- conservative
           , docSetParSpacing $ docAddBaseY BrIndentRegular $ docPar
@@ -114,7 +115,7 @@ layoutExpr lexpr@(L _ expr) = do
               , docLit $ Text.pack "->"
               ]
             )
-            (docWrapNode lgrhs $ docNonBottomSpacing bodyDoc)
+            (docWrapNode (reLocA lgrhs) $ docNonBottomSpacing bodyDoc)
           ]
     HsLam{} -> unknownNodeError "HsLam too complex" lexpr
     HsLamCase _ (MG _ (L _ []) _) -> do
@@ -378,14 +379,14 @@ layoutExpr lexpr@(L _ expr) = do
     ExplicitTuple _ args boxity -> do
       let
         argExprs = args <&> \arg -> case arg of
-          (L _ (Present _ e)) -> (arg, Just e)
-          (L _ (Missing NoExtField)) -> (arg, Nothing)
+          (Present _ e) -> (arg, Just e)
+          (Missing _) -> (arg, Nothing)
       argDocs <- forM argExprs $ docSharedWrapper $ \(arg, exprM) ->
-        docWrapNode arg $ maybe docEmpty layoutExpr exprM
+        docWrapNode (noLocA arg) $ maybe docEmpty layoutExpr exprM
       hasComments <-
         orM
           (hasCommentsBetween lexpr AnnOpenP AnnCloseP
-          : map hasAnyCommentsBelow args
+          : map (hasAnyCommentsBelow . noLocA) args
           )
       let
         (openLit, closeLit) = case boxity of
@@ -758,7 +759,7 @@ layoutExpr lexpr@(L _ expr) = do
       _ -> do
         -- TODO
         unknownNodeError "HsDo{} unknown stmtCtx" lexpr
-    ExplicitList _ _ elems@(_ : _) -> do
+    ExplicitList _ elems@(_ : _) -> do
       elemDocs <- elems `forM` docSharedWrapper layoutExpr
       hasComments <- hasAnyCommentsBelow lexpr
       case splitFirstLast elemDocs of
@@ -800,12 +801,12 @@ layoutExpr lexpr@(L _ expr) = do
                   [docCommaSep, docNodeAnnKW lexpr (Just AnnOpenS) eN]
                 end = docLit $ Text.pack "]"
               in docSetBaseY $ docLines $ [start] ++ linesM ++ [lineN] ++ [end]
-    ExplicitList _ _ [] -> docLit $ Text.pack "[]"
+    ExplicitList _ [] -> docLit $ Text.pack "[]"
     RecordCon _ lname fields -> case fields of
       HsRecFields fs Nothing -> do
         let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
         rFs <-
-          fs `forM` \lfield@(L _ (HsRecField (L _ fieldOcc) rFExpr pun)) -> do
+          fs `forM` \lfield@(L _ (HsRecField _ (L _ fieldOcc) rFExpr pun)) -> do
             let FieldOcc _ lnameF = fieldOcc
             rFExpDoc <- if pun
               then return Nothing
@@ -818,7 +819,7 @@ layoutExpr lexpr@(L _ expr) = do
       HsRecFields fs@(_ : _) (Just (L _ dotdoti)) | dotdoti == length fs -> do
         let nameDoc = docWrapNode lname $ docLit $ lrdrNameToText lname
         fieldDocs <-
-          fs `forM` \fieldl@(L _ (HsRecField (L _ fieldOcc) fExpr pun)) -> do
+          fs `forM` \fieldl@(L _ (HsRecField _ (L _ fieldOcc) fExpr pun)) -> do
             let FieldOcc _ lnameF = fieldOcc
             fExpDoc <- if pun
               then return Nothing
@@ -826,10 +827,10 @@ layoutExpr lexpr@(L _ expr) = do
             return (fieldl, lrdrNameToText lnameF, fExpDoc)
         recordExpression True indentPolicy lexpr nameDoc fieldDocs
       _ -> unknownNodeError "RecordCon with puns" lexpr
-    RecordUpd _ rExpr fields -> do
+    RecordUpd _ rExpr (Left fields) -> do
       rExprDoc <- docSharedWrapper layoutExpr rExpr
       rFs <-
-        fields `forM` \lfield@(L _ (HsRecField (L _ ambName) rFExpr pun)) -> do
+        fields `forM` \lfield@(L _ (HsRecField _ (L _ ambName) rFExpr pun)) -> do
           rFExpDoc <- if pun
             then return Nothing
             else Just <$> docSharedWrapper layoutExpr rFExpr
@@ -837,7 +838,11 @@ layoutExpr lexpr@(L _ expr) = do
             Unambiguous _ n -> (lfield, lrdrNameToText n, rFExpDoc)
             Ambiguous _ n -> (lfield, lrdrNameToText n, rFExpDoc)
       recordExpression False indentPolicy lexpr rExprDoc rFs
-    ExprWithTySig _ exp1 (HsWC _ (HsIB _ typ1)) -> do
+    RecordUpd _ _rExpr (Right _projections) -> do
+      -- TODO
+      briDocByExactInlineOnly "RecordUpd _ _ (Right _projections)" lexpr
+
+    ExprWithTySig _ exp1 (HsWC _ (L _ (HsSig _ _ typ1))) -> do
       expDoc <- docSharedWrapper layoutExpr exp1
       typDoc <- docSharedWrapper layoutType typ1
       docSeq [appSep expDoc, appSep $ docLit $ Text.pack "::", typDoc]
@@ -925,14 +930,21 @@ layoutExpr lexpr@(L _ expr) = do
     HsPragE{} -> do
       -- TODO
       briDocByExactInlineOnly "HsPragE{}" lexpr
+    HsGetField{} -> do
+      -- TODO
+      briDocByExactInlineOnly "HsGetField{}" lexpr
+    HsProjection{} -> do
+      -- TODO
+      briDocByExactInlineOnly "HsProjection{}" lexpr
+    
 
 recordExpression
   :: (Data.Data.Data lExpr, Data.Data.Data name)
   => Bool
   -> IndentPolicy
-  -> GenLocated SrcSpan lExpr
+  -> LocatedAn an1 lExpr
   -> ToBriDocM BriDocNumbered
-  -> [ ( GenLocated SrcSpan name
+  -> [ ( LocatedAn an2 name
        , Text
        , Maybe (ToBriDocM BriDocNumbered)
        )
@@ -1073,14 +1085,14 @@ litBriDoc = \case
   HsInt64Prim (SourceText t) _i -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
   HsWord64Prim (SourceText t) _i -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
   HsInteger (SourceText t) _i _type -> BDFLit $ Text.pack t -- BDFLit $ Text.pack $ show i
-  HsRat _ (FL (SourceText t) _ _) _type -> BDFLit $ Text.pack t
-  HsFloatPrim _ (FL (SourceText t) _ _) -> BDFLit $ Text.pack t
-  HsDoublePrim _ (FL (SourceText t) _ _) -> BDFLit $ Text.pack t
+  HsRat _ (FL (SourceText t) _ _ _ _) _type -> BDFLit $ Text.pack t
+  HsFloatPrim _ (FL (SourceText t) _ _ _ _) -> BDFLit $ Text.pack t
+  HsDoublePrim _ (FL (SourceText t) _ _ _ _) -> BDFLit $ Text.pack t
   _ -> error "litBriDoc: literal with no SourceText"
 
 overLitValBriDoc :: OverLitVal -> BriDocFInt
 overLitValBriDoc = \case
   HsIntegral (IL (SourceText t) _ _) -> BDFLit $ Text.pack t
-  HsFractional (FL (SourceText t) _ _) -> BDFLit $ Text.pack t
+  HsFractional (FL (SourceText t) _ _ _ _) -> BDFLit $ Text.pack t
   HsIsString (SourceText t) _ -> BDFLit $ Text.pack t
   _ -> error "overLitValBriDoc: literal with no SourceText"

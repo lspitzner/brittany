@@ -57,7 +57,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     --       x1' <- docSeq [docLit $ Text.pack "(", return x1]
     --       xN' <- docSeq [return xN, docLit $ Text.pack ")"]
     --       return $ (x1' Seq.<| middle) Seq.|> xN'
-  ConPat _ lname (PrefixCon args) -> do
+  ConPat _ lname (PrefixCon _tyargs args) -> do
     -- Abc a b c -> expr
     nameDoc <- lrdrNameToTextAnn lname
     argDocs <- layoutPat `mapM` args
@@ -84,7 +84,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     -- Abc { a = locA, b = locB, c = locC } -> expr1
     -- Abc { a, b, c } -> expr2
     let t = lrdrNameToText lname
-    fds <- fs `forM` \(L _ (HsRecField (L _ fieldOcc) fPat pun)) -> do
+    fds <- fs `forM` \(L _ (HsRecField _ (L _ fieldOcc) fPat pun)) -> do
       let FieldOcc _ lnameF = fieldOcc
       fExpDoc <- if pun
         then return Nothing
@@ -111,7 +111,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     | dotdoti == length fs -> do
     -- Abc { a = locA, .. }
       let t = lrdrNameToText lname
-      fds <- fs `forM` \(L _ (HsRecField (L _ fieldOcc) fPat pun)) -> do
+      fds <- fs `forM` \(L _ (HsRecField _ (L _ fieldOcc) fPat pun)) -> do
         let FieldOcc _ lnameF = fieldOcc
         fExpDoc <- if pun
           then return Nothing
@@ -171,7 +171,7 @@ layoutPat lpat@(L _ pat) = docWrapNode lpat $ case pat of
     wrapPatPrepend pat1 (docLit $ Text.pack "~")
   NPat _ llit@(L _ ol) mNegative _ -> do
     -- -13 -> expr
-    litDoc <- docWrapNode llit $ allocateNode $ overLitValBriDoc $ GHC.ol_val ol
+    litDoc <- docWrapNode (reLocA llit) $ allocateNode $ overLitValBriDoc $ GHC.ol_val ol
     negDoc <- docLit $ Text.pack "-"
     pure $ case mNegative of
       Just{} -> Seq.fromList [negDoc, litDoc]

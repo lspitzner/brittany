@@ -18,33 +18,34 @@ import Data.Generics.Uniplate.Direct as Uniplate
 import qualified Data.Kind as Kind
 import qualified Data.Strict.Maybe as Strict
 import qualified Data.Text.Lazy.Builder as Text.Builder
-import GHC (AnnKeywordId, GenLocated, Located, SrcSpan)
+import GHC (AnnKeywordId, GenLocated, Located, LocatedAn, SrcSpan)
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.Prelude
 import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
-import Language.Haskell.GHC.ExactPrint (AnnKey)
+-- import Language.Haskell.GHC.ExactPrint (AnnKey)
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint.Types
-import Language.Haskell.GHC.ExactPrint.Types (Anns)
+-- import Language.Haskell.GHC.ExactPrint.Types (Anns)
 import qualified Safe
 
+import Language.Haskell.Brittany.Internal.EPCompat
 
 data PerItemConfig = PerItemConfig
   { _icd_perBinding :: Map String (CConfig Maybe)
-  , _icd_perKey :: Map ExactPrint.Types.AnnKey (CConfig Maybe)
+  , _icd_perKey :: Map AnnKey (CConfig Maybe)
   }
   deriving Data.Data.Data
 
 type PPM = MultiRWSS.MultiRWS
-  '[Map ExactPrint.AnnKey ExactPrint.Anns, PerItemConfig, Config, ExactPrint.Anns]
+  '[Map AnnKey Anns, PerItemConfig, Config, Anns]
   '[Text.Builder.Builder, [BrittanyError], Seq String]
   '[]
 
 type PPMLocal = MultiRWSS.MultiRWS
-  '[Config, ExactPrint.Anns]
+  '[Config, Anns]
   '[Text.Builder.Builder, [BrittanyError], Seq String]
   '[]
 
-newtype TopLevelDeclNameMap = TopLevelDeclNameMap (Map ExactPrint.AnnKey String)
+newtype TopLevelDeclNameMap = TopLevelDeclNameMap (Map AnnKey String)
 
 data LayoutState = LayoutState
   { _lstate_baseYs         :: [Int]
@@ -131,7 +132,7 @@ instance Show LayoutState where
 --                                           -- when creating zero-indentation
 --                                           -- multi-line list literals.
 --   , _lsettings_importColumn :: Int
---   , _lsettings_initialAnns :: ExactPrint.Anns
+--   , _lsettings_initialAnns :: Anns
 --   }
 
 data BrittanyError
@@ -144,7 +145,7 @@ data BrittanyError
     --   output and second the corresponding, ill-formed input.
   | LayoutWarning String
     -- ^ some warning
-  | forall ast . Data.Data.Data ast => ErrorUnknownNode String (GenLocated SrcSpan ast)
+  | forall ast an. Data.Data.Data ast => ErrorUnknownNode String (LocatedAn an ast)
     -- ^ internal error: pretty-printing is not implemented for type of node
     --   in the syntax-tree
   | ErrorOutputCheck
@@ -218,9 +219,9 @@ type ToBriDocM = MultiRWSS.MultiRWS
                    '[[BrittanyError], Seq String] -- writer
                    '[NodeAllocIndex] -- state
 
-type ToBriDoc (sym :: Kind.Type -> Kind.Type) = Located (sym GhcPs) -> ToBriDocM BriDocNumbered
-type ToBriDoc' sym            = Located sym         -> ToBriDocM BriDocNumbered
-type ToBriDocC sym c          = Located sym         -> ToBriDocM c
+type ToBriDoc an (sym :: Kind.Type -> Kind.Type) = LocatedAn an (sym GhcPs) -> ToBriDocM BriDocNumbered
+type ToBriDoc' an sym            = LocatedAn an sym         -> ToBriDocM BriDocNumbered
+type ToBriDocC an sym c          = LocatedAn an sym         -> ToBriDocM c
 
 data DocMultiLine
   = MultiLineNo

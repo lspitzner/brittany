@@ -1,13 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.Haskell.Brittany.Internal.Layouters.Type where
 
 import qualified Data.Text as Text
-import GHC (AnnKeywordId(..), GenLocated(L))
+import GHC (GenLocated(L))
 import GHC.Hs
 import qualified GHC.OldList as List
 import GHC.Types.Basic
+import qualified GHC.Types.SourceText
 import GHC.Utils.Outputable (ftext, showSDocUnsafe)
 import Language.Haskell.Brittany.Internal.LayouterBasics
 import Language.Haskell.Brittany.Internal.Prelude
@@ -17,8 +19,8 @@ import Language.Haskell.Brittany.Internal.Utils
   (FirstLastView(..), splitFirstLast)
 
 
-
-layoutType :: ToBriDoc HsType
+--- XXX: maybe push `Anno (sym GhcPs)` into ToBriDoc definition in place of a typevar
+layoutType :: ToBriDoc AnnListItem HsType
 layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   -- _ | traceShow (ExactPrint.Types.mkAnnKey ltype) False -> error "impossible"
   HsTyVar _ promoted name -> do
@@ -26,7 +28,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
     case promoted of
       IsPromoted -> docSeq [docSeparator, docTick, docWrapNode name $ docLit t]
       NotPromoted -> docWrapNode name $ docLit t
-  HsForAllTy _ hsf (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
+  HsForAllTy _ hsf (L _ (HsQualTy _ (fromMaybeContext -> cntxts) typ2)) -> do
     let bndrs = getBinders hsf
     typeDoc <- docSharedWrapper layoutType typ2
     tyVarDocs <- layoutTyVarBndrs bndrs
@@ -159,7 +161,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
            ]
         )
       ]
-  HsQualTy _ lcntxts@(L _ cntxts) typ1 -> do
+  HsQualTy _ (fromMaybe (noLocA []) -> lcntxts@(L _ cntxts)) typ1 -> do
     typeDoc <- docSharedWrapper layoutType typ1
     cntxtDocs <- cntxts `forM` docSharedWrapper layoutType
     let
@@ -291,8 +293,6 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
       ]
   HsTupleTy _ tupleSort typs -> case tupleSort of
     HsUnboxedTuple -> unboxed
-    HsBoxedTuple -> simple
-    HsConstraintTuple -> simple
     HsBoxedOrConstraintTuple -> simple
    where
     unboxed = if null typs
@@ -573,11 +573,14 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsExplicitTupleTy{} -> -- TODO
     briDocByExactInlineOnly "HsExplicitTupleTy{}" ltype
   HsTyLit _ lit -> case lit of
-    HsNumTy (SourceText srctext) _ -> docLit $ Text.pack srctext
-    HsNumTy NoSourceText _ ->
+    HsNumTy (GHC.Types.SourceText.SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsNumTy GHC.Types.SourceText.NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
-    HsStrTy (SourceText srctext) _ -> docLit $ Text.pack srctext
-    HsStrTy NoSourceText _ ->
+    HsStrTy (GHC.Types.SourceText.SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsStrTy GHC.Types.SourceText.NoSourceText _ ->
+      error "overLitValBriDoc: literal with no SourceText"
+    HsCharTy (GHC.Types.SourceText.SourceText srctext) _ -> docLit $ Text.pack srctext
+    HsCharTy GHC.Types.SourceText.NoSourceText _ ->
       error "overLitValBriDoc: literal with no SourceText"
   HsWildCardTy _ -> docLit $ Text.pack "_"
   HsSumTy{} -> -- TODO
@@ -622,14 +625,12 @@ processTyVarBndrsSingleline bndrDocs = bndrDocs >>= \case
     , docLit $ Text.pack ")"
     ]
 
-getBinders :: HsForAllTelescope pass -> [LHsTyVarBndr () pass]
+getBinders :: HsForAllTelescope (GhcPass pass) -> [LHsTyVarBndr () (GhcPass pass)]
 getBinders x = case x of
   HsForAllVis _ b -> b
   HsForAllInvis _ b -> fmap withoutSpecificity b
-  XHsForAllTelescope _ -> []
 
-withoutSpecificity :: LHsTyVarBndr flag pass -> LHsTyVarBndr () pass
+withoutSpecificity :: LHsTyVarBndr flag (GhcPass pass) -> LHsTyVarBndr () (GhcPass pass)
 withoutSpecificity = fmap $ \case
   UserTyVar a _ c -> UserTyVar a () c
   KindedTyVar a _ c d -> KindedTyVar a () c d
-  XTyVarBndr a -> XTyVarBndr a

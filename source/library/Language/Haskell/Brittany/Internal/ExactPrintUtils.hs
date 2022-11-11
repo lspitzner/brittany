@@ -31,13 +31,13 @@ import qualified Language.Haskell.GHC.ExactPrint as ExactPrint
 import qualified Language.Haskell.GHC.ExactPrint.Types as ExactPrint
 import qualified System.IO
 
-
+import Language.Haskell.Brittany.Internal.EPCompat
 
 parseModule
   :: [String]
   -> System.IO.FilePath
   -> (GHC.DynFlags -> IO (Either String a))
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+  -> IO (Either String (GHC.ParsedSource, a))
 parseModule args fp dynCheck = do
   str <- System.IO.readFile fp
   parseModuleFromString args fp dynCheck str
@@ -47,74 +47,75 @@ parseModuleFromString
   -> System.IO.FilePath
   -> (GHC.DynFlags -> IO (Either String a))
   -> String
-  -> IO (Either String (ExactPrint.Anns, GHC.ParsedSource, a))
+  -> IO (Either String (GHC.ParsedSource, a))
 parseModuleFromString = ParseModule.parseModule
 
 
 commentAnnFixTransformGlob :: SYB.Data ast => ast -> ExactPrint.Transform ()
-commentAnnFixTransformGlob ast = do
-  let
-    extract :: forall a . SYB.Data a => a -> Seq (SrcSpan, ExactPrint.AnnKey)
-    extract = -- traceFunctionWith "extract" (show . SYB.typeOf) show $
-      const Seq.empty
-        `SYB.ext1Q` (\l@(L span _) ->
-                      Seq.singleton (span, ExactPrint.mkAnnKey l)
-                    )
-  let nodes = SYB.everything (<>) extract ast
-  let
-    annsMap :: Map GHC.RealSrcLoc ExactPrint.AnnKey
-    annsMap = Map.fromListWith
-      (const id)
-      [ (GHC.realSrcSpanEnd span, annKey)
-      | (GHC.RealSrcSpan span _, annKey) <- Foldable.toList nodes
-      ]
-  nodes `forM_` (snd .> processComs annsMap)
- where
-  processComs annsMap annKey1 = do
-    mAnn <- State.Class.gets fst <&> Map.lookup annKey1
-    mAnn `forM_` \ann1 -> do
-      let
-        priors = ExactPrint.annPriorComments ann1
-        follows = ExactPrint.annFollowingComments ann1
-        assocs = ExactPrint.annsDP ann1
-      let
-        processCom
-          :: (ExactPrint.Comment, ExactPrint.DeltaPos)
-          -> ExactPrint.TransformT Identity Bool
-        processCom comPair@(com, _) =
-          case GHC.realSrcSpanStart $ ExactPrint.commentIdentifier com of
-            comLoc -> case Map.lookupLE comLoc annsMap of
-              Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
-                (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
-                  move $> False
-                (x, y) | x == y -> move $> False
-                _ -> return True
-               where
-                ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
-                ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
-                loc1 = GHC.realSrcSpanStart annKeyLoc1
-                loc2 = GHC.realSrcSpanStart annKeyLoc2
-                move = ExactPrint.modifyAnnsT $ \anns ->
-                  let
-                    ann2 = Data.Maybe.fromJust $ Map.lookup annKey2 anns
-                    ann2' = ann2
-                      { ExactPrint.annFollowingComments =
-                        ExactPrint.annFollowingComments ann2 ++ [comPair]
-                      }
-                  in Map.insert annKey2 ann2' anns
-              _ -> return True -- retain comment at current node.
-      priors' <- filterM processCom priors
-      follows' <- filterM processCom follows
-      assocs' <- flip filterM assocs $ \case
-        (ExactPrint.AnnComment com, dp) -> processCom (com, dp)
-        _ -> return True
-      let
-        ann1' = ann1
-          { ExactPrint.annPriorComments = priors'
-          , ExactPrint.annFollowingComments = follows'
-          , ExactPrint.annsDP = assocs'
-          }
-      ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
+commentAnnFixTransformGlob ast = undefined
+--   do
+--   let
+--     extract :: forall a . SYB.Data a => a -> Seq (SrcSpan, ExactPrint.AnnKey)
+--     extract = -- traceFunctionWith "extract" (show . SYB.typeOf) show $
+--       const Seq.empty
+--         `SYB.ext1Q` (\l@(L span _) ->
+--                       Seq.singleton (span, ExactPrint.mkAnnKey l)
+--                     )
+--   let nodes = SYB.everything (<>) extract ast
+--   let
+--     annsMap :: Map GHC.RealSrcLoc ExactPrint.AnnKey
+--     annsMap = Map.fromListWith
+--       (const id)
+--       [ (GHC.realSrcSpanEnd span, annKey)
+--       | (GHC.RealSrcSpan span _, annKey) <- Foldable.toList nodes
+--       ]
+--   nodes `forM_` (snd .> processComs annsMap)
+--  where
+--   processComs annsMap annKey1 = do
+--     mAnn <- State.Class.gets fst <&> Map.lookup annKey1
+--     mAnn `forM_` \ann1 -> do
+--       let
+--         priors = ExactPrint.annPriorComments ann1
+--         follows = ExactPrint.annFollowingComments ann1
+--         assocs = ExactPrint.annsDP ann1
+--       let
+--         processCom
+--           :: (ExactPrint.Comment, ExactPrint.DeltaPos)
+--           -> ExactPrint.TransformT Identity Bool
+--         processCom comPair@(com, _) =
+--           case GHC.realSrcSpanStart $ ExactPrint.commentIdentifier com of
+--             comLoc -> case Map.lookupLE comLoc annsMap of
+--               Just (_, annKey2) | loc1 /= loc2 -> case (con1, con2) of
+--                 (ExactPrint.CN "RecordCon", ExactPrint.CN "HsRecField") ->
+--                   move $> False
+--                 (x, y) | x == y -> move $> False
+--                 _ -> return True
+--                where
+--                 ExactPrint.AnnKey annKeyLoc1 con1 = annKey1
+--                 ExactPrint.AnnKey annKeyLoc2 con2 = annKey2
+--                 loc1 = GHC.realSrcSpanStart annKeyLoc1
+--                 loc2 = GHC.realSrcSpanStart annKeyLoc2
+--                 move = ExactPrint.modifyAnnsT $ \anns ->
+--                   let
+--                     ann2 = Data.Maybe.fromJust $ Map.lookup annKey2 anns
+--                     ann2' = ann2
+--                       { ExactPrint.annFollowingComments =
+--                         ExactPrint.annFollowingComments ann2 ++ [comPair]
+--                       }
+--                   in Map.insert annKey2 ann2' anns
+--               _ -> return True -- retain comment at current node.
+--       priors' <- filterM processCom priors
+--       follows' <- filterM processCom follows
+--       assocs' <- flip filterM assocs $ \case
+--         (ExactPrint.AnnComment com, dp) -> processCom (com, dp)
+--         _ -> return True
+--       let
+--         ann1' = ann1
+--           { ExactPrint.annPriorComments = priors'
+--           , ExactPrint.annFollowingComments = follows'
+--           , ExactPrint.annsDP = assocs'
+--           }
+--       ExactPrint.modifyAnnsT $ \anns -> Map.insert annKey1 ann1' anns
 
 
 -- TODO: this is unused by now, but it contains one detail that
@@ -181,27 +182,29 @@ commentAnnFixTransformGlob ast = do
 
 --   ExactPrint.modifyAnnsT moveComments
 
+
 -- | split a set of annotations in a module into a map from top-level module
 -- elements to the relevant annotations. Avoids quadratic behaviour a trivial
 -- implementation would have.
 extractToplevelAnns
   :: Located HsModule
-  -> ExactPrint.Anns
-  -> Map ExactPrint.AnnKey ExactPrint.Anns
+  -> Anns
+  -> Map AnnKey Anns
 extractToplevelAnns lmod anns = output
  where
-  (L _ (HsModule _ _ _ _ ldecls _ _)) = lmod
-  declMap1 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+  (L _ (HsModule _ _ _ _ _ ldecls _ _)) = lmod
+  declMap1 :: Map AnnKey AnnKey
   declMap1 = Map.unions $ ldecls <&> \ldecl ->
-    Map.fromSet (const (ExactPrint.mkAnnKey ldecl)) (foldedAnnKeys ldecl)
-  declMap2 :: Map ExactPrint.AnnKey ExactPrint.AnnKey
+    Map.fromSet (const ({-ExactPrint.mkAnnKey-} undefined ldecl)) (foldedAnnKeys ldecl)
+  declMap2 :: Map AnnKey AnnKey
   declMap2 =
     Map.fromList
-      $ [ (captured, declMap1 Map.! k)
-        | (k, ExactPrint.Ann _ _ _ _ _ (Just captured)) <- Map.toList anns
+      $ [ 
+        -- (captured, declMap1 Map.! k)
+        -- | (k, ExactPrint.Ann _ _ _ _ _ (Just captured)) <- Map.toList anns
         ]
   declMap = declMap1 `Map.union` declMap2
-  modKey = ExactPrint.mkAnnKey lmod
+  modKey = {-ExactPrint.mkAnnKey-} undefined lmod
   output = groupMap (\k _ -> Map.findWithDefault modKey k declMap) anns
 
 groupMap :: (Ord k, Ord l) => (k -> a -> l) -> Map k a -> Map l (Map k a)
@@ -212,13 +215,13 @@ groupMap f = Map.foldlWithKey'
   insert k a Nothing = Just (Map.singleton k a)
   insert k a (Just m) = Just (Map.insert k a m)
 
-foldedAnnKeys :: Data.Data.Data ast => ast -> Set ExactPrint.AnnKey
+foldedAnnKeys :: Data.Data.Data ast => ast -> Set AnnKey
 foldedAnnKeys ast = SYB.everything
   Set.union
   (\x -> maybe
     Set.empty
     Set.singleton
-    [ SYB.gmapQi 1 (ExactPrint.mkAnnKey . L l) x
+    [ SYB.gmapQi 1 ({-ExactPrint.mkAnnKey-} undefined . L l) x
     | locTyCon == SYB.typeRepTyCon (SYB.typeOf x)
     , l :: SrcSpan <- SYB.gmapQi 0 SYB.cast x
     ]
@@ -233,8 +236,8 @@ foldedAnnKeys ast = SYB.everything
 withTransformedAnns
   :: Data ast
   => ast
-  -> MultiRWSS.MultiRWS '[Config , ExactPrint.Anns] w s a
-  -> MultiRWSS.MultiRWS '[Config , ExactPrint.Anns] w s a
+  -> MultiRWSS.MultiRWS '[Config , Anns] w s a
+  -> MultiRWSS.MultiRWS '[Config , Anns] w s a
 withTransformedAnns ast m = MultiRWSS.mGetRawR >>= \case
   readers@(conf :+: anns :+: HNil) -> do
     -- TODO: implement `local` for MultiReader/MultiRWS
@@ -245,9 +248,9 @@ withTransformedAnns ast m = MultiRWSS.mGetRawR >>= \case
  where
   f anns =
     let
-      ((), (annsBalanced, _), _) =
-        ExactPrint.runTransform anns (commentAnnFixTransformGlob ast)
-    in annsBalanced
+      ((), _, _) =
+        ExactPrint.runTransform (commentAnnFixTransformGlob ast)
+    in anns
 
 
 warnExtractorCompat :: GHC.Warn -> String

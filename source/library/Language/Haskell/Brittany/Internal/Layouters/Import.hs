@@ -7,6 +7,7 @@ import qualified Data.Text as Text
 import GHC (GenLocated(L), Located, moduleNameString, unLoc)
 import GHC.Hs
 import GHC.Types.Basic
+import qualified GHC.Types.SourceText
 import GHC.Unit.Types (IsBootInterface(..))
 import Language.Haskell.Brittany.Internal.Config.Types
 import Language.Haskell.Brittany.Internal.LayouterBasics
@@ -17,13 +18,13 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 
-prepPkg :: SourceText -> String
+prepPkg :: GHC.Types.SourceText.SourceText -> String
 prepPkg rawN = case rawN of
-  SourceText n -> n
+  GHC.Types.SourceText.SourceText n -> n
   -- This would be odd to encounter and the
   -- result will most certainly be wrong
-  NoSourceText -> ""
-prepModName :: Located e -> e
+  GHC.Types.SourceText.NoSourceText -> ""
+prepModName :: LocatedAn an e -> e
 prepModName = unLoc
 
 layoutImport :: ImportDecl GhcPs -> ToBriDocM BriDocNumbered
@@ -36,7 +37,7 @@ layoutImport importD = case importD of
     let
       compact = indentPolicy /= IndentPolicyFree
       modNameT = Text.pack $ moduleNameString modName
-      pkgNameT = Text.pack . prepPkg . sl_st <$> pkg
+      pkgNameT = Text.pack . prepPkg . GHC.Types.SourceText.sl_st <$> pkg
       masT = Text.pack . moduleNameString . prepModName <$> mas
       hiding = maybe False fst mllies
       minQLength = length "import qualified "

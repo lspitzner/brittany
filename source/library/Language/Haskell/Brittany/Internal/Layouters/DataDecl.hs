@@ -20,16 +20,17 @@ import Language.Haskell.Brittany.Internal.Types
 
 
 layoutDataDecl
-  :: Located (TyClDecl GhcPs)
-  -> Located RdrName
+  :: Data.Data.Data an1
+  => LocatedAn an1 (TyClDecl GhcPs)
+  -> LocatedAn an2 RdrName
   -> LHsQTyVars GhcPs
   -> HsDataDefn GhcPs
   -> ToBriDocM BriDocNumbered
 layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
   -- newtype MyType a b = MyType ..
-  HsDataDefn _ext NewType (L _ []) _ctype Nothing [cons] mDerivs ->
+  HsDataDefn _ext NewType _ctxt _ctype Nothing [cons] mDerivs ->
     case cons of
-      (L _ (ConDeclH98 _ext consName (L _ False) _qvars (Just (L _ [])) details _conDoc))
+      (L _ (ConDeclH98 _ext consName False _qvars (Just (L _ [])) details _conDoc))
         -> docWrapNode ltycl $ do
           nameStr <- lrdrNameToTextAnn name
           consNameStr <- lrdrNameToTextAnn consName
@@ -54,9 +55,9 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 
   -- data MyData a b
   -- (zero constructors)
-  HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [] mDerivs ->
+  HsDataDefn _ext DataType mLhsContext _ctype Nothing [] mDerivs ->
     docWrapNode ltycl $ do
-      lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
+      lhsContextDoc <- docSharedWrapper createContextDoc mLhsContext
       nameStr <- lrdrNameToTextAnn name
       tyVarLine <- return <$> createBndrDoc bndrs
       createDerivingPar mDerivs $ docSeq
@@ -68,11 +69,11 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 
   -- data MyData = MyData ..
   -- data MyData = MyData { .. }
-  HsDataDefn _ext DataType (L _ lhsContext) _ctype Nothing [cons] mDerivs ->
+  HsDataDefn _ext DataType mLhsContext _ctype Nothing [cons] mDerivs ->
     case cons of
-      (L _ (ConDeclH98 _ext consName (L _ _hasExt) qvars mRhsContext details _conDoc))
+      (L _ (ConDeclH98 _ext consName _hasExt qvars mRhsContext details _conDoc))
         -> docWrapNode ltycl $ do
-          lhsContextDoc <- docSharedWrapper createContextDoc lhsContext
+          lhsContextDoc <- docSharedWrapper createContextDoc mLhsContext
           nameStr <- lrdrNameToTextAnn name
           consNameStr <- lrdrNameToTextAnn consName
           tyVarLine <- return <$> createBndrDoc bndrs
@@ -81,7 +82,7 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
             Just x -> Just . pure <$> x
           rhsContextDocMay <- case mRhsContext of
             Nothing -> pure Nothing
-            Just (L _ ctxt) -> Just . pure <$> createContextDoc ctxt
+            Just lctxt -> Just . pure <$> createContextDoc (Just lctxt)
           rhsDoc <- return <$> createDetailsDoc consNameStr details
           consDoc <-
             fmap pure
@@ -200,28 +201,29 @@ layoutDataDecl ltycl name (HsQTvs _ bndrs) defn = case defn of
 
   _ -> briDocByExactNoComment ltycl
 
-createContextDoc :: HsContext GhcPs -> ToBriDocM BriDocNumbered
-createContextDoc [] = docEmpty
-createContextDoc [t] =
-  docSeq [layoutType t, docSeparator, docLitS "=>", docSeparator]
-createContextDoc (t1 : tR) = do
-  t1Doc <- docSharedWrapper layoutType t1
-  tRDocs <- tR `forM` docSharedWrapper layoutType
-  docAlt
-    [ docSeq
-      [ docLitS "("
-      , docForceSingleline $ docSeq $ List.intersperse
-        docCommaSep
-        (t1Doc : tRDocs)
-      , docLitS ") =>"
-      , docSeparator
+createContextDoc :: Maybe (LHsContext GhcPs) -> ToBriDocM BriDocNumbered
+createContextDoc Nothing = docEmpty
+createContextDoc (Just (L _ lhsContext)) = case lhsContext of
+  [] -> docEmpty
+  [t] -> docSeq [layoutType t, docSeparator, docLitS "=>", docSeparator]
+  (t1 : tR) -> do
+    t1Doc <- docSharedWrapper layoutType t1
+    tRDocs <- tR `forM` docSharedWrapper layoutType
+    docAlt
+      [ docSeq
+        [ docLitS "("
+        , docForceSingleline $ docSeq $ List.intersperse
+          docCommaSep
+          (t1Doc : tRDocs)
+        , docLitS ") =>"
+        , docSeparator
+        ]
+      , docLines $ join
+        [ [docSeq [docLitS "(", docSeparator, t1Doc]]
+        , tRDocs <&> \tRDoc -> docSeq [docLitS ",", docSeparator, tRDoc]
+        , [docLitS ") =>", docSeparator]
+        ]
       ]
-    , docLines $ join
-      [ [docSeq [docLitS "(", docSeparator, t1Doc]]
-      , tRDocs <&> \tRDoc -> docSeq [docLitS ",", docSeparator, tRDoc]
-      , [docLitS ") =>", docSeparator]
-      ]
-    ]
 
 createBndrDoc :: [LHsTyVarBndr flag GhcPs] -> ToBriDocM BriDocNumbered
 createBndrDoc bs = do
@@ -246,20 +248,20 @@ createBndrDoc bs = do
 createDerivingPar
   :: HsDeriving GhcPs -> ToBriDocM BriDocNumbered -> ToBriDocM BriDocNumbered
 createDerivingPar derivs mainDoc = do
-  case derivs of
-    (L _ []) -> mainDoc
-    (L _ types) ->
-      docPar mainDoc
-        $ docEnsureIndent BrIndentRegular
-        $ docLines
-        $ docWrapNode derivs
-        $ derivingClauseDoc
-        <$> types
+    docPar mainDoc
+      $ docEnsureIndent BrIndentRegular
+      $ docLines
+      $ docWrapNode (noLocA derivs)
+      $ derivingClauseDoc
+      <$> derivs
 
 derivingClauseDoc :: LHsDerivingClause GhcPs -> ToBriDocM BriDocNumbered
 derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
-  (L _ []) -> docSeq []
-  (L _ ts) ->
+  (L _ (DctSingle _ t)) -> derivingClauseDoc' [t]
+  (L _ (DctMulti _ ts)) -> derivingClauseDoc' ts
+ where
+  derivingClauseDoc' [] = docSeq []
+  derivingClauseDoc' ts = 
     let
       tsLength = length ts
       whenMoreThan1Type val = if tsLength > 1 then docLitS val else docLitS ""
@@ -275,29 +277,32 @@ derivingClauseDoc (L _ (HsDerivingClause _ext mStrategy types)) = case types of
       $ List.intersperse docCommaSep
       $ ts
       <&> \case
-            HsIB _ t -> layoutType t
+            _ -> undefined
+            -- HsIB _ t -> layoutType t
       , whenMoreThan1Type ")"
       , rhsStrategy
       ]
- where
+  strategyLeftRight 
+    :: Located (DerivStrategy GhcPs) 
+    -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
   strategyLeftRight = \case
-    (L _ StockStrategy) -> (docLitS " stock", docEmpty)
-    (L _ AnyclassStrategy) -> (docLitS " anyclass", docEmpty)
-    (L _ NewtypeStrategy) -> (docLitS " newtype", docEmpty)
+    (L _ (StockStrategy _)) -> (docLitS " stock", docEmpty)
+    (L _ (AnyclassStrategy _)) -> (docLitS " anyclass", docEmpty)
+    (L _ (NewtypeStrategy _)) -> (docLitS " newtype", docEmpty)
     lVia@(L _ (ViaStrategy viaTypes)) ->
       ( docEmpty
       , case viaTypes of
-        HsIB _ext t ->
-          docSeq [docWrapNode lVia $ docLitS " via", docSeparator, layoutType t]
+          XViaStrategyPs _epann (L _span (HsSig _sig _bndrs t)) -> 
+            docSeq [docWrapNode (reLocA lVia) $ docLitS " via", docSeparator, layoutType t]
       )
 
 docDeriving :: ToBriDocM BriDocNumbered
 docDeriving = docLitS "deriving"
 
 createDetailsDoc
-  :: Text -> HsConDeclDetails GhcPs -> (ToBriDocM BriDocNumbered)
+  :: Text -> HsConDeclH98Details GhcPs -> (ToBriDocM BriDocNumbered)
 createDetailsDoc consNameStr details = case details of
-  PrefixCon args -> do
+  PrefixCon _ args -> do
     indentPolicy <- mAsk <&> _conf_layout .> _lconfig_indentPolicy .> confUnpack
     let
       singleLine = docSeq
@@ -421,9 +426,9 @@ createForallDoc lhsTyVarBndrs =
 
 createNamesAndTypeDoc
   :: Data.Data.Data ast
-  => Located ast
+  => LocatedAn an1 ast
   -> [GenLocated t (FieldOcc GhcPs)]
-  -> Located (HsType GhcPs)
+  -> LocatedAn AnnListItem (HsType GhcPs)
   -> (ToBriDocM BriDocNumbered, ToBriDocM BriDocNumbered)
 createNamesAndTypeDoc lField names t =
   ( docNodeAnnKW lField Nothing $ docWrapNodePrior lField $ docSeq
