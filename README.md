@@ -1,4 +1,11 @@
 # brittany [![Hackage version](https://img.shields.io/hackage/v/brittany.svg?label=Hackage)](https://hackage.haskell.org/package/brittany) [![Stackage version](https://www.stackage.org/package/brittany/badge/lts?label=Stackage)](https://www.stackage.org/package/brittany) [![Build Status](https://secure.travis-ci.org/lspitzner/brittany.svg?branch=master)](http://travis-ci.org/lspitzner/brittany)
+
+:warning:
+This project is effectively unmaintained!
+I ([@tfausak](https://github.com/tfausak)) would recommend switching to another formatter.
+At time of writing (2022-11-11), I would suggest [Ormolu](https://github.com/tweag/ormolu).
+Or if you prefer some configuration, I would suggest [Fourmolu](https://github.com/fourmolu/fourmolu).
+
 haskell source code formatter
 
 ![Output sample](https://github.com/lspitzner/brittany/raw/master/brittany-sample.gif)
