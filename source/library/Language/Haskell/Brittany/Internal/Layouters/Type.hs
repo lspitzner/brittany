@@ -24,7 +24,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsTyVar _ promoted name -> do
     t <- lrdrNameToTextAnnTypeEqualityIsSpecial name
     case promoted of
-      IsPromoted -> docSeq [docSeparator, docTick, docWrapNode name $ docLit t]
+      IsPromoted -> docSeq [docTick, docWrapNode name $ docLit t]
       NotPromoted -> docWrapNode name $ docLit t
   HsForAllTy _ hsf (L _ (HsQualTy _ (L _ cntxts) typ2)) -> do
     let bndrs = getBinders hsf
@@ -522,14 +522,25 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
   HsRecTy{} -> -- TODO
     briDocByExactInlineOnly "HsRecTy{}" ltype
   HsExplicitListTy _ _ typs -> do
+    -- `'['Foo]` isn't valid because it parses as a character. So if the list
+    -- starts with a promoted type var, we swap to `'[ 'Foo ]`.
+    let
+      sepIfHeadPromoted = case typs of
+        (L _ t) : _ | startsWithTick t -> docSeparator
+        _ -> docEmpty
+
+    -- When rendering on multiple lines, this causes commas to line up with the
+    -- opening bracket. Unfortunately it also adds unnecessary space when
+    -- rendering on a single line.
+    let specialCommaSep = appSep $ docLit $ Text.pack " ,"
+
     typDocs <- docSharedWrapper layoutType `mapM` typs
     hasComments <- hasAnyCommentsBelow ltype
-    let specialCommaSep = appSep $ docLit $ Text.pack " ,"
     docAlt
       [ docSeq
-      $ [docLit $ Text.pack "'["]
+      $ [docLit $ Text.pack "'[", sepIfHeadPromoted]
       ++ List.intersperse specialCommaSep (docForceSingleline <$> typDocs)
-      ++ [docLit $ Text.pack "]"]
+      ++ [sepIfHeadPromoted, docLit $ Text.pack "]"]
       , case splitFirstLast typDocs of
         FirstLastEmpty -> docSeq
           [ docLit $ Text.pack "'["
@@ -538,7 +549,9 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         FirstLastSingleton e -> docAlt
           [ docSeq
             [ docLit $ Text.pack "'["
+            , sepIfHeadPromoted
             , docNodeAnnKW ltype (Just AnnOpenS) $ docForceSingleline e
+            , sepIfHeadPromoted
             , docLit $ Text.pack "]"
             ]
           , docSetBaseY $ docLines
@@ -553,7 +566,7 @@ layoutType ltype@(L _ typ) = docWrapNode ltype $ case typ of
         FirstLast e1 ems eN -> runFilteredAlternative $ do
           addAlternativeCond (not hasComments)
             $ docSeq
-            $ [docLit $ Text.pack "'["]
+            $ [docLit $ Text.pack "'[", sepIfHeadPromoted]
             ++ List.intersperse
                  specialCommaSep
                  (docForceSingleline
@@ -633,3 +646,10 @@ withoutSpecificity = fmap $ \case
   UserTyVar a _ c -> UserTyVar a () c
   KindedTyVar a _ c d -> KindedTyVar a () c d
   XTyVarBndr a -> XTyVarBndr a
+
+-- | Determine if the type starts with a tick mark (single quote) when rendered.
+startsWithTick :: HsType pass -> Bool
+startsWithTick = \case
+  HsTyVar _ IsPromoted _ -> True
+  HsAppTy _ (L _ t) _ -> startsWithTick t
+  _ -> False
